@@ -24,3 +24,7 @@ The updated source build is ready through the same **TEST_WORLD_GENERATION.cmd**
 Focused checks: `dotnet run --project Tests/Thornwake.Core.Tests.csproj --no-restore -- --drainage-preview` and `dotnet run --project Tests/Thornwake.Core.Tests.csproj --no-restore -- --regional-drainage`. The latter writes `artifacts/regional-drainage.json`.
 
 The vast-world view refines 16 km cells at 250 m sample spacing, so paths and shores remain visibly grid-shaped. Bed-rise diagnostics are not water-flow predictions, and lake storage is an estimate at the coarse candidate level. See [MASTER_A4_HYDROLOGY_ACCEPTANCE.md](MASTER_A4_HYDROLOGY_ACCEPTANCE.md) for current validation, finer inspection results and the exact next step. The additional engine-free inspector is exercised with `--hydrology-inspection`; the lab still shows the original regional proposals. The existing cave water/terrain issue remains open.
+
+## Multi-patch reconciliation developer report
+
+Run `dotnet run --project Tests/Thornwake.Core.Tests.csproj --no-restore -- --reconciliation`. Read `artifacts/hydrology-reconciliation/report.json` for connected components, explicit unresolved frontiers, reachable spill proposals and adaptive profiles. The Godot preview is unchanged; this new layer has no gameplay-water activation. See [the reconciliation checkpoint](MASTER_HYDROLOGY_RECONCILIATION.md) for result-state meanings, limitations and the next V1 step.

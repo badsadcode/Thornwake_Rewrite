@@ -1,0 +1,94 @@
+{
+  "Format": 1,
+  "Algorithm": 1,
+  "Cases": [
+    {
+      "Name": "complete-multi-patch",
+      "Fingerprint": "2e7c9d6bb4fba7051a760c3b45dd82682a36a96fb032c38414d3a0cbac69b014"
+    },
+    {
+      "Name": "truncated-large-component",
+      "Fingerprint": "f098a0e94ceeea2c410e0a2e05937399ccb0feccdee92503fe3c8dbddae1f4d2"
+    },
+    {
+      "Name": "disconnected-left",
+      "Fingerprint": "3ccc9546e3797404a9fdb3172f588190fe72d5fec74116249cadc6660c2ac7ee"
+    },
+    {
+      "Name": "disconnected-right",
+      "Fingerprint": "ec404e2a2f1f5daf70ad97f7494e542ec83a03a9d508982d4e8080cf2acd0f85"
+    },
+    {
+      "Name": "original-port-confirmed",
+      "Fingerprint": "926d029d3609d497e374123efeb5f90b984e5df2a8734cf1cea7a76e871d541e"
+    },
+    {
+      "Name": "outlet-replaced-bilaterally",
+      "Fingerprint": "afa9edfc7285c78774181ce7b6c8388f19bffdc307cf81062cd79759a6f5ad0a"
+    },
+    {
+      "Name": "far-origin",
+      "Fingerprint": "f2ac5e0ea6510b69f4950c6f93a53eb27e177df99379d0930d683de24c146610"
+    },
+    {
+      "Name": "budget-samples",
+      "Fingerprint": "416b0b732e71ca11428cfaa1687c5ed7911054454cc10144cd7e95e930698c29"
+    },
+    {
+      "Name": "budget-nodes",
+      "Fingerprint": "14a4e406e539e11fae6ca86f38e5b5e223cf22fca77afc46fc0942b21bf139dd"
+    },
+    {
+      "Name": "budget-frontier",
+      "Fingerprint": "9c9cc1ff9891378bf1d6d211c0523d201cd6ec8e852b55711bca7d862140d7a6"
+    },
+    {
+      "Name": "budget-adaptive",
+      "Fingerprint": "8582c0fb8bb9cab4b0cec3fad008b862a12656883e3680c6d620532d316336b0"
+    },
+    {
+      "Name": "adaptive-outlet-opening",
+      "Fingerprint": "01e48b96b6a9967ad6f053347dfdc1ceae5d68dfdbe995729b964b12d4856b67"
+    },
+    {
+      "Name": "adaptive-wet-component-barrier",
+      "Fingerprint": "c9060500137f22adf1efb06d2d2e2c8cc8a597bfb1c38225d4a8b17dbada8417"
+    },
+    {
+      "Name": "open-world-boundary",
+      "Fingerprint": "769a3d2ca29b6b06ae3a9ffe2ea142f6a4d503f1c720057f309a7c72c3ee1b80"
+    },
+    {
+      "Name": "explicit-outlet-at-stage",
+      "Fingerprint": "b9e885eb5a598e86c3b820f4a85a24982267c174122781e3af684bda851304a8"
+    },
+    {
+      "Name": "explicit-receiver-level",
+      "Fingerprint": "1283c3923515d0d4215e7b6be362d2020f7ebaef0c06f2ffa10ebd3eaa52fad9"
+    },
+    {
+      "Name": "corner-contact-first",
+      "Fingerprint": "7fb795659d4fb6a5331898bce48d8cdb8c98c71ba0ecd6ffbfda6b0b95e7a8ee"
+    },
+    {
+      "Name": "corner-contact-second",
+      "Fingerprint": "022250339329ae6cd9d35873ff4c2fa251f1d5f0672a91c25100f8257a243631"
+    },
+    {
+      "Name": "dry-shared-face",
+      "Fingerprint": "0429be7e80ca3ee64ef8f05c1b946b294b0dca9e7ae7e61f8416fab0a8fd21e5"
+    },
+    {
+      "Name": "world-mountainous/42",
+      "Fingerprint": "ab15f326af55fe086f2110ff211cc6e5dec4a0656724b8caefb42878ecb30e77"
+    },
+    {
+      "Name": "world-mountainous/42/far",
+      "Fingerprint": "fe6289befac30d3c46772eb73fc5c745bbe7e89cd778488bd33369f76e4cee9d"
+    },
+    {
+      "Name": "world-vast-world/7319/far",
+      "Fingerprint": "c85a081923eafcb15530eca004a36950f71d0082049acc95e927179ea8efa016"
+    }
+  ]
+}

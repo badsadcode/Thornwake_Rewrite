@@ -3,6 +3,9 @@ using Thornwake.Core;
 
 try
 {
+if (args.Contains("--reconciliation-spike")) { HydrologyReconciliationTests.Run(verify:false); return; }
+if (args.Contains("--record-reconciliation")) { HydrologyReconciliationTests.Run(record:true); return; }
+if (args.Contains("--reconciliation")) { HydrologyReconciliationTests.Run(); return; }
 if (args.Contains("--record-hydrology-inspection")) { HydrologyInspectionTests.Run(record:true); return; }
 if (args.Contains("--hydrology-inspection")) { HydrologyInspectionTests.Run(); return; }
 if (args.Contains("--record-a4-acceptance")) { AcceptedWorldTests.Record(); return; }
@@ -35,6 +38,7 @@ passed += MacroWorldTests.Run();
 passed += MacroMountainsV4Tests.Run();
 passed += AcceptedWorldTests.Run();
 passed += HydrologyInspectionTests.Run();
+passed += HydrologyReconciliationTests.Run();
 passed += MacroChunkTests.Run();
 passed += DrainageTests.Run();
 passed += DrainagePreviewTests.Run();

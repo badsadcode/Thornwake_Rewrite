@@ -2,6 +2,8 @@
 
 2026-09-30 completed review checkpoint. The user formally accepted Algorithm 4 mountain morphology. Master Rework + Supplement V1 remain authoritative; V2 is not active. This supersedes the awaiting-review stop in the mountain experiment and the next-step section of the original regional-drainage checkpoint. Historical measurements remain in those documents.
 
+> **Continuation checkpoint:** [Bounded multi-patch reconciliation](MASTER_HYDROLOGY_RECONCILIATION.md) now records the next implemented V1 layer, validation and resume point. The acceptance results and original next-step guidance below remain historical evidence.
+
 ## Terrain acceptance and version policy
 
 Algorithm 4 is the default for **new macro Master-Rework worlds**. Algorithm 3 remains supported with its original sampler, explicit manifest version, save paths and frozen outputs. Loading a saved world never substitutes the current default. The normal playable valley and cave saves are unchanged. `ExperimentalAlgorithm` remains a historical API alias for accepted version 4; it does not mean acceptance is pending.
