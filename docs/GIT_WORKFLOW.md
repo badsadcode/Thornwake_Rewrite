@@ -1,6 +1,6 @@
 # GitHub setup and review workflow
 
-This repository contains the existing Thornwake Godot 4.5.1 / C# project, its authored assets, tests, frozen world-generation fixtures and design/checkpoint documents. Git setup does not change gameplay or promote the experimental Algorithm 4 mountain generator. Algorithm 3 remains the default.
+This repository contains the existing Thornwake Godot 4.5.1 / C# project, its authored assets, tests, frozen world-generation fixtures and design/checkpoint documents. Git setup originally preserved Algorithm 3 as default and Algorithm 4 as an opt-in experiment. Algorithm 4 was subsequently formally accepted and promoted for new macro worlds; Algorithm 3 remains reconstructible. See [the current acceptance checkpoint](MASTER_A4_HYDROLOGY_ACCEPTANCE.md).
 
 ## Developing from a clone
 

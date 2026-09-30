@@ -8,7 +8,7 @@ internal static class MacroChunkTests
         int checks=0;
         void Check(bool ok,string why) { if(!ok) throw new Exception("MACRO CHUNKS: "+why); checks++; }
         var profile=MacroProfileCatalog.Load(Path.Combine(AppContext.BaseDirectory,"Content","world_profiles.json")).Single(p=>p.Id=="vast-world");
-        var world=new MacroWorldGenerator(MacroWorldManifest.Create(7319,profile));
+        var world=new MacroWorldGenerator(MacroWorldManifest.Create(7319,profile,algorithm:3));
         Check((long)(profile.WorldSize/WorldRegion.Size)*(long)(profile.WorldSize/WorldRegion.Size)==16_384_000_000L,"vast preset addresses billions of potential chunks without constructing them");
         foreach(var land in world.LandFeatures.Take(profile.Continents))
         {

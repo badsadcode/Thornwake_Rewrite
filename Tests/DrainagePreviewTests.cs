@@ -9,7 +9,7 @@ internal static class DrainagePreviewTests
         var profiles = MacroProfileCatalog.Load(Path.Combine(AppContext.BaseDirectory, "Content", "world_profiles.json"));
         foreach (string id in new[] { "vast-world", "archipelago" })
         {
-            var manifest = MacroWorldManifest.Create(7319, profiles.Single(p => p.Id == id)) with { WorldId = "0123456789abcdef0123456789abcdef" };
+            var manifest = MacroWorldManifest.Create(7319, profiles.Single(p => p.Id == id),algorithm:3) with { WorldId = "0123456789abcdef0123456789abcdef" };
             var world = new MacroWorldGenerator(manifest);
             var recipe = MacroDrainageRecipe.Create(manifest);
             var drainage = MacroDrainage.Build(recipe);

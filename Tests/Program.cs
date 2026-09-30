@@ -3,6 +3,10 @@ using Thornwake.Core;
 
 try
 {
+if (args.Contains("--record-hydrology-inspection")) { HydrologyInspectionTests.Run(record:true); return; }
+if (args.Contains("--hydrology-inspection")) { HydrologyInspectionTests.Run(); return; }
+if (args.Contains("--record-a4-acceptance")) { AcceptedWorldTests.Record(); return; }
+if (args.Contains("--accepted-a4")) { AcceptedWorldTests.Run(); return; }
 if (args.Contains("--mountain-v4")) { MacroMountainsV4Tests.Run(); return; }
 if (args.Contains("--cave-benchmark")) { CaveSpikeTests.Benchmark(Path.Combine("artifacts", "cave-mesher-benchmark.json")); return; }
 if (args.Contains("--drainage-spike")) { DrainageTests.Run(Path.Combine("artifacts", "drainage-spike.json")); return; }
@@ -29,6 +33,8 @@ passed += LandscapeTests.Run(catalog);
 passed += WorldStreamingTests.Run();
 passed += MacroWorldTests.Run();
 passed += MacroMountainsV4Tests.Run();
+passed += AcceptedWorldTests.Run();
+passed += HydrologyInspectionTests.Run();
 passed += MacroChunkTests.Run();
 passed += DrainageTests.Run();
 passed += DrainagePreviewTests.Run();

@@ -1,0 +1,62 @@
+{
+  "Algorithm": 1,
+  "Factor": 2,
+  "Cases": [
+    {
+      "World": "mountainous/42",
+      "Kind": "foothill-pass",
+      "Cell": 10136,
+      "Fingerprint": "4f058c76e0049945db01b993499c4f58b243a3d1bb272331d405345dd2ce09d3"
+    },
+    {
+      "World": "mountainous/42",
+      "Kind": "basin-outlet",
+      "Cell": 10780,
+      "Fingerprint": "6673dab813f4ca616e09b8d2b6269e254c8a4c1d7f239162475a14e146f486c1"
+    },
+    {
+      "World": "mountainous/42/far",
+      "Kind": "foothill-pass",
+      "Cell": 10136,
+      "Fingerprint": "1003b4e477ff4a9f3577ca319375207b68e3f8728aa84d64ae670bd9a1b28699"
+    },
+    {
+      "World": "mountainous/42/far",
+      "Kind": "basin-outlet",
+      "Cell": 10780,
+      "Fingerprint": "d4d24d063bb814f0c79d6d769e58cdeed9f613f033077f55a37a1ab614d4ff66"
+    },
+    {
+      "World": "vast-world/7319/far",
+      "Kind": "foothill-pass",
+      "Cell": 6733,
+      "Fingerprint": "d218d00ea4325df12786ef2ba3a78255c1573575402f24b896568a7c6a288c8a"
+    },
+    {
+      "World": "vast-world/7319/far",
+      "Kind": "basin-outlet",
+      "Cell": 13254,
+      "Fingerprint": "e2ffc1681708bb8c3e47427381fa48652a82c3dcab99826dd6bbdb74bfec9ca9"
+    }
+  ],
+  "Pairs": [
+    {
+      "World": "mountainous/42",
+      "First": 10524,
+      "Second": 10525,
+      "Fingerprint": "7ceebf86398b6e73f93ed27c57f1fec2e5023d6b98c8f8cbdd00b4c0e9b9dfc1"
+    },
+    {
+      "World": "mountainous/42/far",
+      "First": 10524,
+      "Second": 10525,
+      "Fingerprint": "da37c3345f1164cb5394979ef32dfec75347a2f21357f245520a640210c82bea"
+    },
+    {
+      "World": "vast-world/7319/far",
+      "First": 12996,
+      "Second": 12997,
+      "Fingerprint": "1621a7b7c5498ecc3d9428ae209955322b7d0cd7eae80c4e12d952de30910181"
+    }
+  ]
+}

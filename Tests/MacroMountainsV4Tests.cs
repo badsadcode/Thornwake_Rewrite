@@ -9,11 +9,11 @@ internal static class MacroMountainsV4Tests
         void Check(bool ok,string why) { if(!ok)throw new Exception("MOUNTAIN_V4: "+why); checks++; }
         void Reject(Action action) { try{action();}catch(InvalidDataException){checks++;return;}throw new Exception("MOUNTAIN_V4: unsupported version accepted"); }
         var profiles=MacroProfileCatalog.Load(Path.Combine(AppContext.BaseDirectory,"Content","world_profiles.json"));
-        Check(MacroWorldManifest.CurrentAlgorithm==3,"experimental morphology must not change default");
+        Check(MacroWorldManifest.CurrentAlgorithm==4 && MacroWorldManifest.Create(42,profiles[0]).Algorithm==4,"new Master worlds use accepted A4");
         foreach(var profile in profiles)
         foreach(int seed in new[]{-9,0,42,7319,int.MinValue,int.MaxValue})
         {
-            var original=MacroWorldManifest.Create(seed,profile);
+            var original=MacroWorldManifest.Create(seed,profile,algorithm:3);
             var a3=new MacroWorldGenerator(original);
             var manifest=original with { Algorithm=4 };
             var a4=new MacroWorldGenerator(manifest);
@@ -69,7 +69,7 @@ internal static class MacroMountainsV4Tests
         Check(distinctA.Sample(landCenter.X,landCenter.Z)!=distinctB.Sample(landCenter.X,landCenter.Z),"seed changes reconstructed terrain");
         foreach(var profile in new[]{profiles[0] with { MountainHeight=0 },profiles[0] with { RangesPerContinent=0 }})
         {
-            var manifest=MacroWorldManifest.Create(42,profile); var old=new MacroWorldGenerator(manifest); var next=new MacroWorldGenerator(manifest with { Algorithm=4 });
+            var manifest=MacroWorldManifest.Create(42,profile,algorithm:3); var old=new MacroWorldGenerator(manifest); var next=new MacroWorldGenerator(manifest with { Algorithm=4 });
             for(int i=-50;i<50;i++)Check(old.Sample(i*813,i*537)==next.Sample(i*813,i*537),"no-mountain base/hill equality");
             Check(next.Ranges.Count==0 && next.ExperimentalMountains!.SegmentCount==0,"disabled mountains allocate no belts");
         }

@@ -49,7 +49,7 @@ public partial class MacroWorldLab : Control
                 if(arg.StartsWith("--profile=")) requested=arg[10..];
                 if(arg.StartsWith("--algorithm=")) requestedAlgorithm=int.Parse(arg[12..]);
             }
-            if(requestedAlgorithm is not (3 or 4) || _drainageSmoke && requestedAlgorithm!=3) throw new InvalidDataException("Unsupported preview algorithm / drainage experiment combination.");
+            if(requestedAlgorithm is not (3 or 4)) throw new InvalidDataException("Unsupported preview algorithm / drainage experiment combination.");
             BuildUi();
             _algorithm.Select(requestedAlgorithm==4?1:0);
             int selected=_profiles.ToList().FindIndex(p=>p.Id==requested);
@@ -72,7 +72,7 @@ public partial class MacroWorldLab : Control
         tools.AddChild(new Label { Text="Seed" });
         _seed=new SpinBox { MinValue=int.MinValue,MaxValue=int.MaxValue,Value=7319,Step=1,CustomMinimumSize=new(160,0) }; tools.AddChild(_seed);
         _profile=new OptionButton(); foreach(var p in _profiles) _profile.AddItem(p.Name); tools.AddChild(_profile);
-        _algorithm=new OptionButton(); _algorithm.AddItem("Algorithm 3 (stable)",3); _algorithm.AddItem("Algorithm 4 (experimental)",4); tools.AddChild(_algorithm);
+        _algorithm=new OptionButton(); _algorithm.AddItem("Algorithm 3 (preserved)",3); _algorithm.AddItem("Algorithm 4 (accepted)",4); tools.AddChild(_algorithm);
         void Button(string text,Action action) { var button=new Button { Text=text }; button.Pressed+=action; tools.AddChild(button); }
         Button("Generate",Generate); Button("Save world",Save); Button("Load world",Load);
         _layer=new OptionButton(); _layer.AddItem("Elevation"); _layer.AddItem("Land ownership"); _layer.AddItem("Mountain ranges"); _layer.AddItem("Drainage routes"); _layer.AddItem("Catchments"); _layer.AddItem("Basin candidates"); _layer.AddItem("Regional refinement");
@@ -103,15 +103,13 @@ public partial class MacroWorldLab : Control
     }
     private void ConfigureAlgorithm()
     {
-        bool experimental=_world.Manifest.Algorithm==4;
-        for(int i=(int)MacroMapLayer.DrainageRoutes;i<_layer.ItemCount;i++) _layer.SetItemDisabled(i,experimental);
-        _refineButton.Disabled=experimental;
-        if(experimental && _layer.Selected>=(int)MacroMapLayer.DrainageRoutes) _layer.Select((int)MacroMapLayer.Elevation);
-        _message.Text=experimental?"Algorithm 4 mountain experiment. Hydrology diagnostics are deferred until morphology review. Saved separately from Algorithm 3.":"Algorithm 3 stable geography. Saved worlds retain their original algorithm and profile.";
+        for(int i=(int)MacroMapLayer.DrainageRoutes;i<_layer.ItemCount;i++) _layer.SetItemDisabled(i,false);
+        _refineButton.Disabled=false;
+        _message.Text=$"Algorithm {_world.Manifest.Algorithm}: {(_world.Manifest.Algorithm==4?"accepted new-world terrain":"preserved historical terrain")}. Drainage is diagnostic metadata, not physical rivers/lakes. Saved worlds keep their own algorithm.";
     }
     private void InspectRegion()
     {
-        if(_world==null || _world.Manifest.Algorithm==4) return;
+        if(_world==null) return;
         double spacing=_world.Manifest.Profile.WorldSize/128;
         double minX=_world.Manifest.OriginX-_world.Manifest.Profile.WorldSize*.5,minZ=_world.Manifest.OriginZ-_world.Manifest.Profile.WorldSize*.5;
         int cx=Math.Clamp((int)Math.Floor((_selectedX-minX)/spacing),0,127),cz=Math.Clamp((int)Math.Floor((_selectedZ-minZ)/spacing),0,127);
@@ -139,12 +137,11 @@ public partial class MacroWorldLab : Control
     private void RequestMap()
     {
         if(_world==null || _closing) return;
-        if(_world.Manifest.Algorithm==4 && _layer.Selected>=(int)MacroMapLayer.DrainageRoutes) _layer.Select((int)MacroMapLayer.Elevation);
         _cancel?.Cancel(); _revision++; _readyFrames=0;
         _pending=new(_world,_x,_z,_span,(MacroMapLayer)_layer.Selected,_revision,_drainageWorld==_world.Manifest?_drainage:null,_refiner?.Recipe.Coarse.World==_world.Manifest?_refiner:null);
         _status.Text="Generating map…\nPrevious view stays visible until ready.";
     }
-    // Keep stable v3 paths intact; experimental worlds must never occupy their save slots.
+    // Keep historical v3 paths intact; versioned new worlds must never occupy their save slots.
     private static string WorldPath(int algorithm,string profile,int seed)=>ProjectSettings.GlobalizePath(
         $"user://macro-world-previews/{(algorithm==3?"":"algorithm-"+algorithm+"/")}{profile}/{seed}/manifest.json");
     private string SavePath()=>_manifestPath!=""?_manifestPath:WorldPath(_algorithm.GetSelectedId(),_profiles[_profile.Selected].Id,(int)_seed.Value);
@@ -224,7 +221,7 @@ public partial class MacroWorldLab : Control
         using var image=Image.CreateFromData(map.Resolution,map.Resolution,false,Image.Format.Rgba8,map.Pixels);
         var texture=ImageTexture.CreateFromImage(image); var old=_texture; _texture=texture; _map.Texture=texture; old?.Dispose(); _displayed=request;
         var p=request.World.Manifest.Profile;
-        _status.Text=$"{p.Name}\nAlgorithm {request.World.Manifest.Algorithm}{(request.World.Manifest.Algorithm==4?" / EXPERIMENTAL":" / stable")}\nSeed {request.World.Manifest.Seed} · view {request.Span/1000:0.#} km\nPrepared in {map.Milliseconds:0} ms";
+        _status.Text=$"{p.Name}\nAlgorithm {request.World.Manifest.Algorithm}{(request.World.Manifest.Algorithm==4?" / accepted":" / preserved")}\nSeed {request.World.Manifest.Seed} · view {request.Span/1000:0.#} km\nPrepared in {map.Milliseconds:0} ms";
         _details.Text=$"{p.Continents} major land features\n{p.Islands} island candidates\n{request.World.Ranges.Count} mountain belts\n\nSampled view:\n{map.LandFraction:P1} land\n{map.SampledLandComponents} land components\n{map.MinimumHeight:0} to {map.MaximumHeight:0} m\n\nComponent counts depend on zoom and map resolution.";
         if(request.Layer>=MacroMapLayer.DrainageRoutes && result.Drainage is { } d)
             _details.Text=$"COARSE DRAINAGE / v{DrainageAnalysis.Algorithm}\n{d.Grid.Width} x {d.Grid.Depth} cells · {d.Grid.Spacing/1000:0.##} km each\n{d.Basins.Count} basin candidates\n{d.Outlets.Count} sampled ocean outlets\n\nYellow: routes with >= 4 cells' area\nCyan: receiving ocean outlets\nPurple/pink: basin/spill cells\n\nArea is not discharge. Spill height is not water level.\nFingerprint: {d.Fingerprint[..12]}";
@@ -278,14 +275,8 @@ public partial class MacroWorldLab : Control
             if(WorldPath(3,_world.Manifest.Profile.Id,_world.Manifest.Seed)==WorldPath(4,_world.Manifest.Profile.Id,_world.Manifest.Seed))
                 throw new Exception("Experimental save slot aliases stable world.");
             _algorithm.Select(_world.Manifest.Algorithm==4?0:1); Load();
-            if(_algorithm.GetSelectedId()!=restored.Manifest.Algorithm || _world.Manifest!=restored.Manifest || _refineButton.Disabled!=(restored.Manifest.Algorithm==4))
+            if(_algorithm.GetSelectedId()!=restored.Manifest.Algorithm || _world.Manifest!=restored.Manifest || _refineButton.Disabled)
                 throw new Exception("Saved algorithm / preview capability restoration failed.");
-            if(_world.Manifest.Algorithm==4)
-            {
-                _layer.Select((int)MacroMapLayer.DrainageRoutes); RequestMap(); InspectRegion();
-                if(_layer.Selected!=(int)MacroMapLayer.Elevation || !_layer.IsItemDisabled((int)MacroMapLayer.RegionalRefinement))
-                    throw new Exception("Unreviewed algorithm entered hydrology diagnostics.");
-            }
             float size=Math.Min(_map.Size.X,_map.Size.Y); var offset=(_map.Size-new Vector2(size,size))*.5f;
             using(var click=new InputEventMouseButton { Pressed=true,ButtonIndex=MouseButton.Left,Position=offset+new Vector2(size*.75f,size*.25f) }) MapInput(click);
             double expectedX=_world.Manifest.OriginX+_span*.25,expectedZ=_world.Manifest.OriginZ-_span*.25,oldSpan=_span;

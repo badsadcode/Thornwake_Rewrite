@@ -105,7 +105,7 @@ internal static class DrainageTests
         foreach (var profile in profiles)
             foreach (int seed in new[] { -9, 0, 7319 })
             {
-                var world = MacroWorldManifest.Create(seed, profile) with { WorldId = "0123456789abcdef0123456789abcdef" };
+                var world = MacroWorldManifest.Create(seed, profile,algorithm:3) with { WorldId = "0123456789abcdef0123456789abcdef" };
                 var recipe = MacroDrainageRecipe.Create(world, 64);
                 var watch = System.Diagnostics.Stopwatch.StartNew(); var a = MacroDrainage.Build(recipe); watch.Stop();
                 Invariants(a);

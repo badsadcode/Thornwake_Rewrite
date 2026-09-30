@@ -153,13 +153,13 @@ internal static class DrainageValidationTests
     {
         var fixture = JsonSerializer.Deserialize<FrozenFixture>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "drainage-v1.json")),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        check(fixture.MacroAlgorithm == MacroWorldManifest.CurrentAlgorithm && fixture.DrainageAlgorithm == DrainageAnalysis.Algorithm,
+        check(fixture.MacroAlgorithm == 3 && fixture.DrainageAlgorithm == DrainageAnalysis.Algorithm,
             "existing frozen algorithms still supported");
         check(fixture.Profiles.Length == 5 && fixture.Scenarios.Length == 15, "complete pre-continuation fixture matrix");
         foreach (var scenario in fixture.Scenarios)
         {
             var profile = fixture.Profiles.Single(p => p.Id == scenario.Profile);
-            var world = MacroWorldManifest.Create(scenario.Seed, profile) with { WorldId = fixture.WorldId };
+            var world = MacroWorldManifest.Create(scenario.Seed, profile,algorithm:fixture.MacroAlgorithm) with { WorldId = fixture.WorldId };
             var analysis = MacroDrainage.Build(MacroDrainageRecipe.Create(world, fixture.Resolution));
             check(analysis.Fingerprint == scenario.Fingerprint, $"frozen {scenario.Profile}/{scenario.Seed} reconstruction matches pre-continuation output");
         }

@@ -1,0 +1,365 @@
+{
+  "Format": 1,
+  "TerrainAlgorithm": 4,
+  "DrainageAlgorithm": 1,
+  "RegionalAlgorithm": 1,
+  "Subdivisions": 64,
+  "Cases": [
+    {
+      "TerrainCase": "balanced/-9",
+      "Resolution": 128,
+      "CoarseFingerprint": "26fc83a6a70d44feb929462488d3589c8cda325287b80768fa4f5d4f6a63b40f",
+      "BasinCount": 122,
+      "OutletCount": 13319,
+      "Tiles": {
+        "3379": "a3e3d764aa00fa07fc67777e2a2fb6fbd33532ce69b56f578a2fd00121619e5e",
+        "3507": "d3a9a4ba1e766aee7beebdfb7be4a74d975874cf1730cbf7f446a0210d46aea5",
+        "10914": "951627add48a4cb2238be4baf8e32f1b7ca1e250b33beca398a57012c1a00ce4",
+        "10915": "539a92d825bf386e034f6567798fe0505c883331bab04a5ac45555fbc6ed97d6",
+        "10916": "3c8446509463eed02e6e93ce1c60bb9cdae4fcd9eae93a2a0d9aa38130790cbf",
+        "11179": "56a6e9e53b54043192aace7aecc04069b3a0c6e2920cab9a34b16322c335a036",
+        "11307": "a7c1565d9529554d41721b9229e3f79329a06a57677d8a845c8769df4f2d33cc"
+      }
+    },
+    {
+      "TerrainCase": "balanced/0",
+      "Resolution": 128,
+      "CoarseFingerprint": "1b3ebd6e0e51bb42113f1e96c9ff1b2949659364e5d6300e56e7803912c91bbd",
+      "BasinCount": 141,
+      "OutletCount": 13390,
+      "Tiles": {
+        "3004": "5ee8402dde70148b51dbe616685e673a4678db1fbf34c4a3776b005133bffd42",
+        "3120": "8fbcff746c407b5ccb7e9e9793d57758dd2d1da778921d9bdc4b4212218e70e8",
+        "3132": "8adc4c44391d4c6ebe44ce3490aaba63e1001113f92b298db4552f6d4e7c5d4a",
+        "3248": "2652c2831b53f8d231888d44c953ca34f610adb45d4ec394fd359d6c241819ac",
+        "10021": "5daf4aba418fe155cce791a245939657ee70beae56b06f2d529f5ce46a8e4445",
+        "10149": "ab03f9965d9d40d0cbaef67b89ba7c46765f769681366c16f8666599aaee4c14",
+        "11157": "62f1e4a956d2cebd3620e39b8ee73ff4af34bdd03d742d991ebbe3e554815b37",
+        "11158": "04f5dfbb132ba34f1efea93733f3188d2b990352bc7049d53aad21e289670a03"
+      }
+    },
+    {
+      "TerrainCase": "balanced/42",
+      "Resolution": 128,
+      "CoarseFingerprint": "95b79fe487121e252813ecb1616a92c58fb65991bf0a3bf853f278d52f0751a2",
+      "BasinCount": 130,
+      "OutletCount": 13277,
+      "Tiles": {
+        "8736": "4cc641ec47ac795b4fc689537b7d387ffc24a5a13c013c13ae88f99ad2c8f7bb",
+        "8737": "c627cfa0ea24d400145579e1b63a46b781cb7e4bc7416d5a81ce625c208a6dbf",
+        "11433": "2e8d2c36da9524fbd6c862f444e2cf2897d2923924e73d230c2c18dd83d5a6a2",
+        "11434": "b79bd1b9afbd06f18dc6f677cdf86f7d6d34cfa6c0d1e0e446deeb6160dcb8c1",
+        "11575": "1ec52836e3dacceec8f21f3c7f1c6477142850554458b122251e142ba3834d55",
+        "11703": "38c565b5659d98d69f1713d346fe1c27e6e7a9047aa54a7415055e350e56aae7",
+        "12582": "523b6de95f26cf2d56b4a500c36c81194359d318577590be4a9f86120bdc46da",
+        "12710": "160ef8074d2e73d0363b1ce49a1ab610265fd38fe9ca311e73623ad6798cb06d"
+      }
+    },
+    {
+      "TerrainCase": "balanced/7319",
+      "Resolution": 128,
+      "CoarseFingerprint": "e11a07428474c2c09fce5ca9f932cdfeee7830114927b6699fecb388e8f9ae71",
+      "BasinCount": 137,
+      "OutletCount": 13160,
+      "Tiles": {
+        "2491": "27cd177c8c5546d36607037c7cf202ed5a7f8a668d3071c36cf050e14d7b1751",
+        "2492": "d8830c81ee459261c9b198cc892e7ef49e6b1014b26c16a1f31efac0e1a2e83e",
+        "2493": "0797b5d8a0a1511bd8f593786bd79a4cf80467d8e56bffb2eda398435bd2dda0",
+        "3140": "ed9a1a8deee77195903912c94081d12cd1fac41fed8a2af83484af8067bb09f0",
+        "3268": "348e31ccff82de1f7c9bb9596db84873f10d90ebaaea0c4134eef4c18be0c150",
+        "3545": "8f4cf85832c51169bae44c8cb85168692fdbc6379d4be7f28d778311da39fca7",
+        "3546": "83632e26c6cc8d370bf7b6d453fcff5674aaafff874de5fdacf0717ffced93ae"
+      }
+    },
+    {
+      "TerrainCase": "continental/-9",
+      "Resolution": 128,
+      "CoarseFingerprint": "e11a763239e99d6fc7fa0ea7be3203b1457d98b43a483bdaff9dcb19315b57e7",
+      "BasinCount": 65,
+      "OutletCount": 14438,
+      "Tiles": {
+        "10823": "430f1f90d9aa0f14257056e0406862843719709c717cbf8b319b58e84de32549",
+        "10824": "6f065c4fa33842aee1d976bc05fcbb14fcf738297ac19724175df4cdb371870b",
+        "12107": "87b7180a730c8040887b43c56d2354b2404431f77452327511e88f9286789406",
+        "12108": "3c91c54b9ff63d7d20ae36f7ad5a3f49c79ffd26a7d93de0ce2c9f994ad64692",
+        "12109": "66ec3f2563722a1f9ffa09e8f16f8f2deb47cc0b34c7c60f9952b707f19949a5",
+        "12605": "770bc39e5a6821d6bb644104a5b6c324794511a49db3bd049b9df78952f49a17",
+        "12606": "3d08648b67e4c51f8dfde93e1ce6417be9289bf11980c9346b3bd25aa8e0f1b5"
+      }
+    },
+    {
+      "TerrainCase": "continental/0",
+      "Resolution": 128,
+      "CoarseFingerprint": "43804fb7752b404786f1778445f3c8457d18d2162d26e7a77af38bbe92c9e446",
+      "BasinCount": 75,
+      "OutletCount": 14007,
+      "Tiles": {
+        "4931": "e07f21bbbddcf84b8f83b41190de7a6eae2e42d45da694048e7c6f562ed8eec1",
+        "4932": "5213c36560da73d34b209219b26e109bec2284f5c291886c8bd0209cba419760",
+        "7854": "1d266e8da6823b5a02fb303cda779a66705305bfaee890a533a05a982e216309",
+        "7969": "7e424d6cc3bbdfbe6f70872d5acf87e8cede8b7d3bc65cdda7e4dd049d6d128e",
+        "7970": "88bf1078cd867d786d43c9a183272ee18270960e8052891aa83f42d91f55781e",
+        "7971": "99b0ec58d1da6db33584b817866ff5ab548cbd2c971cdcf27ffa85a20b6d4205",
+        "7982": "4e9230cf1d95aefb4c6c339449b908a40bde0dc07ca33c03cd1c835b426e8410"
+      }
+    },
+    {
+      "TerrainCase": "continental/42",
+      "Resolution": 128,
+      "CoarseFingerprint": "e111c8c8667ad99e3d0af35ac65ae8e2eaca87940b12a5f48ce5778fd46049ce",
+      "BasinCount": 92,
+      "OutletCount": 14114,
+      "Tiles": {
+        "3908": "0e6a6466716c7aeed97c6ae6ff4132a355ae37640f3a5ff925defc29bdea9218",
+        "3909": "fad89162f15fffcad0982dfdbc5501a2798653c6ac052ab3c5070708d771a9ae",
+        "8376": "87631eaebcc257a2df15f469d01be880a0fb5c9d242c259234dcab38efff575b",
+        "8503": "d654405edf1ff21b921826342030a91be345a249f0dfba38686b9b547eed7299",
+        "8504": "4c5c3fda2a7250eb1adcdc5859b1d3646465b62f4008d638b25807d55f3d990e",
+        "8515": "c6f665036bfdd7486e37be46af0f11935798e61b37f315d7196a5119aa246f49",
+        "8516": "8d081c2bc1d56fdf670d54e7eb3e2085c508180450fa0842e8a2b3573e43a5e9"
+      }
+    },
+    {
+      "TerrainCase": "continental/7319",
+      "Resolution": 128,
+      "CoarseFingerprint": "a4bcc75710c3eabd77448ae0f65b231513554c7e84f69124f4484f53954cdaeb",
+      "BasinCount": 107,
+      "OutletCount": 13524,
+      "Tiles": {
+        "8405": "36818ec54545c924e949ecba6a82cae1a70afd07774f59c44ff99e3ce73b8e37",
+        "8533": "fce4accdb09e3d54c61a1356cc2e5bd01e5561158de2075bdef4ee6efe82f5c6",
+        "8909": "a252f026555565f609952c1333291d61912801ba085f19afaab74206ecddd29b",
+        "9037": "6cd4ca758c005fb0430ac8ea588cb37263a983db9f4c35ea4670df2663d186bb",
+        "9183": "be957af07ebbcb3148e3cf75e29a161f738eeb274168014bbf97c29d5296b831",
+        "9184": "f6d91e62772154bfa9ad0da219ad4bb15d35d1647cf09c20f507a9929ffe2b4c",
+        "9185": "41564dd57686e5f9217cbdbc0f7049ddcd6d13422e7cfc3ce11bb6c18a9865f1"
+      }
+    },
+    {
+      "TerrainCase": "archipelago/-9",
+      "Resolution": 128,
+      "CoarseFingerprint": "628a6bf0e8a59da06a0a8184cd50fc63cda5c4e3fc2b66e8471faf790f06e1cd",
+      "BasinCount": 149,
+      "OutletCount": 13732,
+      "Tiles": {
+        "6879": "8e1d8436439731883c993f75f9cb9aa910cbbfdf4a3b986a3d63215c839f35ad",
+        "6880": "ab1f0c6781dfec69e643f955e364d3279eed344e29881a91a4fff0e583d24ab4",
+        "6881": "65a3aad4146a25bbf48c0190a7f6c73465f0966b6ca9ef3cfcd11c87717101b1",
+        "9832": "d6da971fb94e52e373f737c48c006aca3ed597e1cd6e4aafbc0e25320228ef8b",
+        "9833": "7dfe7b19f299df55b41f6eb35f0f43e23a7c9dbe8bb3e62c929610734031784c",
+        "10930": "4f07a00e3e46f305ac4a40f5481c5f09cdcd9644c40c1b035677a91c58d4269d",
+        "11058": "75e5224a90f8cab82b2afd8a8f72e68c82347afde7b50c8850882457ed42cbd5"
+      }
+    },
+    {
+      "TerrainCase": "archipelago/0",
+      "Resolution": 128,
+      "CoarseFingerprint": "ff8508ea94acf90622f8b81c5c5cc359ebd30a0c1aa064ab27dce39d97436b82",
+      "BasinCount": 120,
+      "OutletCount": 13963,
+      "Tiles": {
+        "8866": "e372c3a7ab1d50500f21f52823a68d9b4591b2bc0273373204b192b391bdeb8f",
+        "8867": "48f22d76ebe0edf27fa2681ce0ef19af23db5a3ffea70be2f2e0c18d7fb0282d",
+        "13389": "46347813957cc68d864d39a688b45390a054f4a44678ce1b6aecd5e46e90a392",
+        "13390": "4bf233d297a14f830ab43556c501acfae53eafcba6fe1be658ad7c4227d21834",
+        "13909": "d273c14084d40a21f5a3077347c64972f94c67823b803c03419f18291c60a14b",
+        "13910": "fba0ee20097da5cb67d8c73492bedc7f96f57de91c5a8204efbf2005c27603cd",
+        "13911": "5432c9b323d90bab1c1ec6157b26f1267d8b867e9085c39a8f4e3105b1caa1f6"
+      }
+    },
+    {
+      "TerrainCase": "archipelago/42",
+      "Resolution": 128,
+      "CoarseFingerprint": "e29efaebbbe7273d2191b10c21ec8fdd46d20ddb5f89e5c1a8b457561837a401",
+      "BasinCount": 117,
+      "OutletCount": 14148,
+      "Tiles": {
+        "2379": "3f5ad94069394e4d7a3c67e7e4d3fb01ed519a9bb03481647392b68434070e16",
+        "2507": "87389c655320c9df79c245d86a368e219e984955db75ffc6b5a04568a9d53f2c",
+        "2635": "d006307ae2f86b74ae4b735040eb291cc75b3193b57b0af39ff82fab49fe5df5",
+        "5544": "29ec5f18abb08184c6db2f90c2d152a8087d074a822d4d80ca6f91cfd7609804",
+        "5672": "9dd1d4bd67c654012ae4b6fa3c6b7dcb32382d60055c7cc900ed4aae3af889c6",
+        "9805": "d69fe2b3b814c5c55ad6bbcdc3a3119b568c46e831c8ae55eef672a789272753",
+        "9806": "9674f7d67cb4ce3ca3c0465a2ddc8b52a475637ef21a991e688061e23f6ff74e"
+      }
+    },
+    {
+      "TerrainCase": "archipelago/7319",
+      "Resolution": 128,
+      "CoarseFingerprint": "ec9b68bb93799d0e2e12dbd875ebabf8a477cce8d782e1bf0e8cda000dc787c0",
+      "BasinCount": 118,
+      "OutletCount": 14107,
+      "Tiles": {
+        "4502": "e6686782bb517fb5441c283335d6798dd9025f7a4dde4fccf80d3a114ed3b0c2",
+        "4629": "75a477ef382814b3554090b8adcccc1644d07eee172b7606f2fea0c11b51ed35",
+        "4630": "8851d10250069688e05f3d8b08317a03d064e5972913fb4a2ac5ae4d88b32dc6",
+        "5090": "dc7faa5a4902cc1c21b8b8d41c51586b0f3acd25b0c3d363c30fae7f182a46e2",
+        "5218": "777a1f5a85239f12da5de471d6fb15ca6137d722e52dc59e02e38df0e8dac6f6",
+        "14232": "18f1bac081af3ad0bf73d4063c70f3981edd09b498842b2880ca2035ccdb846b",
+        "14360": "af8d602a60898009b4daa87fcc7ae3e356f9f991e0fc346eec6a50d40134cb7f"
+      }
+    },
+    {
+      "TerrainCase": "mountainous/-9",
+      "Resolution": 128,
+      "CoarseFingerprint": "f8fe337154288a9dfd578abf1839c77a579502129e8e7f15074621bdebb6497f",
+      "BasinCount": 99,
+      "OutletCount": 13979,
+      "Tiles": {
+        "10693": "6014c55bf3b2f96820ed7f7511513993a0dee7a879ca98b503b8c07c5987065f",
+        "10694": "1dc82de9a8a93918b5d71abc5de24f41512d7d854a966efd4a5410e0a7499f65",
+        "11851": "796240cf87e67810892cb9a8a69cbc99285008465d2ae0ea0763545c69fe5b56",
+        "11979": "74a850c9cc7a9acbf19fa326432aa28955a8284ec6987950a8c271392243f50e",
+        "13014": "d7f77583730597a6d78f0826e8e1f81c5901697af08664b8ebcc306643d1f027",
+        "13142": "4a2decdf3ac488d2b051267f4d23fcbbef9398d3d3ad2492811a02ff1cf89ea6",
+        "13143": "c5d9e301cc3c6bf953725114dbd61c7fc71acea8318b664c894ff20a94aae064"
+      }
+    },
+    {
+      "TerrainCase": "mountainous/0",
+      "Resolution": 128,
+      "CoarseFingerprint": "0c37b34d17d75b3288ff33c54237bafd332d2aef1d46d805f86158e6432adf52",
+      "BasinCount": 121,
+      "OutletCount": 13841,
+      "Tiles": {
+        "3672": "2b55776ed38747b3ce021b86c4fa357577a33f45fb57ea7fe1a1da66fb826d81",
+        "3673": "941621570fd22f8cc602cb483942b4dc9b88a0af9d03b5c01cb176616631fcc7",
+        "9819": "acbb0e136cf196c44bfcf0041bfab64d62f91a263f6e59fd8bcd81aa0133437c",
+        "9947": "7d8974096ae65741c92c5b41a5a1680d2ae8ba1dff5a618c56d077041564a69f",
+        "10973": "a7c153deb162e17b0d80025cc8a2b1e167fad1e1b43bc02297c050460e596166",
+        "10974": "d2bbdf01ed79eae0a85162d156ff67e7f75cc9a7825ece220a9aa2fc4c830395",
+        "11101": "02a24c2ba7a6f32f403a282861c70c73dc5cbd69c1054115cd8868431fa4c3d7"
+      }
+    },
+    {
+      "TerrainCase": "mountainous/42",
+      "Resolution": 128,
+      "CoarseFingerprint": "d1a92890a4b91c662ed65ae0327a58be93961562c0c612a4306cac68fdbe512a",
+      "BasinCount": 94,
+      "OutletCount": 13878,
+      "Tiles": {
+        "7116": "795349ebdfded4855a94016c7f8c60a30abb83f6856566983d1b0defe3954359",
+        "7244": "f4fc14a3c3574385b885e03ad9350b4c8aec2e3fe13ff68a3487d93e7b473364",
+        "10524": "e86651ae0bdea77fbb738201170c53f4fdb16dafc6476751361f5e089a967961",
+        "10652": "2b6c10e06635c4bb2f10cab593eb613f227ae8be66accb6f01054307d1e7f587",
+        "11163": "7d3b59b4d978a3b98867cdb89c3dcfa8baa882269da0381d32167875096b0c6b",
+        "11291": "10170c0837ed6d5f302ee64c613301af1dc02e27ff644db14a2cbdf081a63ca2",
+        "11419": "4b9ef035e8c56b26f922008343b9fa85ad2a1378752cf1d96902fe9972b21489"
+      }
+    },
+    {
+      "TerrainCase": "mountainous/7319",
+      "Resolution": 128,
+      "CoarseFingerprint": "2eb5bf2cd205d86c7db0db35fcb922c2af4ad2ba7cf59f1a44229b5490913b84",
+      "BasinCount": 84,
+      "OutletCount": 14080,
+      "Tiles": {
+        "4152": "a9bc90689c042e534cf53441e5586b7991c7284647e66b9f4212e3fbfa48d4ce",
+        "4153": "9301ee9821ce79f26e7c25ddaa3b74a75885b29af8cfc17acb86707b52e8e765",
+        "5432": "40974a26d9a9585e26165cf01dc57d9b8e5df9b9d32cfd63dd6a0b28e05ec62a",
+        "5433": "1b48b63a379d9af22fc444d90de9321ae8936f901f2765dcafdeb5b2494c0086",
+        "12326": "f89671fb7d8420cce475d621c7aca13e222390512cacd6551d80b3b24ed24204",
+        "12454": "59c250477bbc06305520b72d64431a02527edb36bd0895052c95a28d4717a29a",
+        "13992": "ab615e440d370db55c81e2be4eab46707501f101f4d80e5ff23ee29d96f95077",
+        "13993": "6c64d6130d48a360611fa2996c90e78b5f8154a0c76cd8373a142303ceeec20a"
+      }
+    },
+    {
+      "TerrainCase": "vast-world/-9",
+      "Resolution": 128,
+      "CoarseFingerprint": "d0b2e804aeef23ba7fdb7e4a31fdb50cb2c3c7dba3cbaf9dc41a6151b563cca6",
+      "BasinCount": 134,
+      "OutletCount": 14157,
+      "Tiles": {
+        "9825": "e2d7408187c8b311f7f7a99ca4d1d5ebe2d80d7b4cbdf6aaa7ef2e143ab3d65e",
+        "9953": "a677db3f88d4b1bcc7d608f228cd52e4063b22e0e47942f041f278006493ceba",
+        "10527": "711bfe328d77742d816b8c7495a02ae7dc118ea0d02d0d37c8f5ba1f8a36f5fc",
+        "10600": "21cff8939ac86100fa7c44f13e5597ba8e6d7ee53c4c5ffbfb286a27024f2019",
+        "10655": "e9e39f15f81e822994267bf69dac9ecc460dd8ba045bde6b0366e4c106c588db",
+        "10728": "fc9ca6bf3eec29f4493d2f5cfc0c386ff09e8c40634a57e39c93d850c672bec3",
+        "11371": "f397c2d3ade160bf93e784bd34f6f716e8f79072ea98be79f4766b6057543028",
+        "11372": "411d14ff564148d9b26bbe0917d9a5fa2a7643922cbfdf21a12d475f94b494da"
+      }
+    },
+    {
+      "TerrainCase": "vast-world/0",
+      "Resolution": 128,
+      "CoarseFingerprint": "6a68c09d30cd74ca02d7583a140f83c792b0118ac258ed98a213e23011ccfd18",
+      "BasinCount": 156,
+      "OutletCount": 13994,
+      "Tiles": {
+        "2230": "dfc62715e5c4e725cf6afb366dcfc60781e16b13f38679d8682a2a3c0a10dee8",
+        "2358": "bb7bd7a9de7e0b445e864de9f77677a98c15b44b431c70384b0d5da67e2a45d3",
+        "2359": "9dbd667b7cdb4b61d89dfaed0f3e2cb45845f24111c9e3ac5713e8b19813e904",
+        "2870": "62ea8c645e895ce48509557ffe27c942251949a60676a0e47899d7f7f7543d0e",
+        "2998": "c41eb4ddb5738cb31ace52baf645508974b91dd92c36910a277febefdee75244",
+        "6360": "fbb2c49f0bb0c29baf64af9705cea0e508a2171873cee2795b4775b8e5b579f2",
+        "6488": "ea365ba6d0794df3ec3c62f6f96638f8a8c9cf3ae6fcb3a3a86b4d021ed29265"
+      }
+    },
+    {
+      "TerrainCase": "vast-world/42",
+      "Resolution": 128,
+      "CoarseFingerprint": "b23f784da73d6b523b68d76bebd08ce6b94281c77dae17886676738756276e22",
+      "BasinCount": 141,
+      "OutletCount": 14115,
+      "Tiles": {
+        "8509": "5b24a52a31399c8aef3d0d3a2645bdc223458eb9e3d908c992de223819b0296b",
+        "8637": "7cdbab1a5999df1b83fefc7c33dfc25cd4e5fad98b6215b6214962a08ddb024d",
+        "8765": "47245874720a3904516af477384c067d7c9b403640cb483b0fabd1bc5435fc6b",
+        "9405": "bf11103bd76c58cc5247f6c61b572cc85aedfe2f80125de612e3e1e1b963ac32",
+        "9533": "0a579851f54fd3c9ce3e07df0c6e1b1dad5d1452333f4d282882a54196f95eec",
+        "10148": "aca10fdc72f94539c71287f3bd489d1bb2317f9542049d4c1a0fbcf467b497d9",
+        "10149": "1305eee87e7f4d05128cbab70185d52fadbfe02477a91f64dc9770f243c1918b"
+      }
+    },
+    {
+      "TerrainCase": "vast-world/7319",
+      "Resolution": 128,
+      "CoarseFingerprint": "9b4ee0f5737b1ad9a9e949a7a33ca70ac8a38908ef9eb1ab508a2e25e1ffcd1f",
+      "BasinCount": 150,
+      "OutletCount": 14117,
+      "Tiles": {
+        "11676": "565f80a12750577b8facaf5fa885d50f3df8c0bad609fa4c895d67d5588172da",
+        "11804": "6eee9bfece4f391cdc6dc542c8b37096c59db47335ca92477a74945fa8a2d77a",
+        "11932": "33f26040a0cae6b190b452477e52098dff8da451a6ee46ba43ec992a0afc69c3",
+        "12097": "ef6b9aa7a7392b1d408c2fa89e1d3100a824065edee91ced37755ba796bde706",
+        "12225": "deac299fc693709abe5832c5a48f1b666b23a7661befbc4593567694d17430c5",
+        "12869": "3f1eee66e2c851da7b10a16cca17a2590a03cf01b60d6dfd4acfd3c2489d0304",
+        "12997": "7f6e29b108cf4a1a7aaac11206b414cb8b8ecc0ae1ec2df4c963ddbf88ee2d7e"
+      }
+    },
+    {
+      "TerrainCase": "vast-world/7319/far",
+      "Resolution": 128,
+      "CoarseFingerprint": "1bf6fba04ebd82329b1c815012bc4779a0371a50d8d8ecb31d0479db41f453a6",
+      "BasinCount": 150,
+      "OutletCount": 14117,
+      "Tiles": {
+        "11676": "a84b225019d8002e17bc7f42bf8b9b1d2346540789029021da65e75c276156d9",
+        "11804": "7b58a5a73bb120fec1b5eb30bfe9fe1c303bf8509fb0f34563a1a9d2fbaf4fb2",
+        "11932": "c91be1c0b903acb41f60b7aa9a435b490f6d0c2556f6739502b9855e317c1d42",
+        "12097": "bb471c4c0d329694aa7793cd9662ae083747bbf2d156204b511f7ece38dd9136",
+        "12225": "34ab712a9c6f36e54a354b50583c255d04df3d4f73e46aeee86dda6d5449c3ee",
+        "12869": "271313e58daf16dfb1c441ee278ce8cbec8ddfc7ee2851c5f0df3ffeace0288b",
+        "12997": "6223799c9c7cfcb6896951670b7cbed9e8a3fc0a91f7fdc3cd4f880d58508390"
+      }
+    },
+    {
+      "TerrainCase": "mountainous/42/far",
+      "Resolution": 128,
+      "CoarseFingerprint": "665dc7df373c05371c05edc830dc67a30057eae5536aa89255e4669ec9fbe4e7",
+      "BasinCount": 94,
+      "OutletCount": 13878,
+      "Tiles": {
+        "7116": "a6d85a85aa1eabc48396c782bc1e5f333ab7dba2065d3dd0fe9c0966dbd47057",
+        "7244": "735d7d1ef45103a0b03d468a7be41b4f5959dfb65568b9f20e80d42418378466",
+        "10524": "8943a38c34a1830c12c8a9e1cdf240fef87f3d973cedbe45b9b280d74212a193",
+        "10652": "dbd07a9b7ec76efdbe9ff9857654741905ca41c1325d1a2cc91a87be9b6fb795",
+        "11163": "93bf48f5a79726f69881ba224ce8565aeae2b8e2ed28d2a89c2cb3ccb61ab87e",
+        "11291": "34a8bb0f7d23e4d46ee633920570ccb27a58b62e57655efb2bd06eaa30da3d59",
+        "11419": "9a9635b0680b96a642353e537258ef8d6672999191294875372fa55dcd4ac8c0"
+      }
+    }
+  ]
+}

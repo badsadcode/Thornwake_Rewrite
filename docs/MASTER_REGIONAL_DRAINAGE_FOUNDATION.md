@@ -58,7 +58,9 @@ The 320 x 320 regional preview raster dominates the displayed preparation time: 
 
 > **2026-09-30 mountain experiment checkpoint:** [Algorithm 4 is implemented as an opt-in review candidate](MASTER_MOUNTAIN_V4_EXPERIMENT.md). Algorithm 3 remains default and its fixtures are unchanged. Stop for visual/design review; the hydrology work below is deferred until the terrain decision and separate accepted-version fixtures.
 
-## Exact next recommended Master step
+> **2026-09-30 accepted-A4 checkpoint:** the user accepted A4 morphology. Separate terrain/drainage baselines are frozen, new macro worlds default to A4, and bounded hydrology inspection is validated. See [the current acceptance/resume checkpoint](MASTER_A4_HYDROLOGY_ACCEPTANCE.md). The earlier stop and next-step instructions below are historical.
+
+## Original next recommended Master step (superseded)
 
 Start a **regional hydrology acceptance spike** over selected neighbouring candidate basins/reaches. Reconcile proposed ports with higher-resolution terrain: find true sill profiles, distinguish submerged lakebed rises from blocked channels, resolve connected lake components across patches, and refine the grid paths into bounded adaptive corridor profiles. Establish acceptance fixtures for a continuous downhill route, an explicitly blocked route, a basin with a revised spill, and several merging tributaries. Keep macro algorithm 3 and drainage algorithm 1 unchanged; version any regional-output changes and retain the reconstruction fixtures.
 

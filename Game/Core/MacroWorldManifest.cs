@@ -65,8 +65,9 @@ public static class MacroProfileCatalog
 /// <summary>Immutable new-world header. Does not migrate legacy WorldState or cave-lab saves.</summary>
 public sealed record MacroWorldManifest
 {
-    public const int CurrentAlgorithm = 3; // Stable default; experimental versions must be chosen explicitly.
-    public const int ExperimentalAlgorithm = 4;
+    public const int CurrentAlgorithm = 4; // Accepted default for NEW Master-Rework worlds only; manifests retain their explicit version.
+    public const int AcceptedAlgorithm = 4;
+    public const int ExperimentalAlgorithm = AcceptedAlgorithm; // Historical API alias; A4 is now accepted.
     public required int Format { get; init; }
     public required int Algorithm { get; init; }
     public required string WorldId { get; init; }

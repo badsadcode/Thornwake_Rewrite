@@ -22,7 +22,7 @@ internal static class RegionalDrainageTests
         var reports = new List<object>();
         foreach (string id in new[] { "vast-world", "archipelago" })
         {
-            var world = MacroWorldManifest.Create(7319, profiles.Single(p => p.Id == id), originX: 8_000_000_000, originZ: -7_000_000_000)
+            var world = MacroWorldManifest.Create(7319, profiles.Single(p => p.Id == id), originX: 8_000_000_000, originZ: -7_000_000_000,algorithm:3)
                 with { WorldId = "0123456789abcdef0123456789abcdef" };
             var generator = new MacroWorldGenerator(world);
             var refiner = RegionalDrainageRefiner.Create(MacroDrainageRecipe.Create(world));

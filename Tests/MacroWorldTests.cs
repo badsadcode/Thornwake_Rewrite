@@ -17,7 +17,7 @@ internal static class MacroWorldTests
             Reject(()=>(profile with { Continents=999 }).Validate());
             for(int seed=-8;seed<8;seed++)
             {
-                var manifest=MacroWorldManifest.Create(seed,profile); var world=new MacroWorldGenerator(manifest);
+                var manifest=MacroWorldManifest.Create(seed,profile,algorithm:3); var world=new MacroWorldGenerator(manifest);
                 var copy=new MacroWorldGenerator(JsonSerializer.Deserialize<MacroWorldManifest>(JsonSerializer.Serialize(manifest))!);
                 Check(world.LandFeatures.Count==profile.Continents+profile.Islands && world.Ranges.Count==profile.Continents*profile.RangesPerContinent,"bounded feature counts");
                 Check(world.LandFeatures.Select(f=>f.Id).Distinct().Count()==world.LandFeatures.Count,"unique stable features");
@@ -38,7 +38,7 @@ internal static class MacroWorldTests
                 Check(world.Sample(profile.WorldSize*.5,0).Elevation==profile.SeaLevel-profile.OceanDepth,"world perimeter reaches deep ocean");
             }
         }
-        var baseProfile=profiles[0]; var original=MacroWorldManifest.Create(7319,baseProfile);
+        var baseProfile=profiles[0]; var original=MacroWorldManifest.Create(7319,baseProfile,algorithm:3);
         var near=new MacroWorldGenerator(original);
         var far=new MacroWorldGenerator(original with { OriginX=8_000_000_000,OriginZ=-8_000_000_000 });
         foreach(var feature in near.LandFeatures.Take(3)) for(int i=0;i<20;i++)
@@ -67,7 +67,7 @@ internal static class MacroWorldTests
         finally { foreach(string path in Directory.GetFiles(folder)) File.Delete(path); Directory.Delete(folder); }
         foreach(var profile in profiles)
         {
-            var world=new MacroWorldGenerator(MacroWorldManifest.Create(7319,profile));
+            var world=new MacroWorldGenerator(MacroWorldManifest.Create(7319,profile,algorithm:3));
             var map=MacroWorldMap.Build(world,0,0,profile.WorldSize,128);
             Check(map.Pixels.Length==128*128*4 && map.LandFraction>.03 && map.LandFraction<.75,"bounded diagnostic map");
             Check(map.SampledLandComponents>=profile.Continents,"multiple landmasses visible");
