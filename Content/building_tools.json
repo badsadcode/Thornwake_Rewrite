@@ -1,0 +1,442 @@
+[
+  {
+    "id": "roof",
+    "name": "Roof",
+    "category": "Roofs",
+    "description": "Choose a roof shape, pitch and finish. Matching roof edges carry their height into the next piece.",
+    "defaultVariant": "slope",
+    "defaultSlope": 45,
+    "allowedRotations": [
+      0,
+      45,
+      90,
+      135,
+      180,
+      225,
+      270,
+      315
+    ],
+    "legacyKinds": [
+      "roof"
+    ],
+    "materials": [
+      {
+        "id": "timber",
+        "name": "Timber",
+        "colorHex": "a18b61"
+      },
+      {
+        "id": "slate",
+        "name": "Slate",
+        "colorHex": "556658",
+        "costs": {
+          "stone": 2
+        }
+      }
+    ],
+    "variants": [
+      {
+        "id": "slope",
+        "name": "Slope",
+        "kind": "roof_module",
+        "geometry": "roof_slope",
+        "slopes": [
+          22.5,
+          30,
+          45,
+          60
+        ],
+        "costs": {
+          "plank": 3,
+          "wood": 2
+        }
+      },
+      {
+        "id": "ridge",
+        "name": "Ridge",
+        "kind": "roof_module",
+        "geometry": "roof_ridge",
+        "slopes": [
+          22.5,
+          30,
+          45,
+          60
+        ],
+        "costs": {
+          "plank": 4,
+          "wood": 2
+        }
+      },
+      {
+        "id": "hip",
+        "name": "Outer corner",
+        "kind": "roof_module",
+        "geometry": "roof_hip",
+        "slopes": [
+          22.5,
+          30,
+          45,
+          60
+        ],
+        "costs": {
+          "plank": 4,
+          "wood": 2
+        }
+      },
+      {
+        "id": "valley",
+        "name": "Inner corner",
+        "kind": "roof_module",
+        "geometry": "roof_valley",
+        "slopes": [
+          22.5,
+          30,
+          45,
+          60
+        ],
+        "costs": {
+          "plank": 4,
+          "wood": 2
+        }
+      },
+      {
+        "id": "gable_edge",
+        "name": "Gable edge",
+        "kind": "roof_module",
+        "geometry": "roof_gable_edge",
+        "slopes": [
+          22.5,
+          30,
+          45,
+          60
+        ],
+        "supportsMirroring": true,
+        "costs": {
+          "plank": 1,
+          "wood": 1
+        }
+      },
+      {
+        "id": "eave",
+        "name": "Eave",
+        "kind": "roof_module",
+        "geometry": "roof_eave",
+        "slopes": [
+          22.5,
+          30,
+          45,
+          60
+        ],
+        "costs": {
+          "wood": 2
+        }
+      },
+      {
+        "id": "flat",
+        "name": "Flat",
+        "kind": "roof_flat",
+        "geometry": "legacy",
+        "slopes": [
+          0
+        ]
+      },
+      {
+        "id": "triangle",
+        "name": "Triangle",
+        "kind": "roof_triangle",
+        "geometry": "legacy",
+        "slopes": [
+          0
+        ]
+      },
+      {
+        "id": "corner",
+        "name": "Shallow corner",
+        "kind": "roof_corner",
+        "geometry": "legacy",
+        "slopes": [
+          0
+        ]
+      },
+      {
+        "id": "legacy_slope",
+        "name": "Shallow slope",
+        "kind": "roof_slope",
+        "geometry": "legacy",
+        "slopes": [
+          0
+        ]
+      }
+    ],
+    "appearances": [
+      {
+        "id": "cedar",
+        "pattern": "shingle",
+        "name": "Cedar shingles",
+        "models": [],
+        "colorHex": "976645"
+      },
+      {
+        "id": "clay",
+        "pattern": "tile",
+        "name": "Terracotta",
+        "models": [],
+        "colorHex": "b76647"
+      },
+      {
+        "id": "thatch",
+        "pattern": "thatch",
+        "name": "Golden thatch",
+        "models": [],
+        "colorHex": "b6a169"
+      },
+      {
+        "id": "charcoal",
+        "pattern": "tile",
+        "name": "Charcoal slate",
+        "models": [],
+        "colorHex": "505b66"
+      }
+    ]
+  },
+  {
+    "id": "floor",
+    "name": "Floor",
+    "category": "Structure",
+    "description": "Full or triangular floors. Select a higher level to build upstairs.",
+    "defaultVariant": "full",
+    "defaultSlope": 0,
+    "allowedRotations": [
+      0,
+      45,
+      90,
+      135,
+      180,
+      225,
+      270,
+      315
+    ],
+    "materials": [
+      {
+        "id": "timber",
+        "name": "Timber",
+        "colorHex": "b3a079"
+      }
+    ],
+    "variants": [
+      {
+        "id": "full",
+        "name": "Full floor",
+        "kind": "foundation",
+        "upperKind": "upper_floor",
+        "geometry": "legacy",
+        "slopes": [
+          0
+        ]
+      },
+      {
+        "id": "triangle",
+        "name": "Triangle floor",
+        "kind": "foundation_triangle",
+        "upperKind": "upper_floor_triangle",
+        "geometry": "legacy",
+        "slopes": [
+          0
+        ]
+      }
+    ],
+    "appearances": []
+  },
+  {
+    "id": "wall",
+    "name": "Wall",
+    "category": "Structure",
+    "description": "Choose a wall, doorway or matching fill for a sloped roof end.",
+    "defaultVariant": "solid",
+    "defaultSlope": 0,
+    "allowedRotations": [
+      0,
+      45,
+      90,
+      135,
+      180,
+      225,
+      270,
+      315
+    ],
+    "materials": [
+      {
+        "id": "timber",
+        "name": "Timber and plaster",
+        "colorHex": "9a8c6f"
+      }
+    ],
+    "variants": [
+      {
+        "id": "solid",
+        "name": "Solid wall",
+        "kind": "wall",
+        "geometry": "legacy",
+        "slopes": [
+          0
+        ]
+      },
+      {
+        "id": "door",
+        "name": "Doorway",
+        "kind": "door",
+        "geometry": "legacy",
+        "slopes": [
+          0
+        ]
+      },
+      {
+        "id": "diagonal",
+        "name": "Diagonal wall",
+        "kind": "wall_diagonal",
+        "geometry": "legacy",
+        "slopes": [
+          0
+        ]
+      },
+      {
+        "id": "gable_fill",
+        "name": "Sloped gable",
+        "kind": "roof_module",
+        "geometry": "roof_gable_fill",
+        "slopes": [
+          22.5,
+          30,
+          45,
+          60
+        ],
+        "supportsMirroring": true,
+        "costs": {
+          "wood": 3,
+          "plank": 1
+        }
+      },
+      {
+        "id": "gable_ridge_fill",
+        "name": "Peaked gable",
+        "kind": "roof_module",
+        "geometry": "roof_gable_ridge_fill",
+        "slopes": [
+          22.5,
+          30,
+          45,
+          60
+        ],
+        "supportsMirroring": true,
+        "costs": {
+          "wood": 3,
+          "plank": 1
+        }
+      }
+    ],
+    "appearances": [
+      {
+        "id": "limewash",
+        "pattern": "plain",
+        "name": "Limewash",
+        "models": [],
+        "colorHex": "ded7bf"
+      },
+      {
+        "id": "planks",
+        "pattern": "plank",
+        "name": "Oak boards",
+        "models": [],
+        "colorHex": "91714e"
+      },
+      {
+        "id": "stone",
+        "pattern": "masonry",
+        "name": "Fieldstone",
+        "models": [
+          {
+            "variant": "solid",
+            "mirrored": false,
+            "scene": "res://Assets/Buildings/Wall_Solid_Fieldstone.glb",
+            "slope": 0
+          }
+        ],
+        "colorHex": "91948a"
+      }
+    ]
+  },
+  {
+    "id": "stairs",
+    "name": "Stairs",
+    "category": "Structure",
+    "description": "A straight timber flight. Leave the stairwell open and add a landing above.",
+    "defaultVariant": "straight",
+    "defaultSlope": 0,
+    "allowedRotations": [
+      0,
+      45,
+      90,
+      135,
+      180,
+      225,
+      270,
+      315
+    ],
+    "materials": [
+      {
+        "id": "timber",
+        "name": "Timber",
+        "colorHex": "b3a079"
+      }
+    ],
+    "variants": [
+      {
+        "id": "straight",
+        "name": "Straight stairs",
+        "kind": "stairs",
+        "geometry": "legacy",
+        "slopes": [
+          0
+        ]
+      }
+    ],
+    "appearances": []
+  },
+  {
+    "id": "fence",
+    "name": "Fence",
+    "category": "Structure",
+    "description": "Timber rails for a garden or homestead.",
+    "defaultVariant": "rail",
+    "defaultSlope": 0,
+    "allowedRotations": [
+      0,
+      45,
+      90,
+      135,
+      180,
+      225,
+      270,
+      315
+    ],
+    "materials": [
+      {
+        "id": "timber",
+        "name": "Timber",
+        "colorHex": "8c7350"
+      }
+    ],
+    "variants": [
+      {
+        "id": "rail",
+        "name": "Timber fence",
+        "kind": "fence",
+        "geometry": "legacy",
+        "slopes": [
+          0
+        ]
+      }
+    ],
+    "appearances": []
+  }
+]

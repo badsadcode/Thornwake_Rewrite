@@ -1,0 +1,649 @@
+[
+  {
+    "bounds_error_m": 0.0000765620643505827,
+    "id": "TREE_Pine_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000765620643505827,
+    "id": "TREE_Pine_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000624333551968448,
+    "id": "TREE_Pine_A",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000675448682159185,
+    "id": "TREE_Pine_B",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000675448682159185,
+    "id": "TREE_Pine_B",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000448252285423223,
+    "id": "TREE_Pine_B",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000560973130632192,
+    "id": "TREE_Pine_C",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000560973130632192,
+    "id": "TREE_Pine_C",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000547730051039252,
+    "id": "TREE_Pine_C",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000421913318859879,
+    "id": "TREE_Spruce_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000421913318859879,
+    "id": "TREE_Spruce_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000312910196953453,
+    "id": "TREE_Spruce_A",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000573276483919472,
+    "id": "TREE_Spruce_B",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000573276483919472,
+    "id": "TREE_Spruce_B",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000493946681672242,
+    "id": "TREE_Spruce_B",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000628168490948156,
+    "id": "TREE_Birch_Green_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000533248094143346,
+    "id": "TREE_Birch_Green_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.000066833796154242,
+    "id": "TREE_Birch_Green_A",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000222279777517542,
+    "id": "TREE_Birch_Green_B",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.000036615692806663,
+    "id": "TREE_Birch_Green_B",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000449322578788269,
+    "id": "TREE_Birch_Green_B",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000682281315675937,
+    "id": "TREE_Birch_Green_C",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000502435686939862,
+    "id": "TREE_Birch_Green_C",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.000053270414355211,
+    "id": "TREE_Birch_Green_C",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.000065717518737074,
+    "id": "TREE_Birch_Autumn_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000370317102351692,
+    "id": "TREE_Birch_Autumn_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000687985302647576,
+    "id": "TREE_Birch_Autumn_A",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000402990881411824,
+    "id": "TREE_Birch_Autumn_B",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000748748207115568,
+    "id": "TREE_Birch_Autumn_B",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000469823753519449,
+    "id": "TREE_Birch_Autumn_B",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000323195708915591,
+    "id": "TREE_Oak_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000467063146061264,
+    "id": "TREE_Oak_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000336533557856455,
+    "id": "TREE_Oak_A",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.000049455622502137,
+    "id": "TREE_Oak_B",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000513148552272469,
+    "id": "TREE_Oak_B",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000650756046525203,
+    "id": "TREE_Oak_B",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000622341030975804,
+    "id": "TREE_Oak_C",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000539585016667843,
+    "id": "TREE_Oak_C",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000484077791043092,
+    "id": "TREE_Oak_C",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000749120154068805,
+    "id": "TREE_Maple_Autumn_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000576578750042245,
+    "id": "TREE_Maple_Autumn_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000436748741776682,
+    "id": "TREE_Maple_Autumn_A",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000580175837967545,
+    "id": "TREE_Sparse_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000585966699873097,
+    "id": "TREE_Sparse_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000625384273007512,
+    "id": "TREE_Sparse_A",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000649348221486434,
+    "id": "TREE_Poplar_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000466094606963452,
+    "id": "TREE_Poplar_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000513332706759684,
+    "id": "TREE_Poplar_A",
+    "imported_texture_filters": [
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 0,
+    "preview_filter": "NEAREST",
+    "textured_materials": 2
+  },
+  {
+    "bounds_error_m": 0.0000469726946903393,
+    "id": "TREE_Willow_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 0.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.0000515778265253175,
+    "id": "TREE_Willow_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 1.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  },
+  {
+    "bounds_error_m": 0.000048028177843662,
+    "id": "TREE_Willow_A",
+    "imported_texture_filters": [
+      2,
+      2,
+      2
+    ],
+    "lod": 2.0,
+    "masked_materials": 1,
+    "preview_filter": "NEAREST",
+    "textured_materials": 3
+  }
+]

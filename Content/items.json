@@ -1,0 +1,290 @@
+[
+  {
+    "id": "wood",
+    "name": "Timber",
+    "buyPrice": 3,
+    "sellPrice": 2,
+    "category": "Materials",
+    "description": "Saw timber into planks at a carpenter's bench."
+  },
+  {
+    "id": "stone",
+    "name": "Stone",
+    "buyPrice": 4,
+    "sellPrice": 2,
+    "category": "Materials",
+    "description": "Useful stone from the valley."
+  },
+  {
+    "id": "berries",
+    "useAction": "consume",
+    "restoreHealth": 18,
+    "restoreStamina": 30,
+    "cooldown": 2,
+    "name": "Wild berries",
+    "buyPrice": 3,
+    "sellPrice": 2,
+    "category": "Food",
+    "description": "Useful wild berries from the valley."
+  },
+  {
+    "id": "seeds",
+    "useAction": "seeds",
+    "name": "Berry seeds",
+    "buyPrice": 3,
+    "sellPrice": 1,
+    "category": "Materials",
+    "description": "Useful berry seeds from the valley."
+  },
+  {
+    "id": "plank",
+    "name": "Cut planks",
+    "buyPrice": 7,
+    "sellPrice": 5,
+    "category": "Materials",
+    "description": "Useful cut planks from the valley."
+  },
+  {
+    "id": "axe",
+    "useAction": "axe",
+    "name": "Stone axe",
+    "buyPrice": 18,
+    "sellPrice": 9,
+    "category": "Tools",
+    "description": "Fells trees in fewer strokes."
+  },
+  {
+    "id": "sword",
+    "useAction": "sword",
+    "name": "Flint blade",
+    "buyPrice": 30,
+    "sellPrice": 15,
+    "category": "Tools",
+    "description": "Useful flint blade from the valley."
+  },
+  {
+    "id": "hide",
+    "name": "Tanned hide",
+    "buyPrice": 12,
+    "sellPrice": 8,
+    "category": "Materials",
+    "description": "Useful tanned hide from the valley."
+  },
+  {
+    "id": "meal",
+    "useAction": "consume",
+    "restoreHealth": 45,
+    "restoreStamina": 30,
+    "cooldown": 2,
+    "name": "Berry meal",
+    "buyPrice": 10,
+    "sellPrice": 6,
+    "category": "Food",
+    "description": "Useful berry meal from the valley."
+  },
+  {
+    "id": "coins",
+    "name": "Crowns",
+    "buyPrice": 0,
+    "sellPrice": 0,
+    "category": "Currency",
+    "description": "Useful crowns from the valley."
+  },
+  {
+    "id": "clay",
+    "name": "Clay",
+    "category": "Materials",
+    "description": "Raw clay supplied by the village market. Shape and fire it at a kiln.",
+    "buyPrice": 3,
+    "sellPrice": 1
+  },
+  {
+    "id": "brick",
+    "name": "Fired brick",
+    "category": "Materials",
+    "description": "Made using the valley's materials.",
+    "buyPrice": 12,
+    "sellPrice": 6
+  },
+  {
+    "id": "iron",
+    "name": "Iron fittings",
+    "category": "Materials",
+    "description": "Made using the valley's materials.",
+    "buyPrice": 12,
+    "sellPrice": 6
+  },
+  {
+    "id": "chair",
+    "useAction": "place",
+    "name": "Timber chair",
+    "category": "Decor",
+    "description": "Craft and place this furnishing in your home or garden.",
+    "buyPrice": 12,
+    "sellPrice": 6
+  },
+  {
+    "id": "table",
+    "useAction": "place",
+    "name": "Oak table",
+    "category": "Decor",
+    "description": "Craft and place this furnishing in your home or garden.",
+    "buyPrice": 12,
+    "sellPrice": 6
+  },
+  {
+    "id": "planter",
+    "useAction": "place",
+    "name": "Potted fern",
+    "category": "Decor",
+    "description": "Craft and place this furnishing in your home or garden.",
+    "buyPrice": 12,
+    "sellPrice": 6
+  },
+  {
+    "id": "painting",
+    "useAction": "place",
+    "name": "Valley painting",
+    "category": "Decor",
+    "description": "Craft and place this furnishing in your home or garden.",
+    "buyPrice": 12,
+    "sellPrice": 6
+  },
+  {
+    "id": "lantern",
+    "useAction": "place",
+    "name": "Iron lantern",
+    "category": "Decor",
+    "description": "Craft and place this furnishing in your home or garden.",
+    "buyPrice": 12,
+    "sellPrice": 6
+  },
+  {
+    "id": "rug",
+    "useAction": "place",
+    "name": "Woven rug",
+    "category": "Decor",
+    "description": "Craft and place this furnishing in your home or garden.",
+    "buyPrice": 12,
+    "sellPrice": 6
+  },
+  {
+    "id": "bread",
+    "useAction": "consume",
+    "restoreHealth": 28,
+    "restoreStamina": 35,
+    "cooldown": 2,
+    "name": "Hearth bread",
+    "category": "Food",
+    "description": "Made using the valley's materials.",
+    "buyPrice": 12,
+    "sellPrice": 6
+  },
+  {
+    "id": "iron_ore",
+    "category": "Materials",
+    "description": "Raw ore supplied by the village market. Smelt it at a forge.",
+    "buyPrice": 4,
+    "sellPrice": 2,
+    "name": "Iron ore"
+  },
+  {
+    "id": "grain",
+    "category": "Food",
+    "description": "Grain from the village market, ready for the hearth oven.",
+    "buyPrice": 3,
+    "sellPrice": 1,
+    "name": "Grain"
+  },
+  {
+    "id": "basic_axe",
+    "name": "Worn axe",
+    "category": "Tools",
+    "description": "Your dependable starting axe. Craft a stone axe for faster chopping.",
+    "buyPrice": 5,
+    "sellPrice": 2,
+    "useAction": "axe"
+  },
+  {
+    "id": "hammer",
+    "name": "Building hammer",
+    "category": "Tools",
+    "description": "Equip to open build mode and place or reclaim structures.",
+    "buyPrice": 6,
+    "sellPrice": 3,
+    "useAction": "hammer"
+  },
+  {
+    "id": "hoe",
+    "name": "Garden hoe",
+    "category": "Tools",
+    "description": "Prepare and shape soil for your crops.",
+    "buyPrice": 6,
+    "sellPrice": 3,
+    "useAction": "hoe"
+  },
+  {
+    "id": "basic_sword",
+    "name": "Rusty sword",
+    "category": "Tools",
+    "description": "A serviceable starting weapon. A crafted flint blade deals more damage.",
+    "buyPrice": 8,
+    "sellPrice": 4,
+    "useAction": "sword"
+  },
+  {
+    "id": "health_potion",
+    "name": "Berry tonic",
+    "category": "Consumables",
+    "description": "Brew at a cooking station. Restores 40 health; eight-second recovery between doses.",
+    "buyPrice": 18,
+    "sellPrice": 9,
+    "useAction": "consume",
+    "restoreHealth": 40,
+    "restoreStamina": 0,
+    "cooldown": 8
+  },
+  {
+    "id": "pine_cone",
+    "name": "Pine cone",
+    "category": "Materials",
+    "description": "A seed-bearing cone. Prepare a sapling by hand to plant a new pine.",
+    "buyPrice": 3,
+    "sellPrice": 1
+  },
+  {
+    "id": "pine_sapling",
+    "name": "Pine sapling",
+    "category": "Garden",
+    "description": "Equip and plant on open ground. Slow growth follows your world sandbox settings.",
+    "buyPrice": 8,
+    "sellPrice": 3,
+    "useAction": "seeds"
+  },
+  {
+    "id": "bush_seedling",
+    "name": "Berry seedling",
+    "category": "Garden",
+    "description": "Equip and plant a perennial berry bush. Fruit slowly returns after harvesting.",
+    "buyPrice": 8,
+    "sellPrice": 3,
+    "useAction": "seeds"
+  },
+  {
+    "id": "shovel",
+    "name": "Wooden shovel",
+    "category": "Tools",
+    "description": "Move loose earth. Dig, fill, level and smooth with timed shovel strokes.",
+    "buyPrice": 18,
+    "sellPrice": 5,
+    "useAction": "shovel"
+  },
+  {
+    "id": "soil",
+    "name": "Loose soil",
+    "category": "Materials",
+    "description": "10 litres of excavated earth. Used to fill and level terrain.",
+    "buyPrice": 0,
+    "sellPrice": 0
+  }
+]

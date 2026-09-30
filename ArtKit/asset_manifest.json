@@ -1,0 +1,2690 @@
+[
+  {
+    "id": "Roof_Slope_22p5",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "slope",
+    "pitch": 22.5,
+    "mirrored": false,
+    "geometry": "roof_slope",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3.031478,
+    "heightM": 1.4280268,
+    "godotMin": [
+      -1.5,
+      -0.0034267902,
+      -1.5161983
+    ],
+    "godotMax": [
+      1.5,
+      1.4246,
+      1.5152798
+    ],
+    "reference": "References/01_Roofs/Roof_Slope_22p5.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Slope_30",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "slope",
+    "pitch": 30,
+    "mirrored": false,
+    "geometry": "roof_slope",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3.0411851,
+    "heightM": 1.9148278,
+    "godotMin": [
+      -1.5,
+      -0.0007278323,
+      -1.5211926
+    ],
+    "godotMax": [
+      1.5,
+      1.9140999,
+      1.5199926
+    ],
+    "reference": "References/01_Roofs/Roof_Slope_30.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Slope_45",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "slope",
+    "pitch": 45,
+    "mirrored": false,
+    "geometry": "roof_slope",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3.058095,
+    "heightM": 3.1752195,
+    "godotMin": [
+      -1.5,
+      0.0067802668,
+      -1.529896
+    ],
+    "godotMax": [
+      1.5,
+      3.182,
+      1.528199
+    ],
+    "reference": "References/01_Roofs/Roof_Slope_45.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Slope_60",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "slope",
+    "pitch": 60,
+    "mirrored": false,
+    "geometry": "roof_slope",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3.0711868,
+    "heightM": 5.3617,
+    "godotMin": [
+      -1.5,
+      0.016499996,
+      -1.5366327
+    ],
+    "godotMax": [
+      1.5,
+      5.3782,
+      1.5345541
+    ],
+    "reference": "References/01_Roofs/Roof_Slope_60.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Ridge_22p5",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "ridge",
+    "pitch": 22.5,
+    "mirrored": false,
+    "geometry": "roof_ridge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3.029975,
+    "heightM": 0.8347245,
+    "godotMin": [
+      -1.5,
+      -0.0034245253,
+      -1.5161929
+    ],
+    "godotMax": [
+      1.5,
+      0.83129996,
+      1.513782
+    ],
+    "reference": "References/01_Roofs/Roof_Ridge_22p5.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Ridge_30",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "ridge",
+    "pitch": 30,
+    "mirrored": false,
+    "geometry": "roof_ridge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3.039106,
+    "heightM": 1.0766904,
+    "godotMin": [
+      -1.5,
+      -0.00069049,
+      -1.5211279
+    ],
+    "godotMax": [
+      1.5,
+      1.076,
+      1.517978
+    ],
+    "reference": "References/01_Roofs/Roof_Ridge_30.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Ridge_45",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "ridge",
+    "pitch": 45,
+    "mirrored": false,
+    "geometry": "roof_ridge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3.0554228,
+    "heightM": 1.7032621,
+    "godotMin": [
+      -1.5,
+      0.0067377687,
+      -1.5299387
+    ],
+    "godotMax": [
+      1.5,
+      1.7099999,
+      1.5254841
+    ],
+    "reference": "References/01_Roofs/Roof_Ridge_45.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Ridge_60",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "ridge",
+    "pitch": 60,
+    "mirrored": false,
+    "geometry": "roof_ridge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3.0678098,
+    "heightM": 2.7916,
+    "godotMin": [
+      -1.5,
+      0.016499996,
+      -1.5366328
+    ],
+    "godotMax": [
+      1.5,
+      2.8081,
+      1.531177
+    ],
+    "reference": "References/01_Roofs/Roof_Ridge_60.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Hip_22p5",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "hip",
+    "pitch": 22.5,
+    "mirrored": false,
+    "geometry": "roof_hip",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3.0462828,
+    "depthM": 3.0458138,
+    "heightM": 1.4780078,
+    "godotMin": [
+      -1.5253608,
+      -0.0034380853,
+      -1.5256146
+    ],
+    "godotMax": [
+      1.5209218,
+      1.4745697,
+      1.5201992
+    ],
+    "reference": "References/01_Roofs/Roof_Hip_22p5.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Hip_30",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "hip",
+    "pitch": 30,
+    "mirrored": false,
+    "geometry": "roof_hip",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3.0477076,
+    "depthM": 3.0469782,
+    "heightM": 1.9637456,
+    "godotMin": [
+      -1.5256664,
+      -0.0007006526,
+      -1.5264385
+    ],
+    "godotMax": [
+      1.5220412,
+      1.9630449,
+      1.5205398
+    ],
+    "reference": "References/01_Roofs/Roof_Hip_30.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Hip_45",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "hip",
+    "pitch": 45,
+    "mirrored": false,
+    "geometry": "roof_hip",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3.0505104,
+    "depthM": 3.0534549,
+    "heightM": 3.221197,
+    "godotMin": [
+      -1.5262302,
+      0.0067377687,
+      -1.5299387
+    ],
+    "godotMax": [
+      1.5242801,
+      3.2279346,
+      1.5235162
+    ],
+    "reference": "References/01_Roofs/Roof_Hip_45.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Hip_60",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "hip",
+    "pitch": 60,
+    "mirrored": false,
+    "geometry": "roof_hip",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3.0558515,
+    "depthM": 3.0630736,
+    "heightM": 5.4024053,
+    "godotMin": [
+      -1.5293769,
+      0.016499996,
+      -1.536633
+    ],
+    "godotMax": [
+      1.5264746,
+      5.4189053,
+      1.5264405
+    ],
+    "reference": "References/01_Roofs/Roof_Hip_60.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Valley_22p5",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "valley",
+    "pitch": 22.5,
+    "mirrored": false,
+    "geometry": "roof_valley",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3.0304337,
+    "depthM": 3.0321345,
+    "heightM": 1.3953407,
+    "godotMin": [
+      -1.5166439,
+      0.07,
+      -1.5168276
+    ],
+    "godotMax": [
+      1.5137898,
+      1.4653407,
+      1.5153071
+    ],
+    "reference": "References/01_Roofs/Roof_Valley_22p5.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Valley_30",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "valley",
+    "pitch": 30,
+    "mirrored": false,
+    "geometry": "roof_valley",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3.0313935,
+    "depthM": 3.0373259,
+    "heightM": 1.8841416,
+    "godotMin": [
+      -1.5168574,
+      0.07,
+      -1.5173802
+    ],
+    "godotMax": [
+      1.5145361,
+      1.9541416,
+      1.5199456
+    ],
+    "reference": "References/01_Roofs/Roof_Valley_30.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Valley_45",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "valley",
+    "pitch": 45,
+    "mirrored": false,
+    "geometry": "roof_valley",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3.033239,
+    "depthM": 3.0466943,
+    "heightM": 3.1500828,
+    "godotMin": [
+      -1.5172318,
+      0.07,
+      -1.5184525
+    ],
+    "godotMax": [
+      1.5160072,
+      3.2200828,
+      1.5282416
+    ],
+    "reference": "References/01_Roofs/Roof_Valley_45.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Valley_60",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "valley",
+    "pitch": 60,
+    "mirrored": false,
+    "geometry": "roof_valley",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3.0367422,
+    "depthM": 3.0540476,
+    "heightM": 5.342823,
+    "godotMin": [
+      -1.5192997,
+      0.07,
+      -1.5194931
+    ],
+    "godotMax": [
+      1.5174423,
+      5.412823,
+      1.5345545
+    ],
+    "reference": "References/01_Roofs/Roof_Valley_60.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_GableEdge_22p5_Left",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "gable_edge",
+    "pitch": 22.5,
+    "mirrored": false,
+    "geometry": "roof_gable_edge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.09559989,
+    "depthM": 3.095,
+    "heightM": 1.5226406,
+    "godotMin": [
+      -1.5478,
+      -0.045,
+      -1.5475
+    ],
+    "godotMax": [
+      -1.4522,
+      1.4776406,
+      1.5475
+    ],
+    "reference": "References/01_Roofs/Roof_GableEdge_22p5_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_GableEdge_22p5_Right",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "gable_edge",
+    "pitch": 22.5,
+    "mirrored": true,
+    "geometry": "roof_gable_edge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.09559989,
+    "depthM": 3.095,
+    "heightM": 1.5226406,
+    "godotMin": [
+      1.4522,
+      -0.045,
+      -1.5475
+    ],
+    "godotMax": [
+      1.5478,
+      1.4776406,
+      1.5475
+    ],
+    "reference": "References/01_Roofs/Roof_GableEdge_22p5_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_GableEdge_30_Left",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "gable_edge",
+    "pitch": 30,
+    "mirrored": false,
+    "geometry": "roof_gable_edge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.09559989,
+    "depthM": 3.095,
+    "heightM": 2.0120506,
+    "godotMin": [
+      -1.5478,
+      -0.045,
+      -1.5475
+    ],
+    "godotMax": [
+      -1.4522,
+      1.9670507,
+      1.5475
+    ],
+    "reference": "References/01_Roofs/Roof_GableEdge_30_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_GableEdge_30_Right",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "gable_edge",
+    "pitch": 30,
+    "mirrored": true,
+    "geometry": "roof_gable_edge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.09559989,
+    "depthM": 3.095,
+    "heightM": 2.0120506,
+    "godotMin": [
+      1.4522,
+      -0.045,
+      -1.5475
+    ],
+    "godotMax": [
+      1.5478,
+      1.9670507,
+      1.5475
+    ],
+    "reference": "References/01_Roofs/Roof_GableEdge_30_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_GableEdge_45_Left",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "gable_edge",
+    "pitch": 45,
+    "mirrored": false,
+    "geometry": "roof_gable_edge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.09559989,
+    "depthM": 3.095,
+    "heightM": 3.2800002,
+    "godotMin": [
+      -1.5478,
+      -0.045,
+      -1.5475
+    ],
+    "godotMax": [
+      -1.4522,
+      3.2350001,
+      1.5475
+    ],
+    "reference": "References/01_Roofs/Roof_GableEdge_45_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_GableEdge_45_Right",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "gable_edge",
+    "pitch": 45,
+    "mirrored": true,
+    "geometry": "roof_gable_edge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.09559989,
+    "depthM": 3.095,
+    "heightM": 3.2800002,
+    "godotMin": [
+      1.4522,
+      -0.045,
+      -1.5475
+    ],
+    "godotMax": [
+      1.5478,
+      3.2350001,
+      1.5475
+    ],
+    "reference": "References/01_Roofs/Roof_GableEdge_45_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_GableEdge_60_Left",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "gable_edge",
+    "pitch": 60,
+    "mirrored": false,
+    "geometry": "roof_gable_edge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.09559989,
+    "depthM": 3.095,
+    "heightM": 5.476153,
+    "godotMin": [
+      -1.5478,
+      -0.045,
+      -1.5475
+    ],
+    "godotMax": [
+      -1.4522,
+      5.431153,
+      1.5475
+    ],
+    "reference": "References/01_Roofs/Roof_GableEdge_60_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_GableEdge_60_Right",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "gable_edge",
+    "pitch": 60,
+    "mirrored": true,
+    "geometry": "roof_gable_edge",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.09559989,
+    "depthM": 3.095,
+    "heightM": 5.476153,
+    "godotMin": [
+      1.4522,
+      -0.045,
+      -1.5475
+    ],
+    "godotMax": [
+      1.5478,
+      5.431153,
+      1.5475
+    ],
+    "reference": "References/01_Roofs/Roof_GableEdge_60_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Eave_22p5",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "eave",
+    "pitch": 22.5,
+    "mirrored": false,
+    "geometry": "roof_eave",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 0.23950005,
+    "heightM": 0.325,
+    "godotMin": [
+      -1.5,
+      -0.13499999,
+      -1.5695
+    ],
+    "godotMax": [
+      1.5,
+      0.19,
+      -1.3299999
+    ],
+    "reference": "References/01_Roofs/Roof_Eave_22p5.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Eave_30",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "eave",
+    "pitch": 30,
+    "mirrored": false,
+    "geometry": "roof_eave",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 0.23950005,
+    "heightM": 0.325,
+    "godotMin": [
+      -1.5,
+      -0.13499999,
+      -1.5695
+    ],
+    "godotMax": [
+      1.5,
+      0.19,
+      -1.3299999
+    ],
+    "reference": "References/01_Roofs/Roof_Eave_30.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Eave_45",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "eave",
+    "pitch": 45,
+    "mirrored": false,
+    "geometry": "roof_eave",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 0.23950005,
+    "heightM": 0.325,
+    "godotMin": [
+      -1.5,
+      -0.13499999,
+      -1.5695
+    ],
+    "godotMax": [
+      1.5,
+      0.19,
+      -1.3299999
+    ],
+    "reference": "References/01_Roofs/Roof_Eave_45.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Eave_60",
+    "category": "01_Roofs",
+    "gameId": "roof_module",
+    "tool": "roof",
+    "variant": "eave",
+    "pitch": 60,
+    "mirrored": false,
+    "geometry": "roof_eave",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 0.23950005,
+    "heightM": 0.325,
+    "godotMin": [
+      -1.5,
+      -0.13499999,
+      -1.5695
+    ],
+    "godotMax": [
+      1.5,
+      0.19,
+      -1.3299999
+    ],
+    "reference": "References/01_Roofs/Roof_Eave_60.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Flat",
+    "category": "01_Roofs",
+    "gameId": "roof_flat",
+    "tool": "roof",
+    "variant": "flat",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3,
+    "heightM": 0.252,
+    "godotMin": [
+      -1.5,
+      -0.07,
+      -1.5
+    ],
+    "godotMax": [
+      1.5,
+      0.182,
+      1.5
+    ],
+    "reference": "References/01_Roofs/Roof_Flat.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Triangle",
+    "category": "01_Roofs",
+    "gameId": "roof_triangle",
+    "tool": "roof",
+    "variant": "triangle",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3,
+    "heightM": 0.25,
+    "godotMin": [
+      -1.5,
+      -0.06,
+      -1.5
+    ],
+    "godotMax": [
+      1.5,
+      0.19,
+      1.5
+    ],
+    "reference": "References/01_Roofs/Roof_Triangle.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_Corner",
+    "category": "01_Roofs",
+    "gameId": "roof_corner",
+    "tool": "roof",
+    "variant": "corner",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3,
+    "heightM": 1.3262,
+    "godotMin": [
+      -1.5,
+      -0.07,
+      -1.5
+    ],
+    "godotMax": [
+      1.5,
+      1.2562,
+      1.5
+    ],
+    "reference": "References/01_Roofs/Roof_Corner.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_LegacySlope",
+    "category": "01_Roofs",
+    "gameId": "roof_slope",
+    "tool": "roof",
+    "variant": "legacy_slope",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3,
+    "heightM": 1.3277,
+    "godotMin": [
+      -1.5,
+      -0.07,
+      -1.5
+    ],
+    "godotMax": [
+      1.5,
+      1.2577,
+      1.5
+    ],
+    "reference": "References/01_Roofs/Roof_LegacySlope.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Floor_Full_Foundation",
+    "category": "03_Structure",
+    "gameId": "foundation",
+    "tool": "floor",
+    "variant": "full",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3.02,
+    "depthM": 3,
+    "heightM": 0.29,
+    "godotMin": [
+      -1.51,
+      7.450581E-09,
+      -1.5
+    ],
+    "godotMax": [
+      1.51,
+      0.29,
+      1.5
+    ],
+    "reference": "References/03_Structure/Floor_Full_Foundation.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Floor_Full_Upper",
+    "category": "03_Structure",
+    "gameId": "upper_floor",
+    "tool": "floor",
+    "variant": "full",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3,
+    "heightM": 0.28,
+    "godotMin": [
+      -1.5,
+      7.450581E-09,
+      -1.5
+    ],
+    "godotMax": [
+      1.5,
+      0.28,
+      1.5
+    ],
+    "reference": "References/03_Structure/Floor_Full_Upper.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Floor_Triangle_Foundation",
+    "category": "03_Structure",
+    "gameId": "foundation_triangle",
+    "tool": "floor",
+    "variant": "triangle",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3,
+    "heightM": 0.295,
+    "godotMin": [
+      -1.5,
+      0,
+      -1.5
+    ],
+    "godotMax": [
+      1.5,
+      0.295,
+      1.5
+    ],
+    "reference": "References/03_Structure/Floor_Triangle_Foundation.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Floor_Triangle_Upper",
+    "category": "03_Structure",
+    "gameId": "upper_floor_triangle",
+    "tool": "floor",
+    "variant": "triangle",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3,
+    "depthM": 3,
+    "heightM": 0.295,
+    "godotMin": [
+      -1.5,
+      0,
+      -1.5
+    ],
+    "godotMax": [
+      1.5,
+      0.295,
+      1.5
+    ],
+    "reference": "References/03_Structure/Floor_Triangle_Upper.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_Solid",
+    "category": "02_Walls",
+    "gameId": "wall",
+    "tool": "wall",
+    "variant": "solid",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 3,
+    "gridDepthM": 0.2,
+    "widthM": 3.0600002,
+    "depthM": 0.295,
+    "heightM": 2.615,
+    "godotMin": [
+      -1.5300001,
+      0,
+      -0.125
+    ],
+    "godotMax": [
+      1.5300001,
+      2.615,
+      0.16999999
+    ],
+    "reference": "References/02_Walls/Wall_Solid.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_Door",
+    "category": "02_Walls",
+    "gameId": "door",
+    "tool": "wall",
+    "variant": "door",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 3,
+    "gridDepthM": 0.2,
+    "widthM": 3.0600002,
+    "depthM": 0.27499998,
+    "heightM": 2.615,
+    "godotMin": [
+      -1.5300001,
+      0,
+      -0.13
+    ],
+    "godotMax": [
+      1.5300001,
+      2.615,
+      0.145
+    ],
+    "reference": "References/02_Walls/Wall_Door.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_Diagonal",
+    "category": "02_Walls",
+    "gameId": "wall_diagonal",
+    "tool": "wall",
+    "variant": "diagonal",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 4.24264,
+    "gridDepthM": 0.2,
+    "widthM": 4.327493,
+    "depthM": 0.295,
+    "heightM": 2.615,
+    "godotMin": [
+      -2.1637466,
+      0,
+      -0.125
+    ],
+    "godotMax": [
+      2.1637466,
+      2.615,
+      0.16999999
+    ],
+    "reference": "References/02_Walls/Wall_Diagonal.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableFill_22p5_Left",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_fill",
+    "pitch": 22.5,
+    "mirrored": false,
+    "geometry": "roof_gable_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 1.312639,
+    "godotMin": [
+      -1.6303,
+      -3.9041042E-05,
+      -1.5
+    ],
+    "godotMax": [
+      -1.3697,
+      1.3126,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableFill_22p5_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableFill_22p5_Right",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_fill",
+    "pitch": 22.5,
+    "mirrored": true,
+    "geometry": "roof_gable_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 1.312639,
+    "godotMin": [
+      1.3697,
+      -3.9041042E-05,
+      -1.5
+    ],
+    "godotMax": [
+      1.6303,
+      1.3126,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableFill_22p5_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableFill_30_Left",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_fill",
+    "pitch": 30,
+    "mirrored": false,
+    "geometry": "roof_gable_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 1.8021457,
+    "godotMin": [
+      -1.6303,
+      -4.5776367E-05,
+      -1.5
+    ],
+    "godotMax": [
+      -1.3697,
+      1.8021,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableFill_30_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableFill_30_Right",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_fill",
+    "pitch": 30,
+    "mirrored": true,
+    "geometry": "roof_gable_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 1.8021457,
+    "godotMin": [
+      1.3697,
+      -4.5776367E-05,
+      -1.5
+    ],
+    "godotMax": [
+      1.6303,
+      1.8021,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableFill_30_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableFill_45_Left",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_fill",
+    "pitch": 45,
+    "mirrored": false,
+    "geometry": "roof_gable_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 3.07,
+    "godotMin": [
+      -1.6303,
+      0,
+      -1.5
+    ],
+    "godotMax": [
+      -1.3697,
+      3.07,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableFill_45_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableFill_45_Right",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_fill",
+    "pitch": 45,
+    "mirrored": true,
+    "geometry": "roof_gable_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 3.07,
+    "godotMin": [
+      1.3697,
+      0,
+      -1.5
+    ],
+    "godotMax": [
+      1.6303,
+      3.07,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableFill_45_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableFill_60_Left",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_fill",
+    "pitch": 60,
+    "mirrored": false,
+    "geometry": "roof_gable_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 5.266249,
+    "godotMin": [
+      -1.6303,
+      -4.9281865E-05,
+      -1.5
+    ],
+    "godotMax": [
+      -1.3697,
+      5.2662,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableFill_60_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableFill_60_Right",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_fill",
+    "pitch": 60,
+    "mirrored": true,
+    "geometry": "roof_gable_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 5.266249,
+    "godotMin": [
+      1.3697,
+      -4.9281865E-05,
+      -1.5
+    ],
+    "godotMax": [
+      1.6303,
+      5.2662,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableFill_60_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableRidgeFill_22p5_Left",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_ridge_fill",
+    "pitch": 22.5,
+    "mirrored": false,
+    "geometry": "roof_gable_ridge_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 0.6913307,
+    "godotMin": [
+      -1.6303,
+      -3.066659E-05,
+      -1.5
+    ],
+    "godotMax": [
+      -1.3697,
+      0.6913,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableRidgeFill_22p5_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableRidgeFill_22p5_Right",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_ridge_fill",
+    "pitch": 22.5,
+    "mirrored": true,
+    "geometry": "roof_gable_ridge_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 0.6913307,
+    "godotMin": [
+      1.3697,
+      -3.066659E-05,
+      -1.5
+    ],
+    "godotMax": [
+      1.6303,
+      0.6913,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableRidgeFill_22p5_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableRidgeFill_30_Left",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_ridge_fill",
+    "pitch": 30,
+    "mirrored": false,
+    "geometry": "roof_gable_ridge_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 0.936,
+    "godotMin": [
+      -1.6303,
+      0,
+      -1.5
+    ],
+    "godotMax": [
+      -1.3697,
+      0.936,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableRidgeFill_30_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableRidgeFill_30_Right",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_ridge_fill",
+    "pitch": 30,
+    "mirrored": true,
+    "geometry": "roof_gable_ridge_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 0.936,
+    "godotMin": [
+      1.3697,
+      0,
+      -1.5
+    ],
+    "godotMax": [
+      1.6303,
+      0.936,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableRidgeFill_30_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableRidgeFill_45_Left",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_ridge_fill",
+    "pitch": 45,
+    "mirrored": false,
+    "geometry": "roof_gable_ridge_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 1.5699999,
+    "godotMin": [
+      -1.6303,
+      0,
+      -1.5
+    ],
+    "godotMax": [
+      -1.3697,
+      1.5699999,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableRidgeFill_45_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableRidgeFill_45_Right",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_ridge_fill",
+    "pitch": 45,
+    "mirrored": true,
+    "geometry": "roof_gable_ridge_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 1.5699999,
+    "godotMin": [
+      1.3697,
+      0,
+      -1.5
+    ],
+    "godotMax": [
+      1.6303,
+      1.5699999,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableRidgeFill_45_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableRidgeFill_60_Left",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_ridge_fill",
+    "pitch": 60,
+    "mirrored": false,
+    "geometry": "roof_gable_ridge_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 2.6681492,
+    "godotMin": [
+      -1.6303,
+      -4.9281865E-05,
+      -1.5
+    ],
+    "godotMax": [
+      -1.3697,
+      2.6680999,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableRidgeFill_60_Left.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Wall_GableRidgeFill_60_Right",
+    "category": "02_Walls",
+    "gameId": "roof_module",
+    "tool": "wall",
+    "variant": "gable_ridge_fill",
+    "pitch": 60,
+    "mirrored": true,
+    "geometry": "roof_gable_ridge_fill",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 0.2606001,
+    "depthM": 3,
+    "heightM": 2.6681492,
+    "godotMin": [
+      1.3697,
+      -4.9281865E-05,
+      -1.5
+    ],
+    "godotMax": [
+      1.6303,
+      2.6680999,
+      1.5
+    ],
+    "reference": "References/02_Walls/Wall_GableRidgeFill_60_Right.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Stairs_Straight",
+    "category": "03_Structure",
+    "gameId": "stairs",
+    "tool": "stairs",
+    "variant": "straight",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 1.25,
+    "gridDepthM": 3,
+    "widthM": 1.3054,
+    "depthM": 3.066304,
+    "heightM": 3.745798,
+    "godotMin": [
+      -0.6527,
+      -0.041431546,
+      -1.5347035
+    ],
+    "godotMax": [
+      0.6527,
+      3.7043667,
+      1.5316005
+    ],
+    "reference": "References/03_Structure/Stairs_Straight.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Fence_Rail",
+    "category": "03_Structure",
+    "gameId": "fence",
+    "tool": "fence",
+    "variant": "rail",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "legacy",
+    "gridWidthM": 3,
+    "gridDepthM": 0.2,
+    "widthM": 3.1838477,
+    "depthM": 0.18384776,
+    "heightM": 1.2399999,
+    "godotMin": [
+      -1.5919238,
+      0,
+      -0.09192388
+    ],
+    "godotMax": [
+      1.5919238,
+      1.2399999,
+      0.09192388
+    ],
+    "reference": "References/03_Structure/Fence_Rail.glb",
+    "integration": "building_appearance_mapping",
+    "notes": "Modular origin; preserve the grid, profile and pivots. Roof templates exclude optional exposed-edge overhangs."
+  },
+  {
+    "id": "Roof_LegacyConnected",
+    "category": "01_Roofs",
+    "gameId": "roof",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 3,
+    "gridDepthM": 3,
+    "widthM": 3.1268,
+    "depthM": 3.1236,
+    "heightM": 0.33999997,
+    "godotMin": [
+      -1.5634,
+      -0.07,
+      -1.5586
+    ],
+    "godotMax": [
+      1.5634,
+      0.26999998,
+      1.565
+    ],
+    "reference": "References/01_Roofs/Roof_LegacyConnected.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Stations_Campfire",
+    "category": "04_Stations",
+    "gameId": "campfire",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 1.3,
+    "gridDepthM": 1.3,
+    "widthM": 1.4553161,
+    "depthM": 1.3980379,
+    "heightM": 0.91999996,
+    "godotMin": [
+      -0.72765803,
+      0,
+      -0.699019
+    ],
+    "godotMax": [
+      0.72765803,
+      0.91999996,
+      0.69901896
+    ],
+    "reference": "References/04_Stations/Stations_Campfire.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Stations_Workbench",
+    "category": "04_Stations",
+    "gameId": "workbench",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 2.2,
+    "gridDepthM": 1.1,
+    "widthM": 1.75,
+    "depthM": 0.90999997,
+    "heightM": 1.2299999,
+    "godotMin": [
+      -0.875,
+      2.9802322E-08,
+      -0.45499998
+    ],
+    "godotMax": [
+      0.875,
+      1.2299999,
+      0.45499998
+    ],
+    "reference": "References/04_Stations/Stations_Workbench.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Stations_Carpenter",
+    "category": "04_Stations",
+    "gameId": "carpenter",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 2.2,
+    "gridDepthM": 1.5,
+    "widthM": 2.2,
+    "depthM": 1.27,
+    "heightM": 1.335,
+    "godotMin": [
+      -1.1,
+      0,
+      -0.55
+    ],
+    "godotMax": [
+      1.1,
+      1.335,
+      0.72
+    ],
+    "reference": "References/04_Stations/Stations_Carpenter.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Stations_Kiln",
+    "category": "04_Stations",
+    "gameId": "kiln",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 2,
+    "gridDepthM": 1.8,
+    "widthM": 1.7199999,
+    "depthM": 1.76,
+    "heightM": 2.0904999,
+    "godotMin": [
+      -0.85999995,
+      7.450581E-09,
+      -0.85999995
+    ],
+    "godotMax": [
+      0.85999995,
+      2.0904999,
+      0.9
+    ],
+    "reference": "References/04_Stations/Stations_Kiln.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Stations_Forge",
+    "category": "04_Stations",
+    "gameId": "forge",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 2.42,
+    "gridDepthM": 1.35,
+    "widthM": 2.385,
+    "depthM": 1.385,
+    "heightM": 2.555,
+    "godotMin": [
+      -1.1750001,
+      0,
+      -0.71000004
+    ],
+    "godotMax": [
+      1.2099999,
+      2.555,
+      0.675
+    ],
+    "reference": "References/04_Stations/Stations_Forge.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Stations_Cooking",
+    "category": "04_Stations",
+    "gameId": "cooking",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 2,
+    "gridDepthM": 1.8,
+    "widthM": 1.48,
+    "depthM": 1.0904696,
+    "heightM": 1.214623,
+    "godotMin": [
+      -0.74,
+      -0.018823087,
+      -0.5452348
+    ],
+    "godotMax": [
+      0.74,
+      1.1958,
+      0.54523474
+    ],
+    "reference": "References/04_Stations/Stations_Cooking.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Stations_Oven",
+    "category": "04_Stations",
+    "gameId": "oven",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 2,
+    "gridDepthM": 1.8,
+    "widthM": 1.8399999,
+    "depthM": 1.735,
+    "heightM": 2.05,
+    "godotMin": [
+      -0.91999996,
+      2.9802322E-08,
+      -0.84
+    ],
+    "godotMax": [
+      0.91999996,
+      2.05,
+      0.89500004
+    ],
+    "reference": "References/04_Stations/Stations_Oven.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Decor_Chair",
+    "category": "05_Decor",
+    "gameId": "chair",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0.65,
+    "gridDepthM": 0.65,
+    "widthM": 0.55,
+    "depthM": 0.53999996,
+    "heightM": 1.095,
+    "godotMin": [
+      -0.275,
+      0,
+      -0.27
+    ],
+    "godotMax": [
+      0.275,
+      1.095,
+      0.26999998
+    ],
+    "reference": "References/05_Decor/Decor_Chair.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Decor_Table",
+    "category": "05_Decor",
+    "gameId": "table",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 1.6,
+    "gridDepthM": 1,
+    "widthM": 1.5999999,
+    "depthM": 0.89299995,
+    "heightM": 0.85,
+    "godotMin": [
+      -0.79999995,
+      0,
+      -0.4465
+    ],
+    "godotMax": [
+      0.79999995,
+      0.85,
+      0.44649994
+    ],
+    "reference": "References/05_Decor/Decor_Table.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Decor_Planter",
+    "category": "05_Decor",
+    "gameId": "planter",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0.85,
+    "gridDepthM": 0.85,
+    "widthM": 0.7476606,
+    "depthM": 0.7465464,
+    "heightM": 1.085,
+    "godotMin": [
+      -0.3747077,
+      0,
+      -0.37526697
+    ],
+    "godotMax": [
+      0.37295288,
+      1.085,
+      0.3712794
+    ],
+    "reference": "References/05_Decor/Decor_Planter.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Decor_Painting",
+    "category": "05_Decor",
+    "gameId": "painting",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0.91,
+    "gridDepthM": 0.65,
+    "widthM": 0.90999997,
+    "depthM": 0.66997945,
+    "heightM": 1.5142537,
+    "godotMin": [
+      -0.45499998,
+      -0.008423209,
+      -0.39056936
+    ],
+    "godotMax": [
+      0.45499998,
+      1.5058305,
+      0.27941012
+    ],
+    "reference": "References/05_Decor/Decor_Painting.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Decor_Lantern",
+    "category": "05_Decor",
+    "gameId": "lantern",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0.4,
+    "gridDepthM": 0.4,
+    "widthM": 0.3464823,
+    "depthM": 0.3464823,
+    "heightM": 0.6246,
+    "godotMin": [
+      -0.17324115,
+      0,
+      -0.17324115
+    ],
+    "godotMax": [
+      0.17324115,
+      0.6246,
+      0.17324115
+    ],
+    "reference": "References/05_Decor/Decor_Lantern.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Decor_Rug",
+    "category": "05_Decor",
+    "gameId": "rug",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 1.8,
+    "gridDepthM": 1.46,
+    "widthM": 1.8,
+    "depthM": 1.46,
+    "heightM": 0.048,
+    "godotMin": [
+      -0.9,
+      0,
+      -0.73
+    ],
+    "godotMax": [
+      0.9,
+      0.048,
+      0.73
+    ],
+    "reference": "References/05_Decor/Decor_Rug.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Preserve existing local origin; dimensions are measured from prototype artwork."
+  },
+  {
+    "id": "Nature_Tree_Pine",
+    "category": "06_Nature",
+    "gameId": "tree:pine",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 3.112,
+    "depthM": 3.0647,
+    "heightM": 6.2718067,
+    "godotMin": [
+      -1.556,
+      -0.05482748,
+      -1.4247
+    ],
+    "godotMax": [
+      1.556,
+      6.216979,
+      1.6399999
+    ],
+    "reference": "References/06_Nature/Nature_Tree_Pine.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Base-size mature tree. World instances vary in scale; growth scales this model from its root."
+  },
+  {
+    "id": "Nature_Tree_Birch",
+    "category": "06_Nature",
+    "gameId": "tree:birch",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 4.112976,
+    "depthM": 3.8343964,
+    "heightM": 5.144828,
+    "godotMin": [
+      -2.0406508,
+      -0.05482748,
+      -2.044468
+    ],
+    "godotMax": [
+      2.072325,
+      5.09,
+      1.7899284
+    ],
+    "reference": "References/06_Nature/Nature_Tree_Birch.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Base-size mature tree; local origin at soil contact."
+  },
+  {
+    "id": "Nature_Tree_Stump",
+    "category": "06_Nature",
+    "gameId": "stump",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 1.3012044,
+    "depthM": 1.2639605,
+    "heightM": 0.6254032,
+    "godotMin": [
+      -0.64458025,
+      -0.03740324,
+      -0.5936793
+    ],
+    "godotMax": [
+      0.6566242,
+      0.588,
+      0.6702812
+    ],
+    "reference": "References/06_Nature/Nature_Tree_Stump.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Stump origin matches the felled tree\u0027s soil origin."
+  },
+  {
+    "id": "Nature_Tree_PineSapling_Reference",
+    "category": "06_Nature",
+    "gameId": "pine_sapling",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.56016004,
+    "depthM": 0.551646,
+    "heightM": 1.1289252,
+    "godotMin": [
+      -0.28008002,
+      -0.009868946,
+      -0.256446
+    ],
+    "godotMax": [
+      0.28008002,
+      1.1190562,
+      0.2952
+    ],
+    "reference": "References/06_Nature/Nature_Tree_PineSapling_Reference.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Initial growth-size reference only; mature tree and growth scaling are the production asset route."
+  },
+  {
+    "id": "Nature_Rock",
+    "category": "06_Nature",
+    "gameId": "stone",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 1.6672544,
+    "depthM": 1.2836535,
+    "heightM": 1.0945406,
+    "godotMin": [
+      -0.7229355,
+      -0.1772703,
+      -0.624877
+    ],
+    "godotMax": [
+      0.944319,
+      0.9172703,
+      0.6587765
+    ],
+    "reference": "References/06_Nature/Nature_Rock.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Base-size gatherable rock. World instances vary in scale."
+  },
+  {
+    "id": "Nature_BerryBush_Fruiting",
+    "category": "06_Nature",
+    "gameId": "berries",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 1.5272,
+    "depthM": 0.90389997,
+    "heightM": 0.9,
+    "godotMin": [
+      -0.7636,
+      0.100000024,
+      -0.42839998
+    ],
+    "godotMax": [
+      0.7636,
+      1,
+      0.4755
+    ],
+    "reference": "References/06_Nature/Nature_BerryBush_Fruiting.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Mature bush at base scale. Provide a separate bare state or fruit group in future art."
+  },
+  {
+    "id": "Nature_BerryBush_Bare",
+    "category": "06_Nature",
+    "gameId": "berries:bare",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 1.5272,
+    "depthM": 0.90389997,
+    "heightM": 0.9,
+    "godotMin": [
+      -0.7636,
+      0.100000024,
+      -0.42839998
+    ],
+    "godotMax": [
+      0.7636,
+      1,
+      0.4755
+    ],
+    "reference": "References/06_Nature/Nature_BerryBush_Bare.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Same bush without fruit; identical root and base foliage scale."
+  },
+  {
+    "id": "Nature_Grass_Tuft",
+    "category": "06_Nature",
+    "gameId": "grass",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.0928,
+    "depthM": 0.27539998,
+    "heightM": 0.45,
+    "godotMin": [
+      -0.0535,
+      0,
+      -0.1304
+    ],
+    "godotMax": [
+      0.0393,
+      0.45,
+      0.145
+    ],
+    "reference": "References/06_Nature/Nature_Grass_Tuft.glb",
+    "integration": "future_visual_adapter",
+    "notes": "One instanced tuft; match soil origin. Avoid dense geometry for repeated grass."
+  },
+  {
+    "id": "Nature_Crop_Mature",
+    "category": "06_Nature",
+    "gameId": "village_crop:mature",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.762219,
+    "depthM": 0.7371,
+    "heightM": 0.975,
+    "godotMin": [
+      -0.37981033,
+      -0.005,
+      -0.35709998
+    ],
+    "godotMax": [
+      0.38240868,
+      0.97,
+      0.38
+    ],
+    "reference": "References/06_Nature/Nature_Crop_Mature.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Origin at the existing game asset root; preserve it when replacing the artwork."
+  },
+  {
+    "id": "Nature_Crop_Young",
+    "category": "06_Nature",
+    "gameId": "village_crop:young",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.762219,
+    "depthM": 0.7371,
+    "heightM": 0.3758254,
+    "godotMin": [
+      -0.37981033,
+      -0.005,
+      -0.35709998
+    ],
+    "godotMax": [
+      0.38240868,
+      0.3708254,
+      0.38
+    ],
+    "reference": "References/06_Nature/Nature_Crop_Young.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Origin at the existing game asset root; preserve it when replacing the artwork."
+  },
+  {
+    "id": "Character_Player_Reference",
+    "category": "07_Characters",
+    "gameId": "player",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.81057686,
+    "depthM": 0.3875,
+    "heightM": 1.82,
+    "godotMin": [
+      -0.40528843,
+      0.009999961,
+      -0.1875
+    ],
+    "godotMax": [
+      0.40528843,
+      1.83,
+      0.2
+    ],
+    "reference": "References/07_Characters/Character_Player_Reference.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Scale/pose reference with rigid named limb pivots. Not a production animation rig. Preserve the foot origin; coordinate a skeleton before replacing animated characters."
+  },
+  {
+    "id": "Character_Villager_Reference",
+    "category": "07_Characters",
+    "gameId": "villager",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.81057686,
+    "depthM": 0.3875,
+    "heightM": 1.82,
+    "godotMin": [
+      -0.40528843,
+      0.009999961,
+      -0.1875
+    ],
+    "godotMax": [
+      0.40528843,
+      1.83,
+      0.2
+    ],
+    "reference": "References/07_Characters/Character_Villager_Reference.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Scale reference; shares prototype character proportions and named limb pivots."
+  },
+  {
+    "id": "Character_Bandit_Reference",
+    "category": "07_Characters",
+    "gameId": "bandit",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.8510902,
+    "depthM": 1.2125,
+    "heightM": 1.82,
+    "godotMin": [
+      -0.40528843,
+      0.009999961,
+      -0.1875
+    ],
+    "godotMax": [
+      0.4458018,
+      1.83,
+      1.025
+    ],
+    "reference": "References/07_Characters/Character_Bandit_Reference.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Scale reference including prototype weapon; separate weapon art before final rigging."
+  },
+  {
+    "id": "Tool_Axe",
+    "category": "08_Tools",
+    "gameId": "axe",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.3475,
+    "depthM": 0.78,
+    "heightM": 0.07000002,
+    "godotMin": [
+      -0.11,
+      -0.52500004,
+      -0.07999998
+    ],
+    "godotMax": [
+      0.2375,
+      -0.455,
+      0.7
+    ],
+    "reference": "References/08_Tools/Tool_Axe.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Origin is the existing hand/arm attachment pivot, NOT the bottom of the mesh. Preserve offsets for compatibility; hand grip is (0,-0.49,0) in Godot / (0,0,-0.49) in Blender."
+  },
+  {
+    "id": "Tool_Hammer",
+    "category": "08_Tools",
+    "gameId": "hammer",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.35999998,
+    "depthM": 0.72999996,
+    "heightM": 0.17999998,
+    "godotMin": [
+      -0.17999999,
+      -0.58,
+      -0.07999998
+    ],
+    "godotMax": [
+      0.17999999,
+      -0.4,
+      0.65
+    ],
+    "reference": "References/08_Tools/Tool_Hammer.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Origin is the existing hand/arm attachment pivot, NOT the bottom of the mesh. Preserve offsets for compatibility; hand grip is (0,-0.49,0) in Godot / (0,0,-0.49) in Blender."
+  },
+  {
+    "id": "Tool_Hoe",
+    "category": "08_Tools",
+    "gameId": "hoe",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.29,
+    "depthM": 0.72999996,
+    "heightM": 0.25999996,
+    "godotMin": [
+      -0.145,
+      -0.54999995,
+      -0.07999998
+    ],
+    "godotMax": [
+      0.145,
+      -0.29,
+      0.65
+    ],
+    "reference": "References/08_Tools/Tool_Hoe.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Origin is the existing hand/arm attachment pivot, NOT the bottom of the mesh. Preserve offsets for compatibility; hand grip is (0,-0.49,0) in Godot / (0,0,-0.49) in Blender."
+  },
+  {
+    "id": "Tool_SeedBag",
+    "category": "08_Tools",
+    "gameId": "seedbag",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.22478399,
+    "depthM": 0.18447998,
+    "heightM": 0.29999998,
+    "godotMin": [
+      -0.11239199,
+      -0.65,
+      0.030620001
+    ],
+    "godotMax": [
+      0.11239199,
+      -0.35,
+      0.21509999
+    ],
+    "reference": "References/08_Tools/Tool_SeedBag.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Origin is the existing hand/arm attachment pivot, NOT the bottom of the mesh. Preserve offsets for compatibility; hand grip is (0,-0.49,0) in Godot / (0,0,-0.49) in Blender."
+  },
+  {
+    "id": "Tool_Sword",
+    "category": "08_Tools",
+    "gameId": "sword",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 0.24,
+    "depthM": 1.1299999,
+    "heightM": 0.06650004,
+    "godotMin": [
+      -0.12,
+      -0.52500004,
+      -0.07999998
+    ],
+    "godotMax": [
+      0.12,
+      -0.4585,
+      1.05
+    ],
+    "reference": "References/08_Tools/Tool_Sword.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Origin is the existing hand/arm attachment pivot, NOT the bottom of the mesh. Preserve offsets for compatibility; hand grip is (0,-0.49,0) in Godot / (0,0,-0.49) in Blender."
+  },
+  {
+    "id": "Village_Cottage_5x5",
+    "category": "09_Village",
+    "gameId": "cottage:5x5",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 5.7999997,
+    "depthM": 6.645,
+    "heightM": 5.4325,
+    "godotMin": [
+      -2.8999999,
+      -0.06999993,
+      -2.96
+    ],
+    "godotMax": [
+      2.8999999,
+      5.3625,
+      3.685
+    ],
+    "reference": "References/09_Village/Village_Cottage_5x5.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Whole-prefab size reference. Current village collision uses reserved lots; modular replacement is a later step."
+  },
+  {
+    "id": "Village_Cottage_6x5",
+    "category": "09_Village",
+    "gameId": "cottage:6x5",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 6.7999997,
+    "depthM": 6.645,
+    "heightM": 5.8225,
+    "godotMin": [
+      -3.3999999,
+      -0.06999993,
+      -2.96
+    ],
+    "godotMax": [
+      3.3999999,
+      5.7525,
+      3.685
+    ],
+    "reference": "References/09_Village/Village_Cottage_6x5.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Origin at the existing game asset root; preserve it when replacing the artwork."
+  },
+  {
+    "id": "Village_Workshop_6x6",
+    "category": "09_Village",
+    "gameId": "workshop:6x6",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 7.9049997,
+    "depthM": 7.6449995,
+    "heightM": 5.8225,
+    "godotMin": [
+      -3.3999999,
+      -0.06999993,
+      -3.4599998
+    ],
+    "godotMax": [
+      4.505,
+      5.7525,
+      4.185
+    ],
+    "reference": "References/09_Village/Village_Workshop_6x6.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Includes outside bench/logs and porch; measured visual bounds exceed the nominal 6x6 footprint."
+  },
+  {
+    "id": "Village_Well",
+    "category": "09_Village",
+    "gameId": "well",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 2.3065,
+    "depthM": 1.7199999,
+    "heightM": 2.83,
+    "godotMin": [
+      -1.1,
+      0,
+      -0.85999995
+    ],
+    "godotMax": [
+      1.2065,
+      2.83,
+      0.85999995
+    ],
+    "reference": "References/09_Village/Village_Well.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Origin at the existing game asset root; preserve it when replacing the artwork."
+  },
+  {
+    "id": "Village_Caravan_Cart",
+    "category": "09_Village",
+    "gameId": "caravan_cart",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 2.48,
+    "depthM": 3,
+    "heightM": 1.33,
+    "godotMin": [
+      -1.24,
+      0.02000001,
+      -1.5
+    ],
+    "godotMax": [
+      1.24,
+      1.35,
+      1.5
+    ],
+    "reference": "References/09_Village/Village_Caravan_Cart.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Origin at the existing game asset root; preserve it when replacing the artwork."
+  },
+  {
+    "id": "Prop_Shrine_Optional",
+    "category": "09_Village",
+    "gameId": "shrine:unused",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 2.5,
+    "depthM": 2.5,
+    "heightM": 1.9638569,
+    "godotMin": [
+      -1.25,
+      0,
+      -1.25
+    ],
+    "godotMax": [
+      1.25,
+      1.9638569,
+      1.25
+    ],
+    "reference": "References/09_Village/Prop_Shrine_Optional.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Existing visual helper, not currently placed in the playable valley."
+  },
+  {
+    "id": "Village_Bridge",
+    "category": "09_Village",
+    "gameId": "bridge",
+    "tool": "",
+    "variant": "",
+    "pitch": 0,
+    "mirrored": false,
+    "geometry": "",
+    "gridWidthM": 0,
+    "gridDepthM": 0,
+    "widthM": 9,
+    "depthM": 3.6,
+    "heightM": 1.3,
+    "godotMin": [
+      -4.5,
+      -0.049999952,
+      -1.8
+    ],
+    "godotMax": [
+      4.5,
+      1.25,
+      1.8
+    ],
+    "reference": "References/09_Village/Village_Bridge.glb",
+    "integration": "future_visual_adapter",
+    "notes": "Current river crossing centred on its span; keep walking deck height and clear width."
+  }
+]

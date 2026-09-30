@@ -1,0 +1,235 @@
+[
+  {
+    "id": "planks",
+    "activity": "saw",
+    "name": "Cut planks",
+    "costs": {
+      "wood": 2
+    },
+    "output": "plank",
+    "quantity": 1,
+    "station": "carpenter",
+    "duration": 6,
+    "description": "Saw timber into useful boards."
+  },
+  {
+    "id": "stone_axe",
+    "name": "Stone axe",
+    "costs": {
+      "wood": 3,
+      "stone": 2
+    },
+    "output": "axe",
+    "quantity": 1,
+    "station": "hand",
+    "duration": 4,
+    "description": "Make by hand from gathered materials."
+  },
+  {
+    "id": "flint_blade",
+    "name": "Flint blade",
+    "costs": {
+      "wood": 2,
+      "stone": 6
+    },
+    "output": "sword",
+    "quantity": 1,
+    "station": "hand",
+    "duration": 4,
+    "description": "Make by hand from gathered materials."
+  },
+  {
+    "id": "berry_meal",
+    "name": "Berry meal",
+    "costs": {
+      "berries": 3
+    },
+    "output": "meal",
+    "quantity": 1,
+    "station": "hand",
+    "duration": 4,
+    "description": "Make by hand from gathered materials."
+  },
+  {
+    "id": "brick",
+    "name": "Fired brick",
+    "station": "kiln",
+    "duration": 10,
+    "costs": {
+      "clay": 2,
+      "wood": 1
+    },
+    "output": "brick",
+    "quantity": 1,
+    "description": "Made using the valley's materials."
+  },
+  {
+    "id": "iron",
+    "name": "Iron fittings",
+    "station": "forge",
+    "duration": 10,
+    "costs": {
+      "wood": 2,
+      "iron_ore": 3
+    },
+    "output": "iron",
+    "quantity": 1,
+    "description": "Made using the valley's materials."
+  },
+  {
+    "id": "chair",
+    "name": "Timber chair",
+    "station": "carpenter",
+    "duration": 8,
+    "costs": {
+      "plank": 2,
+      "wood": 1
+    },
+    "output": "chair",
+    "quantity": 1,
+    "description": "Craft and place this furnishing in your home or garden."
+  },
+  {
+    "id": "table",
+    "name": "Oak table",
+    "station": "carpenter",
+    "duration": 10,
+    "costs": {
+      "plank": 4,
+      "wood": 2
+    },
+    "output": "table",
+    "quantity": 1,
+    "description": "Craft and place this furnishing in your home or garden."
+  },
+  {
+    "id": "planter",
+    "name": "Potted fern",
+    "station": "kiln",
+    "duration": 8,
+    "costs": {
+      "clay": 2,
+      "seeds": 1
+    },
+    "output": "planter",
+    "quantity": 1,
+    "description": "Craft and place this furnishing in your home or garden."
+  },
+  {
+    "id": "painting",
+    "name": "Valley painting",
+    "station": "hand",
+    "duration": 7,
+    "costs": {
+      "plank": 1,
+      "hide": 1,
+      "berries": 2
+    },
+    "output": "painting",
+    "quantity": 1,
+    "description": "Craft and place this furnishing in your home or garden."
+  },
+  {
+    "id": "lantern",
+    "name": "Iron lantern",
+    "station": "forge",
+    "duration": 9,
+    "costs": {
+      "iron": 2,
+      "wood": 1
+    },
+    "output": "lantern",
+    "quantity": 1,
+    "description": "Craft and place this furnishing in your home or garden."
+  },
+  {
+    "id": "rug",
+    "name": "Woven rug",
+    "station": "hand",
+    "duration": 8,
+    "costs": {
+      "hide": 2
+    },
+    "output": "rug",
+    "quantity": 1,
+    "description": "Craft and place this furnishing in your home or garden."
+  },
+  {
+    "id": "bread",
+    "name": "Hearth bread",
+    "station": "oven",
+    "duration": 10,
+    "costs": {
+      "grain": 3,
+      "wood": 1
+    },
+    "output": "bread",
+    "quantity": 1,
+    "description": "Made using the valley's materials."
+  },
+  {
+    "id": "stew",
+    "name": "Berry stew",
+    "station": "cooking",
+    "duration": 8,
+    "costs": {
+      "berries": 4,
+      "wood": 1
+    },
+    "output": "meal",
+    "quantity": 1,
+    "description": "Simmer a warm meal over the hearth."
+  },
+  {
+    "id": "health_potion",
+    "name": "Berry tonic",
+    "station": "cooking",
+    "duration": 6,
+    "costs": {
+      "berries": 3,
+      "grain": 1
+    },
+    "output": "health_potion",
+    "quantity": 1,
+    "description": "Brew berries and grain into a restorative tonic."
+  },
+  {
+    "id": "pine_sapling",
+    "name": "Prepare pine sapling",
+    "output": "pine_sapling",
+    "quantity": 1,
+    "station": "hand",
+    "duration": 8,
+    "costs": {
+      "pine_cone": 1,
+      "wood": 1
+    },
+    "description": "Prepare a cone and a wooden nursery support for planting."
+  },
+  {
+    "id": "bush_seedling",
+    "name": "Prepare berry seedling",
+    "output": "bush_seedling",
+    "quantity": 1,
+    "station": "hand",
+    "duration": 8,
+    "costs": {
+      "berries": 3,
+      "wood": 1
+    },
+    "description": "Prepare berry seeds and a nursery support to establish a lasting bush."
+  },
+  {
+    "id": "shovel",
+    "name": "Wooden shovel",
+    "costs": {
+      "wood": 3,
+      "stone": 2
+    },
+    "output": "shovel",
+    "quantity": 1,
+    "station": "hand",
+    "duration": 5,
+    "description": "Carve a broad wooden blade and bind it to a sturdy handle."
+  }
+]

@@ -1,0 +1,674 @@
+[
+  {
+    "id": "Roof_Slope_22p5",
+    "blend": "Templates\\01_Roofs\\Roof_Slope_22p5.blend",
+    "axis_scale_error_m": 4.119487392292004e-05,
+    "meshes": 4,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Slope_30",
+    "blend": "Templates\\01_Roofs\\Roof_Slope_30.blend",
+    "axis_scale_error_m": 5.310609950909179e-05,
+    "meshes": 4,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Slope_45",
+    "blend": "Templates\\01_Roofs\\Roof_Slope_45.blend",
+    "axis_scale_error_m": 5.1731752059607755e-05,
+    "meshes": 4,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Slope_60",
+    "blend": "Templates\\01_Roofs\\Roof_Slope_60.blend",
+    "axis_scale_error_m": 6.183285990015877e-05,
+    "meshes": 4,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Ridge_22p5",
+    "blend": "Templates\\01_Roofs\\Roof_Ridge_22p5.blend",
+    "axis_scale_error_m": 2.3726317467044392e-05,
+    "meshes": 10,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Ridge_30",
+    "blend": "Templates\\01_Roofs\\Roof_Ridge_30.blend",
+    "axis_scale_error_m": 5.151510520022645e-05,
+    "meshes": 10,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Ridge_45",
+    "blend": "Templates\\01_Roofs\\Roof_Ridge_45.blend",
+    "axis_scale_error_m": 4.322847408527252e-05,
+    "meshes": 10,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Ridge_60",
+    "blend": "Templates\\01_Roofs\\Roof_Ridge_60.blend",
+    "axis_scale_error_m": 4.618386965996693e-05,
+    "meshes": 10,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Hip_22p5",
+    "blend": "Templates\\01_Roofs\\Roof_Hip_22p5.blend",
+    "axis_scale_error_m": 5.913609881105183e-05,
+    "meshes": 8,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Hip_30",
+    "blend": "Templates\\01_Roofs\\Roof_Hip_30.blend",
+    "axis_scale_error_m": 4.9508821731341074e-05,
+    "meshes": 8,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Hip_45",
+    "blend": "Templates\\01_Roofs\\Roof_Hip_45.blend",
+    "axis_scale_error_m": 7.058751779026414e-05,
+    "meshes": 8,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Hip_60",
+    "blend": "Templates\\01_Roofs\\Roof_Hip_60.blend",
+    "axis_scale_error_m": 4.872906241506514e-05,
+    "meshes": 8,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Valley_22p5",
+    "blend": "Templates\\01_Roofs\\Roof_Valley_22p5.blend",
+    "axis_scale_error_m": 3.832889183896226e-05,
+    "meshes": 8,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Valley_30",
+    "blend": "Templates\\01_Roofs\\Roof_Valley_30.blend",
+    "axis_scale_error_m": 5.1652299804430196e-05,
+    "meshes": 8,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Valley_45",
+    "blend": "Templates\\01_Roofs\\Roof_Valley_45.blend",
+    "axis_scale_error_m": 5.780458327395862e-05,
+    "meshes": 8,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Valley_60",
+    "blend": "Templates\\01_Roofs\\Roof_Valley_60.blend",
+    "axis_scale_error_m": 4.775072396366532e-05,
+    "meshes": 8,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_GableEdge_22p5_Left",
+    "blend": "Templates\\01_Roofs\\Roof_GableEdge_22p5_Left.blend",
+    "axis_scale_error_m": 2.849102020263672e-05,
+    "meshes": 5,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_GableEdge_22p5_Right",
+    "blend": "Templates\\01_Roofs\\Roof_GableEdge_22p5_Right.blend",
+    "axis_scale_error_m": 2.849102020263672e-05,
+    "meshes": 5,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_GableEdge_30_Left",
+    "blend": "Templates\\01_Roofs\\Roof_GableEdge_30_Left.blend",
+    "axis_scale_error_m": 2.849102020263672e-05,
+    "meshes": 5,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_GableEdge_30_Right",
+    "blend": "Templates\\01_Roofs\\Roof_GableEdge_30_Right.blend",
+    "axis_scale_error_m": 2.849102020263672e-05,
+    "meshes": 5,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_GableEdge_45_Left",
+    "blend": "Templates\\01_Roofs\\Roof_GableEdge_45_Left.blend",
+    "axis_scale_error_m": 2.849102020263672e-05,
+    "meshes": 5,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_GableEdge_45_Right",
+    "blend": "Templates\\01_Roofs\\Roof_GableEdge_45_Right.blend",
+    "axis_scale_error_m": 2.849102020263672e-05,
+    "meshes": 5,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_GableEdge_60_Left",
+    "blend": "Templates\\01_Roofs\\Roof_GableEdge_60_Left.blend",
+    "axis_scale_error_m": 2.849102020263672e-05,
+    "meshes": 5,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_GableEdge_60_Right",
+    "blend": "Templates\\01_Roofs\\Roof_GableEdge_60_Right.blend",
+    "axis_scale_error_m": 2.849102020263672e-05,
+    "meshes": 5,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Eave_22p5",
+    "blend": "Templates\\01_Roofs\\Roof_Eave_22p5.blend",
+    "axis_scale_error_m": 1.4901161193847656e-08,
+    "meshes": 9,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Eave_30",
+    "blend": "Templates\\01_Roofs\\Roof_Eave_30.blend",
+    "axis_scale_error_m": 1.4901161193847656e-08,
+    "meshes": 9,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Eave_45",
+    "blend": "Templates\\01_Roofs\\Roof_Eave_45.blend",
+    "axis_scale_error_m": 1.4901161193847656e-08,
+    "meshes": 9,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Eave_60",
+    "blend": "Templates\\01_Roofs\\Roof_Eave_60.blend",
+    "axis_scale_error_m": 1.4901161193847656e-08,
+    "meshes": 9,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Flat",
+    "blend": "Templates\\01_Roofs\\Roof_Flat.blend",
+    "axis_scale_error_m": 0.0,
+    "meshes": 38,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Triangle",
+    "blend": "Templates\\01_Roofs\\Roof_Triangle.blend",
+    "axis_scale_error_m": 2.384185791015625e-07,
+    "meshes": 14,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_Corner",
+    "blend": "Templates\\01_Roofs\\Roof_Corner.blend",
+    "axis_scale_error_m": 4.00543212890625e-05,
+    "meshes": 44,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_LegacySlope",
+    "blend": "Templates\\01_Roofs\\Roof_LegacySlope.blend",
+    "axis_scale_error_m": 2.002716064453125e-05,
+    "meshes": 38,
+    "door_pivot": false
+  },
+  {
+    "id": "Floor_Full_Foundation",
+    "blend": "Templates\\03_Structure\\Floor_Full_Foundation.blend",
+    "axis_scale_error_m": 7.450580596923828e-09,
+    "meshes": 13,
+    "door_pivot": false
+  },
+  {
+    "id": "Floor_Full_Upper",
+    "blend": "Templates\\03_Structure\\Floor_Full_Upper.blend",
+    "axis_scale_error_m": 7.450580596923828e-09,
+    "meshes": 15,
+    "door_pivot": false
+  },
+  {
+    "id": "Floor_Triangle_Foundation",
+    "blend": "Templates\\03_Structure\\Floor_Triangle_Foundation.blend",
+    "axis_scale_error_m": 3.1680303253932744e-07,
+    "meshes": 14,
+    "door_pivot": false
+  },
+  {
+    "id": "Floor_Triangle_Upper",
+    "blend": "Templates\\03_Structure\\Floor_Triangle_Upper.blend",
+    "axis_scale_error_m": 3.1680303253932744e-07,
+    "meshes": 14,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_Solid",
+    "blend": "Templates\\02_Walls\\Wall_Solid.blend",
+    "axis_scale_error_m": 1.4901161193847656e-08,
+    "meshes": 7,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_Door",
+    "blend": "Templates\\02_Walls\\Wall_Door.blend",
+    "axis_scale_error_m": 0.0,
+    "meshes": 18,
+    "door_pivot": true
+  },
+  {
+    "id": "Wall_Diagonal",
+    "blend": "Templates\\02_Walls\\Wall_Diagonal.blend",
+    "axis_scale_error_m": 1.4901161193847656e-08,
+    "meshes": 7,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableFill_22p5_Left",
+    "blend": "Templates\\02_Walls\\Wall_GableFill_22p5_Left.blend",
+    "axis_scale_error_m": 6.302294233320763e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableFill_22p5_Right",
+    "blend": "Templates\\02_Walls\\Wall_GableFill_22p5_Right.blend",
+    "axis_scale_error_m": 6.302294233320763e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableFill_30_Left",
+    "blend": "Templates\\02_Walls\\Wall_GableFill_30_Left.blend",
+    "axis_scale_error_m": 6.88721289137609e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableFill_30_Right",
+    "blend": "Templates\\02_Walls\\Wall_GableFill_30_Right.blend",
+    "axis_scale_error_m": 6.88721289137609e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableFill_45_Left",
+    "blend": "Templates\\02_Walls\\Wall_GableFill_45_Left.blend",
+    "axis_scale_error_m": 4.816114311989772e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableFill_45_Right",
+    "blend": "Templates\\02_Walls\\Wall_GableFill_45_Right.blend",
+    "axis_scale_error_m": 4.816114311989772e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableFill_60_Left",
+    "blend": "Templates\\02_Walls\\Wall_GableFill_60_Left.blend",
+    "axis_scale_error_m": 6.890675738662882e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableFill_60_Right",
+    "blend": "Templates\\02_Walls\\Wall_GableFill_60_Right.blend",
+    "axis_scale_error_m": 6.890675738662882e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableRidgeFill_22p5_Left",
+    "blend": "Templates\\02_Walls\\Wall_GableRidgeFill_22p5_Left.blend",
+    "axis_scale_error_m": 5.709534647666227e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableRidgeFill_22p5_Right",
+    "blend": "Templates\\02_Walls\\Wall_GableRidgeFill_22p5_Right.blend",
+    "axis_scale_error_m": 5.709534647666227e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableRidgeFill_30_Left",
+    "blend": "Templates\\02_Walls\\Wall_GableRidgeFill_30_Left.blend",
+    "axis_scale_error_m": 5.4444201994063703e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableRidgeFill_30_Right",
+    "blend": "Templates\\02_Walls\\Wall_GableRidgeFill_30_Right.blend",
+    "axis_scale_error_m": 5.4444201994063703e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableRidgeFill_45_Left",
+    "blend": "Templates\\02_Walls\\Wall_GableRidgeFill_45_Left.blend",
+    "axis_scale_error_m": 4.8160552978515625e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableRidgeFill_45_Right",
+    "blend": "Templates\\02_Walls\\Wall_GableRidgeFill_45_Right.blend",
+    "axis_scale_error_m": 4.8160552978515625e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableRidgeFill_60_Left",
+    "blend": "Templates\\02_Walls\\Wall_GableRidgeFill_60_Left.blend",
+    "axis_scale_error_m": 6.890675738662882e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Wall_GableRidgeFill_60_Right",
+    "blend": "Templates\\02_Walls\\Wall_GableRidgeFill_60_Right.blend",
+    "axis_scale_error_m": 6.890675738662882e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Stairs_Straight",
+    "blend": "Templates\\03_Structure\\Stairs_Straight.blend",
+    "axis_scale_error_m": 4.729199442599055e-05,
+    "meshes": 46,
+    "door_pivot": false
+  },
+  {
+    "id": "Fence_Rail",
+    "blend": "Templates\\03_Structure\\Fence_Rail.blend",
+    "axis_scale_error_m": 7.450580596923828e-09,
+    "meshes": 6,
+    "door_pivot": false
+  },
+  {
+    "id": "Roof_LegacyConnected",
+    "blend": "Templates\\01_Roofs\\Roof_LegacyConnected.blend",
+    "axis_scale_error_m": 4.740049772678566e-05,
+    "meshes": 50,
+    "door_pivot": false
+  },
+  {
+    "id": "Stations_Campfire",
+    "blend": "Templates\\04_Stations\\Stations_Campfire.blend",
+    "axis_scale_error_m": 9.755516082079299e-06,
+    "meshes": 18,
+    "door_pivot": false
+  },
+  {
+    "id": "Stations_Workbench",
+    "blend": "Templates\\04_Stations\\Stations_Workbench.blend",
+    "axis_scale_error_m": 4.2146848510894035e-08,
+    "meshes": 12,
+    "door_pivot": false
+  },
+  {
+    "id": "Stations_Carpenter",
+    "blend": "Templates\\04_Stations\\Stations_Carpenter.blend",
+    "axis_scale_error_m": 5.960464477539063e-08,
+    "meshes": 25,
+    "door_pivot": false
+  },
+  {
+    "id": "Stations_Kiln",
+    "blend": "Templates\\04_Stations\\Stations_Kiln.blend",
+    "axis_scale_error_m": 8.429369702178807e-08,
+    "meshes": 13,
+    "door_pivot": false
+  },
+  {
+    "id": "Stations_Forge",
+    "blend": "Templates\\04_Stations\\Stations_Forge.blend",
+    "axis_scale_error_m": 1.1920928955078125e-07,
+    "meshes": 22,
+    "door_pivot": false
+  },
+  {
+    "id": "Stations_Cooking",
+    "blend": "Templates\\04_Stations\\Stations_Cooking.blend",
+    "axis_scale_error_m": 4.5305931194306486e-05,
+    "meshes": 28,
+    "door_pivot": false
+  },
+  {
+    "id": "Stations_Oven",
+    "blend": "Templates\\04_Stations\\Stations_Oven.blend",
+    "axis_scale_error_m": 6.664001874625056e-08,
+    "meshes": 10,
+    "door_pivot": false
+  },
+  {
+    "id": "Decor_Chair",
+    "blend": "Templates\\05_Decor\\Decor_Chair.blend",
+    "axis_scale_error_m": 2.9802322387695312e-08,
+    "meshes": 10,
+    "door_pivot": false
+  },
+  {
+    "id": "Decor_Table",
+    "blend": "Templates\\05_Decor\\Decor_Table.blend",
+    "axis_scale_error_m": 5.960464477539063e-08,
+    "meshes": 9,
+    "door_pivot": false
+  },
+  {
+    "id": "Decor_Planter",
+    "blend": "Templates\\05_Decor\\Decor_Planter.blend",
+    "axis_scale_error_m": 8.608281007984163e-06,
+    "meshes": 21,
+    "door_pivot": false
+  },
+  {
+    "id": "Decor_Painting",
+    "blend": "Templates\\05_Decor\\Decor_Painting.blend",
+    "axis_scale_error_m": 4.652341075352716e-05,
+    "meshes": 9,
+    "door_pivot": false
+  },
+  {
+    "id": "Decor_Lantern",
+    "blend": "Templates\\05_Decor\\Decor_Lantern.blend",
+    "axis_scale_error_m": 2.3961104267243517e-05,
+    "meshes": 10,
+    "door_pivot": false
+  },
+  {
+    "id": "Decor_Rug",
+    "blend": "Templates\\05_Decor\\Decor_Rug.blend",
+    "axis_scale_error_m": 0.0,
+    "meshes": 40,
+    "door_pivot": false
+  },
+  {
+    "id": "Nature_Tree_Pine",
+    "blend": "Templates\\06_Nature\\Nature_Tree_Pine.blend",
+    "axis_scale_error_m": 1.4897822959816138e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Nature_Tree_Birch",
+    "blend": "Templates\\06_Nature\\Nature_Tree_Birch.blend",
+    "axis_scale_error_m": 0.00015489147742761008,
+    "meshes": 26,
+    "door_pivot": false
+  },
+  {
+    "id": "Nature_Tree_Stump",
+    "blend": "Templates\\06_Nature\\Nature_Tree_Stump.blend",
+    "axis_scale_error_m": 6.326155968413354e-05,
+    "meshes": 12,
+    "door_pivot": false
+  },
+  {
+    "id": "Nature_Tree_PineSapling_Reference",
+    "blend": "Templates\\06_Nature\\Nature_Tree_PineSapling_Reference.blend",
+    "axis_scale_error_m": 2.684525972578179e-06,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Nature_Rock",
+    "blend": "Templates\\06_Nature\\Nature_Rock.blend",
+    "axis_scale_error_m": 3.7347815721181005e-05,
+    "meshes": 3,
+    "door_pivot": false
+  },
+  {
+    "id": "Nature_BerryBush_Fruiting",
+    "blend": "Templates\\06_Nature\\Nature_BerryBush_Fruiting.blend",
+    "axis_scale_error_m": 3.66779422786096e-05,
+    "meshes": 11,
+    "door_pivot": false
+  },
+  {
+    "id": "Nature_BerryBush_Bare",
+    "blend": "Templates\\06_Nature\\Nature_BerryBush_Bare.blend",
+    "axis_scale_error_m": 3.66779422786096e-05,
+    "meshes": 3,
+    "door_pivot": false
+  },
+  {
+    "id": "Nature_Grass_Tuft",
+    "blend": "Templates\\06_Nature\\Nature_Grass_Tuft.blend",
+    "axis_scale_error_m": 4.625818713314644e-05,
+    "meshes": 1,
+    "door_pivot": false
+  },
+  {
+    "id": "Nature_Crop_Mature",
+    "blend": "Templates\\06_Nature\\Nature_Crop_Mature.blend",
+    "axis_scale_error_m": 1.9899606740418284e-05,
+    "meshes": 21,
+    "door_pivot": false
+  },
+  {
+    "id": "Nature_Crop_Young",
+    "blend": "Templates\\06_Nature\\Nature_Crop_Young.blend",
+    "axis_scale_error_m": 2.9527981000750807e-05,
+    "meshes": 16,
+    "door_pivot": false
+  },
+  {
+    "id": "Character_Player_Reference",
+    "blend": "Templates\\07_Characters\\Character_Player_Reference.blend",
+    "axis_scale_error_m": 4.0471554488294777e-05,
+    "meshes": 23,
+    "door_pivot": false
+  },
+  {
+    "id": "Character_Villager_Reference",
+    "blend": "Templates\\07_Characters\\Character_Villager_Reference.blend",
+    "axis_scale_error_m": 4.0471554488294777e-05,
+    "meshes": 23,
+    "door_pivot": false
+  },
+  {
+    "id": "Character_Bandit_Reference",
+    "blend": "Templates\\07_Characters\\Character_Bandit_Reference.blend",
+    "axis_scale_error_m": 4.0471554488294777e-05,
+    "meshes": 26,
+    "door_pivot": false
+  },
+  {
+    "id": "Tool_Axe",
+    "blend": "Templates\\08_Tools\\Tool_Axe.blend",
+    "axis_scale_error_m": 5.960464477539063e-08,
+    "meshes": 3,
+    "door_pivot": false
+  },
+  {
+    "id": "Tool_Hammer",
+    "blend": "Templates\\08_Tools\\Tool_Hammer.blend",
+    "axis_scale_error_m": 8.560065398421926e-08,
+    "meshes": 2,
+    "door_pivot": false
+  },
+  {
+    "id": "Tool_Hoe",
+    "blend": "Templates\\08_Tools\\Tool_Hoe.blend",
+    "axis_scale_error_m": 5.960464477539063e-08,
+    "meshes": 2,
+    "door_pivot": false
+  },
+  {
+    "id": "Tool_SeedBag",
+    "blend": "Templates\\08_Tools\\Tool_SeedBag.blend",
+    "axis_scale_error_m": 9.95434652657727e-06,
+    "meshes": 1,
+    "door_pivot": false
+  },
+  {
+    "id": "Tool_Sword",
+    "blend": "Templates\\08_Tools\\Tool_Sword.blend",
+    "axis_scale_error_m": 3.394486564125077e-05,
+    "meshes": 3,
+    "door_pivot": false
+  },
+  {
+    "id": "Village_Cottage_5x5",
+    "blend": "Templates\\09_Village\\Village_Cottage_5x5.blend",
+    "axis_scale_error_m": 3.371747880871523e-07,
+    "meshes": 93,
+    "door_pivot": false
+  },
+  {
+    "id": "Village_Cottage_6x5",
+    "blend": "Templates\\09_Village\\Village_Cottage_6x5.blend",
+    "axis_scale_error_m": 3.371747880871523e-07,
+    "meshes": 93,
+    "door_pivot": false
+  },
+  {
+    "id": "Village_Workshop_6x6",
+    "blend": "Templates\\09_Village\\Village_Workshop_6x6.blend",
+    "axis_scale_error_m": 8.596304119739507e-07,
+    "meshes": 110,
+    "door_pivot": false
+  },
+  {
+    "id": "Village_Well",
+    "blend": "Templates\\09_Village\\Village_Well.blend",
+    "axis_scale_error_m": 5.722356330874915e-06,
+    "meshes": 44,
+    "door_pivot": false
+  },
+  {
+    "id": "Village_Caravan_Cart",
+    "blend": "Templates\\09_Village\\Village_Caravan_Cart.blend",
+    "axis_scale_error_m": 7.078051567077637e-08,
+    "meshes": 10,
+    "door_pivot": false
+  },
+  {
+    "id": "Prop_Shrine_Optional",
+    "blend": "Templates\\09_Village\\Prop_Shrine_Optional.blend",
+    "axis_scale_error_m": 1.0728836059570312e-06,
+    "meshes": 5,
+    "door_pivot": false
+  },
+  {
+    "id": "Village_Bridge",
+    "blend": "Templates\\09_Village\\Village_Bridge.blend",
+    "axis_scale_error_m": 0.0,
+    "meshes": 29,
+    "door_pivot": false
+  }
+]

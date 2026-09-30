@@ -1,0 +1,29 @@
+config_version=5
+
+[application]
+config/name="Thornwake"
+run/main_scene="res://Game/Main.tscn"
+config/features=PackedStringArray("4.5", "C#", "GL Compatibility")
+config/description="A life at the edge of the wild. First playable prototype."
+config/use_custom_user_dir=true
+config/custom_user_dir_name="Thornwake"
+
+[display]
+window/size/viewport_width=1440
+window/size/viewport_height=900
+window/size/window_width_override=1280
+window/size/window_height_override=800
+window/stretch/mode="canvas_items"
+
+[dotnet]
+project/assembly_name="Thornwake"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+anti_aliasing/quality/msaa_3d=2
+environment/defaults/default_clear_color=Color(0.13,0.18,0.19,1)
+
+[environment]
+defaults/default_clear_color=Color(0.13,0.18,0.19,1)

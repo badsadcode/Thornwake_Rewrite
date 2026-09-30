@@ -1,0 +1,206 @@
+[
+  {
+    "file": "T_Tree_Pine_Bark_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 18,
+    "type": "bark"
+  },
+  {
+    "file": "T_Tree_Birch_Bark_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 18,
+    "type": "bark"
+  },
+  {
+    "file": "T_Tree_Oak_Bark_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 18,
+    "type": "bark"
+  },
+  {
+    "file": "T_Tree_Willow_Bark_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 18,
+    "type": "bark"
+  },
+  {
+    "file": "T_Tree_Pine_Foliage_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 20,
+    "type": "foliage"
+  },
+  {
+    "file": "T_Tree_Pine_Card_32.png",
+    "size": [
+      32,
+      32
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "type": "cutout"
+  },
+  {
+    "file": "T_Tree_Spruce_Foliage_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 20,
+    "type": "foliage"
+  },
+  {
+    "file": "T_Tree_Spruce_Card_32.png",
+    "size": [
+      32,
+      32
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "type": "cutout"
+  },
+  {
+    "file": "T_Tree_Birch_Green_Foliage_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 20,
+    "type": "foliage"
+  },
+  {
+    "file": "T_Tree_Birch_Green_Card_32.png",
+    "size": [
+      32,
+      32
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "type": "cutout"
+  },
+  {
+    "file": "T_Tree_Birch_Autumn_Foliage_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 20,
+    "type": "foliage"
+  },
+  {
+    "file": "T_Tree_Birch_Autumn_Card_32.png",
+    "size": [
+      32,
+      32
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "type": "cutout"
+  },
+  {
+    "file": "T_Tree_Oak_Foliage_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 20,
+    "type": "foliage"
+  },
+  {
+    "file": "T_Tree_Oak_Card_32.png",
+    "size": [
+      32,
+      32
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "type": "cutout"
+  },
+  {
+    "file": "T_Tree_Maple_Autumn_Foliage_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 20,
+    "type": "foliage"
+  },
+  {
+    "file": "T_Tree_Maple_Autumn_Card_32.png",
+    "size": [
+      32,
+      32
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "type": "cutout"
+  },
+  {
+    "file": "T_Tree_Sparse_Foliage_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 20,
+    "type": "foliage"
+  },
+  {
+    "file": "T_Tree_Sparse_Card_32.png",
+    "size": [
+      32,
+      32
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "type": "cutout"
+  },
+  {
+    "file": "T_Tree_Willow_Foliage_64.png",
+    "size": [
+      64,
+      64
+    ],
+    "colors": 20,
+    "type": "foliage"
+  },
+  {
+    "file": "T_Tree_Willow_Card_32.png",
+    "size": [
+      32,
+      32
+    ],
+    "alpha_values": [
+      0,
+      255
+    ],
+    "type": "cutout"
+  }
+]

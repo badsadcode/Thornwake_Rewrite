@@ -1,0 +1,373 @@
+[
+  {
+    "id": "foundation",
+    "name": "Timber floor",
+    "costs": {
+      "wood": 4,
+      "stone": 2
+    },
+    "radius": 1.8,
+    "placement": "floor",
+    "width": 3,
+    "depth": 3,
+    "category": "Structure",
+    "description": "A floor at your feet or overhead. Alt + mouse wheel adjusts height while placing; the piece becomes a foundation or upper floor automatically."
+  },
+  {
+    "id": "wall",
+    "name": "Timber wall",
+    "costs": {
+      "wood": 3
+    },
+    "radius": 0.65,
+    "placement": "edge",
+    "width": 3,
+    "depth": 0.2,
+    "category": "Structure",
+    "description": "Build and rotate to suit your home."
+  },
+  {
+    "id": "door",
+    "name": "Doorway and door",
+    "costs": {
+      "wood": 4,
+      "plank": 1
+    },
+    "radius": 0.65,
+    "placement": "edge",
+    "width": 3,
+    "depth": 0.2,
+    "category": "Structure",
+    "description": "Build and rotate to suit your home."
+  },
+  {
+    "id": "roof",
+    "name": "Connected roof",
+    "costs": {
+      "plank": 3,
+      "wood": 2
+    },
+    "radius": 1.8,
+    "placement": "roof",
+    "width": 3,
+    "depth": 3,
+    "category": "Roofs",
+    "description": "Joins roof tiles across a connected room of any shape."
+  },
+  {
+    "id": "campfire",
+    "name": "Campfire",
+    "costs": {
+      "wood": 3,
+      "stone": 3
+    },
+    "radius": 1.1,
+    "width": 1.3,
+    "depth": 1.3,
+    "category": "Stations",
+    "placement": "ground",
+    "description": "Build and rotate to suit your home."
+  },
+  {
+    "id": "workbench",
+    "name": "Workbench",
+    "costs": {
+      "wood": 2,
+      "plank": 2,
+      "stone": 2
+    },
+    "radius": 1.2,
+    "width": 2.2,
+    "depth": 1.1,
+    "category": "Stations",
+    "placement": "ground",
+    "description": "Build and rotate to suit your home."
+  },
+  {
+    "id": "fence",
+    "name": "Timber fence",
+    "costs": {
+      "wood": 2
+    },
+    "radius": 1.5,
+    "width": 3,
+    "depth": 0.2,
+    "category": "Structure",
+    "placement": "ground",
+    "description": "Build and rotate to suit your home."
+  },
+  {
+    "id": "upper_floor",
+    "name": "Upper floor",
+    "placement": "floor",
+    "category": "Structure",
+    "width": 3,
+    "depth": 3,
+    "costs": {
+      "plank": 3,
+      "wood": 2
+    },
+    "radius": 0.5,
+    "description": "Choose an upper build level. Supported by the room below."
+  },
+  {
+    "id": "stairs",
+    "name": "Timber staircase",
+    "placement": "stairs",
+    "category": "Structure",
+    "width": 1.25,
+    "depth": 3,
+    "costs": {
+      "plank": 4,
+      "wood": 3
+    },
+    "radius": 0.5,
+    "description": "Keep space overhead open. Add an upper landing at the high end."
+  },
+  {
+    "id": "roof_flat",
+    "name": "Flat roof",
+    "placement": "roof",
+    "category": "Roofs",
+    "width": 3,
+    "depth": 3,
+    "costs": {
+      "plank": 3,
+      "wood": 2
+    },
+    "radius": 0.5,
+    "description": "Rotate and join pieces to suit your home."
+  },
+  {
+    "id": "roof_slope",
+    "name": "Sloping roof",
+    "placement": "roof",
+    "category": "Roofs",
+    "width": 3,
+    "depth": 3,
+    "costs": {
+      "plank": 3,
+      "wood": 2
+    },
+    "radius": 0.5,
+    "description": "Rotate and join pieces to suit your home."
+  },
+  {
+    "id": "roof_corner",
+    "name": "Corner roof",
+    "placement": "roof",
+    "category": "Roofs",
+    "width": 3,
+    "depth": 3,
+    "costs": {
+      "plank": 3,
+      "wood": 2
+    },
+    "radius": 0.5,
+    "description": "Rotate and join pieces to suit your home."
+  },
+  {
+    "id": "carpenter",
+    "name": "Carpenter's bench",
+    "placement": "ground",
+    "category": "Stations",
+    "width": 2.2,
+    "depth": 1.5,
+    "costs": {
+      "wood": 4,
+      "stone": 2
+    },
+    "radius": 0.5,
+    "description": "Rotate and join pieces to suit your home."
+  },
+  {
+    "id": "kiln",
+    "name": "Pottery kiln",
+    "placement": "ground",
+    "category": "Stations",
+    "width": 2,
+    "depth": 1.8,
+    "costs": {
+      "stone": 10,
+      "clay": 4
+    },
+    "radius": 0.5,
+    "description": "Rotate and join pieces to suit your home."
+  },
+  {
+    "id": "forge",
+    "name": "Forge",
+    "placement": "ground",
+    "category": "Stations",
+    "width": 2.42,
+    "depth": 1.35,
+    "costs": {
+      "stone": 12,
+      "plank": 2
+    },
+    "radius": 0.5,
+    "description": "Rotate and join pieces to suit your home."
+  },
+  {
+    "id": "cooking",
+    "name": "Cooking station",
+    "placement": "ground",
+    "category": "Stations",
+    "width": 2,
+    "depth": 1.8,
+    "costs": {
+      "wood": 5,
+      "stone": 5
+    },
+    "radius": 0.5,
+    "description": "Rotate and join pieces to suit your home."
+  },
+  {
+    "id": "oven",
+    "name": "Hearth oven",
+    "placement": "ground",
+    "category": "Stations",
+    "width": 2,
+    "depth": 1.8,
+    "costs": {
+      "brick": 8,
+      "stone": 4
+    },
+    "radius": 0.5,
+    "description": "Rotate and join pieces to suit your home."
+  },
+  {
+    "id": "chair",
+    "name": "Timber chair",
+    "placement": "ground",
+    "category": "Decor",
+    "width": 0.65,
+    "depth": 0.65,
+    "costs": {
+      "chair": 1
+    },
+    "radius": 0.5,
+    "description": "Place this furnishing. Dismantle to pick it up again."
+  },
+  {
+    "id": "table",
+    "name": "Oak table",
+    "placement": "ground",
+    "category": "Decor",
+    "width": 1.6,
+    "depth": 1,
+    "costs": {
+      "table": 1
+    },
+    "radius": 0.5,
+    "description": "Place this furnishing. Dismantle to pick it up again."
+  },
+  {
+    "id": "planter",
+    "name": "Potted fern",
+    "placement": "ground",
+    "category": "Decor",
+    "width": 0.85,
+    "depth": 0.85,
+    "costs": {
+      "planter": 1
+    },
+    "radius": 0.5,
+    "description": "Place this furnishing. Dismantle to pick it up again."
+  },
+  {
+    "id": "painting",
+    "name": "Valley painting",
+    "placement": "ground",
+    "category": "Decor",
+    "width": 0.91,
+    "depth": 0.65,
+    "costs": {
+      "painting": 1
+    },
+    "radius": 0.5,
+    "description": "Place this furnishing. Dismantle to pick it up again."
+  },
+  {
+    "id": "lantern",
+    "name": "Iron lantern",
+    "placement": "ground",
+    "category": "Decor",
+    "width": 0.4,
+    "depth": 0.4,
+    "costs": {
+      "lantern": 1
+    },
+    "radius": 0.5,
+    "description": "Place this furnishing. Dismantle to pick it up again."
+  },
+  {
+    "id": "rug",
+    "name": "Woven rug",
+    "placement": "ground",
+    "category": "Decor",
+    "width": 1.8,
+    "depth": 1.46,
+    "costs": {
+      "rug": 1
+    },
+    "radius": 0.5,
+    "description": "Place this furnishing. Dismantle to pick it up again."
+  },
+  {
+    "category": "Structure",
+    "id": "foundation_triangle",
+    "placement": "floor",
+    "costs": {
+      "stone": 1,
+      "wood": 3
+    },
+    "depth": 3,
+    "name": "Triangle floor",
+    "radius": 1.5,
+    "width": 3,
+    "description": "A half-square piece for angled corners and non-rectangular rooms. Object snapping joins compatible edges."
+  },
+  {
+    "category": "Structure",
+    "id": "upper_floor_triangle",
+    "placement": "floor",
+    "costs": {
+      "wood": 1,
+      "plank": 2
+    },
+    "depth": 3,
+    "name": "Triangle upper floor",
+    "radius": 1.5,
+    "width": 3,
+    "description": "A half-square piece for angled corners and non-rectangular rooms. Object snapping joins compatible edges."
+  },
+  {
+    "category": "Roofs",
+    "id": "roof_triangle",
+    "placement": "roof",
+    "costs": {
+      "wood": 1,
+      "plank": 2
+    },
+    "depth": 3,
+    "name": "Triangle roof",
+    "radius": 1.5,
+    "width": 3,
+    "description": "A half-square piece for angled corners and non-rectangular rooms. Object snapping joins compatible edges."
+  },
+  {
+    "category": "Structure",
+    "id": "wall_diagonal",
+    "placement": "edge",
+    "costs": {
+      "wood": 4
+    },
+    "depth": 0.2,
+    "name": "Diagonal wall",
+    "radius": 1.5,
+    "width": 4.24264,
+    "description": "Fits the long sloping edge of a triangle floor."
+  },
+  {"id":"roof_module","name":"Roof module","category":"Roofs","placement":"roof","width":3,"depth":3,"radius":1.5,"costs":{"plank":3,"wood":2},"description":"A configurable roof piece with matching pitch connections."}
+]

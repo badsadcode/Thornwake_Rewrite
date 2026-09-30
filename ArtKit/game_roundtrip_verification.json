@@ -1,0 +1,32 @@
+[
+  {
+    "door_leaf_count": 0,
+    "id": "Roof_Slope_30",
+    "maximum_bound_error_m": 0.0,
+    "no_guides_or_reference_exported": true
+  },
+  {
+    "door_leaf_count": 0,
+    "id": "Roof_Hip_60",
+    "maximum_bound_error_m": 0.0000886917114257813,
+    "no_guides_or_reference_exported": true
+  },
+  {
+    "door_leaf_count": 1,
+    "id": "Wall_Door",
+    "maximum_bound_error_m": 0.0,
+    "no_guides_or_reference_exported": true
+  },
+  {
+    "door_leaf_count": 0,
+    "id": "Character_Player_Reference",
+    "maximum_bound_error_m": 0.0,
+    "no_guides_or_reference_exported": true
+  },
+  {
+    "door_leaf_count": 0,
+    "id": "Tool_Axe",
+    "maximum_bound_error_m": 0.0000000298023223876953,
+    "no_guides_or_reference_exported": true
+  }
+]

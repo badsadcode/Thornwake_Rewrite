@@ -1,0 +1,582 @@
+{
+  "blender": "5.1.1",
+  "count": 96,
+  "templates": [
+    {
+      "id": "Roof_Slope_22p5",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Slope_30",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": true
+    },
+    {
+      "id": "Roof_Slope_45",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Slope_60",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Ridge_22p5",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Ridge_30",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Ridge_45",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Ridge_60",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Hip_22p5",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Hip_30",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Hip_45",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Hip_60",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": true
+    },
+    {
+      "id": "Roof_Valley_22p5",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Valley_30",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Valley_45",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Valley_60",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_GableEdge_22p5_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_GableEdge_22p5_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_GableEdge_30_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_GableEdge_30_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_GableEdge_45_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_GableEdge_45_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_GableEdge_60_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_GableEdge_60_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Eave_22p5",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Eave_30",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Eave_45",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Eave_60",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Flat",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Triangle",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_Corner",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_LegacySlope",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Floor_Full_Foundation",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Floor_Full_Upper",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Floor_Triangle_Foundation",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Floor_Triangle_Upper",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_Solid",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_Door",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": true
+    },
+    {
+      "id": "Wall_Diagonal",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableFill_22p5_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableFill_22p5_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableFill_30_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableFill_30_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableFill_45_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableFill_45_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableFill_60_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableFill_60_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableRidgeFill_22p5_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableRidgeFill_22p5_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableRidgeFill_30_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableRidgeFill_30_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableRidgeFill_45_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableRidgeFill_45_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableRidgeFill_60_Left",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Wall_GableRidgeFill_60_Right",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Stairs_Straight",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Fence_Rail",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Roof_LegacyConnected",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Stations_Campfire",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Stations_Workbench",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Stations_Carpenter",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Stations_Kiln",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Stations_Forge",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Stations_Cooking",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Stations_Oven",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Decor_Chair",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Decor_Table",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Decor_Planter",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Decor_Painting",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Decor_Lantern",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Decor_Rug",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Nature_Tree_Pine",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Nature_Tree_Birch",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Nature_Tree_Stump",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Nature_Tree_PineSapling_Reference",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Nature_Rock",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Nature_BerryBush_Fruiting",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Nature_BerryBush_Bare",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Nature_Grass_Tuft",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Nature_Crop_Mature",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Nature_Crop_Young",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Character_Player_Reference",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": true
+    },
+    {
+      "id": "Character_Villager_Reference",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Character_Bandit_Reference",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Tool_Axe",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": true
+    },
+    {
+      "id": "Tool_Hammer",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Tool_Hoe",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Tool_SeedBag",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Tool_Sword",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Village_Cottage_5x5",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Village_Cottage_6x5",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Village_Workshop_6x6",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Village_Well",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Village_Caravan_Cart",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Prop_Shrine_Optional",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    },
+    {
+      "id": "Village_Bridge",
+      "native_file_opened": true,
+      "dimensions_verified": true,
+      "export_roundtrip": false
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+[
+  { "id": "tree", "name": "Pine", "skill": "forestry", "rewards": { "wood": 4 } },
+  { "id": "stone", "name": "Stone outcrop", "skill": "mining", "rewards": { "stone": 3 } },
+  { "id": "berries", "name": "Berry bush", "skill": "foraging", "rewards": { "berries": 3, "seeds": 1 } }
+]

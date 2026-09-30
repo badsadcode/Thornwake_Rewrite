@@ -1,0 +1,272 @@
+[
+  {
+    "id": "Icon_Wood",
+    "itemId": "wood",
+    "name": "Timber",
+    "category": "Materials",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Stone",
+    "itemId": "stone",
+    "name": "Stone",
+    "category": "Materials",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Berries",
+    "itemId": "berries",
+    "name": "Wild berries",
+    "category": "Food",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Seeds",
+    "itemId": "seeds",
+    "name": "Berry seeds",
+    "category": "Materials",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Plank",
+    "itemId": "plank",
+    "name": "Cut planks",
+    "category": "Materials",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Axe",
+    "itemId": "axe",
+    "name": "Stone axe",
+    "category": "Tools",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Sword",
+    "itemId": "sword",
+    "name": "Flint blade",
+    "category": "Tools",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Hide",
+    "itemId": "hide",
+    "name": "Tanned hide",
+    "category": "Materials",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Meal",
+    "itemId": "meal",
+    "name": "Berry meal",
+    "category": "Food",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Coins",
+    "itemId": "coins",
+    "name": "Crowns",
+    "category": "Currency",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Clay",
+    "itemId": "clay",
+    "name": "Clay",
+    "category": "Materials",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Brick",
+    "itemId": "brick",
+    "name": "Fired brick",
+    "category": "Materials",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Iron",
+    "itemId": "iron",
+    "name": "Iron fittings",
+    "category": "Materials",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Chair",
+    "itemId": "chair",
+    "name": "Timber chair",
+    "category": "Decor",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Table",
+    "itemId": "table",
+    "name": "Oak table",
+    "category": "Decor",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Planter",
+    "itemId": "planter",
+    "name": "Potted fern",
+    "category": "Decor",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Painting",
+    "itemId": "painting",
+    "name": "Valley painting",
+    "category": "Decor",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Lantern",
+    "itemId": "lantern",
+    "name": "Iron lantern",
+    "category": "Decor",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Rug",
+    "itemId": "rug",
+    "name": "Woven rug",
+    "category": "Decor",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Bread",
+    "itemId": "bread",
+    "name": "Hearth bread",
+    "category": "Food",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_IronOre",
+    "itemId": "iron_ore",
+    "name": "Iron ore",
+    "category": "Materials",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Grain",
+    "itemId": "grain",
+    "name": "Grain",
+    "category": "Food",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_BasicAxe",
+    "itemId": "basic_axe",
+    "name": "Worn axe",
+    "category": "Tools",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Hammer",
+    "itemId": "hammer",
+    "name": "Building hammer",
+    "category": "Tools",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_Hoe",
+    "itemId": "hoe",
+    "name": "Garden hoe",
+    "category": "Tools",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_BasicSword",
+    "itemId": "basic_sword",
+    "name": "Rusty sword",
+    "category": "Tools",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_HealthPotion",
+    "itemId": "health_potion",
+    "name": "Berry tonic",
+    "category": "Consumables",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_PineCone",
+    "itemId": "pine_cone",
+    "name": "Pine cone",
+    "category": "Materials",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_PineSapling",
+    "itemId": "pine_sapling",
+    "name": "Pine sapling",
+    "category": "Garden",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  },
+  {
+    "id": "Icon_BushSeedling",
+    "itemId": "bush_seedling",
+    "name": "Berry seedling",
+    "category": "Garden",
+    "suggestedPixels": 256,
+    "format": "PNG RGBA",
+    "status": "Future icon replacement; current icons are procedurally drawn. Inventory-only items need new 3D designs if world models are desired."
+  }
+]

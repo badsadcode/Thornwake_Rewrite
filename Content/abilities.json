@@ -1,0 +1,3 @@
+[
+  {"id":"dodge","name":"Dodge","description":"A quick evasive step. Costs 24 stamina and recovers in one second.","action":"dodge","staminaCost":24,"cooldown":1}
+]

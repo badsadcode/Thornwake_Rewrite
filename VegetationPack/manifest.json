@@ -1,0 +1,1175 @@
+[
+  {
+    "id": "TREE_Pine_A",
+    "species": "pine",
+    "seed": 101,
+    "lod": 0,
+    "triangles": 2784,
+    "objects": 3,
+    "bounds_min": [
+      -3.056489944458008,
+      -2.858759880065918,
+      0.0
+    ],
+    "bounds_max": [
+      3.120654344558716,
+      3.132943630218506,
+      12.524652481079102
+    ],
+    "height_m": 12.524652481079102,
+    "width_m": 6.177144289016724,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Pine_A.glb"
+  },
+  {
+    "id": "TREE_Pine_A",
+    "species": "pine",
+    "seed": 101,
+    "lod": 1,
+    "triangles": 1134,
+    "objects": 3,
+    "bounds_min": [
+      -3.056489944458008,
+      -2.858759880065918,
+      0.0
+    ],
+    "bounds_max": [
+      3.120654344558716,
+      3.132943630218506,
+      12.524652481079102
+    ],
+    "height_m": 12.524652481079102,
+    "width_m": 6.177144289016724,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Pine_A_LOD1.glb"
+  },
+  {
+    "id": "TREE_Pine_A",
+    "species": "pine",
+    "seed": 101,
+    "lod": 2,
+    "triangles": 202,
+    "objects": 2,
+    "bounds_min": [
+      -2.5707590579986572,
+      -2.050672769546509,
+      0.0
+    ],
+    "bounds_max": [
+      2.5208311080932617,
+      2.7821388244628906,
+      12.524652481079102
+    ],
+    "height_m": 12.524652481079102,
+    "width_m": 5.091590166091919,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Pine_A_LOD2.glb"
+  },
+  {
+    "id": "TREE_Pine_B",
+    "species": "pine",
+    "seed": 247,
+    "lod": 0,
+    "triangles": 3144,
+    "objects": 3,
+    "bounds_min": [
+      -2.940737724304199,
+      -2.8459489345550537,
+      0.0
+    ],
+    "bounds_max": [
+      2.7224459648132324,
+      2.6477513313293457,
+      14.847494125366211
+    ],
+    "height_m": 14.847494125366211,
+    "width_m": 5.663183689117432,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Pine_B.glb"
+  },
+  {
+    "id": "TREE_Pine_B",
+    "species": "pine",
+    "seed": 247,
+    "lod": 1,
+    "triangles": 1264,
+    "objects": 3,
+    "bounds_min": [
+      -2.940737724304199,
+      -2.8459489345550537,
+      0.0
+    ],
+    "bounds_max": [
+      2.7224459648132324,
+      2.6477513313293457,
+      14.847494125366211
+    ],
+    "height_m": 14.847494125366211,
+    "width_m": 5.663183689117432,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Pine_B_LOD1.glb"
+  },
+  {
+    "id": "TREE_Pine_B",
+    "species": "pine",
+    "seed": 247,
+    "lod": 2,
+    "triangles": 222,
+    "objects": 2,
+    "bounds_min": [
+      -2.0979995727539062,
+      -2.250710964202881,
+      0.0
+    ],
+    "bounds_max": [
+      2.430539846420288,
+      2.0343551635742188,
+      14.847494125366211
+    ],
+    "height_m": 14.847494125366211,
+    "width_m": 4.528539419174194,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Pine_B_LOD2.glb"
+  },
+  {
+    "id": "TREE_Pine_C",
+    "species": "pine",
+    "seed": 393,
+    "lod": 0,
+    "triangles": 2784,
+    "objects": 3,
+    "bounds_min": [
+      -3.255854606628418,
+      -3.35247540473938,
+      0.0
+    ],
+    "bounds_max": [
+      3.3741865158081055,
+      3.7030797004699707,
+      10.706551551818848
+    ],
+    "height_m": 10.706551551818848,
+    "width_m": 6.630041122436523,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Pine_C.glb"
+  },
+  {
+    "id": "TREE_Pine_C",
+    "species": "pine",
+    "seed": 393,
+    "lod": 1,
+    "triangles": 1134,
+    "objects": 3,
+    "bounds_min": [
+      -3.255854606628418,
+      -3.35247540473938,
+      0.0
+    ],
+    "bounds_max": [
+      3.3741865158081055,
+      3.7030797004699707,
+      10.706551551818848
+    ],
+    "height_m": 10.706551551818848,
+    "width_m": 6.630041122436523,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Pine_C_LOD1.glb"
+  },
+  {
+    "id": "TREE_Pine_C",
+    "species": "pine",
+    "seed": 393,
+    "lod": 2,
+    "triangles": 202,
+    "objects": 2,
+    "bounds_min": [
+      -2.5788795948028564,
+      -2.47627592086792,
+      0.0
+    ],
+    "bounds_max": [
+      2.6867926120758057,
+      3.2244813442230225,
+      10.706551551818848
+    ],
+    "height_m": 10.706551551818848,
+    "width_m": 5.265672206878662,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Pine_C_LOD2.glb"
+  },
+  {
+    "id": "TREE_Spruce_A",
+    "species": "spruce",
+    "seed": 521,
+    "lod": 0,
+    "triangles": 4152,
+    "objects": 3,
+    "bounds_min": [
+      -3.5242910385131836,
+      -4.204893112182617,
+      0.0
+    ],
+    "bounds_max": [
+      4.388758182525635,
+      3.626070737838745,
+      13.332303047180176
+    ],
+    "height_m": 13.332303047180176,
+    "width_m": 7.913049221038818,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Spruce_A.glb"
+  },
+  {
+    "id": "TREE_Spruce_A",
+    "species": "spruce",
+    "seed": 521,
+    "lod": 1,
+    "triangles": 1628,
+    "objects": 3,
+    "bounds_min": [
+      -3.5242910385131836,
+      -4.204893112182617,
+      0.0
+    ],
+    "bounds_max": [
+      4.388758182525635,
+      3.626070737838745,
+      13.332303047180176
+    ],
+    "height_m": 13.332303047180176,
+    "width_m": 7.913049221038818,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Spruce_A_LOD1.glb"
+  },
+  {
+    "id": "TREE_Spruce_A",
+    "species": "spruce",
+    "seed": 521,
+    "lod": 2,
+    "triangles": 278,
+    "objects": 2,
+    "bounds_min": [
+      -2.743079662322998,
+      -3.473693609237671,
+      0.0
+    ],
+    "bounds_max": [
+      3.639676809310913,
+      3.123176097869873,
+      13.332303047180176
+    ],
+    "height_m": 13.332303047180176,
+    "width_m": 6.382756471633911,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Spruce_A_LOD2.glb"
+  },
+  {
+    "id": "TREE_Spruce_B",
+    "species": "spruce",
+    "seed": 699,
+    "lod": 0,
+    "triangles": 4152,
+    "objects": 3,
+    "bounds_min": [
+      -3.6131606101989746,
+      -3.780174732208252,
+      0.0
+    ],
+    "bounds_max": [
+      3.6094565391540527,
+      3.817084550857544,
+      11.514527320861816
+    ],
+    "height_m": 11.514527320861816,
+    "width_m": 7.222617149353027,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Spruce_B.glb"
+  },
+  {
+    "id": "TREE_Spruce_B",
+    "species": "spruce",
+    "seed": 699,
+    "lod": 1,
+    "triangles": 1628,
+    "objects": 3,
+    "bounds_min": [
+      -3.6131606101989746,
+      -3.780174732208252,
+      0.0
+    ],
+    "bounds_max": [
+      3.6094565391540527,
+      3.817084550857544,
+      11.514527320861816
+    ],
+    "height_m": 11.514527320861816,
+    "width_m": 7.222617149353027,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Spruce_B_LOD1.glb"
+  },
+  {
+    "id": "TREE_Spruce_B",
+    "species": "spruce",
+    "seed": 699,
+    "lod": 2,
+    "triangles": 278,
+    "objects": 2,
+    "bounds_min": [
+      -3.052302360534668,
+      -2.994640588760376,
+      0.0
+    ],
+    "bounds_max": [
+      3.1797034740448,
+      3.0746219158172607,
+      11.514527320861816
+    ],
+    "height_m": 11.514527320861816,
+    "width_m": 6.232005834579468,
+    "texture_size": 64,
+    "foliage_supports": 0,
+    "file": "Exports/TREE_Spruce_B_LOD2.glb"
+  },
+  {
+    "id": "TREE_Birch_Green_A",
+    "species": "birch",
+    "seed": 731,
+    "lod": 0,
+    "triangles": 2642,
+    "objects": 3,
+    "bounds_min": [
+      -3.4612388610839844,
+      -4.622711181640625,
+      0.0
+    ],
+    "bounds_max": [
+      3.9968936443328857,
+      3.5949504375457764,
+      11.679076194763184
+    ],
+    "height_m": 11.679076194763184,
+    "width_m": 7.45813250541687,
+    "texture_size": 64,
+    "foliage_supports": 20,
+    "file": "Exports/TREE_Birch_Green_A.glb"
+  },
+  {
+    "id": "TREE_Birch_Green_A",
+    "species": "birch",
+    "seed": 731,
+    "lod": 1,
+    "triangles": 1958,
+    "objects": 3,
+    "bounds_min": [
+      -3.3873023986816406,
+      -4.569780349731445,
+      0.0
+    ],
+    "bounds_max": [
+      3.827498435974121,
+      3.5269994735717773,
+      11.685150146484375
+    ],
+    "height_m": 11.685150146484375,
+    "width_m": 7.214800834655762,
+    "texture_size": 64,
+    "foliage_supports": 20,
+    "file": "Exports/TREE_Birch_Green_A_LOD1.glb"
+  },
+  {
+    "id": "TREE_Birch_Green_A",
+    "species": "birch",
+    "seed": 731,
+    "lod": 2,
+    "triangles": 686,
+    "objects": 2,
+    "bounds_min": [
+      -3.2639429569244385,
+      -4.411335468292236,
+      0.0
+    ],
+    "bounds_max": [
+      3.7983551025390625,
+      3.2687621116638184,
+      11.532533645629883
+    ],
+    "height_m": 11.532533645629883,
+    "width_m": 7.062298059463501,
+    "texture_size": 64,
+    "foliage_supports": 10,
+    "file": "Exports/TREE_Birch_Green_A_LOD2.glb"
+  },
+  {
+    "id": "TREE_Birch_Green_B",
+    "species": "birch",
+    "seed": 882,
+    "lod": 0,
+    "triangles": 2642,
+    "objects": 3,
+    "bounds_min": [
+      -3.319608449935913,
+      -3.8014097213745117,
+      0.0
+    ],
+    "bounds_max": [
+      2.700716495513916,
+      3.0947794914245605,
+      13.217195510864258
+    ],
+    "height_m": 13.217195510864258,
+    "width_m": 6.020324945449829,
+    "texture_size": 64,
+    "foliage_supports": 20,
+    "file": "Exports/TREE_Birch_Green_B.glb"
+  },
+  {
+    "id": "TREE_Birch_Green_B",
+    "species": "birch",
+    "seed": 882,
+    "lod": 1,
+    "triangles": 1958,
+    "objects": 3,
+    "bounds_min": [
+      -3.269901752471924,
+      -3.707392454147339,
+      0.0
+    ],
+    "bounds_max": [
+      2.59492826461792,
+      2.936431884765625,
+      13.217077255249023
+    ],
+    "height_m": 13.217077255249023,
+    "width_m": 5.864830017089844,
+    "texture_size": 64,
+    "foliage_supports": 20,
+    "file": "Exports/TREE_Birch_Green_B_LOD1.glb"
+  },
+  {
+    "id": "TREE_Birch_Green_B",
+    "species": "birch",
+    "seed": 882,
+    "lod": 2,
+    "triangles": 686,
+    "objects": 2,
+    "bounds_min": [
+      -3.0282421112060547,
+      -3.4386143684387207,
+      0.0
+    ],
+    "bounds_max": [
+      2.524883270263672,
+      2.733095645904541,
+      13.24966049194336
+    ],
+    "height_m": 13.24966049194336,
+    "width_m": 5.553125381469727,
+    "texture_size": 64,
+    "foliage_supports": 10,
+    "file": "Exports/TREE_Birch_Green_B_LOD2.glb"
+  },
+  {
+    "id": "TREE_Birch_Green_C",
+    "species": "birch",
+    "seed": 946,
+    "lod": 0,
+    "triangles": 2642,
+    "objects": 3,
+    "bounds_min": [
+      -3.765381097793579,
+      -3.4535670280456543,
+      0.0
+    ],
+    "bounds_max": [
+      3.4941458702087402,
+      2.9344568252563477,
+      9.760061264038086
+    ],
+    "height_m": 9.760061264038086,
+    "width_m": 7.259526968002319,
+    "texture_size": 64,
+    "foliage_supports": 20,
+    "file": "Exports/TREE_Birch_Green_C.glb"
+  },
+  {
+    "id": "TREE_Birch_Green_C",
+    "species": "birch",
+    "seed": 946,
+    "lod": 1,
+    "triangles": 1958,
+    "objects": 3,
+    "bounds_min": [
+      -3.609593391418457,
+      -3.4734654426574707,
+      0.0
+    ],
+    "bounds_max": [
+      3.597075939178467,
+      2.949249744415283,
+      9.77548599243164
+    ],
+    "height_m": 9.77548599243164,
+    "width_m": 7.206669330596924,
+    "texture_size": 64,
+    "foliage_supports": 20,
+    "file": "Exports/TREE_Birch_Green_C_LOD1.glb"
+  },
+  {
+    "id": "TREE_Birch_Green_C",
+    "species": "birch",
+    "seed": 946,
+    "lod": 2,
+    "triangles": 686,
+    "objects": 2,
+    "bounds_min": [
+      -3.474374294281006,
+      -3.345579147338867,
+      0.0
+    ],
+    "bounds_max": [
+      3.4246268272399902,
+      2.7712817192077637,
+      9.580159187316895
+    ],
+    "height_m": 9.580159187316895,
+    "width_m": 6.899001121520996,
+    "texture_size": 64,
+    "foliage_supports": 10,
+    "file": "Exports/TREE_Birch_Green_C_LOD2.glb"
+  },
+  {
+    "id": "TREE_Birch_Autumn_A",
+    "species": "birch_autumn",
+    "seed": 1121,
+    "lod": 0,
+    "triangles": 2642,
+    "objects": 3,
+    "bounds_min": [
+      -3.7279810905456543,
+      -2.8026511669158936,
+      0.0
+    ],
+    "bounds_max": [
+      4.3038201332092285,
+      4.203847885131836,
+      11.849839210510254
+    ],
+    "height_m": 11.849839210510254,
+    "width_m": 8.031801223754883,
+    "texture_size": 64,
+    "foliage_supports": 20,
+    "file": "Exports/TREE_Birch_Autumn_A.glb"
+  },
+  {
+    "id": "TREE_Birch_Autumn_A",
+    "species": "birch_autumn",
+    "seed": 1121,
+    "lod": 1,
+    "triangles": 1958,
+    "objects": 3,
+    "bounds_min": [
+      -3.675262928009033,
+      -2.763822317123413,
+      0.0
+    ],
+    "bounds_max": [
+      4.274697780609131,
+      4.106502056121826,
+      11.830214500427246
+    ],
+    "height_m": 11.830214500427246,
+    "width_m": 7.949960708618164,
+    "texture_size": 64,
+    "foliage_supports": 20,
+    "file": "Exports/TREE_Birch_Autumn_A_LOD1.glb"
+  },
+  {
+    "id": "TREE_Birch_Autumn_A",
+    "species": "birch_autumn",
+    "seed": 1121,
+    "lod": 2,
+    "triangles": 686,
+    "objects": 2,
+    "bounds_min": [
+      -3.5121846199035645,
+      -2.680449962615967,
+      0.0
+    ],
+    "bounds_max": [
+      4.176554203033447,
+      3.6408700942993164,
+      11.787211418151855
+    ],
+    "height_m": 11.787211418151855,
+    "width_m": 7.688738822937012,
+    "texture_size": 64,
+    "foliage_supports": 10,
+    "file": "Exports/TREE_Birch_Autumn_A_LOD2.glb"
+  },
+  {
+    "id": "TREE_Birch_Autumn_B",
+    "species": "birch_autumn",
+    "seed": 1293,
+    "lod": 0,
+    "triangles": 2642,
+    "objects": 3,
+    "bounds_min": [
+      -3.087940216064453,
+      -3.4430720806121826,
+      0.0
+    ],
+    "bounds_max": [
+      3.898820400238037,
+      3.126899242401123,
+      10.573812484741211
+    ],
+    "height_m": 10.573812484741211,
+    "width_m": 6.98676061630249,
+    "texture_size": 64,
+    "foliage_supports": 20,
+    "file": "Exports/TREE_Birch_Autumn_B.glb"
+  },
+  {
+    "id": "TREE_Birch_Autumn_B",
+    "species": "birch_autumn",
+    "seed": 1293,
+    "lod": 1,
+    "triangles": 1958,
+    "objects": 3,
+    "bounds_min": [
+      -3.058642625808716,
+      -3.4692420959472656,
+      0.0
+    ],
+    "bounds_max": [
+      3.9343478679656982,
+      3.058126926422119,
+      10.551260948181152
+    ],
+    "height_m": 10.551260948181152,
+    "width_m": 6.992990493774414,
+    "texture_size": 64,
+    "foliage_supports": 20,
+    "file": "Exports/TREE_Birch_Autumn_B_LOD1.glb"
+  },
+  {
+    "id": "TREE_Birch_Autumn_B",
+    "species": "birch_autumn",
+    "seed": 1293,
+    "lod": 2,
+    "triangles": 686,
+    "objects": 2,
+    "bounds_min": [
+      -2.676499605178833,
+      -3.3532047271728516,
+      0.0
+    ],
+    "bounds_max": [
+      3.9606008529663086,
+      3.0754141807556152,
+      10.63914680480957
+    ],
+    "height_m": 10.63914680480957,
+    "width_m": 6.637100458145142,
+    "texture_size": 64,
+    "foliage_supports": 10,
+    "file": "Exports/TREE_Birch_Autumn_B_LOD2.glb"
+  },
+  {
+    "id": "TREE_Oak_A",
+    "species": "oak",
+    "seed": 1331,
+    "lod": 0,
+    "triangles": 3642,
+    "objects": 3,
+    "bounds_min": [
+      -5.845773220062256,
+      -4.013768672943115,
+      0.0
+    ],
+    "bounds_max": [
+      4.377707004547119,
+      5.186407089233398,
+      10.718093872070312
+    ],
+    "height_m": 10.718093872070312,
+    "width_m": 10.223480224609375,
+    "texture_size": 64,
+    "foliage_supports": 30,
+    "file": "Exports/TREE_Oak_A.glb"
+  },
+  {
+    "id": "TREE_Oak_A",
+    "species": "oak",
+    "seed": 1331,
+    "lod": 1,
+    "triangles": 2678,
+    "objects": 3,
+    "bounds_min": [
+      -5.914299488067627,
+      -3.9408609867095947,
+      0.0
+    ],
+    "bounds_max": [
+      4.400974273681641,
+      5.081160068511963,
+      10.592097282409668
+    ],
+    "height_m": 10.592097282409668,
+    "width_m": 10.315273761749268,
+    "texture_size": 64,
+    "foliage_supports": 30,
+    "file": "Exports/TREE_Oak_A_LOD1.glb"
+  },
+  {
+    "id": "TREE_Oak_A",
+    "species": "oak",
+    "seed": 1331,
+    "lod": 2,
+    "triangles": 686,
+    "objects": 2,
+    "bounds_min": [
+      -5.473988056182861,
+      -4.025321960449219,
+      0.0
+    ],
+    "bounds_max": [
+      3.91009521484375,
+      5.264068603515625,
+      10.652193069458008
+    ],
+    "height_m": 10.652193069458008,
+    "width_m": 9.384083271026611,
+    "texture_size": 64,
+    "foliage_supports": 10,
+    "file": "Exports/TREE_Oak_A_LOD2.glb"
+  },
+  {
+    "id": "TREE_Oak_B",
+    "species": "oak",
+    "seed": 1462,
+    "lod": 0,
+    "triangles": 3642,
+    "objects": 3,
+    "bounds_min": [
+      -6.1227312088012695,
+      -4.972376346588135,
+      0.0
+    ],
+    "bounds_max": [
+      6.53120756149292,
+      4.962737560272217,
+      11.652457237243652
+    ],
+    "height_m": 11.652457237243652,
+    "width_m": 12.65393877029419,
+    "texture_size": 64,
+    "foliage_supports": 30,
+    "file": "Exports/TREE_Oak_B.glb"
+  },
+  {
+    "id": "TREE_Oak_B",
+    "species": "oak",
+    "seed": 1462,
+    "lod": 1,
+    "triangles": 2678,
+    "objects": 3,
+    "bounds_min": [
+      -5.894068241119385,
+      -5.055498123168945,
+      0.0
+    ],
+    "bounds_max": [
+      6.579862117767334,
+      4.918159484863281,
+      11.537712097167969
+    ],
+    "height_m": 11.537712097167969,
+    "width_m": 12.473930358886719,
+    "texture_size": 64,
+    "foliage_supports": 30,
+    "file": "Exports/TREE_Oak_B_LOD1.glb"
+  },
+  {
+    "id": "TREE_Oak_B",
+    "species": "oak",
+    "seed": 1462,
+    "lod": 2,
+    "triangles": 686,
+    "objects": 2,
+    "bounds_min": [
+      -5.185646057128906,
+      -5.063704490661621,
+      0.0
+    ],
+    "bounds_max": [
+      6.229210376739502,
+      5.003645420074463,
+      11.75320816040039
+    ],
+    "height_m": 11.75320816040039,
+    "width_m": 11.414856433868408,
+    "texture_size": 64,
+    "foliage_supports": 10,
+    "file": "Exports/TREE_Oak_B_LOD2.glb"
+  },
+  {
+    "id": "TREE_Oak_C",
+    "species": "oak",
+    "seed": 1588,
+    "lod": 0,
+    "triangles": 3642,
+    "objects": 3,
+    "bounds_min": [
+      -5.374382972717285,
+      -4.334445953369141,
+      0.0
+    ],
+    "bounds_max": [
+      5.370216369628906,
+      5.018224716186523,
+      8.159661293029785
+    ],
+    "height_m": 8.159661293029785,
+    "width_m": 10.744599342346191,
+    "texture_size": 64,
+    "foliage_supports": 30,
+    "file": "Exports/TREE_Oak_C.glb"
+  },
+  {
+    "id": "TREE_Oak_C",
+    "species": "oak",
+    "seed": 1588,
+    "lod": 1,
+    "triangles": 2678,
+    "objects": 3,
+    "bounds_min": [
+      -5.328148365020752,
+      -4.21786642074585,
+      0.0
+    ],
+    "bounds_max": [
+      5.411674499511719,
+      4.980376720428467,
+      8.176066398620605
+    ],
+    "height_m": 8.176066398620605,
+    "width_m": 10.73982286453247,
+    "texture_size": 64,
+    "foliage_supports": 30,
+    "file": "Exports/TREE_Oak_C_LOD1.glb"
+  },
+  {
+    "id": "TREE_Oak_C",
+    "species": "oak",
+    "seed": 1588,
+    "lod": 2,
+    "triangles": 686,
+    "objects": 2,
+    "bounds_min": [
+      -4.629478454589844,
+      -4.084399223327637,
+      0.0
+    ],
+    "bounds_max": [
+      5.459805011749268,
+      5.043643474578857,
+      8.248917579650879
+    ],
+    "height_m": 8.248917579650879,
+    "width_m": 10.089283466339111,
+    "texture_size": 64,
+    "foliage_supports": 10,
+    "file": "Exports/TREE_Oak_C_LOD2.glb"
+  },
+  {
+    "id": "TREE_Maple_Autumn_A",
+    "species": "maple",
+    "seed": 1679,
+    "lod": 0,
+    "triangles": 3642,
+    "objects": 3,
+    "bounds_min": [
+      -4.46589469909668,
+      -4.972253322601318,
+      0.0
+    ],
+    "bounds_max": [
+      4.915037631988525,
+      5.464807033538818,
+      10.793044090270996
+    ],
+    "height_m": 10.793044090270996,
+    "width_m": 9.380932331085205,
+    "texture_size": 64,
+    "foliage_supports": 30,
+    "file": "Exports/TREE_Maple_Autumn_A.glb"
+  },
+  {
+    "id": "TREE_Maple_Autumn_A",
+    "species": "maple",
+    "seed": 1679,
+    "lod": 1,
+    "triangles": 2678,
+    "objects": 3,
+    "bounds_min": [
+      -4.448439598083496,
+      -4.819332122802734,
+      0.0
+    ],
+    "bounds_max": [
+      4.740647315979004,
+      5.46544075012207,
+      10.79049301147461
+    ],
+    "height_m": 10.79049301147461,
+    "width_m": 9.1890869140625,
+    "texture_size": 64,
+    "foliage_supports": 30,
+    "file": "Exports/TREE_Maple_Autumn_A_LOD1.glb"
+  },
+  {
+    "id": "TREE_Maple_Autumn_A",
+    "species": "maple",
+    "seed": 1679,
+    "lod": 2,
+    "triangles": 686,
+    "objects": 2,
+    "bounds_min": [
+      -4.1200761795043945,
+      -4.479205131530762,
+      0.0
+    ],
+    "bounds_max": [
+      3.840439796447754,
+      4.3151774406433105,
+      10.711782455444336
+    ],
+    "height_m": 10.711782455444336,
+    "width_m": 7.960515975952148,
+    "texture_size": 64,
+    "foliage_supports": 10,
+    "file": "Exports/TREE_Maple_Autumn_A_LOD2.glb"
+  },
+  {
+    "id": "TREE_Sparse_A",
+    "species": "sparse",
+    "seed": 1793,
+    "lod": 0,
+    "triangles": 1246,
+    "objects": 3,
+    "bounds_min": [
+      -5.012650966644287,
+      -4.237659931182861,
+      0.0
+    ],
+    "bounds_max": [
+      4.9772844314575195,
+      3.260982036590576,
+      8.729860305786133
+    ],
+    "height_m": 8.729860305786133,
+    "width_m": 9.989935398101807,
+    "texture_size": 64,
+    "foliage_supports": 7,
+    "file": "Exports/TREE_Sparse_A.glb"
+  },
+  {
+    "id": "TREE_Sparse_A",
+    "species": "sparse",
+    "seed": 1793,
+    "lod": 1,
+    "triangles": 944,
+    "objects": 3,
+    "bounds_min": [
+      -5.033203601837158,
+      -4.237336158752441,
+      0.0
+    ],
+    "bounds_max": [
+      4.878744125366211,
+      3.298323392868042,
+      8.699111938476562
+    ],
+    "height_m": 8.699111938476562,
+    "width_m": 9.91194772720337,
+    "texture_size": 64,
+    "foliage_supports": 7,
+    "file": "Exports/TREE_Sparse_A_LOD1.glb"
+  },
+  {
+    "id": "TREE_Sparse_A",
+    "species": "sparse",
+    "seed": 1793,
+    "lod": 2,
+    "triangles": 500,
+    "objects": 2,
+    "bounds_min": [
+      -4.993340969085693,
+      -4.320439338684082,
+      0.0
+    ],
+    "bounds_max": [
+      5.143574237823486,
+      3.178196907043457,
+      8.788759231567383
+    ],
+    "height_m": 8.788759231567383,
+    "width_m": 10.13691520690918,
+    "texture_size": 64,
+    "foliage_supports": 7,
+    "file": "Exports/TREE_Sparse_A_LOD2.glb"
+  },
+  {
+    "id": "TREE_Poplar_A",
+    "species": "poplar",
+    "seed": 1864,
+    "lod": 0,
+    "triangles": 2170,
+    "objects": 3,
+    "bounds_min": [
+      -2.1173577308654785,
+      -2.3456993103027344,
+      0.0
+    ],
+    "bounds_max": [
+      2.1894102096557617,
+      2.5018491744995117,
+      16.681703567504883
+    ],
+    "height_m": 16.681703567504883,
+    "width_m": 4.30676794052124,
+    "texture_size": 64,
+    "foliage_supports": 14,
+    "file": "Exports/TREE_Poplar_A.glb"
+  },
+  {
+    "id": "TREE_Poplar_A",
+    "species": "poplar",
+    "seed": 1864,
+    "lod": 1,
+    "triangles": 1630,
+    "objects": 3,
+    "bounds_min": [
+      -1.9717007875442505,
+      -2.0324349403381348,
+      0.0
+    ],
+    "bounds_max": [
+      2.10870361328125,
+      2.177669048309326,
+      16.606069564819336
+    ],
+    "height_m": 16.606069564819336,
+    "width_m": 4.0804044008255005,
+    "texture_size": 64,
+    "foliage_supports": 14,
+    "file": "Exports/TREE_Poplar_A_LOD1.glb"
+  },
+  {
+    "id": "TREE_Poplar_A",
+    "species": "poplar",
+    "seed": 1864,
+    "lod": 2,
+    "triangles": 934,
+    "objects": 2,
+    "bounds_min": [
+      -1.4853761196136475,
+      -1.6580064296722412,
+      0.0
+    ],
+    "bounds_max": [
+      1.716925859451294,
+      1.8028593063354492,
+      16.81535530090332
+    ],
+    "height_m": 16.81535530090332,
+    "width_m": 3.2023019790649414,
+    "texture_size": 64,
+    "foliage_supports": 14,
+    "file": "Exports/TREE_Poplar_A_LOD2.glb"
+  },
+  {
+    "id": "TREE_Willow_A",
+    "species": "willow",
+    "seed": 1951,
+    "lod": 0,
+    "triangles": 4754,
+    "objects": 3,
+    "bounds_min": [
+      -5.241195201873779,
+      -3.37697172164917,
+      0.0
+    ],
+    "bounds_max": [
+      5.58168888092041,
+      6.306046485900879,
+      8.959909439086914
+    ],
+    "height_m": 8.959909439086914,
+    "width_m": 10.82288408279419,
+    "texture_size": 64,
+    "foliage_supports": 24,
+    "file": "Exports/TREE_Willow_A.glb"
+  },
+  {
+    "id": "TREE_Willow_A",
+    "species": "willow",
+    "seed": 1951,
+    "lod": 1,
+    "triangles": 2386,
+    "objects": 3,
+    "bounds_min": [
+      -5.193571090698242,
+      -3.354402542114258,
+      0.0
+    ],
+    "bounds_max": [
+      5.565680503845215,
+      6.289742946624756,
+      8.9323091506958
+    ],
+    "height_m": 8.9323091506958,
+    "width_m": 10.759251594543457,
+    "texture_size": 64,
+    "foliage_supports": 24,
+    "file": "Exports/TREE_Willow_A_LOD1.glb"
+  },
+  {
+    "id": "TREE_Willow_A",
+    "species": "willow",
+    "seed": 1951,
+    "lod": 2,
+    "triangles": 610,
+    "objects": 3,
+    "bounds_min": [
+      -5.178675651550293,
+      -3.083709955215454,
+      0.0
+    ],
+    "bounds_max": [
+      5.76865291595459,
+      5.336661338806152,
+      9.050994873046875
+    ],
+    "height_m": 9.050994873046875,
+    "width_m": 10.947328567504883,
+    "texture_size": 64,
+    "foliage_supports": 8,
+    "file": "Exports/TREE_Willow_A_LOD2.glb"
+  }
+]

@@ -1,0 +1,176 @@
+{
+  "Note": "Frozen before this continuation: algorithm-3 worlds and drainage-1 fingerprints from the interrupted C2 report. Deliberate version migrations must keep these fixtures meaningful; do not regenerate expectations to hide drift.",
+  "MacroAlgorithm": 3,
+  "DrainageAlgorithm": 1,
+  "Resolution": 64,
+  "WorldId": "0123456789abcdef0123456789abcdef",
+  "Profiles": [
+    {
+      "Id": "balanced",
+      "Name": "Balanced continents",
+      "WorldSize": 512000,
+      "Continents": 3,
+      "Islands": 32,
+      "ContinentRadius": 85000,
+      "IslandRadius": 6200,
+      "CoastRoughness": 0.22,
+      "SeaLevel": 0,
+      "OceanDepth": 2200,
+      "LowlandHeight": 260,
+      "HillHeight": 180,
+      "HillScale": 8000,
+      "RangesPerContinent": 2,
+      "MountainHeight": 2600,
+      "MountainWidth": 9500
+    },
+    {
+      "Id": "continental",
+      "Name": "Great mainland",
+      "WorldSize": 512000,
+      "Continents": 1,
+      "Islands": 16,
+      "ContinentRadius": 140000,
+      "IslandRadius": 8000,
+      "CoastRoughness": 0.18,
+      "SeaLevel": 0,
+      "OceanDepth": 2200,
+      "LowlandHeight": 320,
+      "HillHeight": 160,
+      "HillScale": 10000,
+      "RangesPerContinent": 3,
+      "MountainHeight": 2400,
+      "MountainWidth": 12000
+    },
+    {
+      "Id": "archipelago",
+      "Name": "Island seas",
+      "WorldSize": 512000,
+      "Continents": 5,
+      "Islands": 110,
+      "ContinentRadius": 45000,
+      "IslandRadius": 11000,
+      "CoastRoughness": 0.27,
+      "SeaLevel": 0,
+      "OceanDepth": 2600,
+      "LowlandHeight": 140,
+      "HillHeight": 140,
+      "HillScale": 4500,
+      "RangesPerContinent": 1,
+      "MountainHeight": 1300,
+      "MountainWidth": 4500
+    },
+    {
+      "Id": "mountainous",
+      "Name": "Mountain kingdoms",
+      "WorldSize": 768000,
+      "Continents": 4,
+      "Islands": 40,
+      "ContinentRadius": 105000,
+      "IslandRadius": 8500,
+      "CoastRoughness": 0.23,
+      "SeaLevel": 0,
+      "OceanDepth": 3000,
+      "LowlandHeight": 360,
+      "HillHeight": 300,
+      "HillScale": 11000,
+      "RangesPerContinent": 4,
+      "MountainHeight": 3800,
+      "MountainWidth": 12000
+    },
+    {
+      "Id": "vast-world",
+      "Name": "Vast world (2048 km)",
+      "WorldSize": 2048000,
+      "Continents": 6,
+      "Islands": 128,
+      "ContinentRadius": 210000,
+      "IslandRadius": 18000,
+      "CoastRoughness": 0.25,
+      "SeaLevel": 0,
+      "OceanDepth": 3500,
+      "LowlandHeight": 300,
+      "HillHeight": 220,
+      "HillScale": 12000,
+      "RangesPerContinent": 4,
+      "MountainHeight": 3400,
+      "MountainWidth": 15000
+    }
+  ],
+  "Scenarios": [
+    {
+      "profile": "balanced",
+      "seed": -9,
+      "Fingerprint": "f54b13a373f928f738feff3fa8834168c6800868c51f2f7b7f7a5fd9875c697f"
+    },
+    {
+      "profile": "balanced",
+      "seed": 0,
+      "Fingerprint": "0e71788a233a0f79672c083dc1b2dd671fe2d0512f83b18bceb93fa4b9ba0124"
+    },
+    {
+      "profile": "balanced",
+      "seed": 7319,
+      "Fingerprint": "918b57cea49f2828d2798a584af4ee920cd69c3cfeabbdc9d46ebddbc62cb787"
+    },
+    {
+      "profile": "continental",
+      "seed": -9,
+      "Fingerprint": "d08096ba05bdd10a8fbea6fc08fa674f95253d313812feeb2dc711e498c9fee5"
+    },
+    {
+      "profile": "continental",
+      "seed": 0,
+      "Fingerprint": "2e597cf1d1de8629007f2e918ebdb30d5514de3d90e030d214873e328cc03c7b"
+    },
+    {
+      "profile": "continental",
+      "seed": 7319,
+      "Fingerprint": "50d1b09f387fd1687f45903e79fd3a3b931a5496538cea16552efd0ed31a2a78"
+    },
+    {
+      "profile": "archipelago",
+      "seed": -9,
+      "Fingerprint": "45d74257a63868839e3e5656455797ba03c316f26160fd2049e7df90df7d399d"
+    },
+    {
+      "profile": "archipelago",
+      "seed": 0,
+      "Fingerprint": "01b8d36ccbd7b170a54d4cd861af8ddc9424e006cf668768a3e1fdbd1f99b650"
+    },
+    {
+      "profile": "archipelago",
+      "seed": 7319,
+      "Fingerprint": "4a5778f52e21d3d39893e8363b1f63334ac3d2182aafeb8684a6f75046e2c3b6"
+    },
+    {
+      "profile": "mountainous",
+      "seed": -9,
+      "Fingerprint": "8873bc5e90f0e1b4f3bd331d661c6820abc53704ac386c8668bb5f8b03dce8b0"
+    },
+    {
+      "profile": "mountainous",
+      "seed": 0,
+      "Fingerprint": "504c370e1d4f650cd32ccc43218a77f33c015d92ee05095794e3402a4f22360d"
+    },
+    {
+      "profile": "mountainous",
+      "seed": 7319,
+      "Fingerprint": "a91a4a47fb92e94e536e6d9ac07d20d0e00875c3359a9f494ad02e34b0ddfb2f"
+    },
+    {
+      "profile": "vast-world",
+      "seed": -9,
+      "Fingerprint": "c1c09c796be257b8f66c2326136b384d860f58e23d3e0bc7356c4141e703fde5"
+    },
+    {
+      "profile": "vast-world",
+      "seed": 0,
+      "Fingerprint": "8a063f586d074299b884edc2ae5db9ba99aed1aa0f85a0ce2ff5ab466e9da423"
+    },
+    {
+      "profile": "vast-world",
+      "seed": 7319,
+      "Fingerprint": "239b0dafd2645f1ae76534b329134ba3b0fc44f1317095987f29c5afea60d3cc"
+    }
+  ]
+}

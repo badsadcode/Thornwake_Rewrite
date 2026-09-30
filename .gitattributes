@@ -1,0 +1,14 @@
+# Preserve the existing working-file bytes and avoid platform-wide CRLF conversion.
+# Small authored binary assets use ordinary Git; no LFS filters are needed currently.
+* -text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.glb binary
+*.blend binary
+*.ogg binary
+*.wav binary
+*.mp3 binary
+*.ttf binary
+*.woff2 binary
