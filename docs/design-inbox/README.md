@@ -45,6 +45,27 @@ Focus:
 
 Do **not** begin Supplement V2 implementation merely because this file exists. Continue the currently approved Supplement V1 / Master Rework milestone until the user explicitly instructs otherwise.
 
+### THORNWAKE_LIVING_WORLD_SIMULATION_SCOPE.md
+
+Status: **Future design reference / scope guardrail**
+
+Focus:
+- simulation-depth limits and performance philosophy
+- ephemeral events versus persistent sites/history
+- procedural narrative, rumors and contextual fiction
+- lightweight world history and knowledge
+- abstract settlement economy and production
+- player-driven caravan contracts
+- settlement decline, abandonment and recovery
+- low-cost background repopulation
+- abstract/offscreen populations
+- multiplayer 1–16 player performance principles
+- weather/hydrology scope guardrails
+
+This document exists for future reference when these systems are actually designed or implemented.
+
+Do **not** implement systems from this file merely because it exists in the repository. Codex should leave it untouched unless the user explicitly asks to read, revise, promote, or implement it.
+
 ## Prompt examples
 
 To ask Codex to consider the draft without implementing it:
