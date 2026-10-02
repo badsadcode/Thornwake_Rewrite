@@ -1,0 +1,623 @@
+diff --git a/Game/Core/AdaptiveBasinTopology.cs b/Game/Core/AdaptiveBasinTopology.cs
+index 66bda7e..9aa23a9 100644
+--- a/Game/Core/AdaptiveBasinTopology.cs
++++ b/Game/Core/AdaptiveBasinTopology.cs
+@@ -49,7 +49,8 @@ internal sealed partial class AdaptiveBasinTopology
+     private AdaptiveBasinTopology(ReconciliationDomain d,HydrologyTopologyRecipe r,CancellationToken cancel)
+     {
+         r.Validate();_d=d;_r=r;_cancel=cancel;
+-        if(r.Algorithm==3){_expansions=new();_reuseExpansions=true;}
++        if(r.Algorithm>=3){_expansions=new();_reuseExpansions=true;}
++        if(r.Algorithm==4)_reach=new();
+         if(d.Subdivisions<1 || d.Subdivisions>256 || d.Width<1 || d.Depth<1 || (long)d.Width*d.Depth>262144 ||
+             !double.IsFinite(d.MinX) || !double.IsFinite(d.MinZ) || !double.IsFinite(d.PatchSpan) || d.PatchSpan<=0 || !double.IsFinite(d.Stage))
+             throw new ArgumentException("Invalid topology domain.");
+@@ -76,7 +77,7 @@ internal sealed partial class AdaptiveBasinTopology
+                 // closes cascading face evidence in already materialized neighbours, avoiding a
+                 // whole graph replay for each individual correction.
+                 _graph?.Restart(_spillPhase,_lastCorrection);
+-                if(_r.Algorithm==3 && !BalanceForRestart())
++                if(_r.Algorithm>=3 && !BalanceForRestart())
+                     return Result(null,new(),TopologyStop.WorkBudget,TopologyStop.WorkBudget,null);
+             }
+         }
+@@ -121,7 +122,7 @@ internal sealed partial class AdaptiveBasinTopology
+         if(_failed.TryGetValue(patch,out string? failure))return failure;
+         if(_startedPatches.Count>=_r.Limits.Patches)return _failed[patch]="patch-budget";
+         _startedPatches.Add(patch);
+-        if(_r.Algorithm==3)
++        if(_r.Algorithm>=3)
+         {
+             _patches.Add(patch,new(new Cell[_d.Subdivisions*_d.Subdivisions],Array.Empty<Cell>()));
+             foreach(var port in _d.OriginalOutlets(patch))_originals.TryAdd(port.Id,port);
+@@ -158,7 +159,7 @@ internal sealed partial class AdaptiveBasinTopology
+     {
+         int patch=(int)(z/_patchUnits)*_d.Width+(int)(x/_patchUnits);
+         int root=(int)(z%_patchUnits/_unit)*_d.Subdivisions+(int)(x%_patchUnits/_unit);
+-        var c=_r.Algorithm==3?EnsureRoot(patch,root):_patches[patch].Roots[root];
++        var c=_r.Algorithm>=3?EnsureRoot(patch,root):_patches[patch].Roots[root];
+         while(c.Children is {} children)
+         {int h=c.Key.Size/2;c=children[(z>=c.Key.Z+h?2:0)+(x>=c.Key.X+h?1:0)];}
+         return c;
+@@ -215,7 +216,7 @@ internal sealed partial class AdaptiveBasinTopology
+             int patch=Owner(coarse.Key);var old=_patches[patch];var leaves=new List<Cell>();
+             void Collect(Cell c){if(c.Children==null)leaves.Add(c);else foreach(var child in c.Children)Collect(child);}
+             foreach(var root in old.Roots)if(root!=null)Collect(root);_patches[patch]=new(old.Roots,leaves.ToArray());
+-            if(_r.Algorithm==3)
++            if(_r.Algorithm>=3)
+             {
+                 void Schedule(Cell cell){if(cell.Children==null)_balance.Add(cell.Key);else foreach(var child in cell.Children)Schedule(child);}
+                 foreach(var child in children)Schedule(child);
+@@ -262,7 +263,7 @@ internal sealed partial class AdaptiveBasinTopology
+         _spillPhase=false;_graphParents=null;_cancel.ThrowIfCancellationRequested();_seedPatch=seedPatch;_seedQuad=seedQuad;
+         if(seedPatch<0 || seedPatch>=_d.Width*_d.Depth || seedQuad<0 || seedQuad>=_d.Subdivisions*_d.Subdivisions)throw new ArgumentOutOfRangeException(nameof(seedPatch));
+         string? fail=Load(seedPatch);
+-        if(fail==null && _r.Algorithm==3)
++        if(fail==null && _r.Algorithm>=3)
+         {
+             _selectingSeed=true;
+             try
+@@ -284,6 +285,7 @@ internal sealed partial class AdaptiveBasinTopology
+             return Result(null,new(),uncertain?TopologyStop.ResolutionLimit:TopologyStop.Blocked,uncertain?TopologyStop.ResolutionLimit:TopologyStop.Blocked,null);
+         }
+         var wet=new SortedDictionary<HydrologyCell,Cell>();var pending=new SortedDictionary<HydrologyCell,Cell>{{seed.Key,seed}};
++        PrepareReachability(seed,wet,pending);
+         while(pending.Count>0)
+         {
+             var c=pending.First().Value;pending.Remove(c.Key);if(wet.ContainsKey(c.Key))continue;
+@@ -293,8 +295,10 @@ internal sealed partial class AdaptiveBasinTopology
+                 if(n.Failure!=null){Unknown(c,n.Patch,n.Failure,c.High);continue;}
+                 var next=n.Cell!;
+                 if(next.Unresolved){Unknown(next,n.Patch,"resolution-limit",-100000);continue;}
+-                if(next.High<_d.Stage && !wet.ContainsKey(next.Key))pending.TryAdd(next.Key,next);
++                if(next.High<_d.Stage && !wet.ContainsKey(next.Key))
++                {pending.TryAdd(next.Key,next);DiscoverReachability(next,c);}
+             }
++            CompleteReachability(c);
+         }
+         TopologyStop componentStop=Stop(_d.Stage);
+         if(componentStop!=TopologyStop.SupportedAtSampleSpacing)return Result(seed.Key,wet,componentStop,componentStop,null);
+diff --git a/Game/Core/AdaptiveHydrologyTopology.cs b/Game/Core/AdaptiveHydrologyTopology.cs
+index 1b0c8b9..4efe19a 100644
+--- a/Game/Core/AdaptiveHydrologyTopology.cs
++++ b/Game/Core/AdaptiveHydrologyTopology.cs
+@@ -19,12 +19,13 @@ public sealed record HydrologyTopologyBudget(int Patches=16,int Samples=600000,i
+     internal bool Contains(HydrologyTopologyBudget b)=>Patches>=b.Patches && Samples>=b.Samples && Cells>=b.Cells &&
+         NodeVisits>=b.NodeVisits && FrontierEntries>=b.FrontierEntries && Splits>=b.Splits && Passes>=b.Passes;
+ }
++// Algorithm 4 is an opt-in reachability experiment, not the production algorithm-3 path.
+ public sealed record HydrologyTopologyRecipe(int Format,int Algorithm,HydrologyInspectionRecipe InspectionDependency,
+     int MaximumDepth,double MinimumSpacing,double MaximumProbeSpacing,double HeightTolerance,HydrologyTopologyBudget Limits)
+ {
+     public void Validate()
+     {
+-        if(Format!=1 || (Algorithm!=2 && Algorithm!=3) || InspectionDependency==null || Limits==null || MaximumDepth<1 || MaximumDepth>6 ||
++        if(Format!=1 || (Algorithm!=2 && Algorithm!=3 && Algorithm!=4) || InspectionDependency==null || Limits==null || MaximumDepth<1 || MaximumDepth>6 ||
+             !double.IsFinite(MinimumSpacing) || MinimumSpacing<.001 || !double.IsFinite(MaximumProbeSpacing) ||
+             MaximumProbeSpacing<MinimumSpacing || MaximumProbeSpacing>262144 || !double.IsFinite(HeightTolerance) || HeightTolerance<=0 || HeightTolerance>100)
+             throw new InvalidDataException("Unsupported adaptive topology recipe.");
+diff --git a/Tests/HydrologyTopologyTests.cs b/Tests/HydrologyTopologyTests.cs
+index 70cd4e7..690bcf6 100644
+--- a/Tests/HydrologyTopologyTests.cs
++++ b/Tests/HydrologyTopologyTests.cs
+@@ -28,6 +28,15 @@ internal static class HydrologyTopologyTests
+         HydrologyTopologyResult Solve(string name,ReconciliationDomain d,HydrologyTopologyRecipe? p=null,int patch=6,int? quad=5)
+         {
+             p??=recipe;var clock=Stopwatch.StartNew();var r=AdaptiveBasinTopology.Run(d,p,patch,quad);clock.Stop();Bounds(r,p);
++            if(algorithm==4)
++            {
++                var plain=AdaptiveBasinTopology.ProfileReachability(d,p,patch,quad,reuse:false).Result;
++                if(r.ComponentStop==TopologyStop.SupportedAtSampleSpacing && plain.ComponentStop==r.ComponentStop)
++                    Check(r.ComponentCells.SequenceEqual(plain.ComponentCells),"experimental supported membership equals full restart: "+name);
++                if(r.SpillStop==TopologyStop.SupportedAtSampleSpacing && plain.SpillStop==r.SpillStop)
++                    Check(HydrologyReachabilityTests.Geography(r)==HydrologyReachabilityTests.Geography(plain),"experimental complete geography equals full restart: "+name);
++                Check(Hash(r)==Hash(AdaptiveBasinTopology.Run(d,p,patch,quad)),"experimental complete result deterministic: "+name);
++            }
+             if(compareReuse)
+             {
+                 var cached=AdaptiveBasinTopology.ProfileGraph(d,p,patch,quad,reuse:true);
+@@ -193,7 +202,7 @@ internal static class HydrologyTopologyTests
+             Check(Hash(expanded)==Hash(direct),"real-world serialized expansion equals fresh reconstruction");
+             Console.WriteLine($"TOPOLOGY_WORLD {name}: {expanded.ComponentStop}/{expanded.SpillStop}, {expanded.Metrics.Patches} patches, {expanded.Metrics.TerrainSamples} samples, {clock.Elapsed.TotalMilliseconds:F1}ms");
+         }
+-        string directory=compareReuse?"artifacts/hydrology-graph/topology-analytic":algorithm==2?"artifacts/hydrology-topology":"artifacts/hydrology-topology-v3";
++        string directory=compareReuse?"artifacts/hydrology-graph/topology-analytic":algorithm==2?"artifacts/hydrology-topology":$"artifacts/hydrology-topology-v{algorithm}";
+         Directory.CreateDirectory(directory);
+         File.WriteAllText(Path.Combine(directory,"report.json"),JsonSerializer.Serialize(new{checks,reports},Json));
+         var fixture=new Fixture(1,algorithm,cases.ToArray());File.WriteAllText(Path.Combine(directory,"candidate-fixture.json"),JsonSerializer.Serialize(fixture,Json));
+diff --git a/Tests/Program.cs b/Tests/Program.cs
+index e6c8414..e3dd5dc 100644
+--- a/Tests/Program.cs
++++ b/Tests/Program.cs
+@@ -3,6 +3,10 @@ using Thornwake.Core;
+ 
+ try
+ {
++if (args.Contains("--reachability")) { HydrologyReachabilityTests.Run(); return; }
++if (args.Contains("--reachability-spike")) { HydrologyReachabilityTests.Run(verify:false); return; }
++if (args.Contains("--reachability-world-proof")) { HydrologyReachabilityTests.VerifySupportedWorlds(); return; }
++if (args.Contains("--reachability-comparison")) { HydrologyReachabilityTests.Measure(); return; }
+ if (args.Contains("--graph-reuse")) { HydrologyGraphReuseTests.Run(); return; }
+ if (args.Contains("--graph-baseline")) { HydrologyGraphReuseTests.Measure(baselineOnly:true); return; }
+ if (args.Contains("--graph-comparison")) { HydrologyGraphReuseTests.Measure(); return; }
+@@ -57,6 +61,7 @@ passed += HydrologyTopologyTests.Run();
+ passed += HydrologyTopologyTests.Run(algorithm:3);
+ passed += HydrologyDemandWorkTests.Run();
+ passed += HydrologyGraphReuseTests.Run();
++passed += HydrologyReachabilityTests.Run();
+ passed += HydrologyCoverageTests.Run();
+ passed += MacroChunkTests.Run();
+ passed += DrainageTests.Run();
+diff --git a/Game/Core/HydrologyReachabilityExperiment.cs b/Game/Core/HydrologyReachabilityExperiment.cs
+new file mode 100644
+--- /dev/null
++++ b/Game/Core/HydrologyReachabilityExperiment.cs
+@@ -0,0 +1,131 @@
++using System;
++using System.Collections.Generic;
++using System.Linq;
++using System.Threading;
++
++namespace Thornwake.Core;
++
++// Developer-only observations. No dependency tree or profile is serialized into a continuation.
++internal sealed record ReachabilityProfile(int Repairs,int FullRestarts,int SeedChanges,int PreservedCells,
++    int InvalidatedCells,int InvalidatedDescendants,int ValidatedParentEdges,int RequeuedBoundaries,
++    int PreviouslyPreservedInvalidated,int PeakCells,int RepairWork,int BudgetFallbacks);
++internal sealed record ReachabilityExperiment(HydrologyTopologyResult Result,HydrologyGraphProfile Graph,ReachabilityProfile Reachability);
++
++internal sealed partial class AdaptiveBasinTopology
++{
++    // Algorithm 4 experiment: a discovery-order forest whose parent always precedes its children.
++    // No orphan branch is trusted or heuristically reattached. An invalid ancestor drops its entire
++    // subtree; surviving boundary cells rediscover it through the ordinary validated face walker.
++    private sealed class ReachNode
++    {
++        internal readonly Cell Cell;internal readonly int Generation;internal readonly ReachNode? Parent;
++        internal bool Expanded,Preserved;internal int Stamp;
++        internal ReachNode(Cell cell,ReachNode? parent){Cell=cell;Generation=cell.Generation;Parent=parent;}
++    }
++    private sealed class ReachState
++    {
++        internal Dictionary<HydrologyCell,ReachNode> Nodes=new();internal List<ReachNode> Order=new();
++        internal Cell? Seed;internal bool Disabled;internal int Epoch;
++        internal int Repairs,Restarts,SeedChanges,Preserved,Invalidated,Descendants,Edges,Boundaries,OldInvalidated,Peak,Work,BudgetFallbacks;
++        // Independent, deterministic repair bound. Exhaustion permanently disables reuse for this query.
++        internal int WorkLimit=16000000;internal Action<string>? Observer;
++        internal ReachabilityProfile Finish()=>new(Repairs,Restarts,SeedChanges,Preserved,Invalidated,Descendants,Edges,Boundaries,OldInvalidated,Peak,Work,BudgetFallbacks);
++    }
++    private ReachState? _reach;
++    private bool ReachWork()
++    {
++        var r=_reach!;r.Observer?.Invoke("repair");_cancel.ThrowIfCancellationRequested();
++        if(r.Work>=r.WorkLimit)return false;r.Work++;return true;
++    }
++    private void ResetReachability(Cell seed,bool disable=false)
++    {
++        var r=_reach!;if(r.Seed!=null)r.Restarts++;
++        r.Nodes.Clear();r.Order.Clear();r.Seed=seed;r.Disabled|=disable;
++        r.Observer?.Invoke("restart");_cancel.ThrowIfCancellationRequested();
++        if(!r.Disabled){var node=new ReachNode(seed,null);r.Nodes.Add(seed.Key,node);r.Order.Add(node);r.Peak=Math.Max(r.Peak,1);}
++    }
++    private void DiscoverReachability(Cell cell,Cell parent)
++    {
++        var r=_reach;if(r==null || r.Disabled || r.Nodes.ContainsKey(cell.Key))return;
++        if(r.Nodes.Count>=Math.Min(CacheCells,_r.Limits.Cells) || !r.Nodes.TryGetValue(parent.Key,out var previous))
++        {r.Disabled=true;r.BudgetFallbacks++;r.Nodes.Clear();r.Order.Clear();return;}
++        var node=new ReachNode(cell,previous);r.Nodes.Add(cell.Key,node);r.Order.Add(node);r.Peak=Math.Max(r.Peak,r.Nodes.Count);
++    }
++    private void CompleteReachability(Cell cell)
++    {if(_reach is {Disabled:false} r && r.Nodes.TryGetValue(cell.Key,out var node))node.Expanded=true;}
++    private static bool PositiveFace(HydrologyCell a,HydrologyCell b)=>
++        ((a.X+a.Size==b.X || b.X+b.Size==a.X) && Math.Min(a.Z+a.Size,b.Z+b.Size)>Math.Max(a.Z,b.Z)) ||
++        ((a.Z+a.Size==b.Z || b.Z+b.Size==a.Z) && Math.Min(a.X+a.Size,b.X+b.Size)>Math.Max(a.X,b.X));
++    private void PrepareReachability(Cell seed,SortedDictionary<HydrologyCell,Cell> wet,SortedDictionary<HydrologyCell,Cell> pending)
++    {
++        var r=_reach;if(r==null)return;
++        if(r.Seed==null){ResetReachability(seed);return;}
++        if(r.Disabled){ResetReachability(seed);return;}
++        if(!ReferenceEquals(seed,r.Seed) || seed.Children!=null)
++        {r.SeedChanges++;r.Observer?.Invoke("seed-change");ResetReachability(seed);return;}
++        r.Repairs++;int epoch=++r.Epoch;
++        var kept=new List<ReachNode>();var index=new Dictionary<HydrologyCell,ReachNode>();
++        // Build a replacement transactionally. A failed repair never exposes its partial membership.
++        foreach(var node in r.Order)
++        {
++            if(!ReachWork()) {Fallback();return;}
++            var c=node.Cell;var parent=node.Parent;
++            bool ancestor=parent!=null && parent.Stamp!=epoch;
++            if(c.Children!=null || c.Generation!=node.Generation || c.Unresolved || c.High>=_d.Stage || ancestor)
++            {
++                r.Invalidated++;if(ancestor)r.Descendants++;if(node.Preserved)r.OldInvalidated++;
++                r.Observer?.Invoke(ancestor?"descendant":"invalidate-member");_cancel.ThrowIfCancellationRequested();continue;
++            }
++            // The originally reconciled edge remains valid iff both immutable endpoint leaves
++            // survive. A replaced neighbour never silently becomes the old parent endpoint.
++            if(parent!=null)
++            {
++                if(!PositiveFace(parent.Cell.Key,c.Key)){Fallback();return;}r.Edges++;
++            }
++            else if(!ReferenceEquals(c,seed)){Fallback();return;}
++            node.Stamp=epoch;kept.Add(node);index.Add(c.Key,node);
++        }
++        // Repair membership before testing closure. A geometrically unchanged neighbour may have
++        // lost its discovery ancestor elsewhere. Requeue every surviving face to that orphan;
++        // otherwise skipping the expansion could falsely certify an incomplete component.
++        foreach(var node in kept)
++        {
++            if(!ReachWork()){Fallback();return;}
++            var c=node.Cell;
++            bool complete=node.Expanded && _expansions!=null && _expansions.TryGetValue(c.Key,out var expansion);
++            if(complete)
++            {
++                var e=_expansions![c.Key];complete=ReferenceEquals(e.Owner,c) && e.Generation==c.Generation;
++                for(int i=0;complete && i<e.Neighbours.Length;i++)
++                {
++                    if(!ReachWork()){Fallback();return;}
++                    var next=e.Neighbours[i];complete=next.Children==null && next.Generation==e.Generations[i] && !next.Unresolved && (next.High>=_d.Stage || index.ContainsKey(next.Key));
++                }
++            }
++            if(complete){wet.Add(c.Key,c);node.Preserved=true;r.Preserved++;r.Observer?.Invoke("preserve");}
++            else{pending[c.Key]=c;r.Boundaries++;node.Expanded=false;}
++        }
++        _cancel.ThrowIfCancellationRequested();
++        r.Nodes=index;r.Order=kept;
++        if(wet.ContainsKey(seed.Key))pending.Remove(seed.Key);
++        // Otherwise the canonical root is always re-explored. Every queued boundary has a proven
++        // surviving chain to it, even when an ancestor needs its expansion revalidated.
++        return;
++        void Fallback()
++        {
++            r.BudgetFallbacks++;wet.Clear();pending.Clear();pending.Add(seed.Key,seed);
++            ResetReachability(seed,disable:true);
++        }
++    }
++    internal static ReachabilityExperiment ProfileReachability(ReconciliationDomain d,HydrologyTopologyRecipe recipe,int patch,int? quad,
++        bool reuse=true,bool adjacency=true,int repairWorkLimit=16000000,CancellationToken cancellation=default,Action<string>? observer=null)
++    {
++        if(recipe.Algorithm!=4)throw new ArgumentException("Reachability experiment requires explicit topology algorithm 4.");
++        var search=new AdaptiveBasinTopology(d,recipe,cancellation){_reuseExpansions=adjacency};
++        if(!reuse)search._reach=null;
++        else {search._reach!.WorkLimit=repairWorkLimit;search._reach.Observer=observer;}
++        search._graph=new(search._step,cancellation,null);
++        var result=search.Execute(patch,quad);
++        return new(result,search._graph.Finish(),search._reach?.Finish()??new(0,0,0,0,0,0,0,0,0,0,0,0));
++    }
++}
+diff --git a/Tests/HydrologyReachabilityTests.cs b/Tests/HydrologyReachabilityTests.cs
+new file mode 100644
+--- /dev/null
++++ b/Tests/HydrologyReachabilityTests.cs
+@@ -0,0 +1,139 @@
++using System.Diagnostics;
++using System.Security.Cryptography;
++using System.Text.Json;
++using Thornwake.Core;
++
++internal static class HydrologyReachabilityTests
++{
++    private static readonly JsonSerializerOptions Json=new(){WriteIndented=true,Converters={new System.Text.Json.Serialization.JsonStringEnumConverter()}};
++    internal static string Hash<T>(T value)=>Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(value))).ToLowerInvariant();
++    // Execution metrics and discovery-order diagnostic evidence are versioned work, not geography.
++    internal static string Geography(HydrologyTopologyResult r)=>Hash(new{r.CandidateId,r.CandidateStage,r.QueryCell,r.ComponentStop,r.SpillStop,
++        r.FinalComponentId,r.ComponentCells,r.SpillProposal,r.OriginalOutlets,r.Frontier,r.Continuation});
++    public static int Run(bool verify=true)
++    {
++        int checks=HydrologyTopologyTests.Run(verify:verify,includeWorlds:false,algorithm:4);
++        void Check(bool ok,string why){if(!ok)throw new Exception("REACHABILITY: "+why);checks++;}
++        var worlds=JsonSerializer.Deserialize<AcceptedWorldTests.TerrainFixture>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Fixtures/terrain-a4-v1.json")))!;
++        var regional=RegionalDrainageRefiner.Create(MacroDrainageRecipe.Create(worlds.Cases.Single(c=>c.Name=="mountainous/42").World));
++        var recipe=new HydrologyTopologyRecipe(1,4,new(1,1,2,regional.Recipe),3,.03125,1,.01,new(16,100000,100000,200000,8192,10000));
++        ReconciliationDomain Domain(double[] faces,bool opening=false,double receiver=0)
++        {
++            double Terrain(MacroPoint p)
++            {
++                double sill=3*Math.Max(0,1-Math.Abs(p.X-16));
++                if(opening)sill*=Math.Clamp((Math.Abs(p.Z-5.5)-.25)/.25,0,1);
++                double bed=1+40*Math.Max(0,Math.Abs(p.Z-6)-1)+40*Math.Max(0,Math.Max(5-p.X,p.X-18))+sill;
++                foreach(double face in faces)bed+=19*Math.Max(0,1-Math.Abs(p.X-face)/.25)*Math.Max(0,1-Math.Abs(p.Z-5.25)/.125)+
++                    5*Math.Max(0,1-Math.Abs(p.X-face-.5)/.5)*Math.Max(0,1-Math.Abs(p.Z-5.5)/.5);
++                return bed;
++            }
++            return new("graph-reuse","basin",3,0,0,4,5,3,4,Terrain,
++                patch=>patch==9?new[]{new ReconciliationExit("receiver",new(9,5),new(17.5,5.5),receiver)}:Array.Empty<ReconciliationExit>(),
++                (a,b)=>Array.Empty<DrainagePort>(),patch=>Array.Empty<DrainagePort>());
++        }
++        checks+=AdaptiveBasinTopology.TestReachabilityProofs(Domain(new[]{8d}),recipe);
++        var reports=new List<object>();
++        ReachabilityExperiment Compare(string name,ReconciliationDomain d,HydrologyTopologyRecipe? r=null,int patch=6)
++        {
++            r??=recipe;
++            var reused=AdaptiveBasinTopology.ProfileReachability(d,r,patch,5);
++            var plain=AdaptiveBasinTopology.ProfileReachability(d,r,patch,5,reuse:false);
++            Check(Geography(reused.Result)==Geography(plain.Result),"all geographic result fields match full restart: "+name);
++            Check(Hash(reused.Result)==Hash(AdaptiveBasinTopology.Run(d,r,patch,5)),"instrumentation has no effect: "+name);
++            Check(reused.Reachability.PeakCells<=131072 && reused.Reachability.RepairWork<=16000000,"dependency/work bound: "+name);
++            reports.Add(new{name,reused,plain});return reused;
++        }
++        var d=Domain(new[]{8d,12d,16d});var multi=Compare("sequential",d);
++        Compare("leaf",Domain(new[]{8d}));Compare("late",Domain(new[]{12d}));
++        var spill=Compare("spill-parent",Domain(new[]{16d}));
++        var other=Compare("other-entry",d,patch:8);
++        var opening=Compare("opening",Domain(new[]{8d,12d},opening:true));
++        var receiver=Compare("receiver",Domain(new[]{8d,12d},opening:true,receiver:7));
++        Check(opening.Result.SpillProposal!.RequiredElevation==1 && receiver.Result.SpillProposal!.RequiredElevation==7,"opening and receiver remain binding");
++        Check(multi.Reachability.PreservedCells>0 && multi.Reachability.Repairs>1,"multiple corrections preserve proven branches");
++        var noRepair=AdaptiveBasinTopology.ProfileReachability(d,recipe,6,5,repairWorkLimit:0);
++        Check(noRepair.Reachability.BudgetFallbacks>0 && noRepair.Reachability.FullRestarts>0,"invalidation budget falls back");
++        Check(Geography(noRepair.Result)==Geography(multi.Result),"fallback preserves geography");
++        foreach(var limits in new[]{recipe.Limits with{Passes=1},recipe.Limits with{Samples=30},recipe.Limits with{Cells=10},recipe.Limits with{Splits=0},
++            recipe.Limits with{NodeVisits=1},recipe.Limits with{Patches=1,FrontierEntries=1}})
++        {
++            var r=recipe with{Limits=limits};var limited=AdaptiveBasinTopology.ProfileReachability(d,r,6,5);
++            Check(limited.Result.FinalComponentId==null && limited.Result.Continuation!=null,"budget cannot certify closure");
++            Check(Hash(limited.Result)==Hash(AdaptiveBasinTopology.Run(d,r,6,5)),"budget result deterministic");
++            var token=JsonSerializer.Deserialize<HydrologyTopologyContinuation>(JsonSerializer.Serialize(limited.Result.Continuation))!.Expand(recipe.Limits);
++            Check(token.Recipe.Algorithm==4 && Hash(AdaptiveBasinTopology.Run(d,token.Recipe,6,5))==Hash(multi.Result),"versioned continuation equals one shot");
++        }
++        foreach(string moment in new[]{"repair","preserve","descendant","invalidate-member"})
++        {
++            using var cancel=new CancellationTokenSource();bool observed=false,cancelled=false;
++            try{AdaptiveBasinTopology.ProfileReachability(d,recipe,6,5,cancellation:cancel.Token,observer:e=>{if(e==moment){observed=true;cancel.Cancel();}});}
++            catch(OperationCanceledException){cancelled=true;}
++            Check(observed && cancelled,"cancellation during "+moment);
++        }
++        var parallel=Task.WhenAll(Enumerable.Range(0,3).Select(_=>Task.Run(()=>Hash(AdaptiveBasinTopology.ProfileReachability(d,recipe,6,5))))).GetAwaiter().GetResult();
++        Check(parallel.All(h=>h==Hash(multi)),"parallel independent queries");
++        Directory.CreateDirectory("artifacts/hydrology-reachability");
++        File.WriteAllText("artifacts/hydrology-reachability/analytic.json",JsonSerializer.Serialize(reports,Json));
++        Console.WriteLine($"REACHABILITY_PASS: {checks} checks; preserved {multi.Reachability.PreservedCells}, invalidated {multi.Reachability.InvalidatedCells}");return checks;
++    }
++    public static int VerifySupportedWorlds()
++    {
++        int checks=0;void Check(bool ok,string why){if(!ok)throw new Exception("REACHABILITY_WORLD: "+why);checks++;}
++        var worlds=JsonSerializer.Deserialize<AcceptedWorldTests.TerrainFixture>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Fixtures/terrain-a4-v1.json")))!;
++        using var matrix=JsonDocument.Parse(File.ReadAllText("artifacts/hydrology-reachability/comparison.json"));
++        foreach(var row in matrix.RootElement.EnumerateArray().Where(e=>e.GetProperty("Mode").GetInt32()==2 && e.GetProperty("ComponentStop").GetString()==nameof(TopologyStop.SupportedAtSampleSpacing)))
++        {
++            var world=worlds.Cases.Single(c=>c.Name==row.GetProperty("World").GetString()).World;
++            var regional=RegionalDrainageRefiner.Create(MacroDrainageRecipe.Create(world));int patch=row.GetProperty("Patch").GetInt32();
++            var recipe=new HydrologyTopologyRecipe(1,4,new(1,1,2,regional.Recipe),3,2,64,.25,new(32,2000000,800000,2000000,16384,180000));
++            var original=AdaptiveHydrologyReconciler.Restore(recipe with{Algorithm=3}).Reconcile(patch);
++            var experimental=AdaptiveHydrologyReconciler.Restore(recipe).Reconcile(patch);
++            Check(Hash(experimental)==row.GetProperty("Fingerprint").GetString(),"complete experimental reconstruction matches measured result");
++            Check(original.ComponentStop==TopologyStop.SupportedAtSampleSpacing,"supported comparison requires a complete safe oracle");
++            Check(original.ComponentCells.SequenceEqual(experimental.ComponentCells) && original.QueryCell==experimental.QueryCell,"every real supported member equals algorithm 3, not only component size");
++            Console.WriteLine($"REACHABILITY_WORLD {row.GetProperty("World").GetString()}: {experimental.ComponentCells.Count} members identical to algorithm 3");
++        }
++        Check(checks>0,"matrix contains a supported component to compare");
++        Console.WriteLine($"REACHABILITY_WORLD_PASS: {checks} checks");return checks;
++    }
++    public static int Measure()
++    {
++        int checks=0;void Check(bool ok,string why){if(!ok)throw new Exception("REACHABILITY: "+why);checks++;}
++        var rows=new List<object>();
++        var worlds=JsonSerializer.Deserialize<AcceptedWorldTests.TerrainFixture>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Fixtures/terrain-a4-v1.json")))!;
++        using var frozen=JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Fixtures/hydrology-work-coverage-v1.json")));
++        foreach(var group in new[]{(World:"mountainous/42",Sizes:new[]{"large","small"}),
++            (World:"mountainous/42/far",Sizes:new[]{"large"}),(World:"vast-world/7319/far",Sizes:new[]{"small","large","medium"})})
++        {
++            var regional=RegionalDrainageRefiner.Create(MacroDrainageRecipe.Create(worlds.Cases.Single(c=>c.Name==group.World).World));
++            foreach(string size in group.Sizes)
++            {
++                var expected=frozen.RootElement.EnumerateArray().Single(r=>r.GetProperty("World").GetString()==group.World && r.GetProperty("Size").GetString()==size && r.GetProperty("Algorithm").GetInt32()==3);
++                int patch=expected.GetProperty("Patch").GetInt32();
++                var recipe=new HydrologyTopologyRecipe(1,4,new(1,1,2,regional.Recipe),3,2,64,.25,new(32,2000000,800000,2000000,16384,180000));
++                foreach(int mode in new[]{0,1,2})
++                {
++                    var r=mode<2?recipe with{Algorithm=3}:recipe;
++                    var domain=HydrologyReconciler.Create(regional).CreateDomain(patch,CancellationToken.None);
++                    var watch=Stopwatch.StartNew();
++                    var result=mode<2?AdaptiveBasinTopology.RunGraphExperiment(domain,r,patch,null,reuse:mode==1):AdaptiveBasinTopology.Run(domain,r,patch,null);
++                    watch.Stop();domain=HydrologyReconciler.Create(regional).CreateDomain(patch,CancellationToken.None);
++                    ReachabilityExperiment? reuse=null;HydrologyGraphProfile graph;HydrologyTopologyResult profiled;
++                    if(mode==2){reuse=AdaptiveBasinTopology.ProfileReachability(domain,r,patch,null);profiled=reuse.Result;graph=reuse.Graph;}
++                    else{var p=AdaptiveBasinTopology.ProfileGraph(domain,r,patch,null,reuse:mode==1);profiled=p.Result;graph=p.Graph;}
++                    Check(Hash(result)==Hash(profiled),"instrumentation preserves result");
++                    if(mode<2)Check(Hash(result)==expected.GetProperty("Fingerprint").GetString(),"historical frozen algorithm 3 unchanged");
++                    Check(result.Metrics.NodeVisits<=recipe.Limits.NodeVisits,"same visit budget");
++                    rows.Add(new{group.World,Size=size,Patch=patch,Mode=mode,Milliseconds=watch.Elapsed.TotalMilliseconds,result.Metrics,
++                        result.ComponentStop,result.SpillStop,ComponentCells=result.ComponentCells.Count,Fingerprint=Hash(result),
++                        Frontiers=result.Frontier.GroupBy(f=>f.Reason).OrderBy(g=>g.Key).ToDictionary(g=>g.Key,g=>g.Count()),Graph=graph,Reachability=reuse?.Reachability});
++                    Console.WriteLine($"REACH {group.World}/{size} mode={mode}: {watch.Elapsed.TotalMilliseconds:F0}ms, {result.ComponentStop}/{result.SpillStop}, visits {result.Metrics.NodeVisits}, repeated wet {graph.Passes.Sum(p=>p.RepeatedWetVisits)}, preserved {reuse?.Reachability.PreservedCells}");
++                    Directory.CreateDirectory("artifacts/hydrology-reachability");
++                    File.WriteAllText("artifacts/hydrology-reachability/comparison.json",JsonSerializer.Serialize(rows,Json));
++                }
++            }
++        }
++        Console.WriteLine($"REACHABILITY_MEASUREMENT_PASS: {checks} checks; {rows.Count} queries");return checks;
++    }
++}
+diff --git a/Tests/HydrologyReachabilityProofTests.cs b/Tests/HydrologyReachabilityProofTests.cs
+new file mode 100644
+--- /dev/null
++++ b/Tests/HydrologyReachabilityProofTests.cs
+@@ -0,0 +1,80 @@
++using Thornwake.Core;
++
++// Test-only partial access keeps synthetic dependency corruption/retirement fixtures out of Core.
++namespace Thornwake.Core;
++internal sealed partial class AdaptiveBasinTopology
++{
++    internal static int TestReachabilityProofs(ReconciliationDomain domain,HydrologyTopologyRecipe recipe)
++    {
++        int checks=0;void Check(bool ok,string why){if(!ok)throw new Exception("REACHABILITY_PROOF: "+why);checks++;}
++        (AdaptiveBasinTopology Search,Cell[] Cells) Fixture(int? limit=null)
++        {
++            var search=new AdaptiveBasinTopology(domain,recipe,CancellationToken.None);
++            if(limit.HasValue)search._reach!.WorkLimit=limit.Value;
++            var cells=new[]{new Cell(new(0,0,8),1,1,false,null),new Cell(new(8,0,8),1,1,false,null),
++                new Cell(new(16,0,8),1,1,false,null),new Cell(new(24,0,8),1,1,false,null),
++                new Cell(new(0,8,8),1,1,false,null),new Cell(new(8,8,8),1,1,false,null),new Cell(new(16,8,8),1,1,false,null)};
++            search.PrepareReachability(cells[0],new(),new());
++            foreach(var (child,parent) in new[]{(1,0),(2,1),(3,2),(4,0),(5,4),(6,5)})search.DiscoverReachability(cells[child],cells[parent]);
++            foreach(var c in cells)
++            {
++                var neighbours=cells.Where(n=>PositiveFace(c.Key,n.Key)).ToArray();
++                search._expansions![c.Key]=new(c,c.Generation,neighbours,neighbours.Select(n=>n.Generation).ToArray());
++                search.CompleteReachability(c);
++            }
++            return(search,cells);
++        }
++        static void Retire(Cell c){c.Children=Array.Empty<Cell>();c.Generation++;}
++        static (SortedDictionary<HydrologyCell,Cell> Wet,SortedDictionary<HydrologyCell,Cell> Pending) Repair(AdaptiveBasinTopology s,Cell seed)
++        {
++            var wet=new SortedDictionary<HydrologyCell,Cell>();var pending=new SortedDictionary<HydrologyCell,Cell>{{seed.Key,seed}};
++            s.PrepareReachability(seed,wet,pending);return(wet,pending);
++        }
++        var (s,c)=Fixture();var first=Repair(s,c[0]);
++        Check(first.Wet.Count==7 && first.Pending.Count==0,"unchanged full tree preserved");
++        Retire(c[1]);var corrected=Repair(s,c[0]);
++        Check(!s._reach!.Nodes.ContainsKey(c[2].Key) && !s._reach.Nodes.ContainsKey(c[3].Key),"high ancestor invalidates all descendants even when leaf geometry survives");
++        Check(s._reach.Descendants==2 && s._reach.OldInvalidated==3,"previously preserved descendants are invalidated");
++        Check(corrected.Wet.ContainsKey(c[4].Key),"unrelated seed-connected branch survives");
++        Check(corrected.Pending.ContainsKey(c[0].Key) && corrected.Pending.ContainsKey(c[5].Key) && corrected.Pending.ContainsKey(c[6].Key),"closure: unchanged surviving face to an orphan must be requeued");
++        // Exercise the repaired queue to closure, then compare with independent cold flood fill.
++        while(corrected.Pending.Count>0)
++        {
++            var next=corrected.Pending.First().Value;corrected.Pending.Remove(next.Key);
++            if(!corrected.Wet.TryAdd(next.Key,next))continue;
++            foreach(var neighbour in c.Where(n=>n.Children==null && PositiveFace(next.Key,n.Key)))
++                if(!corrected.Wet.ContainsKey(neighbour.Key))
++                {corrected.Pending.TryAdd(neighbour.Key,neighbour);s.DiscoverReachability(neighbour,next);}
++            s.CompleteReachability(next);
++        }
++        var cold=new HashSet<HydrologyCell>();var todo=new Queue<Cell>();todo.Enqueue(c[0]);
++        while(todo.TryDequeue(out var current))
++            if(cold.Add(current.Key))foreach(var neighbour in c.Where(n=>n.Children==null && PositiveFace(current.Key,n.Key)))todo.Enqueue(neighbour);
++        Check(cold.SetEquals(corrected.Wet.Keys) && cold.Count==6,"repaired closure equals full flood fill through alternate face");
++        Check(s._reach.Nodes[c[2].Key].Parent!.Cell==c[6],"rediscovered branch acquires the surviving alternate parent");
++        // A surviving face can rediscover the orphan only after normal face validation. No old
++        // parent is retained: emulate that validated discovery from the lower connected branch.
++        s.DiscoverReachability(c[2],c[6]);s.DiscoverReachability(c[3],c[2]);
++        var reattached=Repair(s,c[0]);
++        Check(reattached.Pending.ContainsKey(c[2].Key) && s._reach.Nodes[c[2].Key].Parent!.Cell==c[6],"orphan requires fresh validated discovery parent");
++        Retire(c[6]);Repair(s,c[0]);
++        Check(!s._reach.Nodes.ContainsKey(c[2].Key) && !s._reach.Nodes.ContainsKey(c[3].Key),"later correction invalidates rediscovered descendants");
++        var (leaf,lc)=Fixture();Retire(lc[3]);var lr=Repair(leaf,lc[0]);
++        Check(leaf._reach!.Descendants==0 && lr.Wet.Count==5,"leaf correction preserves remote ancestors");
++        var (seed,sc)=Fixture();Retire(sc[0]);var replacement=new Cell(sc[0].Key,0,0,false,null);var sr=Repair(seed,replacement);
++        Check(seed._reach!.SeedChanges==1 && sr.Wet.Count==0 && seed._reach.Nodes.Count==1,"changed canonical seed forces full restart");
++        var (budget,bc)=Fixture(2);var br=Repair(budget,bc[0]);
++        Check(br.Wet.Count==0 && br.Pending.Count==1 && budget._reach!.Disabled,"repair budget rollback discards partially accepted cells");
++        var (broken,ic)=Fixture();broken._reach!.Order[2]=new ReachNode(ic[2],broken._reach.Order[0]);var ir=Repair(broken,ic[0]);
++        Check(ir.Wet.Count==0 && broken._reach.Disabled,"invalid parent face cannot reattach");
++        var (missing,mc)=Fixture();missing._reach!.Nodes.Remove(mc[3].Key);
++        missing.DiscoverReachability(new Cell(new(32,0,8),1,1,false,null),mc[3]);var mr=Repair(missing,mc[0]);
++        Check(mr.Wet.Count==0 && missing._reach.Disabled,"missing dependency falls back");
++        var (unknown,uc)=Fixture();var unresolved=new Cell(new(0,-8,8),1,0,true,null);
++        unknown._expansions![uc[0].Key]=new(uc[0],0,new[]{unresolved},new[]{0});var ur=Repair(unknown,uc[0]);
++        Check(!ur.Wet.ContainsKey(uc[0].Key) && ur.Pending.ContainsKey(uc[0].Key),"uncertain neighbour always reobserved");
++        var (absent,ac)=Fixture();absent._expansions!.Remove(ac[4].Key);var ar=Repair(absent,ac[0]);
++        Check(!ar.Wet.ContainsKey(ac[4].Key) && ar.Pending.ContainsKey(ac[4].Key),"missing expansion cannot imply closed boundary");
++        Console.WriteLine($"REACHABILITY_PROOF_PASS: {checks} checks");return checks;
++    }
++}
+diff --git a/Tests/Fixtures/hydrology-topology-v4.json b/Tests/Fixtures/hydrology-topology-v4.json
+new file mode 100644
+--- /dev/null
++++ b/Tests/Fixtures/hydrology-topology-v4.json
+@@ -0,0 +1,102 @@
++{
++  "Format": 1,
++  "Algorithm": 4,
++  "Cases": [
++    {
++      "Name": "complete",
++      "Hash": "17a32b6b9dd408903f582d92ce4b6c47c4411a825cce80497551cd6f1c92b304"
++    },
++    {
++      "Name": "narrow-barrier-left",
++      "Hash": "1e62de9b661d00a6b3a6e850fb141fbab0cb7488720659cb58bd1abb2a7bddc2"
++    },
++    {
++      "Name": "narrow-barrier-right",
++      "Hash": "4edca3d5f56dd692292111d738a3f4f23a3149c017e7a176fe40dd74c4f7667c"
++    },
++    {
++      "Name": "narrow-opening",
++      "Hash": "792bcb47773c14db144878daf585111b0535e366724b11aab2b16f0235ea2008"
++    },
++    {
++      "Name": "reachable-alternative",
++      "Hash": "a31b37cfa3b4c862a1a492c3eeab904648e610d445289411e62a5f1383bd97fe"
++    },
++    {
++      "Name": "receiver-level",
++      "Hash": "dcc57bb0e90fe3b7e915df44777009a1ef77e4a6918884bf98e34cdacbcbf4f2"
++    },
++    {
++      "Name": "confirmed-port",
++      "Hash": "f4197b18be5e3cd5fd9ad512cd8d1ba7a5408710acf3008073e6dffe12babda7"
++    },
++    {
++      "Name": "bilateral-replacement",
++      "Hash": "52996b02f1e945363fc495deea945bc05a9a5734753f349890a18a91584496c6"
++    },
++    {
++      "Name": "budget-patch",
++      "Hash": "f9ef12e87b6c0eafe47133442bb3b29cd1216a560cc4e3d33da98e5ccc567629"
++    },
++    {
++      "Name": "budget-sample",
++      "Hash": "eedc19a1e2f39003e9c3c0a079c8eabec4efbd4bea01bf79fb652be800faa9fc"
++    },
++    {
++      "Name": "budget-cell",
++      "Hash": "c2004f4e7c27de4c8b1e5ed874c4cca557b41a65deb04e16236560f912d10c20"
++    },
++    {
++      "Name": "budget-split",
++      "Hash": "932f3aa6487984f1e4a034fa792cfaa0c9ab95b713373950089522834fe7e224"
++    },
++    {
++      "Name": "budget-node",
++      "Hash": "1c5b5ae8e0131d9640e42f918057dbaa20ed0252acd6dabd01e72126f73b1cfd"
++    },
++    {
++      "Name": "budget-frontier",
++      "Hash": "52a8469aba7f388bf74eb3198eca5ae90f3a5c8bd3c36df6ee4b73a93fb0e2f9"
++    },
++    {
++      "Name": "spill-frontier-continuation",
++      "Hash": "e9aa90aba6986dcb3a72260220213a2e4f5bb881096c500d496d4fc3b68dde1d"
++    },
++    {
++      "Name": "domain-boundary",
++      "Hash": "30b602dbbab136dc91649577717cb8d45e3d91f381324d227799d3812ac77ba1"
++    },
++    {
++      "Name": "resolution-limit",
++      "Hash": "c88f9ac8e6fb1e56945f84c4e9395b0597c9484bc49b91b996c37692e96762c8"
++    },
++    {
++      "Name": "far-1",
++      "Hash": "db86ee91777aa0691f08f948431308ea5d08be433a884fc2d88ea7551aa35651"
++    },
++    {
++      "Name": "far-1.01234567",
++      "Hash": "7226d9e6223081a515e20c1e9050ea1cbbf1ea735c06e64acd89dbb532fe6229"
++    },
++    {
++      "Name": "shared-face-feedback",
++      "Hash": "9caae3b092af58268824d197b9fe8a3ede069a9dd650e81885a849931bf56927"
++    },
++    {
++      "Name": "budget-passes",
++      "Hash": "14afdcac3a3bdac71500415e6fd6162bf9d85e3c48147eb1c540ecd03c69b450"
++    },
++    {
++      "Name": "corner-first",
++      "Hash": "e3db40d3393a28d99f19d03c0866a85b9ba57ce0d2abe7ebce0e92451bdb20d9"
++    },
++    {
++      "Name": "corner-second",
++      "Hash": "3f96337ed0eb8266187e2383ab19970ae657cff05e9b112528ddc65ec382b498"
++    },
++    {
++      "Name": "curvature-unresolved",
++      "Hash": "2dee75ee63663200bb9177410760632bd59989c1ac59cc02bca753af9bd01ce9"
++    }
++  ]
++}
+\ No newline at end of file

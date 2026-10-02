@@ -40,3 +40,7 @@ Use `--demand-work` for the focused demand/balance checks, `--demand-topology` f
 ## Local graph-reuse diagnostics
 
 Use `--graph-reuse` for focused invalidation/full-restart comparisons and `--graph-comparison` for the six-candidate timed matrix. Both use the Core test project above; the latter takes several minutes. Read `artifacts/hydrology-graph/comparison.json` and [the graph-reuse checkpoint](MASTER_HYDROLOGY_GRAPH_REUSE.md) for the exact dependency proof, gains and unchanged unresolved coverage. This is generation tooling; it adds no gameplay water or preview UI.
+
+## Rejected reachability experiment (2026-10-03)
+
+The explicit topology-4 reachability experiment is archived and is not an active algorithm or preview option. Production remains unchanged. See [the experiment checkpoint](MASTER_HYDROLOGY_REACHABILITY_EXPERIMENT.md) for its corrected closure regression, benchmark matrix and disposable-checkout reproduction instructions. Do not confuse this rejected topology version with accepted terrain algorithm 4.

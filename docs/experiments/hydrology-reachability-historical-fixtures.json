@@ -1,0 +1,46 @@
+[
+  {
+    "path": "Tests/Fixtures/cave-player-floor-cuts-v1.json",
+    "sha256": "80d8c2e3b4128ff0b2cd478fd88a6156b97a0d806998f58f3c7067e352e75af1"
+  },
+  {
+    "path": "Tests/Fixtures/cave-player-shore-cuts-v2.json",
+    "sha256": "72ff34f6d98f6344242af872209c80729a45bb015ee303dc36c64d44e3f3f3f3"
+  },
+  {
+    "path": "Tests/Fixtures/drainage-a4-v1.json",
+    "sha256": "888d37dbdf8e3bb901f8259601162321e9f0faad4c61f38223179949783f73aa"
+  },
+  {
+    "path": "Tests/Fixtures/drainage-v1.json",
+    "sha256": "6f4e93931e2d57feb6a03db010accf2dfe313159216cb39b68d6c7f54ec95e4e"
+  },
+  {
+    "path": "Tests/Fixtures/hydrology-inspection-v1.json",
+    "sha256": "f69ad8f0defb262a561c7799450b4df738200ca4437d26d0ca0f0f8813beb5e1"
+  },
+  {
+    "path": "Tests/Fixtures/hydrology-reconciliation-v1.json",
+    "sha256": "ee0e641305245a5ad05f321372faed8d1f77fb06000e06202dfc74ccb9d36745"
+  },
+  {
+    "path": "Tests/Fixtures/hydrology-topology-v2.json",
+    "sha256": "0b77fe548162eb8c951b0ab15845c6632d3dfd11b7d44a98d75a917ce26549cc"
+  },
+  {
+    "path": "Tests/Fixtures/hydrology-topology-v3.json",
+    "sha256": "b500ed7c2804f0f032da19ceb15e583c1b680b959f7ec5b64a580cee9cbf0509"
+  },
+  {
+    "path": "Tests/Fixtures/hydrology-work-coverage-v1.json",
+    "sha256": "9a21fb5b26f197a0cce624a3706a4edb2240067d0f19c3e479ee7cb7168c86c6"
+  },
+  {
+    "path": "Tests/Fixtures/regional-drainage-v1.json",
+    "sha256": "7851e0f7bd98d22a56e09d520a14a9ccee821e7c105a0612a3ca752fe7d03f1a"
+  },
+  {
+    "path": "Tests/Fixtures/terrain-a4-v1.json",
+    "sha256": "d5c1696951c1f2387d9f660fdcc67ccb447ee6a2566bae430fb8c914a6181e18"
+  }
+]
