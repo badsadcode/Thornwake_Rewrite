@@ -3,6 +3,14 @@ using Thornwake.Core;
 
 try
 {
+if (args.Contains("--demand-work")) { HydrologyDemandWorkTests.Run(); return; }
+if (args.Contains("--demand-topology")) { HydrologyTopologyTests.Run(algorithm:3); return; }
+if (args.Contains("--demand-topology-spike")) { HydrologyTopologyTests.Run(verify:false,algorithm:3); return; }
+if (args.Contains("--demand-topology-analytic")) { HydrologyTopologyTests.Run(verify:false,includeWorlds:false,algorithm:3); return; }
+if (args.Contains("--hydrology-work-after")) { HydrologyCoverageTests.Run(afterOnly:true); return; }
+if (args.Contains("--hydrology-work-baseline")) { HydrologyCoverageTests.Run(baselineOnly:true); return; }
+if (args.Contains("--hydrology-work-spike")) { HydrologyCoverageTests.Run(verify:false); return; }
+if (args.Contains("--hydrology-work")) { HydrologyCoverageTests.Run(); return; }
 if (args.Contains("--topology-analytic")) { HydrologyTopologyTests.Run(verify:false,includeWorlds:false); return; }
 if (args.Contains("--adaptive-topology")) { HydrologyTopologyTests.Run(); return; }
 if (args.Contains("--topology-spike")) { HydrologyTopologyTests.Run(verify:false); return; }
@@ -43,6 +51,9 @@ passed += AcceptedWorldTests.Run();
 passed += HydrologyInspectionTests.Run();
 passed += HydrologyReconciliationTests.Run();
 passed += HydrologyTopologyTests.Run();
+passed += HydrologyTopologyTests.Run(algorithm:3);
+passed += HydrologyDemandWorkTests.Run();
+passed += HydrologyCoverageTests.Run();
 passed += MacroChunkTests.Run();
 passed += DrainageTests.Run();
 passed += DrainagePreviewTests.Run();

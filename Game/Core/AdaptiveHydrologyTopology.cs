@@ -24,7 +24,7 @@ public sealed record HydrologyTopologyRecipe(int Format,int Algorithm,HydrologyI
 {
     public void Validate()
     {
-        if(Format!=1 || Algorithm!=2 || InspectionDependency==null || Limits==null || MaximumDepth<1 || MaximumDepth>6 ||
+        if(Format!=1 || (Algorithm!=2 && Algorithm!=3) || InspectionDependency==null || Limits==null || MaximumDepth<1 || MaximumDepth>6 ||
             !double.IsFinite(MinimumSpacing) || MinimumSpacing<.001 || !double.IsFinite(MaximumProbeSpacing) ||
             MaximumProbeSpacing<MinimumSpacing || MaximumProbeSpacing>262144 || !double.IsFinite(HeightTolerance) || HeightTolerance<=0 || HeightTolerance>100)
             throw new InvalidDataException("Unsupported adaptive topology recipe.");
@@ -69,7 +69,7 @@ public sealed record HydrologyTopologyResult(string LayerId,string RequestId,str
     IReadOnlyList<HydrologyCell> ComponentCells,TopologySpill? SpillProposal,IReadOnlyList<DrainagePort> OriginalOutlets,
     IReadOnlyList<TopologyFrontier> Frontier,IReadOnlyList<TopologyRefinement> RefinementEvidence,TopologyMetrics Metrics,HydrologyTopologyContinuation? Continuation);
 
-/// <summary>Algorithm 2 over immutable inspection dependencies. Algorithm 1 remains available unchanged.</summary>
+/// <summary>Explicit topology algorithms 2 (eager patches) and 3 (demand roots), over immutable dependencies.</summary>
 public sealed class AdaptiveHydrologyReconciler
 {
     public HydrologyTopologyRecipe Recipe {get;}
@@ -82,6 +82,8 @@ public sealed class AdaptiveHydrologyReconciler
     }
     public HydrologyTopologyResult Reconcile(int patch,int? quad=null,CancellationToken cancellation=default)
         =>AdaptiveBasinTopology.Run(_baseline.CreateDomain(patch,cancellation),Recipe,patch,quad,cancellation);
+    public ProfiledHydrologyQuery Profile(int patch,int? quad=null,CancellationToken cancellation=default)
+        =>AdaptiveBasinTopology.Profile(_baseline.CreateDomain(patch,cancellation),Recipe,patch,quad,cancellation);
     public static HydrologyTopologyResult Continue(HydrologyTopologyContinuation continuation,CancellationToken cancellation=default)
     {
         continuation.Validate();return Restore(continuation.Recipe,cancellation).Reconcile(continuation.SeedPatch,continuation.SeedQuad,cancellation);

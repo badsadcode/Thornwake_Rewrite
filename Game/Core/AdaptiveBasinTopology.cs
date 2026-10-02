@@ -7,21 +7,28 @@ using System.Threading;
 namespace Thornwake.Core;
 
 /// <summary>
-/// Local, terrain-driven dyadic topology. Each loaded patch is refined to a fixed point before it
-/// enters either graph search. Thus new evidence replaces parent cells, never overlays stale links.
+/// Local, terrain-driven dyadic topology. Algorithm 2 admits fully refined patches; algorithm 3
+/// admits only requested base roots. Changed topology requires a fresh stable graph pass.
 /// Neighbour patches may have different depths; face overlap, not corner contact, connects leaves.
 /// </summary>
-internal sealed class AdaptiveBasinTopology
+internal sealed partial class AdaptiveBasinTopology
 {
     private sealed class Cell
     {
         public HydrologyCell Key {get;} public double High {get;} public double Low {get;} public bool Unresolved {get;}
         public Cell[]? Children {get;set;}
+        public bool FaceWorkScheduled {get;set;}
         public Cell(HydrologyCell key,double high,double low,bool unresolved,Cell[]? children)
         {Key=key;High=high;Low=low;Unresolved=unresolved;Children=children;}
     }
     private sealed class TopologyChanged : Exception {}
-    private sealed record Patch(Cell[] Roots,Cell[] Leaves);
+    private sealed class Patch
+    {
+        // Null array entries are explicitly unmaterialized base cells in algorithm 3, never dry cells.
+        public Cell[] Roots {get;}
+        public List<Cell> Leaves {get;}
+        public Patch(Cell[] roots,IEnumerable<Cell> leaves){Roots=roots;Leaves=leaves.ToList();}
+    }
     private sealed class Limit : Exception {public string Reason {get;} public Limit(string reason){Reason=reason;}}
     private readonly ReconciliationDomain _d;
     private readonly HydrologyTopologyRecipe _r;
@@ -60,7 +67,15 @@ internal sealed class AdaptiveBasinTopology
                 return Result(null,new(),TopologyStop.WorkBudget,TopologyStop.WorkBudget,null);
             }
             _passes++;
-            try {return Search(patch,quad);} catch(TopologyChanged) { /* Keep charged samples/topology; discard obsolete graph queues. */ }
+            try {return Search(patch,quad);}
+            catch(TopologyChanged)
+            {
+                // Keep charged samples/topology; discard obsolete graph queues. Algorithm 3 first
+                // closes cascading face evidence in already materialized neighbours, avoiding a
+                // whole graph replay for each individual correction.
+                if(_r.Algorithm==3 && !BalanceKnownFaces())
+                    return Result(null,new(),TopologyStop.WorkBudget,TopologyStop.WorkBudget,null);
+            }
         }
     }
     private MacroPoint Position(long x,long z)=>new(_d.MinX+x*_step,_d.MinZ+z*_step);
@@ -70,13 +85,14 @@ internal sealed class AdaptiveBasinTopology
         if(_samples.TryGetValue((x,z),out double h))return h;
         if(_samples.Count>=_r.Limits.Samples)throw new Limit("sample-budget");
         h=_d.Sample(Position(x,z));if(!double.IsFinite(h) || Math.Abs(h)>100000)throw new InvalidDataException("Invalid authoritative terrain sample.");
-        _samples.Add((x,z),h);return h;
+        _samples.Add((x,z),h);_work?.Sample(_sampleCell,_sharedSampling);return h;
     }
     private Cell Refine(long x,long z,int size,int depth)
     {
         _cancel.ThrowIfCancellationRequested();
         if(_allocated>=_r.Limits.Cells)throw new Limit("cell-budget");_allocated++;
         _maxDepth=Math.Max(_maxDepth,depth);
+        _sampleCell=new(x,z,size);
         int half=size/2;
         double a=Height(x,z),b=Height(x+size,z),c=Height(x,z+size),d=Height(x+size,z+size);
         double top=Height(x+half,z),bottom=Height(x+half,z+size),left=Height(x,z+half),right=Height(x+size,z+half),mid=Height(x+half,z+half);
@@ -93,6 +109,7 @@ internal sealed class AdaptiveBasinTopology
                 Refine(x,z+half,half,depth+1),Refine(x+half,z+half,half,depth+1)};
         }
         if(needed && _evidence.Count<64)_evidence.Add(new(new(x,z,size),Math.Max(Math.Max(a,b),Math.Max(c,d)),high,low,error,children!=null));
+        if(size==_unit)_work?.Classify(new(x,z,size),low,high,_d.Stage);
         return new(new(x,z,size),high,low,needed && children==null,children);
     }
     private string? Load(int patch)
@@ -101,6 +118,12 @@ internal sealed class AdaptiveBasinTopology
         if(_failed.TryGetValue(patch,out string? failure))return failure;
         if(_startedPatches.Count>=_r.Limits.Patches)return _failed[patch]="patch-budget";
         _startedPatches.Add(patch);
+        if(_r.Algorithm==3)
+        {
+            _patches.Add(patch,new(new Cell[_d.Subdivisions*_d.Subdivisions],Array.Empty<Cell>()));
+            foreach(var port in _d.OriginalOutlets(patch))_originals.TryAdd(port.Id,port);
+            return null;
+        }
         try
         {
             var roots=new Cell[_d.Subdivisions*_d.Subdivisions];var leaves=new List<Cell>();
@@ -116,11 +139,23 @@ internal sealed class AdaptiveBasinTopology
         }
         catch(Limit exhausted) {return _failed[patch]=exhausted.Reason;}
     }
+    private Cell EnsureRoot(int patch,int index)
+    {
+        var data=_patches[patch];if(data.Roots[index] is {} existing){ScheduleReachedRoot(existing);return existing;}
+        int x=index%_d.Subdivisions,z=index/_d.Subdivisions;
+        // Refine the whole requested root before exposing any of it. Failure leaves an explicit
+        // unknown root; cached samples/abandoned cell allocations remain charged to this query.
+        var root=Refine((long)(patch%_d.Width)*_patchUnits+x*_unit,(long)(patch/_d.Width)*_patchUnits+z*_unit,_unit,0);
+        data.Roots[index]=root;
+        void Collect(Cell c){if(c.Children==null)data.Leaves.Add(c);else foreach(var child in c.Children)Collect(child);}
+        Collect(root);ScheduleReachedRoot(root);return root;
+    }
     private int Owner(HydrologyCell c)=>(int)(c.Z/_patchUnits)*_d.Width+(int)(c.X/_patchUnits);
     private Cell At(long x,long z)
     {
         int patch=(int)(z/_patchUnits)*_d.Width+(int)(x/_patchUnits);
-        var c=_patches[patch].Roots[(int)(z%_patchUnits/_unit)*_d.Subdivisions+(int)(x%_patchUnits/_unit)];
+        int root=(int)(z%_patchUnits/_unit)*_d.Subdivisions+(int)(x%_patchUnits/_unit);
+        var c=_r.Algorithm==3?EnsureRoot(patch,root):_patches[patch].Roots[root];
         while(c.Children is {} children)
         {int h=c.Key.Size/2;c=children[(z>=c.Key.Z+h?2:0)+(x>=c.Key.X+h?1:0)];}
         return c;
@@ -141,10 +176,12 @@ internal sealed class AdaptiveBasinTopology
                 _cancel.ThrowIfCancellationRequested();long x=horizontal?fixedCoordinate:along,z=horizontal?along:fixedCoordinate;
                 int patch=(int)(z/_patchUnits)*_d.Width+(int)(x/_patchUnits);string? failure=Load(patch);
                 if(failure!=null){yield return(null,patch,failure);break;}
-                var neighbour=At(x,z);
-                string? seam=ReconcileFace(c,neighbour);
+                Cell? neighbour=null;string? rootFailure=null;
+                try {neighbour=At(x,z);}catch(Limit exhausted){rootFailure=exhausted.Reason;}
+                if(rootFailure!=null){yield return(null,patch,rootFailure);break;}
+                string? seam=ReconcileFace(c,neighbour!);
                 if(seam!=null)yield return(null,patch,seam);else yield return(neighbour,patch,null);
-                along=Math.Min(end,horizontal?neighbour.Key.Z+neighbour.Key.Size:neighbour.Key.X+neighbour.Key.Size);
+                along=Math.Min(end,horizontal?neighbour!.Key.Z+neighbour.Key.Size:neighbour!.Key.X+neighbour.Key.Size);
             }
         }
     }
@@ -166,16 +203,23 @@ internal sealed class AdaptiveBasinTopology
         if(_splits>=_r.Limits.Splits)return "split-budget";
         try
         {
+            _sharedSampling=true;
             _splits++;int depth=0;for(int n=_unit;n>coarse.Key.Size;n/=2)depth++;
             long x=coarse.Key.X,z=coarse.Key.Z;
             var children=new[]{Refine(x,z,half,depth+1),Refine(x+half,z,half,depth+1),Refine(x,z+half,half,depth+1),Refine(x+half,z+half,half,depth+1)};
             coarse.Children=children;
             int patch=Owner(coarse.Key);var old=_patches[patch];var leaves=new List<Cell>();
             void Collect(Cell c){if(c.Children==null)leaves.Add(c);else foreach(var child in c.Children)Collect(child);}
-            foreach(var root in old.Roots)Collect(root);_patches[patch]=new(old.Roots,leaves.ToArray());
+            foreach(var root in old.Roots)if(root!=null)Collect(root);_patches[patch]=new(old.Roots,leaves.ToArray());
+            if(_r.Algorithm==3)
+            {
+                void Schedule(Cell cell){if(cell.Children==null)_balance.Add(cell.Key);else foreach(var child in cell.Children)Schedule(child);}
+                foreach(var child in children)Schedule(child);
+            }
             if(_evidence.Count<64)_evidence.Add(new(coarse.Key,coarse.High,children.Max(c=>c.High),children.Min(c=>c.Low),error,true));
         }
         catch(Limit exhausted){return exhausted.Reason;}
+        finally {_sharedSampling=false;}
         throw new TopologyChanged();
     }
     private void Unknown(Cell? cell,int? patch,string reason,double lower)
@@ -186,7 +230,7 @@ internal sealed class AdaptiveBasinTopology
     private bool Visit(Cell cell)
     {
         _cancel.ThrowIfCancellationRequested();if(_visits>=_r.Limits.NodeVisits){Unknown(cell,Owner(cell.Key),"node-budget",cell.Low);return false;}
-        _visits++;return true;
+        _visits++;_work?.Visit(cell.Key,_spillPhase);return true;
     }
     private TopologyStop Stop(double bound)
     {
@@ -210,9 +254,20 @@ internal sealed class AdaptiveBasinTopology
     }
     private HydrologyTopologyResult Search(int seedPatch,int? seedQuad)
     {
-        _cancel.ThrowIfCancellationRequested();_seedPatch=seedPatch;_seedQuad=seedQuad;
+        _spillPhase=false;_cancel.ThrowIfCancellationRequested();_seedPatch=seedPatch;_seedQuad=seedQuad;
         if(seedPatch<0 || seedPatch>=_d.Width*_d.Depth || seedQuad<0 || seedQuad>=_d.Subdivisions*_d.Subdivisions)throw new ArgumentOutOfRangeException(nameof(seedPatch));
         string? fail=Load(seedPatch);
+        if(fail==null && _r.Algorithm==3)
+        {
+            _selectingSeed=true;
+            try
+            {
+                if(seedQuad is int q)EnsureRoot(seedPatch,q);
+                else for(int i=0;i<_d.Subdivisions*_d.Subdivisions;i++)EnsureRoot(seedPatch,i);
+            }
+            catch(Limit exhausted){fail=exhausted.Reason;}
+            finally {_selectingSeed=false;}
+        }
         if(fail!=null){Unknown(null,seedPatch,fail,_d.Stage);return Result(null,new(),TopologyStop.WorkBudget,TopologyStop.WorkBudget,null);}
         var candidates=_patches[seedPatch].Leaves.Where(c=>seedQuad==null ||
             (c.Key.Z%_patchUnits/_unit)*_d.Subdivisions+c.Key.X%_patchUnits/_unit==seedQuad).ToArray();
@@ -238,6 +293,7 @@ internal sealed class AdaptiveBasinTopology
         }
         TopologyStop componentStop=Stop(_d.Stage);
         if(componentStop!=TopologyStop.SupportedAtSampleSpacing)return Result(seed.Key,wet,componentStop,componentStop,null);
+        _spillPhase=true;
         // Entire selected component is known before choosing its canonical minimax source.
         var source=wet.Values.OrderBy(c=>c.High).ThenBy(c=>c.Key).First();
         var distances=new Dictionary<HydrologyCell,double>{{source.Key,source.High}};
@@ -303,7 +359,7 @@ internal sealed class AdaptiveBasinTopology
         var frontier=_frontier.Distinct().OrderBy(f=>f.From).ThenBy(f=>f.Patch).ThenBy(f=>f.Reason,StringComparer.Ordinal).ThenBy(f=>f.LowerBound).ToArray();
         return new(layer,_r.RequestId(),_d.CandidateId,_d.Stage,query,componentStop,spillStop,id,Array.AsReadOnly(wet.Keys.ToArray()),spill,
             Array.AsReadOnly(_originals.Values.OrderBy(p=>p.Id,StringComparer.Ordinal).ToArray()),Array.AsReadOnly(frontier),_evidence.AsReadOnly(),
-            new(_startedPatches.Count,_patches.Count,_samples.Count,_allocated,_patches.Values.Sum(p=>p.Leaves.Length),_splits,_maxDepth,_passes,_visits,_omitted,_d.BaselineSampleCount?.Invoke()??0),
+            new(_startedPatches.Count,_r.Algorithm==2?_patches.Count:_patches.Values.Count(p=>p.Roots.All(c=>c!=null)),_samples.Count,_allocated,_patches.Values.Sum(p=>p.Leaves.Count),_splits,_maxDepth,_passes,_visits,_omitted,_d.BaselineSampleCount?.Invoke()??0),
             componentStop==TopologyStop.WorkBudget || spillStop==TopologyStop.WorkBudget?new(1,_r,_seedPatch,_seedQuad):null);
     }
 }

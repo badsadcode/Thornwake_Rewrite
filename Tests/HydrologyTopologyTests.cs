@@ -9,13 +9,13 @@ internal static class HydrologyTopologyTests
     private sealed record FrozenCase(string Name,string Hash);
     private sealed record Fixture(int Format,int Algorithm,FrozenCase[] Cases);
     private static string Hash<T>(T value)=>Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(value))).ToLowerInvariant();
-    public static int Run(bool verify=true,bool includeWorlds=true)
+    public static int Run(bool verify=true,bool includeWorlds=true,int algorithm=2)
     {
         int checks=0;void Check(bool ok,string why){if(!ok)throw new Exception("TOPOLOGY: "+why);checks++;}
         void Reject(Action action){try{action();}catch(Exception e)when(e is ArgumentException or InvalidDataException or OperationCanceledException){checks++;return;}throw new Exception("TOPOLOGY: expected rejection");}
         var worlds=JsonSerializer.Deserialize<AcceptedWorldTests.TerrainFixture>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Fixtures/terrain-a4-v1.json")))!;
         var regional=RegionalDrainageRefiner.Create(MacroDrainageRecipe.Create(worlds.Cases.Single(c=>c.Name=="mountainous/42").World));
-        var recipe=new HydrologyTopologyRecipe(1,2,new(1,1,2,regional.Recipe),4,.03125,1,.01,new(24,200000,100000,200000,8192,20000));
+        var recipe=new HydrologyTopologyRecipe(1,algorithm,new(1,1,2,regional.Recipe),4,.03125,1,.01,new(24,200000,100000,200000,8192,20000));
         var reports=new List<object>();var cases=new List<FrozenCase>();
         void Bounds(HydrologyTopologyResult r,HydrologyTopologyRecipe p)
         {
@@ -164,7 +164,7 @@ internal static class HydrologyTopologyTests
             var world=worlds.Cases.Single(c=>c.Name==name).World;var r=RegionalDrainageRefiner.Create(MacroDrainageRecipe.Create(world));
             int patch=r.Drainage.Basins.Where(b=>b.Cells.Count<=4).OrderByDescending(b=>b.CapacityEstimate).First().Cells[0];
             var baseline=HydrologyReconciler.Create(r);var domain=baseline.CreateDomain(patch,CancellationToken.None);
-            var initial=new HydrologyTopologyRecipe(1,2,baseline.Recipe.InspectionDependency,3,2,64,.25,new(8,300000,180000,500000,8192,40000));
+            var initial=new HydrologyTopologyRecipe(1,algorithm,baseline.Recipe.InspectionDependency,3,2,64,.25,new(8,300000,180000,500000,8192,40000));
             var first=Solve("world-"+name+"-initial",domain,initial,patch,null);
             var larger=initial with {Limits=new(32,2000000,800000,2000000,16384,180000)};
             HydrologyTopologyResult expanded;
@@ -187,15 +187,16 @@ internal static class HydrologyTopologyTests
             Check(Hash(expanded)==Hash(direct),"real-world serialized expansion equals fresh reconstruction");
             Console.WriteLine($"TOPOLOGY_WORLD {name}: {expanded.ComponentStop}/{expanded.SpillStop}, {expanded.Metrics.Patches} patches, {expanded.Metrics.TerrainSamples} samples, {clock.Elapsed.TotalMilliseconds:F1}ms");
         }
-        Directory.CreateDirectory("artifacts/hydrology-topology");
-        File.WriteAllText("artifacts/hydrology-topology/report.json",JsonSerializer.Serialize(new{checks,reports},Json));
-        var fixture=new Fixture(1,2,cases.ToArray());File.WriteAllText("artifacts/hydrology-topology/candidate-fixture.json",JsonSerializer.Serialize(fixture,Json));
+        string directory=algorithm==2?"artifacts/hydrology-topology":"artifacts/hydrology-topology-v3";
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory,"report.json"),JsonSerializer.Serialize(new{checks,reports},Json));
+        var fixture=new Fixture(1,algorithm,cases.ToArray());File.WriteAllText(Path.Combine(directory,"candidate-fixture.json"),JsonSerializer.Serialize(fixture,Json));
         if(verify)
         {
-            var expected=JsonSerializer.Deserialize<Fixture>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Fixtures/hydrology-topology-v2.json")))!;
-            Check(expected.Format==1 && expected.Algorithm==2 && expected.Cases.Length==cases.Count,"fixture version/matrix");
+            var expected=JsonSerializer.Deserialize<Fixture>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,$"Fixtures/hydrology-topology-v{algorithm}.json")))!;
+            Check(expected.Format==1 && expected.Algorithm==algorithm && expected.Cases.Length==cases.Count,"fixture version/matrix");
             foreach(var c in cases)Check(expected.Cases.Single(e=>e.Name==c.Name).Hash==c.Hash,"frozen topology "+c.Name);
         }
-        Console.WriteLine($"HYDROLOGY_TOPOLOGY_PASS: {checks} checks; {cases.Count} cases");return checks;
+        Console.WriteLine($"HYDROLOGY_TOPOLOGY_{algorithm}_PASS: {checks} checks; {cases.Count} cases");return checks;
     }
 }

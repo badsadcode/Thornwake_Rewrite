@@ -32,3 +32,7 @@ Run `dotnet run --project Tests/Thornwake.Core.Tests.csproj --no-restore -- --re
 ## Adaptive topology and continuation report
 
 Run `dotnet run --project Tests/Thornwake.Core.Tests.csproj --no-restore -- --adaptive-topology`. The separate algorithm-2 report is `artifacts/hydrology-topology/report.json`; it includes corrected components/spills, refinement evidence, explicit stop reasons and serializable replay continuations. Use `--topology-analytic` for a quick analytic-only pass. This does not activate gameplay water or change the Godot preview. See [the adaptive topology checkpoint](MASTER_HYDROLOGY_ADAPTIVE_TOPOLOGY.md) for supported semantics, measured work and remaining limits.
+
+## Bounded-work hydrology report
+
+Use `--demand-work` for the focused demand/balance checks, `--demand-topology` for topology algorithm 3, and `--hydrology-work` for the 24-query before/after coverage matrix. Run them with the Core test project shown above. Algorithm 2 remains available through `--adaptive-topology`; neither path activates gameplay water. The comparison is a multi-minute Debug developer test. See [the bounded-work checkpoint](MASTER_HYDROLOGY_BOUNDED_WORK.md) for measurements, unresolved cases and the next V1 step.

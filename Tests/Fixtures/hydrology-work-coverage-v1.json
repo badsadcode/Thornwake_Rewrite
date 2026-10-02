@@ -1,0 +1,170 @@
+[
+  {
+    "World": "mountainous/42",
+    "Size": "tiny",
+    "Patch": 2992,
+    "Algorithm": 2,
+    "Fingerprint": "b3b4a772df4ca8b8d220192a145fc66c798af76cda72a80cb19a4158b288378e"
+  },
+  {
+    "World": "mountainous/42",
+    "Size": "tiny",
+    "Patch": 2992,
+    "Algorithm": 3,
+    "Fingerprint": "cef8a13ebd334b1486b3cc601d8ec605092bbb8642572e471e6f87aabe52ac98"
+  },
+  {
+    "World": "mountainous/42",
+    "Size": "small",
+    "Patch": 4126,
+    "Algorithm": 2,
+    "Fingerprint": "8bae93758ad840cb33d8db1fd2654be13ac30a947bda65859579bc6b64a9d91d"
+  },
+  {
+    "World": "mountainous/42",
+    "Size": "small",
+    "Patch": 4126,
+    "Algorithm": 3,
+    "Fingerprint": "516805928ed8325ad59b6ed5d8fac37ad1ace189a18c6db4af3ce81cd8a108dc"
+  },
+  {
+    "World": "mountainous/42",
+    "Size": "medium",
+    "Patch": 7244,
+    "Algorithm": 2,
+    "Fingerprint": "db6b9d29d7a729ead8e1be5ca08b2367ac4917152c2a8fd935fd526bdd9b6399"
+  },
+  {
+    "World": "mountainous/42",
+    "Size": "medium",
+    "Patch": 7244,
+    "Algorithm": 3,
+    "Fingerprint": "6430c953c6becd3a9f583e1d15ddecdbff63733429d8ea0be8894068e2f3ffc1"
+  },
+  {
+    "World": "mountainous/42",
+    "Size": "large",
+    "Patch": 10524,
+    "Algorithm": 2,
+    "Fingerprint": "1742409e3f67af39007203f98ad0c5ff4885ceecda178d785504f3d17ac9806f"
+  },
+  {
+    "World": "mountainous/42",
+    "Size": "large",
+    "Patch": 10524,
+    "Algorithm": 3,
+    "Fingerprint": "fe71a649d304b100cceb3b5e7bb0477edbc4e0802ead7643a02eca8d8b9996f4"
+  },
+  {
+    "World": "mountainous/42/far",
+    "Size": "tiny",
+    "Patch": 2992,
+    "Algorithm": 2,
+    "Fingerprint": "fc5068456b967ae9c325d58af73d94120a75a8544e125e78395d8d8ce18541b4"
+  },
+  {
+    "World": "mountainous/42/far",
+    "Size": "tiny",
+    "Patch": 2992,
+    "Algorithm": 3,
+    "Fingerprint": "f7daf4fe60ff0797169b672ac363c1d5e1dd41c478c73062f73d277d5ac477dd"
+  },
+  {
+    "World": "mountainous/42/far",
+    "Size": "small",
+    "Patch": 4126,
+    "Algorithm": 2,
+    "Fingerprint": "98715f95259572ad93b0e920e3dfa508eacba64c3dd20b20fc3b12f785005a1f"
+  },
+  {
+    "World": "mountainous/42/far",
+    "Size": "small",
+    "Patch": 4126,
+    "Algorithm": 3,
+    "Fingerprint": "1e2ca6833660ddc3f8e4a37cc463b6f00b2df5dd6e19d25887793ea80a0566de"
+  },
+  {
+    "World": "mountainous/42/far",
+    "Size": "medium",
+    "Patch": 7244,
+    "Algorithm": 2,
+    "Fingerprint": "bd3f504ffdd1b16a4cfbb158b96aaa63a2711ea040c2c8d16f5f8a5f3f91db44"
+  },
+  {
+    "World": "mountainous/42/far",
+    "Size": "medium",
+    "Patch": 7244,
+    "Algorithm": 3,
+    "Fingerprint": "68fff293f1ccb6107c730287155b02f6548505b5ee1e9c0eec24c971f5e776c8"
+  },
+  {
+    "World": "mountainous/42/far",
+    "Size": "large",
+    "Patch": 10524,
+    "Algorithm": 2,
+    "Fingerprint": "5194cde0af14a0d4de6de4ecfb369fcae90d0bdcdcdc9c398e8cd8b4f5727594"
+  },
+  {
+    "World": "mountainous/42/far",
+    "Size": "large",
+    "Patch": 10524,
+    "Algorithm": 3,
+    "Fingerprint": "02f538cd8a0e6f579bb8c293ab1c1ed430aa82e93631e980cc3d01554cc41870"
+  },
+  {
+    "World": "vast-world/7319/far",
+    "Size": "tiny",
+    "Patch": 10216,
+    "Algorithm": 2,
+    "Fingerprint": "b0299ddd44cd69d6498a44f201ca1ec2f4edb7b5dd944f772e027ab30aed7aaf"
+  },
+  {
+    "World": "vast-world/7319/far",
+    "Size": "tiny",
+    "Patch": 10216,
+    "Algorithm": 3,
+    "Fingerprint": "79d810bbd77242c902ee76ce1c866a6e05dc4b6b86b0001fad83334a248cce47"
+  },
+  {
+    "World": "vast-world/7319/far",
+    "Size": "small",
+    "Patch": 5919,
+    "Algorithm": 2,
+    "Fingerprint": "dbc86f5a959215a2f6664de17c46aad473acd628b258bcb555094f34e61bbe84"
+  },
+  {
+    "World": "vast-world/7319/far",
+    "Size": "small",
+    "Patch": 5919,
+    "Algorithm": 3,
+    "Fingerprint": "ca308eaffb1ccc82719e0275881e4d1db0bdc4a4348223b6b9a19e1e33b2d6b2"
+  },
+  {
+    "World": "vast-world/7319/far",
+    "Size": "medium",
+    "Patch": 5579,
+    "Algorithm": 2,
+    "Fingerprint": "0a5b70a88b1d4cf6d878df831fdef40739d0627e4d59cd30305a215e4b94a4c8"
+  },
+  {
+    "World": "vast-world/7319/far",
+    "Size": "medium",
+    "Patch": 5579,
+    "Algorithm": 3,
+    "Fingerprint": "1e172373668cce0879f1036e8fcc1b3df35666f8badfb001aad69942632b2bf7"
+  },
+  {
+    "World": "vast-world/7319/far",
+    "Size": "large",
+    "Patch": 12869,
+    "Algorithm": 2,
+    "Fingerprint": "1371d791817dcf44f49b0ad87eef1afad903a68a6f82baebbb86ca802a811c76"
+  },
+  {
+    "World": "vast-world/7319/far",
+    "Size": "large",
+    "Patch": 12869,
+    "Algorithm": 3,
+    "Fingerprint": "6ff4edc7ad88f3b7dd045d4422c2c395106145b50a0e6f1373bf8bcc694483eb"
+  }
+]
