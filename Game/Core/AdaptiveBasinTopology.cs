@@ -18,6 +18,7 @@ internal sealed partial class AdaptiveBasinTopology
         public HydrologyCell Key {get;} public double High {get;} public double Low {get;} public bool Unresolved {get;}
         public Cell[]? Children {get;set;}
         public bool FaceWorkScheduled {get;set;}
+        public int Generation {get;set;} // Query-local monotonic topology stamp.
         public Cell(HydrologyCell key,double high,double low,bool unresolved,Cell[]? children)
         {Key=key;High=high;Low=low;Unresolved=unresolved;Children=children;}
     }
@@ -48,6 +49,7 @@ internal sealed partial class AdaptiveBasinTopology
     private AdaptiveBasinTopology(ReconciliationDomain d,HydrologyTopologyRecipe r,CancellationToken cancel)
     {
         r.Validate();_d=d;_r=r;_cancel=cancel;
+        if(r.Algorithm==3){_expansions=new();_reuseExpansions=true;}
         if(d.Subdivisions<1 || d.Subdivisions>256 || d.Width<1 || d.Depth<1 || (long)d.Width*d.Depth>262144 ||
             !double.IsFinite(d.MinX) || !double.IsFinite(d.MinZ) || !double.IsFinite(d.PatchSpan) || d.PatchSpan<=0 || !double.IsFinite(d.Stage))
             throw new ArgumentException("Invalid topology domain.");
@@ -66,14 +68,15 @@ internal sealed partial class AdaptiveBasinTopology
                 Unknown(null,patch,"pass-budget",-100000);
                 return Result(null,new(),TopologyStop.WorkBudget,TopologyStop.WorkBudget,null);
             }
-            _passes++;
+            _passes++;_graph?.BeginPass(_passes);
             try {return Search(patch,quad);}
             catch(TopologyChanged)
             {
                 // Keep charged samples/topology; discard obsolete graph queues. Algorithm 3 first
                 // closes cascading face evidence in already materialized neighbours, avoiding a
                 // whole graph replay for each individual correction.
-                if(_r.Algorithm==3 && !BalanceKnownFaces())
+                _graph?.Restart(_spillPhase,_lastCorrection);
+                if(_r.Algorithm==3 && !BalanceForRestart())
                     return Result(null,new(),TopologyStop.WorkBudget,TopologyStop.WorkBudget,null);
             }
         }
@@ -161,7 +164,7 @@ internal sealed partial class AdaptiveBasinTopology
         return c;
     }
     // The interval walk skips whole neighbouring leaves; there is no finest-resolution occupancy grid.
-    private IEnumerable<(Cell? Cell,int? Patch,string? Failure)> Neighbours(Cell c)
+    private IEnumerable<(Cell? Cell,int? Patch,string? Failure)> NeighboursRaw(Cell c)
     {
         var k=c.Key;
         foreach(var direction in Directions)
@@ -207,7 +210,8 @@ internal sealed partial class AdaptiveBasinTopology
             _splits++;int depth=0;for(int n=_unit;n>coarse.Key.Size;n/=2)depth++;
             long x=coarse.Key.X,z=coarse.Key.Z;
             var children=new[]{Refine(x,z,half,depth+1),Refine(x+half,z,half,depth+1),Refine(x,z+half,half,depth+1),Refine(x+half,z+half,half,depth+1)};
-            coarse.Children=children;
+            coarse.Children=children;coarse.Generation++;_lastCorrection=coarse.Key;
+            _graph?.Corrected(_spillPhase && _graphParents?.ContainsKey(coarse.Key)==true);RemoveExpansion(coarse.Key);
             int patch=Owner(coarse.Key);var old=_patches[patch];var leaves=new List<Cell>();
             void Collect(Cell c){if(c.Children==null)leaves.Add(c);else foreach(var child in c.Children)Collect(child);}
             foreach(var root in old.Roots)if(root!=null)Collect(root);_patches[patch]=new(old.Roots,leaves.ToArray());
@@ -230,7 +234,8 @@ internal sealed partial class AdaptiveBasinTopology
     private bool Visit(Cell cell)
     {
         _cancel.ThrowIfCancellationRequested();if(_visits>=_r.Limits.NodeVisits){Unknown(cell,Owner(cell.Key),"node-budget",cell.Low);return false;}
-        _visits++;_work?.Visit(cell.Key,_spillPhase);return true;
+        _visits++;_work?.Visit(cell.Key,_spillPhase);
+        if(!_balancing)_graph?.Visit(cell.Key,_spillPhase);return true;
     }
     private TopologyStop Stop(double bound)
     {
@@ -254,7 +259,7 @@ internal sealed partial class AdaptiveBasinTopology
     }
     private HydrologyTopologyResult Search(int seedPatch,int? seedQuad)
     {
-        _spillPhase=false;_cancel.ThrowIfCancellationRequested();_seedPatch=seedPatch;_seedQuad=seedQuad;
+        _spillPhase=false;_graphParents=null;_cancel.ThrowIfCancellationRequested();_seedPatch=seedPatch;_seedQuad=seedQuad;
         if(seedPatch<0 || seedPatch>=_d.Width*_d.Depth || seedQuad<0 || seedQuad>=_d.Subdivisions*_d.Subdivisions)throw new ArgumentOutOfRangeException(nameof(seedPatch));
         string? fail=Load(seedPatch);
         if(fail==null && _r.Algorithm==3)
@@ -297,7 +302,7 @@ internal sealed partial class AdaptiveBasinTopology
         // Entire selected component is known before choosing its canonical minimax source.
         var source=wet.Values.OrderBy(c=>c.High).ThenBy(c=>c.Key).First();
         var distances=new Dictionary<HydrologyCell,double>{{source.Key,source.High}};
-        var parent=new Dictionary<HydrologyCell,HydrologyCell>();
+        var parent=new Dictionary<HydrologyCell,HydrologyCell>();_graphParents=_graph!=null?parent:null;
         var heap=new PriorityQueue<Cell,(double Cost,HydrologyCell Key)>();heap.Enqueue(source,(source.High,source.Key));
         double best=double.PositiveInfinity;Cell? destination=null;ReconciliationExit? target=null;
         while(heap.TryDequeue(out var c,out var priority))

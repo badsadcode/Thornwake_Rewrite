@@ -36,3 +36,7 @@ Run `dotnet run --project Tests/Thornwake.Core.Tests.csproj --no-restore -- --ad
 ## Bounded-work hydrology report
 
 Use `--demand-work` for the focused demand/balance checks, `--demand-topology` for topology algorithm 3, and `--hydrology-work` for the 24-query before/after coverage matrix. Run them with the Core test project shown above. Algorithm 2 remains available through `--adaptive-topology`; neither path activates gameplay water. The comparison is a multi-minute Debug developer test. See [the bounded-work checkpoint](MASTER_HYDROLOGY_BOUNDED_WORK.md) for measurements, unresolved cases and the next V1 step.
+
+## Local graph-reuse diagnostics
+
+Use `--graph-reuse` for focused invalidation/full-restart comparisons and `--graph-comparison` for the six-candidate timed matrix. Both use the Core test project above; the latter takes several minutes. Read `artifacts/hydrology-graph/comparison.json` and [the graph-reuse checkpoint](MASTER_HYDROLOGY_GRAPH_REUSE.md) for the exact dependency proof, gains and unchanged unresolved coverage. This is generation tooling; it adds no gameplay water or preview UI.

@@ -9,7 +9,7 @@ internal static class HydrologyTopologyTests
     private sealed record FrozenCase(string Name,string Hash);
     private sealed record Fixture(int Format,int Algorithm,FrozenCase[] Cases);
     private static string Hash<T>(T value)=>Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(value))).ToLowerInvariant();
-    public static int Run(bool verify=true,bool includeWorlds=true,int algorithm=2)
+    public static int Run(bool verify=true,bool includeWorlds=true,int algorithm=2,bool compareReuse=false)
     {
         int checks=0;void Check(bool ok,string why){if(!ok)throw new Exception("TOPOLOGY: "+why);checks++;}
         void Reject(Action action){try{action();}catch(Exception e)when(e is ArgumentException or InvalidDataException or OperationCanceledException){checks++;return;}throw new Exception("TOPOLOGY: expected rejection");}
@@ -28,6 +28,12 @@ internal static class HydrologyTopologyTests
         HydrologyTopologyResult Solve(string name,ReconciliationDomain d,HydrologyTopologyRecipe? p=null,int patch=6,int? quad=5)
         {
             p??=recipe;var clock=Stopwatch.StartNew();var r=AdaptiveBasinTopology.Run(d,p,patch,quad);clock.Stop();Bounds(r,p);
+            if(compareReuse)
+            {
+                var cached=AdaptiveBasinTopology.ProfileGraph(d,p,patch,quad,reuse:true);
+                var plain=AdaptiveBasinTopology.RunGraphExperiment(d,p,patch,quad,reuse:false);
+                Check(Hash(cached.Result)==Hash(plain) && Hash(r)==Hash(plain),"generation-validated adjacency reuse equals complete full restart: "+name);
+            }
             if(r.SpillProposal is {} spill)
             {
                 Check(spill.RequiredElevation>=spill.ReceiverLevel,"receiver constraint in every proposal");
@@ -187,7 +193,7 @@ internal static class HydrologyTopologyTests
             Check(Hash(expanded)==Hash(direct),"real-world serialized expansion equals fresh reconstruction");
             Console.WriteLine($"TOPOLOGY_WORLD {name}: {expanded.ComponentStop}/{expanded.SpillStop}, {expanded.Metrics.Patches} patches, {expanded.Metrics.TerrainSamples} samples, {clock.Elapsed.TotalMilliseconds:F1}ms");
         }
-        string directory=algorithm==2?"artifacts/hydrology-topology":"artifacts/hydrology-topology-v3";
+        string directory=compareReuse?"artifacts/hydrology-graph/topology-analytic":algorithm==2?"artifacts/hydrology-topology":"artifacts/hydrology-topology-v3";
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory,"report.json"),JsonSerializer.Serialize(new{checks,reports},Json));
         var fixture=new Fixture(1,algorithm,cases.ToArray());File.WriteAllText(Path.Combine(directory,"candidate-fixture.json"),JsonSerializer.Serialize(fixture,Json));

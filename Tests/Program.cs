@@ -3,6 +3,9 @@ using Thornwake.Core;
 
 try
 {
+if (args.Contains("--graph-reuse")) { HydrologyGraphReuseTests.Run(); return; }
+if (args.Contains("--graph-baseline")) { HydrologyGraphReuseTests.Measure(baselineOnly:true); return; }
+if (args.Contains("--graph-comparison")) { HydrologyGraphReuseTests.Measure(); return; }
 if (args.Contains("--demand-work")) { HydrologyDemandWorkTests.Run(); return; }
 if (args.Contains("--demand-topology")) { HydrologyTopologyTests.Run(algorithm:3); return; }
 if (args.Contains("--demand-topology-spike")) { HydrologyTopologyTests.Run(verify:false,algorithm:3); return; }
@@ -53,6 +56,7 @@ passed += HydrologyReconciliationTests.Run();
 passed += HydrologyTopologyTests.Run();
 passed += HydrologyTopologyTests.Run(algorithm:3);
 passed += HydrologyDemandWorkTests.Run();
+passed += HydrologyGraphReuseTests.Run();
 passed += HydrologyCoverageTests.Run();
 passed += MacroChunkTests.Run();
 passed += DrainageTests.Run();
