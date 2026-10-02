@@ -1,0 +1,126 @@
+{
+  "Format": 1,
+  "Algorithm": 2,
+  "Cases": [
+    {
+      "Name": "complete",
+      "Hash": "050f8d97df99e4c01405db64f485534b839529fa1448958a4f3a419bc4a0e5d1"
+    },
+    {
+      "Name": "narrow-barrier-left",
+      "Hash": "466b627b6d897d70d8cfc6c5823eeb7e0d835e0802a8d40c3682791e8f55d47d"
+    },
+    {
+      "Name": "narrow-barrier-right",
+      "Hash": "3f3c0ccbe3808f660fa6f2e2fb05d104f1967a0601c393b00df49ed7a266de22"
+    },
+    {
+      "Name": "narrow-opening",
+      "Hash": "4eaeb485c4afde6adb6dc5901cc0f7f65f3730702b863b4e86df5fc465809c5b"
+    },
+    {
+      "Name": "reachable-alternative",
+      "Hash": "caa12fb5cfd0f2aaed6373dc3806423103381ccf7e3cd3ba743df899ae5478c7"
+    },
+    {
+      "Name": "receiver-level",
+      "Hash": "12a3f9911643af4cd2a0de086bfff27e81d233429f8a5a9849b7aa57fc8b3cd1"
+    },
+    {
+      "Name": "confirmed-port",
+      "Hash": "f10f7927a0bdac074c6e8057f6ad429282efa20ba5e3102e1c09e6ffae21cab6"
+    },
+    {
+      "Name": "bilateral-replacement",
+      "Hash": "1988b5ce328398026ee5850e80c3037b9becf7893bb43779f98aec399e48b7aa"
+    },
+    {
+      "Name": "budget-patch",
+      "Hash": "3ed8631fc730802b0d81e4920f41232be046024cdb4b74efb465a84056ba46f1"
+    },
+    {
+      "Name": "budget-sample",
+      "Hash": "1e7f719e581bf5ae82c298dd51c5f477ec2de6227c827ac0a5a9df3036592529"
+    },
+    {
+      "Name": "budget-cell",
+      "Hash": "7e9c44eec844aeb0872e6ebd93d4cfbc97ca699d04075a40fc39228dafafec0e"
+    },
+    {
+      "Name": "budget-split",
+      "Hash": "544d24b29c5f0d151362ecb3d987b28f7f1ff4247d94f2ede1b958bfeff4b9e5"
+    },
+    {
+      "Name": "budget-node",
+      "Hash": "04ff495ec1fe1c46567206bd89aa1eaa0b774adb1fe93cd5414414e2fed1ffa9"
+    },
+    {
+      "Name": "budget-frontier",
+      "Hash": "68be926d1a237c15af32362dc4b5dc1ee46b270e822789442ee78b7b4c0ec6d3"
+    },
+    {
+      "Name": "spill-frontier-continuation",
+      "Hash": "35c3831d517dee1a52ca4d6670a40674241a23b8b0aa5ad802bb0c428740987a"
+    },
+    {
+      "Name": "domain-boundary",
+      "Hash": "51b2395b6a59d821c1cdedc5e5c35dd680245a049e01a1fe02f683cbf67ad9b6"
+    },
+    {
+      "Name": "resolution-limit",
+      "Hash": "5cbab94e196cca878fb3e81868f3bb18e0d5cd004d7bd47dd13aed2d0eb35bc6"
+    },
+    {
+      "Name": "far-1",
+      "Hash": "57481c62a64a29821adf074fe42440a93ab045b522b48b2bec5d9ed5d788e430"
+    },
+    {
+      "Name": "far-1.01234567",
+      "Hash": "b6d3e41315504bf5fc0395100ed31e16319d64062e605abd289564ef95b857d4"
+    },
+    {
+      "Name": "shared-face-feedback",
+      "Hash": "e30663d8366d588ebff04711647118093e234a7ed4bd1e4be47ac51fb7ac2519"
+    },
+    {
+      "Name": "budget-passes",
+      "Hash": "29c9b497b43d73b44a0429711f796c000a7d6d8cdbb76c57dc0e8eb037c8ee71"
+    },
+    {
+      "Name": "corner-first",
+      "Hash": "5c857dad240e320755a42f2ba5b689f1271bb509131e3e6b8cfdb73e4eb74b3c"
+    },
+    {
+      "Name": "corner-second",
+      "Hash": "8c435161032e40d0139672bf0ea7af3785170dcf7c9d2a0c8c01b36b64f00352"
+    },
+    {
+      "Name": "curvature-unresolved",
+      "Hash": "18fc03448b6bb84af86924e0529c63e4d9d9c5d8bfb0a650890a2d9ec44dd53b"
+    },
+    {
+      "Name": "world-mountainous/42-initial",
+      "Hash": "925a773f36c60de7d6bfcbec2ce63a0e2ad74867ef2b0813e621ea0b6ef5a48c"
+    },
+    {
+      "Name": "world-mountainous/42-expanded",
+      "Hash": "8bae93758ad840cb33d8db1fd2654be13ac30a947bda65859579bc6b64a9d91d"
+    },
+    {
+      "Name": "world-mountainous/42/far-initial",
+      "Hash": "201bb9e8d3b9cc96df5ab4e2b659712a31a2ad4abd204403fb2666159b3a29ac"
+    },
+    {
+      "Name": "world-mountainous/42/far-expanded",
+      "Hash": "98715f95259572ad93b0e920e3dfa508eacba64c3dd20b20fc3b12f785005a1f"
+    },
+    {
+      "Name": "world-vast-world/7319/far-initial",
+      "Hash": "19379eeeb6db1a0e64b16bba9030af648501184eec0c092ed6d71523bf66c5db"
+    },
+    {
+      "Name": "world-vast-world/7319/far-expanded",
+      "Hash": "dbc86f5a959215a2f6664de17c46aad473acd628b258bcb555094f34e61bbe84"
+    }
+  ]
+}

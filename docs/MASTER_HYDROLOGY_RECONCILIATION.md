@@ -2,6 +2,8 @@
 
 2026-09-30 completed diagnostic/foundation checkpoint, continuing reviewed commit `d807567daee105900c352bb71b32d8fdf5511948`. Master Rework + Supplement V1 remain authoritative. No Supplement V2 or runtime water was implemented.
 
+> **Continuation checkpoint:** [Adaptive topology and deterministic continuation](MASTER_HYDROLOGY_ADAPTIVE_TOPOLOGY.md) records the additive algorithm-2 milestone. The algorithm-1 results and limits below remain historical evidence.
+
 ## Scope and preservation
 
 The interrupted local implementation was continued in place. Three new Core files implement the layer: `HydrologyReconciliation.cs` (recipe, contracts and frozen-world adapter), `BasinReconciliationSearch.cs` (bounded component/spill search), and `AdaptiveHydrologySampler.cs` (anchored profiles). The test runner registers the new tests. Every pre-existing Core source file and accepted fixture file remains byte-identical to the reviewed commit, including A3/A4 terrain, both coarse/regional baselines and inspection v1. The default remains accepted A4; saved algorithms are not migrated. No normal gameplay, Godot lab UI, terrain, water solver or renderer was changed.

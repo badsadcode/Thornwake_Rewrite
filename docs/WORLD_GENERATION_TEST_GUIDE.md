@@ -28,3 +28,7 @@ The vast-world view refines 16 km cells at 250 m sample spacing, so paths and sh
 ## Multi-patch reconciliation developer report
 
 Run `dotnet run --project Tests/Thornwake.Core.Tests.csproj --no-restore -- --reconciliation`. Read `artifacts/hydrology-reconciliation/report.json` for connected components, explicit unresolved frontiers, reachable spill proposals and adaptive profiles. The Godot preview is unchanged; this new layer has no gameplay-water activation. See [the reconciliation checkpoint](MASTER_HYDROLOGY_RECONCILIATION.md) for result-state meanings, limitations and the next V1 step.
+
+## Adaptive topology and continuation report
+
+Run `dotnet run --project Tests/Thornwake.Core.Tests.csproj --no-restore -- --adaptive-topology`. The separate algorithm-2 report is `artifacts/hydrology-topology/report.json`; it includes corrected components/spills, refinement evidence, explicit stop reasons and serializable replay continuations. Use `--topology-analytic` for a quick analytic-only pass. This does not activate gameplay water or change the Godot preview. See [the adaptive topology checkpoint](MASTER_HYDROLOGY_ADAPTIVE_TOPOLOGY.md) for supported semantics, measured work and remaining limits.

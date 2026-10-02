@@ -89,6 +89,12 @@ public sealed class HydrologyReconciler
 
     public HydrologyReconciliationResult Reconcile(int seedPatch,int? seedQuad=null,CancellationToken cancellation=default)
     {
+        var domain=CreateDomain(seedPatch,cancellation);
+        return BasinReconciliationSearch.Run(domain,Recipe,seedPatch,seedQuad,cancellation);
+    }
+
+    internal ReconciliationDomain CreateDomain(int seedPatch,CancellationToken cancellation)
+    {
         cancellation.ThrowIfCancellationRequested(); var d=_regional.Drainage; _=d.Grid.Center(seedPatch);
         int basinIndex=d.BasinIndex[seedPatch]; if(basinIndex<0)throw new ArgumentException("Select a coarse candidate basin patch.");
         var basin=d.Basins[basinIndex]; int s=Recipe.InspectionDependency.Regional.Subdivisions*Recipe.InspectionDependency.Factor;
@@ -135,6 +141,6 @@ public sealed class HydrologyReconciler
             d.BasinIndex[d.Downstream[patch]]!=basinIndex ? new[]{Port(patch)} : Array.Empty<DrainagePort>();
         var domain=new ReconciliationDomain(LayerId,_regional.LakeId(basinIndex),basin.SpillLevel,d.Grid.MinX,d.Grid.MinZ,d.Grid.Spacing,
             d.Grid.Width,d.Grid.Depth,s,p=>_world.Sample(p.X,p.Z).Elevation,Exits,Ports,Originals,()=>baselineSamples);
-        return BasinReconciliationSearch.Run(domain,Recipe,seedPatch,seedQuad,cancellation);
+        return domain;
     }
 }
