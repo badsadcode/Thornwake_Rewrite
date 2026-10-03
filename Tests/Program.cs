@@ -3,6 +3,8 @@ using Thornwake.Core;
 
 try
 {
+if (args.Contains("--spill-attribution")) { HydrologySpillAttributionTests.Run(); return; }
+if (args.Contains("--spill-attribution-matrix")) { HydrologySpillAttributionTests.Measure(); return; }
 if (args.Contains("--locality")) { HydrologyLocalityTests.Run(); return; }
 if (args.Contains("--locality-matrix")) { HydrologyLocalityTests.Measure(); return; }
 if (args.Contains("--graph-reuse")) { HydrologyGraphReuseTests.Run(); return; }
@@ -60,6 +62,7 @@ passed += HydrologyTopologyTests.Run(algorithm:3);
 passed += HydrologyDemandWorkTests.Run();
 passed += HydrologyGraphReuseTests.Run();
 passed += HydrologyLocalityTests.Run();
+passed += HydrologySpillAttributionTests.Run();
 passed += HydrologyCoverageTests.Run();
 passed += MacroChunkTests.Run();
 passed += DrainageTests.Run();

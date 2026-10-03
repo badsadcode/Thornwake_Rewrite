@@ -68,14 +68,14 @@ internal sealed partial class AdaptiveBasinTopology
                 Unknown(null,patch,"pass-budget",-100000);
                 return Result(null,new(),TopologyStop.WorkBudget,TopologyStop.WorkBudget,null);
             }
-            _passes++;_graph?.BeginPass(_passes);_locality?.BeginPass();
+            _passes++;_graph?.BeginPass(_passes);_locality?.BeginPass();_spillDiagnostics?.Begin(_passes);
             try {return Search(patch,quad);}
             catch(TopologyChanged)
             {
                 // Keep charged samples/topology; discard obsolete graph queues. Algorithm 3 first
                 // closes cascading face evidence in already materialized neighbours, avoiding a
                 // whole graph replay for each individual correction.
-                _graph?.Restart(_spillPhase,_lastCorrection);
+                _graph?.Restart(_spillPhase,_lastCorrection);_spillDiagnostics?.Restart();
                 if(_r.Algorithm==3 && !BalanceForRestart())
                     return Result(null,new(),TopologyStop.WorkBudget,TopologyStop.WorkBudget,null);
             }
@@ -202,8 +202,8 @@ internal sealed partial class AdaptiveBasinTopology
             error=Math.Max(error,Math.Abs(H(t)-(first+(last-first)*((double)(t-coarseStart)/coarse.Key.Size))));
         if(error<=_r.HeightTolerance)return null;
         int half=coarse.Key.Size/2;
-        if(half<2 || half*_step<_r.MinimumSpacing)return "resolution-limit";
-        if(_splits>=_r.Limits.Splits)return "split-budget";
+        if(half<2 || half*_step<_r.MinimumSpacing)return ObserveFaceFailure("resolution-limit",a,b,error);
+        if(_splits>=_r.Limits.Splits)return ObserveFaceFailure("split-budget",a,b,error);
         try
         {
             _sharedSampling=true;
@@ -223,19 +223,20 @@ internal sealed partial class AdaptiveBasinTopology
             }
             if(_evidence.Count<64)_evidence.Add(new(coarse.Key,coarse.High,children.Max(c=>c.High),children.Min(c=>c.Low),error,true));
         }
-        catch(Limit exhausted){return exhausted.Reason;}
+        catch(Limit exhausted){return ObserveFaceFailure(exhausted.Reason,a,b,error);}
         finally {_sharedSampling=false;}
         throw new TopologyChanged();
     }
     private void Unknown(Cell? cell,int? patch,string reason,double lower)
     {
+        ObserveFrontier(cell,patch,reason,lower);
         if(_frontier.Count>=_r.Limits.FrontierEntries){_omitted++;return;}
         _frontier.Add(new(cell?.Key,patch,reason,lower));
     }
     private bool Visit(Cell cell)
     {
         _cancel.ThrowIfCancellationRequested();if(_visits>=_r.Limits.NodeVisits){Unknown(cell,Owner(cell.Key),"node-budget",cell.Low);return false;}
-        _visits++;_work?.Visit(cell.Key,_spillPhase);
+        _visits++;_work?.Visit(cell.Key,_spillPhase);_spillDiagnostics?.Visit(_spillPhase,_balancing);
         if(!_balancing)_graph?.Visit(cell.Key,_spillPhase);return true;
     }
     private TopologyStop Stop(double bound)
@@ -307,6 +308,7 @@ internal sealed partial class AdaptiveBasinTopology
         _spillPhase=true;
         // Entire selected component is known before choosing its canonical minimax source.
         var source=wet.Values.OrderBy(c=>c.High).ThenBy(c=>c.Key).First();
+        _spillDiagnostics?.Spill(SpillEvidence(source),_visits);
         var distances=new Dictionary<HydrologyCell,double>{{source.Key,source.High}};
         var parent=new Dictionary<HydrologyCell,HydrologyCell>();_graphParents=_graph!=null?parent:null;
         var heap=new PriorityQueue<Cell,(double Cost,HydrologyCell Key)>();heap.Enqueue(source,(source.High,source.Key));
@@ -314,10 +316,12 @@ internal sealed partial class AdaptiveBasinTopology
         while(heap.TryDequeue(out var c,out var priority))
         {
             _cancel.ThrowIfCancellationRequested();if(priority.Cost!=distances[c.Key])continue;if(priority.Cost>best)break;
+            _spillDiagnostics?.Step(priority.Cost,heap.Count);
             if(!Visit(c)){Unknown(c,Owner(c.Key),"node-budget",priority.Cost);break;}
             foreach(var exit in Exits(c).OrderBy(e=>e.Id,StringComparer.Ordinal))
             {
                 double required=Math.Max(priority.Cost,exit.Level);
+                _spillDiagnostics?.Candidate(exit,required,c.Key,parent,SpillLookup);
                 if(required<best || required==best && (target==null || string.CompareOrdinal(exit.Id,target.Id)<0 || exit.Id==target.Id && c.Key.CompareTo(destination!.Key)<0))
                 {best=required;target=exit;destination=c;}
             }
@@ -366,6 +370,7 @@ internal sealed partial class AdaptiveBasinTopology
     }
     private HydrologyTopologyResult Result(HydrologyCell? query,SortedDictionary<HydrologyCell,Cell> wet,TopologyStop componentStop,TopologyStop spillStop,TopologySpill? spill)
     {
+        _spillDiagnostics?.End(componentStop+"/"+spillStop);
         string layer=_r.LayerId();string? id=componentStop==TopologyStop.SupportedAtSampleSpacing && spillStop==TopologyStop.SupportedAtSampleSpacing?layer+":"+_d.CandidateId+":component:"+wet.Keys.First():null;
         var frontier=_frontier.Distinct().OrderBy(f=>f.From).ThenBy(f=>f.Patch).ThenBy(f=>f.Reason,StringComparer.Ordinal).ThenBy(f=>f.LowerBound).ToArray();
         return new(layer,_r.RequestId(),_d.CandidateId,_d.Stage,query,componentStop,spillStop,id,Array.AsReadOnly(wet.Keys.ToArray()),spill,

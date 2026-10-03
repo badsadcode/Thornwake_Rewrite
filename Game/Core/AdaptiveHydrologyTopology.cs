@@ -90,6 +90,9 @@ public sealed class AdaptiveHydrologyReconciler
     /// <summary>Read-only developer assessment; never repairs or retains solver membership.</summary>
     public ProfiledHydrologyLocality ProfileLocality(int patch,int? quad=null,CancellationToken cancellation=default)
         =>AdaptiveBasinTopology.ProfileLocality(_baseline.CreateDomain(patch,cancellation),Recipe,patch,quad,cancellation);
+    /// <summary>Bounded read-only attribution of unresolved generation-time spill topology.</summary>
+    public ProfiledHydrologySpill ProfileSpill(int patch,int? quad=null,CancellationToken cancellation=default)
+        =>AdaptiveBasinTopology.ProfileSpill(_baseline.CreateDomain(patch,cancellation),Recipe,patch,quad,cancellation);
     public static HydrologyTopologyResult Continue(HydrologyTopologyContinuation continuation,CancellationToken cancellation=default)
     {
         continuation.Validate();return Restore(continuation.Recipe,cancellation).Reconcile(continuation.SeedPatch,continuation.SeedQuad,cancellation);

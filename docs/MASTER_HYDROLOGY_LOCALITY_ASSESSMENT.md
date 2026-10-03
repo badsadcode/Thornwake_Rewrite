@@ -117,3 +117,7 @@ Retain algorithm 3 and both full restarts. Next, perform a bounded diagnostics-o
 No finite lake storage, runtime water, climate, biomes, caves, geology, rendering or later systems were started. The known cave water/terrain visual consistency issue remains open and outside this milestone. Stop here; the next assessment has not been implemented.
 
 **Recommendation B: Stop pursuing wet-component reachability reuse and investigate unresolved sampling/domain/spill requirements instead**
+
+## Unresolved-spill attribution follow-up (2026-10-03)
+
+The diagnostics-only attribution is complete in [the spill-attribution checkpoint](MASTER_HYDROLOGY_SPILL_ATTRIBUTION.md). It preserves this decision against reachability reuse and all algorithm-3 results. Its receiver/domain, candidate-path and work evidence now supplies the immediate V1 implementation recommendation.

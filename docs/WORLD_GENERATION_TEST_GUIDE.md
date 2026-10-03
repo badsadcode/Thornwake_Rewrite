@@ -48,3 +48,7 @@ The explicit topology-4 reachability experiment is archived and is not an active
 ## Read-only correction-locality report
 
 Use `--locality` for focused closure/boundary/cap/determinism checks and `--locality-matrix` for six frozen algorithm-3 candidates with independent controls. Reports are under `artifacts/hydrology-locality/`. These observations do not retain component membership or alter graph visits. See [the locality assessment](MASTER_HYDROLOGY_LOCALITY_ASSESSMENT.md) for the indexed-memory estimate, limitations, validation and next V1 step. No preview UI or gameplay-water behavior changes.
+
+## Unresolved-spill attribution report
+
+Use `--spill-attribution` for focused binding/path/limit/equality checks and `--spill-attribution-matrix` for the six frozen candidates. Reports are under `artifacts/hydrology-spill-attribution/`; the full matrix retains repeated and discarded-pass evidence and is deliberately large. See [the attribution checkpoint](MASTER_HYDROLOGY_SPILL_ATTRIBUTION.md) and its compact/lossless archives for domain, sampling and work blockers. This is read-only generation tooling and changes no gameplay water or preview UI.
