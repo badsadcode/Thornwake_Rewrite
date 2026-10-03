@@ -26,7 +26,11 @@ The normal playable valley and isolated streaming/cave/water/map labs are preser
 
 ## Immediate continuation
 
-After the receiver milestone is committed and pushed, perform the explicitly requested **short read-only playable-world readiness assessment**. Do not automatically begin the older proposed adaptive-sampling follow-up. Record exactly one A/B recommendation here and in the assessment, then stop. The previous checkpoints' sampling/optimization suggestions remain technical possibilities, not the active development order. No playable-world implementation is authorized in this task.
+The receiver milestone was validated, committed and pushed as `4c69bbcd1ae8aceb03a11c616ebd09e547de3831`. The subsequent [read-only readiness assessment](PLAYABLE_WORLD_READINESS.md) recommends **A: Hydrology foundation is sufficient to begin playable world visual validation; carry remaining hydrology limitations as explicit known issues.**
+
+**Next milestone: playable A4 world visual-validation vertical slice**, using frozen manifests, bounded streamed terrain/collision and safe coordinate rebasing, representative conservative water, then the intended presentation/traversal/debug inspection foundation. This is a recommendation, not implemented work or permission to auto-start. Use uncertainty overlays for unresolved water, locally checked labelled static test surfaces where appropriate, and no implicit fluid coupling or terrain carving. Read the assessment for the practical representation rules.
+
+The previous automatic priority of another targeted adaptive-sampling experiment is **deferred**. No new sampling, minimax optimization, storage or other hydrology milestone is required before beginning visual validation on the current evidence. Such work needs a concrete integration/visible-geography blocker, not merely an opportunity to optimize initial generation. All historical checkpoints retain their original technical findings; this user-requested practical readiness decision supersedes their development order without changing Master/Supplement design intent.
 
 ## Documentation review and historical record
 
@@ -41,6 +45,7 @@ Updated entry points:
 - `VALIDATION`: append the completed V5 checks; preserve previous release/visual evidence.
 - `WORLD_GENERATION_TEST_GUIDE`: add V5 commands and link active continuation.
 - `MASTER_HYDROLOGY_SPILL_ATTRIBUTION`: link its implemented B-first follow-up.
+- `PLAYABLE_WORLD_READINESS`: new, read-only assessment after the implementation push; records recommendation A and conservative visual-water rules.
 - `MASTER_HYDROLOGY_RECEIVER_DOMAIN`: complete contract, results, bounds, uncertainty, retention and continuation; tracked `experiments/hydrology-receiver-domain.json` preserves the comparison beyond ignored artifacts.
 
 The checkpoint chain leads through [A4 acceptance](MASTER_A4_HYDROLOGY_ACCEPTANCE.md) → reconciliation → adaptive topology 2 → bounded-work topology 3 → neighbour reuse → rejected reachability 4 → locality → spill attribution → [receiver-domain 5](MASTER_HYDROLOGY_RECEIVER_DOMAIN.md). This index owns the **current next step**; historical tails must not override it.
