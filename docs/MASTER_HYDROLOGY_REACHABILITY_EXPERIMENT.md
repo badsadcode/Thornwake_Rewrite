@@ -106,3 +106,7 @@ On the retained source, normal validation remains `--graph-reuse` and the full C
 Generated local logs remain under ignored `artifacts/hydrology-reachability/`: `closure-before.log`, `closure-after.log`, `focused-experiment.log`, `comparison.log`, `world-proof.log`, `restored-focused.log`, `restored-full-core.log`, and `restored-game-build.log`. The archive and this checkpoint suffice to reproduce the experiment after a fresh checkout.
 
 Stop at this checkpoint; no new topology version is promoted.
+
+## Locality assessment follow-up (2026-10-03)
+
+The diagnostics-only follow-up is complete in [the locality assessment checkpoint](MASTER_HYDROLOGY_LOCALITY_ASSESSMENT.md). It preserves this rejection and all algorithm-3 results. Its measured index costs and final recommendation supersede the next-step guidance above; no new reachability algorithm was implemented.

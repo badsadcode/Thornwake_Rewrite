@@ -44,3 +44,7 @@ Use `--graph-reuse` for focused invalidation/full-restart comparisons and `--gra
 ## Rejected reachability experiment (2026-10-03)
 
 The explicit topology-4 reachability experiment is archived and is not an active algorithm or preview option. Production remains unchanged. See [the experiment checkpoint](MASTER_HYDROLOGY_REACHABILITY_EXPERIMENT.md) for its corrected closure regression, benchmark matrix and disposable-checkout reproduction instructions. Do not confuse this rejected topology version with accepted terrain algorithm 4.
+
+## Read-only correction-locality report
+
+Use `--locality` for focused closure/boundary/cap/determinism checks and `--locality-matrix` for six frozen algorithm-3 candidates with independent controls. Reports are under `artifacts/hydrology-locality/`. These observations do not retain component membership or alter graph visits. See [the locality assessment](MASTER_HYDROLOGY_LOCALITY_ASSESSMENT.md) for the indexed-memory estimate, limitations, validation and next V1 step. No preview UI or gameplay-water behavior changes.

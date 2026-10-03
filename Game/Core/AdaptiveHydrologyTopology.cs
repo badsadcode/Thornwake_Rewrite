@@ -87,6 +87,9 @@ public sealed class AdaptiveHydrologyReconciler
     /// <summary>Developer comparison of local expansion reuse with clean whole-search reconstruction.</summary>
     public ProfiledHydrologyGraph ProfileGraph(int patch,int? quad=null,bool reuse=true,CancellationToken cancellation=default)
         =>AdaptiveBasinTopology.ProfileGraph(_baseline.CreateDomain(patch,cancellation),Recipe,patch,quad,reuse,cancellation);
+    /// <summary>Read-only developer assessment; never repairs or retains solver membership.</summary>
+    public ProfiledHydrologyLocality ProfileLocality(int patch,int? quad=null,CancellationToken cancellation=default)
+        =>AdaptiveBasinTopology.ProfileLocality(_baseline.CreateDomain(patch,cancellation),Recipe,patch,quad,cancellation);
     public static HydrologyTopologyResult Continue(HydrologyTopologyContinuation continuation,CancellationToken cancellation=default)
     {
         continuation.Validate();return Restore(continuation.Recipe,cancellation).Reconcile(continuation.SeedPatch,continuation.SeedQuad,cancellation);

@@ -68,7 +68,7 @@ internal sealed partial class AdaptiveBasinTopology
                 Unknown(null,patch,"pass-budget",-100000);
                 return Result(null,new(),TopologyStop.WorkBudget,TopologyStop.WorkBudget,null);
             }
-            _passes++;_graph?.BeginPass(_passes);
+            _passes++;_graph?.BeginPass(_passes);_locality?.BeginPass();
             try {return Search(patch,quad);}
             catch(TopologyChanged)
             {
@@ -211,6 +211,7 @@ internal sealed partial class AdaptiveBasinTopology
             long x=coarse.Key.X,z=coarse.Key.Z;
             var children=new[]{Refine(x,z,half,depth+1),Refine(x+half,z,half,depth+1),Refine(x,z+half,half,depth+1),Refine(x+half,z+half,half,depth+1)};
             coarse.Children=children;coarse.Generation++;_lastCorrection=coarse.Key;
+            _locality?.Corrected(coarse.Key,depth,_passes,_spillPhase,_balancing);
             _graph?.Corrected(_spillPhase && _graphParents?.ContainsKey(coarse.Key)==true);RemoveExpansion(coarse.Key);
             int patch=Owner(coarse.Key);var old=_patches[patch];var leaves=new List<Cell>();
             void Collect(Cell c){if(c.Children==null)leaves.Add(c);else foreach(var child in c.Children)Collect(child);}
@@ -284,16 +285,21 @@ internal sealed partial class AdaptiveBasinTopology
             return Result(null,new(),uncertain?TopologyStop.ResolutionLimit:TopologyStop.Blocked,uncertain?TopologyStop.ResolutionLimit:TopologyStop.Blocked,null);
         }
         var wet=new SortedDictionary<HydrologyCell,Cell>();var pending=new SortedDictionary<HydrologyCell,Cell>{{seed.Key,seed}};
+        _locality?.Discover(seed.Key,null);
         while(pending.Count>0)
         {
             var c=pending.First().Value;pending.Remove(c.Key);if(wet.ContainsKey(c.Key))continue;
-            if(!Visit(c))break;wet.Add(c.Key,c);
+            if(!Visit(c))break;wet.Add(c.Key,c);_locality?.Visited(c.Key);
             foreach(var n in Neighbours(c))
             {
                 if(n.Failure!=null){Unknown(c,n.Patch,n.Failure,c.High);continue;}
                 var next=n.Cell!;
                 if(next.Unresolved){Unknown(next,n.Patch,"resolution-limit",-100000);continue;}
-                if(next.High<_d.Stage && !wet.ContainsKey(next.Key))pending.TryAdd(next.Key,next);
+                if(next.High<_d.Stage)
+                {
+                    _locality?.Discover(next.Key,c.Key);
+                    if(!wet.ContainsKey(next.Key))pending.TryAdd(next.Key,next);
+                }
             }
         }
         TopologyStop componentStop=Stop(_d.Stage);
