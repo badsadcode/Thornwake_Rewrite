@@ -49,7 +49,7 @@ internal sealed partial class AdaptiveBasinTopology
     private AdaptiveBasinTopology(ReconciliationDomain d,HydrologyTopologyRecipe r,CancellationToken cancel)
     {
         r.Validate();_d=d;_r=r;_cancel=cancel;
-        if(r.Algorithm==3){_expansions=new();_reuseExpansions=true;}
+        if(r.Algorithm is (3 or 5)){_expansions=new();_reuseExpansions=true;}
         if(d.Subdivisions<1 || d.Subdivisions>256 || d.Width<1 || d.Depth<1 || (long)d.Width*d.Depth>262144 ||
             !double.IsFinite(d.MinX) || !double.IsFinite(d.MinZ) || !double.IsFinite(d.PatchSpan) || d.PatchSpan<=0 || !double.IsFinite(d.Stage))
             throw new ArgumentException("Invalid topology domain.");
@@ -76,7 +76,7 @@ internal sealed partial class AdaptiveBasinTopology
                 // closes cascading face evidence in already materialized neighbours, avoiding a
                 // whole graph replay for each individual correction.
                 _graph?.Restart(_spillPhase,_lastCorrection);_spillDiagnostics?.Restart();
-                if(_r.Algorithm==3 && !BalanceForRestart())
+                if(_r.Algorithm is (3 or 5) && !BalanceForRestart())
                     return Result(null,new(),TopologyStop.WorkBudget,TopologyStop.WorkBudget,null);
             }
         }
@@ -121,7 +121,7 @@ internal sealed partial class AdaptiveBasinTopology
         if(_failed.TryGetValue(patch,out string? failure))return failure;
         if(_startedPatches.Count>=_r.Limits.Patches)return _failed[patch]="patch-budget";
         _startedPatches.Add(patch);
-        if(_r.Algorithm==3)
+        if(_r.Algorithm is (3 or 5))
         {
             _patches.Add(patch,new(new Cell[_d.Subdivisions*_d.Subdivisions],Array.Empty<Cell>()));
             foreach(var port in _d.OriginalOutlets(patch))_originals.TryAdd(port.Id,port);
@@ -158,7 +158,7 @@ internal sealed partial class AdaptiveBasinTopology
     {
         int patch=(int)(z/_patchUnits)*_d.Width+(int)(x/_patchUnits);
         int root=(int)(z%_patchUnits/_unit)*_d.Subdivisions+(int)(x%_patchUnits/_unit);
-        var c=_r.Algorithm==3?EnsureRoot(patch,root):_patches[patch].Roots[root];
+        var c=_r.Algorithm is (3 or 5)?EnsureRoot(patch,root):_patches[patch].Roots[root];
         while(c.Children is {} children)
         {int h=c.Key.Size/2;c=children[(z>=c.Key.Z+h?2:0)+(x>=c.Key.X+h?1:0)];}
         return c;
@@ -177,7 +177,15 @@ internal sealed partial class AdaptiveBasinTopology
             for(long along=start;along<end;)
             {
                 _cancel.ThrowIfCancellationRequested();long x=horizontal?fixedCoordinate:along,z=horizontal?along:fixedCoordinate;
-                int patch=(int)(z/_patchUnits)*_d.Width+(int)(x/_patchUnits);string? failure=Load(patch);
+                int patch=(int)(z/_patchUnits)*_d.Width+(int)(x/_patchUnits);
+                if(_r.Algorithm==5)
+                {
+                    long bx=horizontal?(direction.X<0?k.X:k.X+k.Size):k.X+k.Size/2;
+                    long bz=horizontal?k.Z+k.Size/2:(direction.Z<0?k.Z:k.Z+k.Size);
+                    if(ReceiverBoundary(c,patch,bx,bz,out _,out var receiverFailure,!_spillPhase))
+                    {if(receiverFailure!=null)yield return(null,patch,receiverFailure);break;}
+                }
+                string? failure=Load(patch);
                 if(failure!=null){yield return(null,patch,failure);break;}
                 Cell? neighbour=null;string? rootFailure=null;
                 try {neighbour=At(x,z);}catch(Limit exhausted){rootFailure=exhausted.Reason;}
@@ -216,7 +224,7 @@ internal sealed partial class AdaptiveBasinTopology
             int patch=Owner(coarse.Key);var old=_patches[patch];var leaves=new List<Cell>();
             void Collect(Cell c){if(c.Children==null)leaves.Add(c);else foreach(var child in c.Children)Collect(child);}
             foreach(var root in old.Roots)if(root!=null)Collect(root);_patches[patch]=new(old.Roots,leaves.ToArray());
-            if(_r.Algorithm==3)
+            if(_r.Algorithm is (3 or 5))
             {
                 void Schedule(Cell cell){if(cell.Children==null)_balance.Add(cell.Key);else foreach(var child in cell.Children)Schedule(child);}
                 foreach(var child in children)Schedule(child);
@@ -244,7 +252,7 @@ internal sealed partial class AdaptiveBasinTopology
         if(_omitted>0)return TopologyStop.WorkBudget;
         var relevant=_frontier.Where(f=>f.LowerBound<=bound).ToArray();
         if(relevant.Any(f=>f.Reason.EndsWith("-budget",StringComparison.Ordinal)))return TopologyStop.WorkBudget;
-        if(relevant.Any(f=>f.Reason=="domain-boundary"))return TopologyStop.DomainBoundary;
+        if(relevant.Any(f=>f.Reason=="domain-boundary" || f.Reason=="receiver-invalid"))return TopologyStop.DomainBoundary;
         if(relevant.Any(f=>f.Reason=="resolution-limit"))return TopologyStop.ResolutionLimit;
         return TopologyStop.SupportedAtSampleSpacing;
     }
@@ -264,7 +272,7 @@ internal sealed partial class AdaptiveBasinTopology
         _spillPhase=false;_graphParents=null;_cancel.ThrowIfCancellationRequested();_seedPatch=seedPatch;_seedQuad=seedQuad;
         if(seedPatch<0 || seedPatch>=_d.Width*_d.Depth || seedQuad<0 || seedQuad>=_d.Subdivisions*_d.Subdivisions)throw new ArgumentOutOfRangeException(nameof(seedPatch));
         string? fail=Load(seedPatch);
-        if(fail==null && _r.Algorithm==3)
+        if(fail==null && _r.Algorithm is (3 or 5))
         {
             _selectingSeed=true;
             try
@@ -318,7 +326,7 @@ internal sealed partial class AdaptiveBasinTopology
             _cancel.ThrowIfCancellationRequested();if(priority.Cost!=distances[c.Key])continue;if(priority.Cost>best)break;
             _spillDiagnostics?.Step(priority.Cost,heap.Count);
             if(!Visit(c)){Unknown(c,Owner(c.Key),"node-budget",priority.Cost);break;}
-            foreach(var exit in Exits(c).OrderBy(e=>e.Id,StringComparer.Ordinal))
+            foreach(var exit in (_r.Algorithm==5?Exits(c).Concat(BoundaryExits(c)):Exits(c)).OrderBy(e=>e.Id,StringComparer.Ordinal))
             {
                 double required=Math.Max(priority.Cost,exit.Level);
                 _spillDiagnostics?.Candidate(exit,required,c.Key,parent,SpillLookup);

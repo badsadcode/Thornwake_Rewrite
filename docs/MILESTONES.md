@@ -1,5 +1,7 @@
 # Milestones
 
+> **Current Master Rework priority (2026-10-04):** see [the active status/continuation index](CURRENT_WORLD_GENERATION_STATUS.md). The release milestones and their Next/Then sections below are historical valley-roadmap context, not authorization to begin construction, settlements or later gameplay now.
+
 ## Delivered: 0.8.0 — seeded landscapes and new-world setup
 
 Generator 2 separates macro landforms, drainage/detail shaping, site preparation, river carving and resource filtering. New-world setup provides a live authoritative map, seed entry, three presets and relief/roughness/forest controls. Saved settings are fixed after creation; continued generator-1 worlds are preserved exactly. The gameplay map now reflects terrain, actual tree positions, removals and planted growth. Schema 10 preserves original schema-9 saves. See LANDSCAPES.md and VALIDATION.md.

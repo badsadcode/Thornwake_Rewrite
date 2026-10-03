@@ -1,6 +1,8 @@
 # Master world architecture decision record
 
-> 2026-09-29: `THORNWAKE_MASTER_REWORK_SUPPLEMENT_v1.md` supersedes conflicting policy below. In particular, ordinary lakes/ponds use finite storage, rivers/springs provide rate-limited inflow, and valid abstract downstream exports are distinct from arbitrary chunk-edge drains. See [the current drainage checkpoint](MASTER_DRAINAGE_CHECKPOINT.md) for inspected source state, validation and the exact next step. The older investigation/results below remain historical.
+> **Current implementation and continuation:** [CURRENT_WORLD_GENERATION_STATUS.md](CURRENT_WORLD_GENERATION_STATUS.md) records accepted terrain A4, retained topology 3, rejected topology 4 and experimental topology 5. The dated architecture/spike evidence below is preserved; follow the active index for the next milestone.
+
+> 2026-09-29: `THORNWAKE_MASTER_REWORK_SUPPLEMENT_v1.md` supersedes conflicting policy below. In particular, ordinary lakes/ponds use finite storage, rivers/springs provide rate-limited inflow, and valid abstract downstream exports are distinct from arbitrary chunk-edge drains. See [the historical drainage checkpoint](MASTER_DRAINAGE_CHECKPOINT.md) for its inspected source state and validation; use the active index above for continuation. The older investigation/results below remain historical.
 
 2026-09-28: migration constraints accepted. The B2 fixed-patch cave experiment now passes; hybrid remains the preferred direction, with production integration gates still open. See MASTER_CAVE_SPIKE_RESULTS.md.
 

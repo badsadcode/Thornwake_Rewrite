@@ -184,3 +184,7 @@ Use the same reference and two broad candidates, plus analytic inland enclosure,
 Next, address **C** at unresolved candidate-path/competing boundary evidence such as patch 4256's 15.625 m leaf, keeping uncertainty until a valid sampled/envelope proof exists. Do not weaken the current tolerance to manufacture support. Even a better domain contract cannot certify the recorded unresolved path by itself. Only then reprofile whether **A**, bounded spill traversal work, is the remaining bottleneck. Minimax state reuse is not recommended by this checkpoint.
 
 No recommended implementation has started. Finite lake storage, river meshes, runtime water, climate, biomes, caves, geology, editors and other future systems remain deferred. The known visual cave-water/terrain issue remains open. Stop after this diagnostics milestone.
+
+## Follow-up implementation
+
+The B-first prototype is now documented in [MASTER_HYDROLOGY_RECEIVER_DOMAIN.md](MASTER_HYDROLOGY_RECEIVER_DOMAIN.md). Topology 5 adds bounded, explicitly versioned ocean-area certificates; topology 3 and this historical diagnostic report remain unchanged. Read the newer checkpoint for current results and the next V1 step.

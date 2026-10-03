@@ -54,7 +54,7 @@ public sealed record HydrologyReconciliationResult(string LayerId,string Candida
 internal sealed record ReconciliationExit(string Id,HydrologyQuad Quad,MacroPoint Position,double Level);
 internal sealed record ReconciliationDomain(string Identity,string CandidateId,double Stage,double MinX,double MinZ,double PatchSpan,
     int Width,int Depth,int Subdivisions,Func<MacroPoint,double> Sample,Func<int,IReadOnlyList<ReconciliationExit>> Exits,
-    Func<int,int,IReadOnlyList<DrainagePort>> Ports,Func<int,IReadOnlyList<DrainagePort>> OriginalOutlets,Func<int>? BaselineSampleCount=null);
+    Func<int,int,IReadOnlyList<DrainagePort>> Ports,Func<int,IReadOnlyList<DrainagePort>> OriginalOutlets,Func<int>? BaselineSampleCount=null,Func<int,ReceiverPatchCertificate?>? ReceiverCertificate=null);
 
 /// <summary>Separate diagnostic algorithm. Existing regional ports, inspection outputs and terrain are never mutated.</summary>
 public sealed class HydrologyReconciler
@@ -141,6 +141,16 @@ public sealed class HydrologyReconciler
             d.BasinIndex[d.Downstream[patch]]!=basinIndex ? new[]{Port(patch)} : Array.Empty<DrainagePort>();
         var domain=new ReconciliationDomain(LayerId,_regional.LakeId(basinIndex),basin.SpillLevel,d.Grid.MinX,d.Grid.MinZ,d.Grid.Spacing,
             d.Grid.Width,d.Grid.Depth,s,p=>_world.Sample(p.X,p.Z).Elevation,Exits,Ports,Originals,()=>baselineSamples);
-        return domain;
+        // Algorithm 3 never invokes this callback. No new terrain samples or whole-world index.
+        ReceiverPatchCertificate? Certificate(int patch)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            if(patch<0 || patch>=d.Grid.Count || d.Downstream[patch]>=0 || d.BasinIndex[patch]==basinIndex)return null;
+            double x=d.Grid.MinX+(patch%d.Grid.Width)*d.Grid.Spacing,z=d.Grid.MinZ+(patch/d.Grid.Width)*d.Grid.Spacing;
+            if(!OceanPatchProof.Covers(_world,x,z,d.Grid.Spacing))return null;
+            var exit=Exits(patch).FirstOrDefault();
+            return exit==null?null:new(1,5,domain.Identity,domain.CandidateId,patch,exit.Id,exit.Level,"whole-patch-ocean-v1");
+        }
+        return domain with {ReceiverCertificate=Certificate};
     }
 }

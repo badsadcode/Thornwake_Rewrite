@@ -52,3 +52,9 @@ Use `--locality` for focused closure/boundary/cap/determinism checks and `--loca
 ## Unresolved-spill attribution report
 
 Use `--spill-attribution` for focused binding/path/limit/equality checks and `--spill-attribution-matrix` for the six frozen candidates. Reports are under `artifacts/hydrology-spill-attribution/`; the full matrix retains repeated and discarded-pass evidence and is deliberately large. See [the attribution checkpoint](MASTER_HYDROLOGY_SPILL_ATTRIBUTION.md) and its compact/lossless archives for domain, sampling and work blockers. This is read-only generation tooling and changes no gameplay water or preview UI.
+
+## Experimental receiver-aware topology 5
+
+Use `--receiver-domain` for the separate frozen analytic cases and `--receiver-matrix` for six real candidates compared with frozen algorithm 3 and clean neighbour traversal. Reports are under `artifacts/hydrology-receivers/`. See [the receiver-domain checkpoint](MASTER_HYDROLOGY_RECEIVER_DOMAIN.md) for the whole-patch ocean proof, explicit terminal-boundary semantics, authoritative final-frontier reporting, measured remaining limits and next V1 step. Version 5 is opt-in and is not promoted to production; the preview and gameplay water remain unchanged.
+
+For the current development order and version registry, follow [CURRENT_WORLD_GENERATION_STATUS.md](CURRENT_WORLD_GENERATION_STATUS.md). Historical checkpoint next-step suggestions are superseded by that active index.

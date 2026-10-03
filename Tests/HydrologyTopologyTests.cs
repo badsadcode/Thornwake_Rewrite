@@ -206,7 +206,7 @@ internal static class HydrologyTopologyTests
             Check(Hash(expanded)==Hash(direct),"real-world serialized expansion equals fresh reconstruction");
             Console.WriteLine($"TOPOLOGY_WORLD {name}: {expanded.ComponentStop}/{expanded.SpillStop}, {expanded.Metrics.Patches} patches, {expanded.Metrics.TerrainSamples} samples, {clock.Elapsed.TotalMilliseconds:F1}ms");
         }
-        string directory=compareSpill?"artifacts/hydrology-spill-attribution/topology-analytic":compareLocality?"artifacts/hydrology-locality/topology-analytic":compareReuse?"artifacts/hydrology-graph/topology-analytic":algorithm==2?"artifacts/hydrology-topology":"artifacts/hydrology-topology-v3";
+        string directory=compareSpill?"artifacts/hydrology-spill-attribution/topology-analytic":compareLocality?"artifacts/hydrology-locality/topology-analytic":compareReuse?"artifacts/hydrology-graph/topology-analytic":algorithm==2?"artifacts/hydrology-topology":$"artifacts/hydrology-topology-v{algorithm}";
         Directory.CreateDirectory(directory);
         File.WriteAllText(Path.Combine(directory,"report.json"),JsonSerializer.Serialize(new{checks,reports},Json));
         var fixture=new Fixture(1,algorithm,cases.ToArray());File.WriteAllText(Path.Combine(directory,"candidate-fixture.json"),JsonSerializer.Serialize(fixture,Json));

@@ -3,6 +3,9 @@ using Thornwake.Core;
 
 try
 {
+if (args.Contains("--receiver-domain")) { HydrologyReceiverTests.Run(); return; }
+if (args.Contains("--record-receiver-domain")) { HydrologyReceiverTests.Run(record:true); return; }
+if (args.Contains("--receiver-matrix")) { HydrologyReceiverTests.Measure(); return; }
 if (args.Contains("--spill-attribution")) { HydrologySpillAttributionTests.Run(); return; }
 if (args.Contains("--spill-attribution-matrix")) { HydrologySpillAttributionTests.Measure(); return; }
 if (args.Contains("--locality")) { HydrologyLocalityTests.Run(); return; }
@@ -63,6 +66,7 @@ passed += HydrologyDemandWorkTests.Run();
 passed += HydrologyGraphReuseTests.Run();
 passed += HydrologyLocalityTests.Run();
 passed += HydrologySpillAttributionTests.Run();
+passed += HydrologyReceiverTests.Run();
 passed += HydrologyCoverageTests.Run();
 passed += MacroChunkTests.Run();
 passed += DrainageTests.Run();

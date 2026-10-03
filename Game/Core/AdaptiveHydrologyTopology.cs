@@ -24,7 +24,7 @@ public sealed record HydrologyTopologyRecipe(int Format,int Algorithm,HydrologyI
 {
     public void Validate()
     {
-        if(Format!=1 || (Algorithm!=2 && Algorithm!=3) || InspectionDependency==null || Limits==null || MaximumDepth<1 || MaximumDepth>6 ||
+        if(Format!=1 || (Algorithm!=2 && Algorithm!=3 && Algorithm!=5) || InspectionDependency==null || Limits==null || MaximumDepth<1 || MaximumDepth>6 ||
             !double.IsFinite(MinimumSpacing) || MinimumSpacing<.001 || !double.IsFinite(MaximumProbeSpacing) ||
             MaximumProbeSpacing<MinimumSpacing || MaximumProbeSpacing>262144 || !double.IsFinite(HeightTolerance) || HeightTolerance<=0 || HeightTolerance>100)
             throw new InvalidDataException("Unsupported adaptive topology recipe.");
@@ -69,7 +69,7 @@ public sealed record HydrologyTopologyResult(string LayerId,string RequestId,str
     IReadOnlyList<HydrologyCell> ComponentCells,TopologySpill? SpillProposal,IReadOnlyList<DrainagePort> OriginalOutlets,
     IReadOnlyList<TopologyFrontier> Frontier,IReadOnlyList<TopologyRefinement> RefinementEvidence,TopologyMetrics Metrics,HydrologyTopologyContinuation? Continuation);
 
-/// <summary>Explicit topology algorithms 2 (eager patches) and 3 (demand roots), over immutable dependencies.</summary>
+/// <summary>Explicit topology 2 (eager), 3 (retained demand roots) and opt-in experimental 5 (receiver boundaries).</summary>
 public sealed class AdaptiveHydrologyReconciler
 {
     public HydrologyTopologyRecipe Recipe {get;}
@@ -93,6 +93,9 @@ public sealed class AdaptiveHydrologyReconciler
     /// <summary>Bounded read-only attribution of unresolved generation-time spill topology.</summary>
     public ProfiledHydrologySpill ProfileSpill(int patch,int? quad=null,CancellationToken cancellation=default)
         =>AdaptiveBasinTopology.ProfileSpill(_baseline.CreateDomain(patch,cancellation),Recipe,patch,quad,cancellation);
+    /// <summary>Opt-in experimental version 5; no production default selects this recipe.</summary>
+    public ProfiledReceiverHydrology ProfileReceivers(int patch,int? quad=null,CancellationToken cancellation=default)
+        =>AdaptiveBasinTopology.ProfileReceivers(_baseline.CreateDomain(patch,cancellation),Recipe,patch,quad,cancellation);
     public static HydrologyTopologyResult Continue(HydrologyTopologyContinuation continuation,CancellationToken cancellation=default)
     {
         continuation.Validate();return Restore(continuation.Recipe,cancellation).Reconcile(continuation.SeedPatch,continuation.SeedQuad,cancellation);

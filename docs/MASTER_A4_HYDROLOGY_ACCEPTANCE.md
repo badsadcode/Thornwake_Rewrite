@@ -1,5 +1,7 @@
 # Accepted Algorithm 4 and bounded regional hydrology inspection
 
+> **Current status:** [the active V1 index](CURRENT_WORLD_GENERATION_STATUS.md) and [receiver-domain checkpoint](MASTER_HYDROLOGY_RECEIVER_DOMAIN.md) now cover topology 5 and the next development gate. A4 terrain acceptance and historical measurements below remain unchanged.
+
 2026-09-30 completed review checkpoint. The user formally accepted Algorithm 4 mountain morphology. Master Rework + Supplement V1 remain authoritative; V2 is not active. This supersedes the awaiting-review stop in the mountain experiment and the next-step section of the original regional-drainage checkpoint. Historical measurements remain in those documents.
 
 > **Continuation checkpoint:** [Bounded multi-patch reconciliation](MASTER_HYDROLOGY_RECONCILIATION.md) now records the next implemented V1 layer, validation and resume point. The acceptance results and original next-step guidance below remain historical evidence.
