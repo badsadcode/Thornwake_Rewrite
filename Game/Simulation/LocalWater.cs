@@ -35,6 +35,10 @@ public sealed class LocalWater
     private float[] _left = new float[Side * Side], _right = new float[Side * Side], _up = new float[Side * Side], _down = new float[Side * Side];
     private bool[] _sink = new bool[Side * Side];
     private float[] _shown = new float[Side * Side];
+    // Ground that held water stays dark for a few minutes (1 = wet now, fades to 0), as in GangTheGAME.
+    private float[] _wet = new float[Side * Side], _wetShown = new float[Side * Side];
+    private const float WetThreshold = .01f, DryingPerSecond = 1f / 150f;
+    private float _dryClock;
     private readonly Dictionary<(long, long), float[]> _dormant = new();
     private readonly HashSet<(long, long)> _dirty = new();
     private int _minX, _maxX = -1, _minZ, _maxZ = -1;
@@ -47,6 +51,10 @@ public sealed class LocalWater
     public double Added { get; private set; }
     public double Absorbed { get; private set; }
     public double Spilled { get; private set; }
+    /// <summary>Water soaked into the ground (m³).</summary>
+    public double Soaked { get; private set; }
+    /// <summary>Infiltration into the soil (m/s of depth): puddles slowly sink away, leaving wet ground.</summary>
+    public float Infiltration { get; set; } = 1.7e-5f; // ~1 mm a minute
     /// <summary>Rain over the whole window (m/s of water depth; 0 = dry).</summary>
     public float RainRate { get; set; }
     public sealed class Source { public double X, Z; public float Rate; }
@@ -112,7 +120,7 @@ public sealed class LocalWater
     {
         var floor = new float[Side * Side]; var depth = new float[Side * Side]; var sink = new bool[Side * Side];
         var left = new float[Side * Side]; var right = new float[Side * Side]; var up = new float[Side * Side]; var down = new float[Side * Side];
-        var shown = new float[Side * Side];
+        var shown = new float[Side * Side]; var wet = new float[Side * Side]; var wetShown = new float[Side * Side];
         // Chunks leaving the window go dormant (if wet).
         if (_placed)
             for (int wz = 0; wz < WindowChunks; wz++)
@@ -148,6 +156,7 @@ public sealed class LocalWater
                         {
                             int o = Index((int)px * ChunkCells + i, (int)pz * ChunkCells + j);
                             floor[n] = _floor[o]; depth[n] = _depth[o]; sink[n] = _sink[o]; shown[n] = _shown[o];
+                            wet[n] = _wet[o]; wetShown[n] = _wetShown[o];
                             left[n] = _left[o]; right[n] = _right[o]; up[n] = _up[o]; down[n] = _down[o];
                         }
                         else
@@ -155,11 +164,12 @@ public sealed class LocalWater
                             floor[n] = ground!.Value.Floor[j * ChunkCells + i];
                             sink[n] = ground.Value.Sink[j * ChunkCells + i];
                             depth[n] = resumed?[j * ChunkCells + i] ?? 0;
+                            wet[n] = depth[n] > WetThreshold ? 1 : 0;
                         }
                     }
                 if (!kept && resumed != null) _dirty.Add((gx, gz));
             }
-        _floor = floor; _depth = depth; _sink = sink; _shown = shown; _left = left; _right = right; _up = up; _down = down;
+        _floor = floor; _depth = depth; _sink = sink; _shown = shown; _wet = wet; _wetShown = wetShown; _left = left; _right = right; _up = up; _down = down;
         OriginChunkX = ox; OriginChunkZ = oz; _placed = true;
         RecomputeBounds();
     }
@@ -216,7 +226,7 @@ public sealed class LocalWater
 
     public void Clear()
     {
-        Array.Clear(_depth); Array.Clear(_left); Array.Clear(_right); Array.Clear(_up); Array.Clear(_down);
+        Array.Clear(_depth); Array.Clear(_wet); Array.Clear(_left); Array.Clear(_right); Array.Clear(_up); Array.Clear(_down);
         foreach (var key in _dormant.Keys) _dirty.Add(key);
         _dormant.Clear(); Sources.Clear(); RainRate = 0;
         for (int wz = 0; wz < WindowChunks; wz++) for (int wx = 0; wx < WindowChunks; wx++) _dirty.Add((OriginChunkX + wx, OriginChunkZ + wz));
@@ -265,6 +275,7 @@ public sealed class LocalWater
                 if (z == 0) Spilled += _up[i] * dt;
                 if (z == Side - 1) Spilled += _down[i] * dt;
                 float d = Math.Max(0, _depth[i] + (inflow - outflow) * dt / area);
+                if (d > 0 && !_sink[i]) { float soak = Math.Min(d, Infiltration * dt); d -= soak; Soaked += soak * area; }
                 if (_sink[i] && d > 0) { Absorbed += d * area; d = 0; _left[i] = _right[i] = _up[i] = _down[i] = 0; }
                 _depth[i] = d;
                 if (d > Dry) { nx0 = Math.Min(nx0, x); nx1 = Math.Max(nx1, x); nz0 = Math.Min(nz0, z); nz1 = Math.Max(nz1, z); }
@@ -272,7 +283,38 @@ public sealed class LocalWater
             }
         _minX = nx0; _maxX = nx1; _minZ = nz0; _maxZ = nz1;
         if (_maxX < 0) _minX = _minZ = 0;
+        // Wetness: water marks the ground at once; drying is slow, so it is updated over the whole window twice a second.
+        for (int z = z0; z <= z1; z++)
+            for (int x = x0; x <= x1; x++)
+            {
+                int i = Index(x, z);
+                if (_depth[i] > WetThreshold && _wet[i] < 1) { _wet[i] = 1; MarkWet(x, z, i); }
+            }
+        _dryClock += dt;
+        if (_dryClock >= .5f)
+        {
+            float dry = DryingPerSecond * _dryClock;
+            _dryClock = 0;
+            for (int z = 0; z < Side; z++)
+                for (int x = 0; x < Side; x++)
+                {
+                    int i = Index(x, z);
+                    if (_wet[i] <= 0 || _depth[i] > WetThreshold) continue;
+                    _wet[i] = Math.Max(0, _wet[i] - dry);
+                    MarkWet(x, z, i);
+                }
+        }
     }
+
+    private void MarkWet(int x, int z, int i)
+    {
+        if (Math.Abs(_wet[i] - _wetShown[i]) < .1f && _wet[i] > 0) return;
+        _wetShown[i] = _wet[i];
+        _dirty.Add((OriginChunkX + x / ChunkCells, OriginChunkZ + z / ChunkCells));
+    }
+
+    /// <summary>Wetness of the ground in a window cell (0 dry … 1 wet now).</summary>
+    public float WetnessAt(double x, double z) => ToCell(x, z, out int ix, out int iz) ? _wet[Index(ix, iz)] : 0;
 
     /// <summary>Horizontal water velocity (m/s) in a window cell, from the flows through it.</summary>
     private (float X, float Z) Velocity(int x, int z)
@@ -298,7 +340,7 @@ public sealed class LocalWater
     /// Render data for a window chunk: (ChunkCells+1)² samples at cell centres (the last row/column from the
     /// neighbouring chunk, so chunk meshes join): floor, depth, velocity. False if the chunk is not in the window.
     /// </summary>
-    public bool ChunkView(long chunkX, long chunkZ, float[] floor, float[] depth, float[] vx, float[] vz)
+    public bool ChunkView(long chunkX, long chunkZ, float[] floor, float[] depth, float[] vx, float[] vz, float[] wet)
     {
         if (!InWindow(chunkX, chunkZ)) return false;
         int bx = (int)(chunkX - OriginChunkX) * ChunkCells, bz = (int)(chunkZ - OriginChunkZ) * ChunkCells, n = ChunkCells + 1;
@@ -306,7 +348,7 @@ public sealed class LocalWater
             for (int i = 0; i < n; i++)
             {
                 int x = Math.Min(bx + i, Side - 1), z = Math.Min(bz + j, Side - 1), k = j * n + i, c = Index(x, z);
-                floor[k] = _floor[c]; depth[k] = _depth[c];
+                floor[k] = _floor[c]; depth[k] = _depth[c]; wet[k] = _wetShown[c];
                 (vx[k], vz[k]) = Velocity(x, z);
             }
         return true;

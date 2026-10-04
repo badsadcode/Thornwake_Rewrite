@@ -12,6 +12,7 @@ internal static class SimulationTests
         T.Run("Water: window moves, dormant chunks resume", Window, filter);
         T.Run("Water: real terrain ground and sinks", RealTerrain, filter);
         T.Run("Water: step cost with rain over the window", Cost, filter);
+        T.Run("Water: puddles soak away and leave wet ground", Soak, filter);
     }
 
     private static Func<long, long, ChunkGround> Ground(Func<double, double, double> height, Func<double, double, bool>? sink = null) => (cx, cz) =>
@@ -29,7 +30,7 @@ internal static class SimulationTests
     };
 
     private static void Balance(LocalWater w, string label) =>
-        T.Near(w.Volume() + w.Absorbed + w.Spilled, w.Added, Math.Max(1e-3, w.Added * 2e-4), label + ": volume balance");
+        T.Near(w.Volume() + w.Absorbed + w.Spilled + w.Soaked, w.Added, Math.Max(1e-3, w.Added * 2e-4), label + ": volume balance");
 
     private static void Downhill()
     {
@@ -51,7 +52,7 @@ internal static class SimulationTests
 
     private static void Basin()
     {
-        var w = new LocalWater(Ground((x, z) => 50 + .02 * (x * x + z * z)));
+        var w = new LocalWater(Ground((x, z) => 50 + .02 * (x * x + z * z))) { Infiltration = 0 };
         w.Follow(0, 0);
         w.Add(8, -5, 30);
         for (int i = 0; i < 3600; i++) w.Step(1 / 60f);
@@ -82,7 +83,7 @@ internal static class SimulationTests
 
     private static void Window()
     {
-        var w = new LocalWater(Ground((x, z) => 50 + .02 * (x * x + z * z)));
+        var w = new LocalWater(Ground((x, z) => 50 + .02 * (x * x + z * z))) { Infiltration = 0 };
         w.Follow(0, 0);
         w.Add(0, 0, 10);
         for (int i = 0; i < 300; i++) w.Step(1 / 60f);
@@ -96,6 +97,18 @@ internal static class SimulationTests
         // A small move keeps simulating without reloading.
         w.Follow(20, 0);
         T.Near(w.Volume(), 10, 1e-3, "volume after a small move");
+    }
+
+    private static void Soak()
+    {
+        var w = new LocalWater(Ground((x, z) => 50 + .002 * (x * x + z * z)));
+        w.Follow(0, 0);
+        w.Add(0, 0, 3);
+        for (int i = 0; i < 60 * 600; i++) w.Step(1 / 60f);
+        Balance(w, "soak");
+        // A 6 cm deep, ~100 m² puddle loses ~1 mm a minute over its whole area.
+        T.Check(w.Soaked > .6 && w.Volume() < 2.4, $"puddle soaks away ({w.Soaked:0.00} m³ soaked in ten minutes, {w.Volume():0.00} m³ left)");
+        T.Check(w.WetnessAt(0, 0) > 0, "ground still wet where the puddle was");
     }
 
     private static void Cost()

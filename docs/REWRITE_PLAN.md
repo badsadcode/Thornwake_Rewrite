@@ -319,10 +319,11 @@ sampling (visible facets on small creeks), so this is left here.
 **M6 first version (night of 2026-10-04/05):** `Game/Simulation/LocalWater.cs` (decision D22) — GangTheGAME's
 virtual-pipes shallow water at 0.5 m in a 128 m window following the player, dormant chunks, rivers/lakes/sea as
 sinks, ground matching the rendered mesh; `LocalWaterView` draws it with the terrain water material; debug tools
-G pour / J spring / H rain / K clear; swimming in simulated water; 7 headless tests (conservation, downhill, level
-pool, sinks, moving window, real terrain, cost ~1.4 ms per step for a full window under rain).
+G pour / J spring / H rain / K clear; swimming in simulated water; ground that held water stays dark for a few
+minutes (`WetGround.gdshader`); puddles soak away (~1 mm/min); 8 headless tests (conservation, downhill, level
+pool, sinks, moving window, real terrain, soaking, cost ~1–1.4 ms per step for a full window under rain).
 
-**Next:** Tom's build-3 feedback and asset batches first when they arrive. Then: M6 second step (simulated water
-wets/darkens the ground; puddles persist; optional local river simulation once terrain edits exist), level-0
+**Next:** Tom's build-3 feedback and asset batches first when they arrive. Then: M6 second step (optional local
+river simulation once terrain edits exist; splashes; sound), level-0
 terrain at 1 m near the player (shoreline steps), M3 gully detail, M8 terrain edits (digging) feeding both the
 sampler and the water.

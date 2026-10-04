@@ -16,16 +16,21 @@ public partial class LocalWaterView : Node3D
     public LocalWater? Sim { get; private set; }
     private ShaderMaterial _material = null!;
     private double _originX, _originZ;
-    private readonly Dictionary<(long, long), MeshInstance3D> _meshes = new();
+    private readonly Dictionary<(long, long), Node3D> _meshes = new();
+    private ShaderMaterial _wetMaterial = null!;
+    // Chunks waiting for a mesh rebuild, oldest first (a set alone kept serving the same busy chunks and starved the rest).
     private readonly HashSet<(long, long)> _pending = new();
+    private readonly Queue<(long, long)> _order = new();
     private const int N = LocalWater.ChunkCells + 1;
-    private readonly float[] _floor = new float[N * N], _depth = new float[N * N], _vx = new float[N * N], _vz = new float[N * N];
+    private readonly float[] _floor = new float[N * N], _depth = new float[N * N], _vx = new float[N * N], _vz = new float[N * N], _wet = new float[N * N];
 
     public void Configure(TerrainSampler sampler, ShaderMaterial material, double originX, double originZ)
     {
         foreach (var mesh in _meshes.Values) mesh.QueueFree();
-        _meshes.Clear(); _pending.Clear();
+        _meshes.Clear(); _pending.Clear(); _order.Clear();
         _material = material; _originX = originX; _originZ = originZ;
+        // Drawn before the water (both are transparent passes), so the film never multiplies over a water surface.
+        _wetMaterial ??= new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/WetGround.gdshader"), RenderPriority = -1 };
         Sim = new LocalWater((cx, cz) => LocalWater.FromSampler(sampler, cx, cz));
     }
 
@@ -44,28 +49,28 @@ public partial class LocalWaterView : Node3D
         if (Sim == null || !GameSettings.WaterSimulation.On) return;
         Sim.Follow(playerX, playerZ);
         Sim.Step(dt * .5f); Sim.Step(dt * .5f);
-        foreach (var chunk in Sim.TakeDirty()) _pending.Add(chunk);
+        foreach (var chunk in Sim.TakeDirty()) if (_pending.Add(chunk)) _order.Enqueue(chunk);
     }
 
     public override void _Process(double delta)
     {
-        if (Sim == null || _pending.Count == 0) return;
-        int budget = 6;
-        var done = new List<(long, long)>();
-        foreach (var chunk in _pending)
+        if (Sim == null) return;
+        for (int budget = 10; budget > 0 && _order.Count > 0; budget--)
         {
-            if (budget-- <= 0) break;
+            var chunk = _order.Dequeue();
+            _pending.Remove(chunk);
             Rebuild(chunk.Item1, chunk.Item2);
-            done.Add(chunk);
         }
-        foreach (var chunk in done) _pending.Remove(chunk);
     }
 
     private void Rebuild(long cx, long cz)
     {
         _meshes.Remove((cx, cz), out var old);
         old?.QueueFree();
-        if (Sim == null || !Sim.ChunkView(cx, cz, _floor, _depth, _vx, _vz)) return;
+        if (Sim == null || !Sim.ChunkView(cx, cz, _floor, _depth, _vx, _vz, _wet)) return;
+        var root = new Node3D { Position = ChunkPosition(cx, cz) };
+        var wetMesh = WetMesh();
+        if (wetMesh != null) root.AddChild(new MeshInstance3D { Mesh = wetMesh, MaterialOverride = _wetMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         const float Wet = .008f;
         var vertices = new Vector3[N * N]; var colors = new Color[N * N]; var flow = new Vector2[N * N]; var normals = new Vector3[N * N];
         bool any = false;
@@ -95,7 +100,7 @@ public partial class LocalWaterView : Node3D
                 colors[k] = new Color(Math.Clamp(_depth[k] / 20, 0, 1), speed > .25f ? 1 : .5f, 0, 1);
                 flow[k] = new Vector2(_vx[k], _vz[k]);
             }
-        if (!any) return;
+        if (!any) { Keep(); return; }
         var indices = new List<int>();
         for (int j = 0; j < N - 1; j++)
             for (int i = 0; i < N - 1; i++)
@@ -114,9 +119,47 @@ public partial class LocalWaterView : Node3D
         arrays[(int)Mesh.ArrayType.Index] = indices.ToArray();
         var mesh = new ArrayMesh();
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-        var instance = new MeshInstance3D { Mesh = mesh, MaterialOverride = _material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Position = ChunkPosition(cx, cz) };
-        AddChild(instance);
-        _meshes[(cx, cz)] = instance;
+        root.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        Keep();
+
+        void Keep()
+        {
+            if (root.GetChildCount() == 0) { root.Free(); return; }
+            AddChild(root);
+            _meshes[(cx, cz)] = root;
+        }
+    }
+
+    /// <summary>Darkened film over wet ground (cells that held water recently), 3 cm above the floor.</summary>
+    private ArrayMesh? WetMesh()
+    {
+        var indices = new List<int>();
+        for (int j = 0; j < N - 1; j++)
+            for (int i = 0; i < N - 1; i++)
+            {
+                int a = j * N + i, b = a + 1, c = a + N, d = c + 1;
+                if (_wet[a] <= 0 && _wet[b] <= 0 && _wet[c] <= 0 && _wet[d] <= 0) continue;
+                indices.Add(a); indices.Add(b); indices.Add(c);
+                indices.Add(b); indices.Add(d); indices.Add(c);
+            }
+        if (indices.Count == 0) return null;
+        var vertices = new Vector3[N * N]; var colors = new Color[N * N];
+        for (int j = 0; j < N; j++)
+            for (int i = 0; i < N; i++)
+            {
+                int k = j * N + i;
+                vertices[k] = new Vector3((i + .5f) * (float)LocalWater.Cell, _floor[k] + .03f, (j + .5f) * (float)LocalWater.Cell);
+                // Only where the ground is wet but uncovered: under water the water itself shows the bed.
+                colors[k] = new Color(1, 1, 1, _depth[k] > .008f ? 0 : _wet[k]);
+            }
+        using var arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+        arrays[(int)Mesh.ArrayType.Color] = colors;
+        arrays[(int)Mesh.ArrayType.Index] = indices.ToArray();
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        return mesh;
     }
 
     public void Clear() { Sim?.Clear(); }
