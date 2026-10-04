@@ -21,3 +21,13 @@ away with more slope detail up close; views from ridges and peaks. Performance g
 11. Not yet present (known): water physics, digging/terraforming in the new world.
 
 More screenshots pending from Tom; plan the fixes after reviewing them.
+
+### Round 1, part 2 (5 more screenshots)
+* Screenshot 10 explained: a 7 m stream at the bottom of a straight-walled trench with a flat floor, grey
+  rock walls both sides. Cause: river surface comes from the coarse raster (750 m cells, minus freeboard) while
+  the detailed terrain around it (bicubic + walking-scale detail) stands much higher; the floodplain blend
+  (capped at 140 m) then cuts a steep trench. Planned fix: derive each river's surface from the *detailed*
+  terrain sampled along its final course (monotone lower envelope), and carve a slope-limited valley profile
+  whose width follows the height difference (no hard cap), so cuts become natural valleys.
+* Ridge/peak/mountain-slope views and forested mountainsides: look as intended (keep).
+* Visible again: forest edges ending abruptly where tree LOD stops (item 1).
