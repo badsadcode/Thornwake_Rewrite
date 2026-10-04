@@ -404,6 +404,16 @@ public sealed class Hydrology
         int m = cells.Count;
         var cx = new double[m]; var cz = new double[m];
         for (int i = 0; i < m; i++) { cx[i] = _raster.CellX(cells[i] % n); cz[i] = _raster.CellZ(cells[i] / n); }
+        // Round off the 45°/90° steps of D8 routing before the spline (endpoints fixed so junctions stay joined).
+        for (int pass = 0; pass < 4; pass++)
+        {
+            double px = cx[0], pz = cz[0];
+            for (int i = 1; i < m - 1; i++)
+            {
+                double nx = .25 * px + .5 * cx[i] + .25 * cx[i + 1], nz = .25 * pz + .5 * cz[i] + .25 * cz[i + 1];
+                px = cx[i]; pz = cz[i]; cx[i] = nx; cz[i] = nz;
+            }
+        }
         const int Sub = 8;
         int total = (m - 1) * Sub + 1;
         var points = new Point2[total]; var s = new double[total]; var w = new double[total]; var d = new double[total]; var a = new double[total];
@@ -433,7 +443,9 @@ public sealed class Hydrology
             double len = Math.Sqrt(tx * tx + tz * tz);
             if (len <= 0) continue;
             double wavelength = Math.Max(180, w[k] * 14);
-            double amplitude = Math.Min(_raster.Cell * .28, w[k] * 3 + 25);
+            // Keep meanders inside the eroded valley floor (a fraction of a raster cell), or the floodplain has to
+            // cut a trench into the valley wall.
+            double amplitude = Math.Min(_raster.Cell * .1, w[k] * 2.5 + 15);
             double envelope = DetMath.Smooth(length[k] / (wavelength * .75)) * DetMath.Smooth((reachLength - length[k]) / (wavelength * .75));
             double offset = Noise.Fbm(length[k], 0, wavelength, 3, 0, noiseSeed, .45) * 2.2 * amplitude * envelope;
             displaced[k] = new(points[k].X - tz / len * offset, points[k].Z + tx / len * offset);
@@ -475,7 +487,11 @@ public sealed class Hydrology
     public bool NearestRiver(double x, double z, double radius, out RiverHit hit) => _index.Nearest(x, z, radius, out hit);
 
     /// <summary>Largest distance at which a river can affect the terrain (channel + banks + floodplain).</summary>
-    public static double Influence(double width) => width * .5 + Math.Max(8, width * .8) + Math.Max(30, width * 2.5);
+    public static double Influence(double width) => width * .5 + Math.Max(8, width * .8) + MaxFloodplain(width);
+
+    /// <summary>Floodplain blend width: wider where the surrounding ground stands high above the banks.</summary>
+    public static double Floodplain(double width, double rise) => DetMath.Clamp(Math.Max(Math.Max(30, width * 2.5), rise * 3.5), 30, MaxFloodplain(width));
+    public static double MaxFloodplain(double width) => Math.Max(140, width * 2.5);
 
     // ------------------------------------------------------------------ spatial index
 

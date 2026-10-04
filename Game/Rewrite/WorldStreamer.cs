@@ -1,0 +1,239 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using Godot;
+using Thornwake.World;
+using Thornwake.WorldGen;
+
+namespace Thornwake.Rewrite;
+
+/// <summary>
+/// Streams the terrain as nested LOD rings (a quadtree "clipmap" in tiles): level 0 is 64 m tiles at 2 m spacing
+/// around the player; each coarser level doubles tile size and covers the ring outside the finer one, out to
+/// level 7 (8 km tiles, ~20 km radius). Tiles are built on worker threads from the deterministic sampler and
+/// committed on the main thread within a time budget. Positions are float offsets from a double-precision origin
+/// that is rebased as the player travels, so precision never degrades far from the world centre.
+/// </summary>
+public partial class WorldStreamer : Node3D
+{
+    public const int Levels = 8, TopRadius = 2;
+    public int Resident => _tiles.Count;
+    public int Pending => _jobs.Count;
+    public int Missing { get; private set; }
+    public int Built { get; private set; }
+    public double LastBuildMs { get; private set; }
+    public double LastCommitMs { get; private set; }
+    public double MaxCommitMs { get; private set; }
+    public long Triangles { get; private set; }
+    public bool Settled => _sampler != null && Missing == 0 && _jobs.Count == 0;
+
+    private TerrainSampler? _sampler;
+    private long _revision;
+    private double _originX, _originZ;
+    private readonly Dictionary<TileKey, Node3D> _tiles = new();
+    private readonly Dictionary<TileKey, long> _tileTriangles = new();
+    private readonly HashSet<TileKey> _desired = new();
+    private readonly Dictionary<TileKey, (Task<TileData> Task, long Revision)> _jobs = new();
+    private readonly HashSet<TileKey> _failed = new();
+    private readonly int _maxJobs = Math.Max(1, System.Environment.ProcessorCount - 1);
+    private ShaderMaterial _terrain = null!, _water = null!;
+    private TreeCatalog _trees = null!;
+
+    public override void _Ready()
+    {
+        _terrain = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Terrain.gdshader") };
+        _water = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Water.gdshader") };
+        _trees = new TreeCatalog();
+    }
+
+    public void ShowGrid(bool show) => _terrain.SetShaderParameter("show_grid", show);
+
+    public void Configure(TerrainSampler sampler, double originX, double originZ)
+    {
+        _revision++;
+        foreach (var node in _tiles.Values) { RemoveChild(node); node.QueueFree(); }
+        _tiles.Clear(); _tileTriangles.Clear(); _failed.Clear(); _desired.Clear();
+        _sampler = sampler; _originX = originX; _originZ = originZ; Triangles = 0; Built = 0; MaxCommitMs = 0;
+    }
+
+    /// <summary>Move the float origin; every resident tile is repositioned (no rebuild).</summary>
+    public void Rebase(double originX, double originZ)
+    {
+        _originX = originX; _originZ = originZ;
+        foreach (var (key, node) in _tiles) node.Position = new Vector3((float)(key.MinX - _originX), 0, (float)(key.MinZ - _originZ));
+    }
+
+    /// <summary>True once a collision tile under (x, z) is resident.</summary>
+    public bool HasGround(double x, double z) =>
+        _tiles.ContainsKey(new TileKey(0, (long)Math.Floor(x / TileBuilder.BaseTile), (long)Math.Floor(z / TileBuilder.BaseTile)));
+
+    public void Update(double px, double pz)
+    {
+        if (_sampler == null) return;
+        Desired(px, pz);
+        var timer = Stopwatch.StartNew();
+
+        // Commit finished builds, nearest levels first, within a frame budget.
+        foreach (var key in _jobs.Where(j => j.Value.Task.IsCompleted).Select(j => j.Key).OrderBy(k => k.Level).ToList())
+        {
+            if (timer.Elapsed.TotalMilliseconds > 6) break;
+            var (task, revision) = _jobs[key];
+            _jobs.Remove(key);
+            if (task.IsFaulted) { _failed.Add(key); GD.PushError(task.Exception?.ToString() ?? "tile build failed"); continue; }
+            if (revision != _revision || !_desired.Contains(key)) continue;
+            var commit = Stopwatch.StartNew();
+            var node = Commit(task.Result);
+            LastBuildMs = task.Result.BuildMs;
+            if (_tiles.Remove(key, out var old)) { RemoveChild(old); old.QueueFree(); Triangles -= _tileTriangles[key]; }
+            AddChild(node);
+            _tiles[key] = node;
+            long tris = task.Result.Indices.Length / 3;
+            _tileTriangles[key] = tris; Triangles += tris; Built++;
+            LastCommitMs = commit.Elapsed.TotalMilliseconds; MaxCommitMs = Math.Max(MaxCommitMs, LastCommitMs);
+        }
+
+        // Schedule missing tiles: finest level first, then nearest.
+        var missing = _desired.Where(k => !_tiles.ContainsKey(k) && !_failed.Contains(k)).ToList();
+        Missing = missing.Count;
+        if (_jobs.Count < _maxJobs)
+        {
+            var sampler = _sampler; long revision = _revision;
+            foreach (var key in missing.Where(k => !_jobs.ContainsKey(k))
+                         .OrderBy(k => k.Level).ThenBy(k => Distance(k, px, pz)).Take(_maxJobs - _jobs.Count))
+                _jobs[key] = (Task.Run(() => TileBuilder.Build(sampler, key)), revision);
+        }
+
+        // Drop tiles that are no longer wanted once everything wanted is on screen (no holes while moving).
+        if (Missing == 0)
+            foreach (var key in _tiles.Keys.Where(k => !_desired.Contains(k)).ToList())
+            {
+                var node = _tiles[key]; RemoveChild(node); node.QueueFree();
+                _tiles.Remove(key); Triangles -= _tileTriangles[key]; _tileTriangles.Remove(key);
+            }
+    }
+
+    private static double Distance(TileKey k, double px, double pz)
+    {
+        double cx = k.MinX + k.Size / 2, cz = k.MinZ + k.Size / 2;
+        return Math.Max(Math.Abs(cx - px), Math.Abs(cz - pz));
+    }
+
+    /// <summary>
+    /// Nested rings. Top level: (2R+1)² tiles around the player. Every level below fills the 3×3 hole around the
+    /// player's tile of the level above with its 6×6 children; level 0 keeps its whole 6×6 region.
+    /// </summary>
+    private void Desired(double px, double pz)
+    {
+        _desired.Clear();
+        int top = Levels - 1;
+        double size = TileBuilder.BaseTile * (1L << top);
+        long cx = (long)Math.Floor(px / size), cz = (long)Math.Floor(pz / size);
+        long x0 = cx - TopRadius, x1 = cx + TopRadius, z0 = cz - TopRadius, z1 = cz + TopRadius;
+        for (int level = top; level >= 0; level--)
+        {
+            size = TileBuilder.BaseTile * (1L << level);
+            cx = (long)Math.Floor(px / size); cz = (long)Math.Floor(pz / size);
+            for (long z = z0; z <= z1; z++)
+                for (long x = x0; x <= x1; x++)
+                {
+                    bool hole = level > 0 && Math.Abs(x - cx) <= 1 && Math.Abs(z - cz) <= 1;
+                    if (!hole) _desired.Add(new TileKey(level, x, z));
+                }
+            // Next finer level covers this level's hole exactly.
+            x0 = 2 * (cx - 1); x1 = 2 * (cx + 1) + 1; z0 = 2 * (cz - 1); z1 = 2 * (cz + 1) + 1;
+        }
+    }
+
+    private Node3D Commit(TileData data)
+    {
+        var key = data.Key;
+        var root = new Node3D { Name = $"T{key.Level}_{key.X}_{key.Z}", Position = new Vector3((float)(key.MinX - _originX), 0, (float)(key.MinZ - _originZ)) };
+        using (var arrays = new Godot.Collections.Array())
+        {
+            arrays.Resize((int)Mesh.ArrayType.Max);
+            arrays[(int)Mesh.ArrayType.Vertex] = data.Vertices;
+            arrays[(int)Mesh.ArrayType.Normal] = data.Normals;
+            arrays[(int)Mesh.ArrayType.Color] = data.Colors;
+            arrays[(int)Mesh.ArrayType.TexUV] = data.Uv;
+            arrays[(int)Mesh.ArrayType.TexUV2] = data.Uv2;
+            arrays[(int)Mesh.ArrayType.Index] = data.Indices;
+            var mesh = new ArrayMesh();
+            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            root.AddChild(new MeshInstance3D
+            {
+                Mesh = mesh, MaterialOverride = _terrain,
+                CastShadow = key.Level <= 1 ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+        }
+        if (data.Water is { } water && water.Indices.Length > 0)
+        {
+            using var arrays = new Godot.Collections.Array();
+            arrays.Resize((int)Mesh.ArrayType.Max);
+            arrays[(int)Mesh.ArrayType.Vertex] = water.Vertices;
+            arrays[(int)Mesh.ArrayType.Color] = water.Colors;
+            arrays[(int)Mesh.ArrayType.Normal] = Enumerable.Repeat(Vector3.Up, water.Vertices.Length).ToArray();
+            arrays[(int)Mesh.ArrayType.Index] = water.Indices;
+            var mesh = new ArrayMesh();
+            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            root.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _water, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        }
+        if (data.CollisionFaces != null)
+        {
+            var body = new StaticBody3D { CollisionLayer = 1, CollisionMask = 0 };
+            body.AddChild(new CollisionShape3D { Shape = new ConcavePolygonShape3D { Data = data.CollisionFaces, BackfaceCollision = true } });
+            root.AddChild(body);
+        }
+        if (data.Trees.Count > 0) _trees.Instance(root, data.Trees, key.Level == 2 ? 2 : 1, key.Level == 0);
+        return root;
+    }
+
+    public override void _ExitTree()
+    {
+        _revision++;
+        foreach (var (task, _) in _jobs.Values) _ = task.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+    }
+}
+
+/// <summary>Tree meshes per species and LOD, extracted once from the woodland pack and drawn with MultiMesh.</summary>
+public sealed class TreeCatalog
+{
+    private readonly Dictionary<(int Species, int Lod), List<(Mesh Mesh, Transform3D Transform)>> _parts = new();
+
+    private List<(Mesh, Transform3D)> Parts(int species, int lod)
+    {
+        if (_parts.TryGetValue((species, lod), out var parts)) return parts;
+        parts = new List<(Mesh, Transform3D)>();
+        var tree = WoodlandAssets.Tree(Vegetation.Species[species]);
+        foreach (var source in WoodlandAssets.Meshes(tree.Levels[lod]))
+        {
+            var mesh = (Mesh)source.Mesh.Duplicate();
+            for (int s = 0; s < mesh.GetSurfaceCount(); s++) mesh.SurfaceSetMaterial(s, source.GetActiveMaterial(s));
+            Transform3D transform = source.Transform; Node? parent = source.GetParent();
+            while (parent is Node3D p && p != tree) { transform = p.Transform * transform; parent = p.GetParent(); }
+            parts.Add((mesh, transform));
+        }
+        tree.Free();
+        _parts[(species, lod)] = parts;
+        return parts;
+    }
+
+    public void Instance(Node3D root, List<TreeInstance> trees, int lod, bool shadows)
+    {
+        foreach (var group in trees.GroupBy(t => t.Species))
+        {
+            var transforms = group.Select(t => t.Transform).ToArray();
+            foreach (var (mesh, part) in Parts(group.Key, lod))
+            {
+                var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = mesh, InstanceCount = transforms.Length };
+                for (int i = 0; i < transforms.Length; i++) multi.SetInstanceTransform(i, transforms[i] * part);
+                root.AddChild(new MultiMeshInstance3D
+                {
+                    Multimesh = multi,
+                    CastShadow = shadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
+                });
+            }
+        }
+    }
+}

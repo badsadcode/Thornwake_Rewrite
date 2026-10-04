@@ -141,12 +141,12 @@ Status legend: ✅ done · 🔨 in progress · ⏳ next · ☐ later
 |---|---|---|
 | M0 | Setup: branch, cloud toolchain (`tools/setup-cloud.sh`), baseline benchmarks, plan/decision docs | ✅ |
 | M1 | Deterministic world-gen core: DetMath, hashing, gradient noise, profiles/manifest, A4 layout port, MacroRaster, TerrainSampler with player-scale detail, batch tile sampling, PNG map previews, tests and benchmarks | ✅ |
-| M2 ⏳ | Erosion and hydrology on the raster: priority-flood, D8 flow, Braun–Willett stream-power valleys, river network (IDs, discharge, monotonic stage), lakes with spill level and outlet, channel and lake carving into the sampler | ☐ |
+| M2 | Erosion and hydrology on the raster: priority-flood, D8 flow, Braun–Willett stream-power valleys, river network (IDs, discharge, monotonic stage), lakes with spill level and outlet, channel and lake carving into the sampler | ✅ (core; tuning continues) |
 | M3 | Landforms and surface: material classification (grass/soil/sand/gravel/rock/snow), moisture, cliffs/plateaus/floodplain shaping, coast detail; data-driven landform parameters per profile | ☐ |
-| M4 | Streaming terrain renderer: new `WorldLab.tscn`, quadtree LOD with skirts, worker pool, budgeted commits, HeightMapShape3D near-collision, rebasing, valley-game terrain look (shader port), frame-cost benchmarks | ☐ |
-| M5 | Static water: ocean/lake/river meshes from hydrology; water shader ported from GangTheGAME with per-body profiles; Gerstner swell; shoreline foam; underwater fog | ☐ |
+| M4 | 🔨 first version playable — Streaming terrain renderer: new `WorldLab.tscn`, quadtree LOD with skirts, worker pool, budgeted commits, HeightMapShape3D near-collision, rebasing, valley-game terrain look (shader port), frame-cost benchmarks | ☐ |
+| M5 | 🔨 first version playable — Static water: ocean/lake/river meshes from hydrology; water shader ported from GangTheGAME with per-body profiles; Gerstner swell; shoreline foam; underwater fog | ☐ |
 | M6 | Local shallow-water simulation: WaterField port on 0.25 m chunks, activation near players/edits, sleep/wake, coupling to static bodies (lake storage, river inflow, ocean boundary), wakes/waves, surface query API, benchmarks | ☐ |
-| M7 | Vegetation and scatter on the streamed world: Blender trees and grass by density fields, LOD, MultiMesh per chunk, harvestable identities | ☐ |
+| M7 | 🔨 first version playable — Vegetation and scatter on the streamed world: Blender trees and grass by density fields, LOD, MultiMesh per chunk, harvestable identities | ☐ |
 | M8 | Terrain edit authority: sparse per-region deltas (earthworks port), persistence, collision/water refresh, protected areas | ☐ |
 | M9 | Gameplay integration: valley gameplay (player, harvesting, crafting, building, farming, saves) running in the streamed world; legacy valley kept as a world type | ☐ |
 | M10 | Caves / volumetric hybrid (Master §19–23) on top of the new terrain authority | ☐ |
@@ -246,3 +246,27 @@ islands, belt splines, feature IDs) is identical to A4.
    meanders from noise) and lake beds; return water level/kind at a point (for M5 water meshes).
 6. Tests: rivers descend monotonically and end in ocean or lake; lakes sit at spill level; carving continuous
    across tiles; determinism fingerprints; maps showing river networks.
+
+**2026-10-04, stretch 1 (continued): playable preview for Tom.** Tom asked for a playable EXE. Done ahead of the
+strict milestone order, on top of M1/M2:
+* M2 core: `Game/WorldGen/Hydrology.cs` (priority-flood, stream-power erosion, lakes, river reaches with
+  monotonic surfaces, continuous junctions/lake levels, meanders, spatial index); sampler carves channels, banks
+  and floodplains and reports water. 19 tests, 1.26 M checks.
+* First playable 3D world: `Game/Rewrite/` — `WorldLab.tscn` (player with the valley character, walk/sprint/
+  jump/swim/fly/noclip, orbit camera, HUD, Esc menu with teleports, presets/seeds, time of day),
+  `WorldStreamer` (nested LOD rings, 64 m → 8 km tiles, ~20 km view, worker pool, budgeted commits, skirts,
+  float rebasing, level-0 collision), `TileBuilder`, `Vegetation` (17 Blender species by elevation, willows
+  by rivers), `Terrain.gdshader` (valley palette), `Water.gdshader` (GangTheGAME port).
+* `Game/Launcher.tscn` is now the main scene: new world preview or the original valley game.
+  `-- --smoke-test` still goes straight to the valley game; `-- --world-smoke=<dir>` runs the new world's
+  screenshot test (`WORLD_SMOKE_PASS`).
+* Windows export from Linux works (templates in ignored `.tools/templates`); verified the EXE boots under Wine
+  (headless), generates and streams. Package: `Thornwake-Rewrite-Preview-Windows.zip` sent to Tom with
+  `docs/PLAYTEST_REWRITE.md` as `PLAYTEST.txt`.
+
+Known limitations of the preview: 2 m nearest terrain spacing (river shorelines show 2 m steps), trees only
+within ~1 km (forest colour beyond), first-time tree model loads may hitch briefly, no shallow-water simulation
+yet, rivers narrower than ~4 m are not represented, filled basins make some very flat plains.
+
+**Next (unless Tom's feedback says otherwise):** finish M2 tuning from feedback; M3 slope-aligned gully detail
+and materials; M6 local shallow-water simulation (GangTheGAME WaterField port) in active chunks near the player.

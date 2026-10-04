@@ -1,0 +1,75 @@
+using System;
+using System.Collections.Generic;
+using Godot;
+using Thornwake.WorldGen;
+using Noise = Thornwake.WorldGen.Noise;
+
+namespace Thornwake.Rewrite;
+
+/// <summary>
+/// Deterministic forest rules (worker-thread safe). Trees sit on world-aligned cells, so the same tree appears at
+/// the same place whatever tile or LOD level asks for it. Species follow elevation, with willows by rivers.
+/// </summary>
+public static class Vegetation
+{
+    public const double Cell = 7;
+    public static readonly string[] Species =
+    {
+        "Pine_A", "Pine_B", "Pine_C", "Spruce_A", "Spruce_B", "Oak_A", "Oak_B", "Oak_C", "Birch_Green_A", "Birch_Green_B",
+        "Birch_Green_C", "Maple_Autumn_A", "Poplar_A", "Willow_A", "Sparse_A", "Birch_Autumn_A", "Birch_Autumn_B",
+    };
+    private static readonly int[] Broadleaf = { 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 0, 1 };
+    private static readonly int[] Mixed = { 0, 1, 2, 3, 4, 8, 9, 5, 6, 15 };
+    private static readonly int[] Conifer = { 0, 1, 2, 3, 4, 3, 4, 14 };
+
+    /// <summary>0..1 forest cover: broad patches of woodland and meadow, thinning toward the tree line.</summary>
+    public static double ForestDensity(TerrainSampler sampler, double x, double z, in TerrainSample t)
+    {
+        if (t.Water != WaterKind.None) return 0;
+        double elevation = t.Height - sampler.Plan.Profile.SeaLevel;
+        if (elevation < 2.5) return 0;
+        ulong seed = Hashing.Mix(unchecked((ulong)sampler.Plan.Manifest.Seed * 0x2545F4914F6CDD1DUL + 77));
+        double patches = Noise.Fbm(x, z, 2600, 4, 60, seed, .55) * 2.2 + .4;
+        double treeline = 1750 + 350 * Noise.Gradient(x / 9000, z / 9000, seed + 5);
+        double cover = DetMath.Smooth(patches) * DetMath.Smooth((treeline - elevation) / 220) * DetMath.Smooth((elevation - 2.5) / 4);
+        return cover * (1 - .7 * DetMath.Smooth((t.Mountain - .45) / .35));
+    }
+
+    public static List<TreeInstance> Trees(TerrainSampler sampler, TileKey key)
+    {
+        var trees = new List<TreeInstance>();
+        double x0 = key.MinX, z0 = key.MinZ, size = key.Size, sea = sampler.Plan.Profile.SeaLevel;
+        long c0x = (long)Math.Floor(x0 / Cell), c0z = (long)Math.Floor(z0 / Cell);
+        long c1x = (long)Math.Floor((x0 + size) / Cell), c1z = (long)Math.Floor((z0 + size) / Cell);
+        ulong seed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0x7EE5UL);
+        for (long cz = c0z; cz < c1z; cz++)
+            for (long cx = c0x; cx < c1x; cx++)
+            {
+                ulong h = Hashing.Lattice(cx, cz, seed);
+                double x = (cx + .15 + .7 * Hashing.Unit(h)) * Cell, z = (cz + .15 + .7 * Hashing.Unit(Hashing.Mix(h))) * Cell;
+                if (x < x0 || z < z0 || x >= x0 + size || z >= z0 + size) continue;
+                double chance = Hashing.Unit(Hashing.Mix(h ^ 0xABCDEFUL));
+                if (chance > .94) continue; // never a perfectly closed canopy
+                var t = sampler.Sample(x, z, 2);
+                double density = ForestDensity(sampler, x, z, t);
+                if (chance > density * .9) continue;
+                // Avoid steep ground: compare with a neighbour sample.
+                double slope = Math.Abs(sampler.Height(x + 2, z, 4) - t.Height) / 2;
+                if (slope > .7) continue;
+                double elevation = t.Height - sea;
+                ulong pick = Hashing.Mix(h + 99);
+                int species;
+                if (sampler.Plan.Hydrology.NearestRiver(x, z, 0, out var river) && river.Distance < river.Width * .5 + 18 && (pick & 3) != 0) species = 13;
+                else
+                {
+                    var list = elevation < 550 ? Broadleaf : elevation < 1250 ? Mixed : Conifer;
+                    species = list[(int)(pick % (ulong)list.Length)];
+                }
+                float scale = (float)(.8 + .45 * Hashing.Unit(Hashing.Mix(pick)));
+                float yaw = (float)(Hashing.Unit(Hashing.Mix(pick + 1)) * Math.PI * 2);
+                var basis = new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale);
+                trees.Add(new TreeInstance(species, new Transform3D(basis, new Vector3((float)(x - x0), (float)t.Height - .1f, (float)(z - z0)))));
+            }
+        return trees;
+    }
+}

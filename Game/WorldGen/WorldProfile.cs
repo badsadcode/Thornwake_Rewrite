@@ -53,11 +53,14 @@ public sealed record WorldProfile
         return Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(this))).ToLowerInvariant();
     }
 
-    public static IReadOnlyList<WorldProfile> LoadCatalog(string path)
+    public static IReadOnlyList<WorldProfile> LoadCatalog(string path) => ParseCatalog(File.ReadAllText(path));
+
+    /// <summary>Parse catalogue JSON (the game reads it through Godot's FileAccess so it works inside a .pck).</summary>
+    public static IReadOnlyList<WorldProfile> ParseCatalog(string json)
     {
         try
         {
-            var profiles = JsonSerializer.Deserialize<WorldProfile[]>(File.ReadAllText(path)) ?? throw new InvalidDataException("Empty profile catalogue.");
+            var profiles = JsonSerializer.Deserialize<WorldProfile[]>(json) ?? throw new InvalidDataException("Empty profile catalogue.");
             if (profiles.Length is < 1 or > 64 || profiles.Select(p => p.Id).Distinct().Count() != profiles.Length)
                 throw new InvalidDataException("Invalid or duplicate world profiles.");
             foreach (var profile in profiles) profile.Validate();
@@ -80,7 +83,7 @@ public sealed record TerrainStyle
     /// <summary>Amplitude ratio between detail octaves (higher = rougher small-scale ground).</summary>
     public double DetailGain { get; init; } = .6;
     /// <summary>Roughness multiplier in the flattest plains (1 = hill country everywhere).</summary>
-    public double PlainsRoughness { get; init; } = .25;
+    public double PlainsRoughness { get; init; } = .4;
     /// <summary>Wavelength (m) over which plains and hill country alternate.</summary>
     public double RegionWavelength { get; init; } = 28000;
     /// <summary>Fraction of mountain height added as rocky ridged detail at full mountain influence.</summary>

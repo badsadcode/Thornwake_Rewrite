@@ -94,10 +94,12 @@ public sealed class TerrainSampler
         double height;
         if (_hydrology.NearestRiver(x, z, 0, out var river))
         {
-            double half = river.Width * .5, bank = Math.Max(8, river.Width * .8), flood = Math.Max(30, river.Width * 2.5);
+            double half = river.Width * .5, bank = Math.Max(8, river.Width * .8);
             double d = river.Distance, surface = river.Surface - _p.SeaLevel;
-            double terrain = Math.Max(baseHeight + detail * DetMath.Smooth((d - half) / (bank + flood)), .2 * inland + .05);
             double bankTop = surface + .6 + .15 * river.Depth;
+            double rough = Math.Max(baseHeight, .2 * inland + .05);
+            double flood = Hydrology.Floodplain(river.Width, rough - bankTop);
+            double terrain = Math.Max(baseHeight + detail * DetMath.Smooth((d - half) / (bank + flood)), .2 * inland + .05);
             if (d < half)
             {
                 double u = d / half;

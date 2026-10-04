@@ -70,3 +70,13 @@ distant tiles equal near tiles minus small bumps.
 Every sampler call takes `minWavelength` (≈ 2 × vertex spacing). Octaves below it are skipped, the last one fades,
 so far terrain costs fewer octaves and does not alias. Collision and gameplay use 2 m. Tests check that a 64 m LOD
 stays within ~2 m mean of the 2 m terrain.
+
+## D12 — Ship a playable preview before the renderer milestone is "finished" (2026-10-04)
+Tom asked for an EXE to play. The preview builds on the finished M1/M2 core with first versions of M4 (streaming
+LOD), M5 (water) and M7 (trees). Nested-ring LOD with skirts was chosen over a GPU clipmap because collision,
+water and trees all come from the same CPU tile data and it is verifiable in the cloud.
+
+## D13 — A launcher becomes the main scene (2026-10-04)
+Both the new world and the original valley game must be reachable from one EXE. `Game/Launcher.tscn` offers both;
+existing command-line tooling keeps working (`--smoke-test` forwards to the valley game). The `TEST_*.cmd`
+scripts open their scenes directly and are unaffected; `TEST_REWRITE_WORLD.cmd` opens the new world.
