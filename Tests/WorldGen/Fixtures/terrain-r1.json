@@ -1,51 +1,51 @@
 [
   {
     "Case": "balanced/-9",
-    "Hash": "7bc862636e7ae5bcb921e1b554d903fdf361cdffd7b460e9636da46fe02e50e6"
+    "Hash": "dd18393454e563aa4aabe909ce14c9120d1eac01c979aa166a701ffd8c4b3a3d"
   },
   {
     "Case": "balanced/42",
-    "Hash": "181b214849936905349bf9241bf1588bef7b11878f20a814a12e61bee25dfc57"
+    "Hash": "85f740e9be97077cf5fac362f860dde62623313fe81ce8ffa073f99ae9d770e8"
   },
   {
     "Case": "balanced/7319",
-    "Hash": "3914040862f25cfc9f1ef7d378cb6bd5efd30586d345eb0b3e1820ae52c6af71"
+    "Hash": "4234f56334bbcfcbf20f3fce3456f05acbcf4ec1dad4dfc1238d5217d57599b2"
   },
   {
     "Case": "continental/-9",
-    "Hash": "f99ddfd6138ad7ddf4545ba82bccee8fedf2af667cf02fe1ef4928b51d0af161"
+    "Hash": "92fee29901b1c87bba0ddbf98e106da951f568ada90843abc3c19a69923bbb23"
   },
   {
     "Case": "continental/42",
-    "Hash": "b1a7fe563a906f6ac503e974288f7c8c060fb9d5d16eafe433bed2ac91c3a044"
+    "Hash": "5808b58d6d51ba6b0c5c8d2de74b2c9f0785747f1809c6a90f2e56303ca05e1f"
   },
   {
     "Case": "continental/7319",
-    "Hash": "680b5dd8dd2609e2deea79aa472b5bff3038c531ced4cf76436e1680d0eb541a"
+    "Hash": "2a2fd08dbde37f5ff856dbdfec5c280a0fc0db2f182144e3d001179e124b9331"
   },
   {
     "Case": "archipelago/-9",
-    "Hash": "852dd87964a1d47d7cf504f55d3136d85a4aff295970ef5f186b57ac2d436d4a"
+    "Hash": "b655f84c6611f25ece4601ec54ad8e684c6abd80a1bb93f50a4061ff8b5cdce5"
   },
   {
     "Case": "archipelago/42",
-    "Hash": "f5be9e707d978fbf5f1cb3baf6b4728433984356968dfb0aaa617e626fd87422"
+    "Hash": "d70fb149fb0659620f195bdcef2f33373613596278b12d36940bb9019f39e410"
   },
   {
     "Case": "archipelago/7319",
-    "Hash": "06f32af2efc8f44b35dd3d5b859f23f195f14fadb9b0b1eaf23b5f154f0b8892"
+    "Hash": "478029f11195eeb871367df8e08a7fdc20f78f7d1cda16db3d5e62a072e217d1"
   },
   {
     "Case": "mountainous/-9",
-    "Hash": "aa0511db20c4e3abb841f6fe4a45e7d0dda64bb3fa91a1d8d6d3482a924800d2"
+    "Hash": "0f738787250a6b8f58c91b2fc5572c1e8816759d0e890584da370bde218e6118"
   },
   {
     "Case": "mountainous/42",
-    "Hash": "935edc9ba8edd2ff878ccfe2ed98d3e00cfe6c8f66552d3e988bb7e32b3566af"
+    "Hash": "90e9d98fe6c94c3aad7d30354c1cb18e9eb665829360028f72b29ac02bc91a52"
   },
   {
     "Case": "mountainous/7319",
-    "Hash": "c5245e55d751b43828e1560f2d6512ffb38b4d9a1e62df2b6ada867dfcc0d133"
+    "Hash": "cca2e4ce47365656f4074e7db97ad60a730e8b0b8ed080c6e6b4546fc8e40058"
   },
   {
     "Case": "vast-world/-9",
@@ -53,10 +53,10 @@
   },
   {
     "Case": "vast-world/42",
-    "Hash": "31a1499534b2dc5f93ded090484910690431a8db95d0ffe0cd1648a7ab208c8e"
+    "Hash": "2f40d05e8d8c820fc91741d17a4a96c778711e42ee93b5fb0237b638bd1a1a63"
   },
   {
     "Case": "vast-world/7319",
-    "Hash": "122164e4e1041093865594b633755589629aabcd49f9acef28133372bf21d4be"
+    "Hash": "275018ce5910b4d7127c90be0bf2240ca9e31e13dcdabc739d4a55999038073a"
   }
 ]

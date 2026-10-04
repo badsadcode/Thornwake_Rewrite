@@ -310,6 +310,11 @@ Costs after stretch 3 (cloud, 4 cores): plan build mountainous ~2.3 s, vast ~5.8
 ~51 MB, vast ~314 MB (3.4 M river points at ~0.9-width spacing, 10 M index entries; transient allocation during the
 vast build ~1.8 GB). This is now the top technical debt.
 
-**Next:** river data memory (float32 positions relative to reach origin, attributes as half/float, index storing
-segment ranges instead of per-segment entries, larger point spacing on straight stretches); then M6 local
-shallow-water simulation near the player; level-0 terrain at 1 m near the player; M3 gully detail.
+River data memory, same night: the segment index stores runs of consecutive segments per bucket (10.4 M → 0.23 M
+entries in the vast world), width/depth/catchment are float32, and a Douglas–Peucker pass drops points that linear
+interpolation reproduces. Vast world: retained 314 → 205 MB, peak working set 975 → 679 MB, 3.15 M points; point
+samples unchanged or faster. Further savings would need float32 positions (API change) or coarser meander
+sampling (visible facets on small creeks), so this is left here.
+
+**Next:** M6 local shallow-water simulation near the player (GangTheGAME WaterField port); level-0 terrain at
+1 m near the player; M3 gully detail; Tom's build-3 feedback and asset batches first when they arrive.

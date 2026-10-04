@@ -24,10 +24,11 @@ public sealed class RiverReach
     public required Point2[] Points { get; init; }
     /// <summary>Water surface elevation (absolute metres), strictly decreasing downstream.</summary>
     public required double[] Surface { get; set; }
-    public required double[] Width { get; init; }
-    public required double[] Depth { get; init; }
+    // Per-point attributes in single precision (memory: millions of points in a large world).
+    public required float[] Width { get; init; }
+    public required float[] Depth { get; init; }
     /// <summary>Upstream catchment (km²) at each point — the discharge proxy until climate exists.</summary>
-    public required double[] Catchment { get; init; }
+    public required float[] Catchment { get; init; }
     public int DownstreamReach { get; internal set; } = -1;
     public int EndLake { get; internal set; } = -1;
     public int StartLake { get; internal set; } = -1;
@@ -678,7 +679,49 @@ public sealed class Hydrology
                 points = p2; s = s2; w = w2; d = d2; a2 = a3;
             }
         }
-        return new RiverReach { Id = id, Points = points, Surface = s, Width = w, Depth = d, Catchment = a2 };
+        var keep = Simplify(points, w, d);
+        return new RiverReach
+        {
+            Id = id, Points = keep.Select(k => points[k]).ToArray(), Surface = keep.Select(k => s[k]).ToArray(),
+            Width = keep.Select(k => (float)w[k]).ToArray(), Depth = keep.Select(k => (float)d[k]).ToArray(), Catchment = keep.Select(k => (float)a2[k]).ToArray(),
+        };
+    }
+
+    /// <summary>
+    /// Douglas–Peucker over position and attributes: drops points that linear interpolation between their neighbours
+    /// reproduces within ~1.5 % of the width (position), 4 % (width) and 3 % (depth), keeping segments shorter than
+    /// 5 widths + 20 m. Meander bends keep their dense points; straight stretches lose most. Ends always kept.
+    /// </summary>
+    private static List<int> Simplify(Point2[] p, double[] w, double[] d)
+    {
+        int n = p.Length;
+        var keep = new bool[n];
+        keep[0] = keep[n - 1] = true;
+        var stack = new Stack<(int A, int B)>();
+        stack.Push((0, n - 1));
+        while (stack.Count > 0)
+        {
+            var (a, b) = stack.Pop();
+            if (b - a < 2) continue;
+            double dx = p[b].X - p[a].X, dz = p[b].Z - p[a].Z, len = Math.Sqrt(dx * dx + dz * dz);
+            int worst = -1; double worstError = 1;
+            for (int i = a + 1; i < b; i++)
+            {
+                double t = len > 0 ? DetMath.Clamp(((p[i].X - p[a].X) * dx + (p[i].Z - p[a].Z) * dz) / (len * len), 0, 1) : 0;
+                double ex = p[i].X - p[a].X - dx * t, ez = p[i].Z - p[a].Z - dz * t;
+                double f = (i - a) / (double)(b - a);
+                double error = Math.Max(Math.Sqrt(ex * ex + ez * ez) / (.04 + .015 * w[i]),
+                    Math.Max(Math.Abs(w[i] - (w[a] + (w[b] - w[a]) * f)) / (.05 + .04 * w[i]), Math.Abs(d[i] - (d[a] + (d[b] - d[a]) * f)) / (.02 + .03 * d[i])));
+                if (error > worstError) { worstError = error; worst = i; }
+            }
+            if (worst < 0 && len > Math.Min(120, 5 * Math.Min(w[a], w[b]) + 20)) worst = (a + b) / 2;
+            if (worst < 0) continue;
+            keep[worst] = true;
+            stack.Push((a, worst)); stack.Push((worst, b));
+        }
+        var result = new List<int>();
+        for (int i = 0; i < n; i++) if (keep[i]) result.Add(i);
+        return result;
     }
 
     /// <summary>Resample a polyline at arclength steps chosen per point from its interpolated attributes; ends kept.</summary>
@@ -775,44 +818,54 @@ public sealed class Hydrology
 
     // ------------------------------------------------------------------ spatial index
 
-    /// <summary>Uniform bucket grid over river segments (CSR layout); each segment is inserted into every bucket its
-    /// influence capsule touches, so a query reads exactly one bucket.</summary>
+    /// <summary>Uniform bucket grid over river segments (CSR layout). A bucket lists runs of consecutive segments of
+    /// one reach whose influence capsules touch it (a reach crossing a bucket is usually one run), so a query reads
+    /// exactly one bucket and the index stays small.</summary>
     private sealed class SegmentIndex
     {
         private readonly double _minX, _minZ, _bucket;
         private readonly int _side;
-        private readonly int[] _start, _items;
+        private readonly int[] _start;
+        private readonly (int Reach, int First, int Count)[] _runs;
         private readonly List<RiverReach> _reaches;
-        private readonly (int Reach, int Index)[] _segments;
-        public long Entries => _items.Length;
+        public long Entries => _runs.Length;
 
         public SegmentIndex(List<RiverReach> reaches, MacroRaster raster, double bucket)
         {
             _reaches = reaches; _bucket = bucket; _minX = raster.MinX; _minZ = raster.MinZ;
             _side = (int)Math.Ceiling(raster.Size * raster.Cell / bucket) + 1;
-            var segments = new List<(int, int)>();
-            var cellsOf = new List<(int Bucket, int Segment)>();
+            var runs = new List<(int Bucket, int Reach, int First, int Count)>();
+            var open = new Dictionary<int, (int First, int Last)>();
             for (int r = 0; r < reaches.Count; r++)
             {
                 var reach = reaches[r];
+                open.Clear();
                 for (int k = 0; k + 1 < reach.Points.Length; k++)
                 {
-                    int segment = segments.Count;
-                    segments.Add((r, k));
                     double pad = Influence(Math.Max(reach.Width[k], reach.Width[k + 1]));
                     var a = reach.Points[k]; var b = reach.Points[k + 1];
                     int x0 = BucketOf(Math.Min(a.X, b.X) - pad - _minX), x1 = BucketOf(Math.Max(a.X, b.X) + pad - _minX);
                     int z0 = BucketOf(Math.Min(a.Z, b.Z) - pad - _minZ), z1 = BucketOf(Math.Max(a.Z, b.Z) + pad - _minZ);
-                    for (int z = z0; z <= z1; z++) for (int x = x0; x <= x1; x++) cellsOf.Add((z * _side + x, segment));
+                    for (int z = z0; z <= z1; z++)
+                        for (int x = x0; x <= x1; x++)
+                        {
+                            int key = z * _side + x;
+                            if (open.TryGetValue(key, out var run) && run.Last == k - 1) open[key] = (run.First, k);
+                            else
+                            {
+                                if (open.TryGetValue(key, out run)) runs.Add((key, r, run.First, run.Last - run.First + 1));
+                                open[key] = (k, k);
+                            }
+                        }
                 }
+                foreach (var key in open.Keys.OrderBy(k => k)) { var run = open[key]; runs.Add((key, r, run.First, run.Last - run.First + 1)); }
             }
-            _segments = segments.ToArray();
             _start = new int[_side * _side + 1];
-            foreach (var (bucketIndex, _) in cellsOf) _start[bucketIndex + 1]++;
+            foreach (var run in runs) _start[run.Bucket + 1]++;
             for (int i = 0; i < _side * _side; i++) _start[i + 1] += _start[i];
-            _items = new int[cellsOf.Count];
+            _runs = new (int, int, int)[runs.Count];
             var fill = (int[])_start.Clone();
-            foreach (var (bucketIndex, segment) in cellsOf) _items[fill[bucketIndex]++] = segment;
+            foreach (var run in runs) _runs[fill[run.Bucket]++] = (run.Reach, run.First, run.Count);
         }
 
         private int BucketOf(double offset) => Math.Clamp((int)Math.Floor(offset / _bucket), 0, _side - 1);
@@ -824,8 +877,9 @@ public sealed class Hydrology
             int b = bz * _side + bx, count = 0;
             Span<double> scores = stackalloc double[hits.Length];
             for (int i = _start[b]; i < _start[b + 1]; i++)
+            for (int k = _runs[i].First, end = _runs[i].First + _runs[i].Count; k < end; k++)
             {
-                var (r, k) = _segments[_items[i]];
+                int r = _runs[i].Reach;
                 var reach = _reaches[r];
                 var p = reach.Points[k]; var q = reach.Points[k + 1];
                 double dx = q.X - p.X, dz = q.Z - p.Z, l2 = dx * dx + dz * dz;
@@ -869,8 +923,9 @@ public sealed class Hydrology
             double best = double.PositiveInfinity, secondBest = double.PositiveInfinity;
             bool found = false;
             for (int i = _start[b]; i < _start[b + 1]; i++)
+            for (int k = _runs[i].First, end = _runs[i].First + _runs[i].Count; k < end; k++)
             {
-                var (r, k) = _segments[_items[i]];
+                int r = _runs[i].Reach;
                 var reach = _reaches[r];
                 var p = reach.Points[k]; var q = reach.Points[k + 1];
                 double dx = q.X - p.X, dz = q.Z - p.Z, l2 = dx * dx + dz * dz;
