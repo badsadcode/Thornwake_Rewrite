@@ -74,6 +74,7 @@ public sealed class Hydrology
     private readonly List<RiverReach> _reaches = new();
     private SegmentIndex _index = null!;
     private readonly double _seaLevel, _minWidth;
+    private readonly TerrainStyle _style;
 
 
     private static readonly int[] Dx = { 1, 1, 0, -1, -1, -1, 0, 1 };
@@ -85,7 +86,7 @@ public sealed class Hydrology
     /// </summary>
     internal Hydrology(MacroRaster raster, double[] height, WorldProfile profile, TerrainStyle style, ulong seed)
     {
-        _raster = raster; _seaLevel = profile.SeaLevel; _minWidth = style.RiverMinWidth;
+        _raster = raster; _seaLevel = profile.SeaLevel; _minWidth = style.RiverMinWidth; _style = style;
         int n = raster.Size, count = n * n;
         double cell = raster.Cell, cellArea = cell * cell;
         var original = (double[])height.Clone();
@@ -628,13 +629,13 @@ public sealed class Hydrology
             double amplitude = lambda * ratio * DetMath.Clamp(.7 + 1.5 * Noise.Gradient(sk / (baseLambda * 4) + 4.1, 2.3, noiseSeed + 2), .2, 1.2)
                 * (.45 + .55 * flatness);
             double envelope = DetMath.Smooth(sk / (baseLambda * .75)) * DetMath.Smooth((reachLength - sk) / (baseLambda * .75));
-            double offset = amplitude * DetMath.Sin(phase) * envelope;
+            double offset = amplitude * _style.MeanderStrength * DetMath.Sin(phase) * envelope;
             // Calmer toward the downstream end, so channels meeting at a shallow angle do not cross before they join.
             double wanderEnvelope = DetMath.Smooth(sk / (wanderLength * .4)) * DetMath.Smooth((reachLength - sk) / (wanderLength * .7));
-            offset += Noise.Gradient(sk / wanderLength + 3.7, 11.1, noiseSeed + 3) * 2.5 * wander * wanderEnvelope;
+            offset += Noise.Gradient(sk / wanderLength + 3.7, 11.1, noiseSeed + 3) * 2.5 * wander * _style.WanderStrength * wanderEnvelope;
             // Valley bends between the two scales: irregular swings of a few hundred metres, also on steep ground.
             double bendLength = Math.Max(700, w[k] * 25), bendEnvelope = DetMath.Smooth(sk / (bendLength * .5)) * DetMath.Smooth((reachLength - sk) / bendLength);
-            offset += Noise.Fbm(sk, 23.9, bendLength, 2, 0, noiseSeed + 4, .45) * 2.5 * (65 + w[k] * 2.5) * (.6 + .4 * flatness) * bendEnvelope;
+            offset += Noise.Fbm(sk, 23.9, bendLength, 2, 0, noiseSeed + 4, .45) * 2.5 * (65 + w[k] * 2.5) * (.6 + .4 * flatness) * _style.WanderStrength * bendEnvelope;
             rx[k] = px[k] - tz / len * offset; rz[k] = pz[k] + tx / len * offset;
         }
 
@@ -646,7 +647,7 @@ public sealed class Hydrology
             double z1 = 2.5 * Noise.Fbm(sk, 17.3, Math.Max(400, w[k] * 30), 2, 0, noiseSeed + 7, .5);
             double z2 = 2.5 * Noise.Gradient(sk / Math.Max(150, w[k] * 8) + 5.1, 2.7, noiseSeed + 8);
             double pool = DetMath.Smooth((2.5 * Noise.Gradient(sk / Math.Max(900, w[k] * 45) + 9.3, 4.4, noiseSeed + 9) - .9) / .8);
-            double vary = DetMath.Clamp((1 + .3 * z1 + .12 * z2) * (1 + .9 * pool) * (.8 + .4 * flatness), .5, 2.6);
+            double vary = DetMath.Clamp(1 + ((1 + .3 * z1 + .12 * z2) * (1 + .9 * pool) * (.8 + .4 * flatness) - 1) * _style.WidthVariation, .4, 3.5);
             double funnel = DetMath.Smooth(1 - (reachLength - sk) / tail);
             // Never narrower than the style's minimum; narrows get shallower so their banks stay walkable.
             double baseWidth = Math.Max(w[k] * (1 + (vary - 1) * ends), Math.Min(w[k], _minWidth));

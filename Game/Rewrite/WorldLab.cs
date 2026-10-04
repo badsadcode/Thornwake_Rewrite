@@ -23,7 +23,8 @@ public partial class WorldLab : Node3D
     private Node3D _pivot = null!;
     private SpringArm3D _arm = null!;
     private Camera3D _camera = null!;
-    private DirectionalLight3D _sun = null!;
+    private Atmosphere _atmosphere = null!;
+    private readonly WorldGenOptions _gen = new();
     private Label _hud = null!, _overlay = null!, _help = null!;
     private PanelContainer _menu = null!;
     private OptionButton _profileList = null!;
@@ -54,30 +55,35 @@ public partial class WorldLab : Node3D
     {
         _profiles = WorldProfile.ParseCatalog(Godot.FileAccess.GetFileAsString("res://Content/world_profiles.json"));
         // The water shader reads the screen and depth textures; with MSAA those reads produce lines along the water
-        // mesh's triangle edges (Tom's playtest) and wrong refraction. This scene uses FXAA instead (the valley game
-        // keeps the project's MSAA setting).
-        GetViewport().Msaa3D = Viewport.Msaa.Disabled;
-        GetViewport().ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Fxaa;
-        BuildEnvironment();
+        // mesh's triangle edges (Tom's playtest) and wrong refraction. This scene uses FXAA or TAA instead (the valley
+        // game keeps the project's MSAA setting); Atmosphere applies the anti-aliasing setting.
+        GameSettings.Load();
+        _atmosphere = new Atmosphere { Name = "Atmosphere" };
+        AddChild(_atmosphere);
         _streamer = new WorldStreamer { Name = "Terrain" };
         AddChild(_streamer);
+        _atmosphere.SetWater(_streamer.WaterMaterial);
         BuildPlayer();
+        _atmosphere.AttachCamera(_camera);
         BuildUi();
+        GameSettings.Changed += OnSettingChanged;
         string preset = "mountainous"; int seed = 42;
         foreach (string arg in OS.GetCmdlineUserArgs())
         {
             if (arg.StartsWith("--preset=")) preset = arg[9..];
             if (arg.StartsWith("--seed=")) seed = int.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--world-smoke=")) _smokeDirectory = arg[14..];
-            // Single screenshot: --world-shot=<png> --at=x,z [--view=yaw,pitch,zoom] [--msaa=0|2|4] [--fly-height=m]
+            // Single screenshot: --world-shot=<png> --at=x,z [--view=yaw,pitch,zoom] [--msaa=0|2|4] [--fly-height=m] [--hour=h]
             if (arg.StartsWith("--world-shot=")) { _shotPath = arg[13..]; _smokeDirectory = Path.GetDirectoryName(_shotPath) ?? "."; }
             if (arg.StartsWith("--at=")) { var v = arg[5..].Split(','); _shotAt = (double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--view=")) { var v = arg[7..].Split(','); _shotView = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture), float.Parse(v[2], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--msaa=")) GetViewport().Msaa3D = arg[7..] switch { "0" => Viewport.Msaa.Disabled, "4" => Viewport.Msaa.Msaa4X, _ => Viewport.Msaa.Msaa2X };
             if (arg.StartsWith("--fly-height=")) _shotHeight = float.Parse(arg[13..], CultureInfo.InvariantCulture);
+            if (arg.StartsWith("--hour=")) _timeSlider.Value = double.Parse(arg[7..], CultureInfo.InvariantCulture);
         }
         int index = Math.Max(0, _profiles.ToList().FindIndex(p => p.Id == preset));
         _profileList.Select(index);
+        _gen.LoadPreset(_profiles[index]);
         _seedEdit.Text = seed.ToString(CultureInfo.InvariantCulture);
         if (_smokeDirectory == null) Input.MouseMode = Input.MouseModeEnum.Captured;
         Generate();
@@ -89,11 +95,15 @@ public partial class WorldLab : Node3D
     {
         if (_generation != null) return;
         if (!int.TryParse(_seedEdit.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seed)) { _status = "Seed must be a whole number."; return; }
-        var profile = _profiles[Math.Max(0, _profileList.Selected)];
-        _overlay.Text = $"Generating {profile.Name}, seed {seed}…\ncontinents → erosion → rivers and lakes";
+        var preset = _profiles[Math.Max(0, _profileList.Selected)];
+        WorldProfile profile; TerrainStyle style;
+        try { (profile, style) = _gen.Build(preset); }
+        catch (Exception error) { _status = "These world parameters are not valid: " + error.Message; return; }
+        _custom = !_gen.IsPreset;
+        _overlay.Text = $"Generating {profile.Name}{(_custom ? " (custom)" : "")}, seed {seed}…\ncontinents → erosion → rivers and lakes";
         _overlay.Visible = true;
         _generationStarted = Time.GetTicksMsec();
-        _generation = Task.Run(() => new TerrainSampler(new WorldPlan(WorldManifest.Create(seed, profile))));
+        _generation = Task.Run(() => new TerrainSampler(new WorldPlan(WorldManifest.Create(seed, profile), style: style)));
     }
 
     private void FinishGeneration()
@@ -110,7 +120,7 @@ public partial class WorldLab : Node3D
         _streamer.Configure(_sampler, _originX, _originZ);
         Teleport(start.X, start.Z);
         var plan = _sampler.Plan;
-        _status = $"{plan.Profile.Name}, seed {plan.Manifest.Seed}: generated in {(Time.GetTicksMsec() - _generationStarted) / 1000:0.0} s " +
+        _status = $"{plan.Profile.Name}{(_custom ? " (custom)" : "")}, seed {plan.Manifest.Seed}: generated in {(Time.GetTicksMsec() - _generationStarted) / 1000:0.0} s " +
             $"({plan.Hydrology.Reaches.Count} river reaches, {plan.Hydrology.Lakes.Count} lakes).";
         _overlay.Text = "Loading terrain…";
     }
@@ -136,6 +146,15 @@ public partial class WorldLab : Node3D
         _streamer.Rebase(ox, oz);
     }
 
+    private bool _custom;
+
+    private void OnSettingChanged(Setting s)
+    {
+        if (s.Rebuild) _streamer.Refresh();
+    }
+
+    public override void _ExitTree() => GameSettings.Changed -= OnSettingChanged;
+
     private double PlayerX => _originX + _player.Position.X;
     private double PlayerZ => _originZ + _player.Position.Z;
 
@@ -156,7 +175,8 @@ public partial class WorldLab : Node3D
         }
         if (_overlay.Visible && _generation == null && _streamer.Missing < 20) _overlay.Visible = false;
         UpdateCamera();
-        UpdateSun();
+        var cam = _camera.GlobalPosition;
+        _atmosphere.Update(delta, (float)_timeSlider.Value, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
         _hudTimer -= delta;
         if (_hudTimer <= 0) { _hudTimer = .2; UpdateHud(); }
         if (_smokeDirectory != null) Smoke(delta);
@@ -241,14 +261,6 @@ public partial class WorldLab : Node3D
         _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, _zoom, .2f);
     }
 
-    private void UpdateSun()
-    {
-        float hour = (float)_timeSlider.Value;
-        float elevation = Mathf.Sin((hour - 6) / 12 * Mathf.Pi) * 62;
-        _sun.RotationDegrees = new Vector3(-Mathf.Max(elevation, -5), -35 + (hour - 12) * 12, 0);
-        _sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f);
-    }
-
     private void UpdateHud()
     {
         if (_sampler == null) { _hud.Text = _status; return; }
@@ -320,29 +332,6 @@ public partial class WorldLab : Node3D
 
     // ------------------------------------------------------------------ scene setup
 
-    private void BuildEnvironment()
-    {
-        var sky = new ProceduralSkyMaterial
-        {
-            SkyTopColor = new Color("4e7599"), SkyHorizonColor = new Color("aebfc2"),
-            GroundBottomColor = new Color("39463e"), GroundHorizonColor = new Color("aebfc2"),
-        };
-        AddChild(new WorldEnvironment
-        {
-            Environment = new Godot.Environment
-            {
-                BackgroundMode = Godot.Environment.BGMode.Sky, Sky = new Sky { SkyMaterial = sky },
-                AmbientLightSource = Godot.Environment.AmbientSource.Sky, AmbientLightEnergy = .5f,
-                ReflectedLightSource = Godot.Environment.ReflectionSource.Sky,
-                TonemapMode = Godot.Environment.ToneMapper.Filmic, TonemapExposure = .95f,
-                FogEnabled = true, FogLightColor = new Color("aebfc2"), FogDensity = .00009f, FogAerialPerspective = .35f, FogSkyAffect = .25f,
-                SsaoEnabled = true, SsaoRadius = 1.5f, SsaoIntensity = 1.2f,
-            }
-        });
-        _sun = new DirectionalLight3D { LightEnergy = 1.05f, ShadowEnabled = true, DirectionalShadowMaxDistance = 180, LightColor = new Color("fff3df") };
-        AddChild(_sun);
-    }
-
     private void BuildPlayer()
     {
         _player = new CharacterBody3D { Name = "Player", CollisionLayer = 2, CollisionMask = 1, FloorSnapLength = .6f, FloorMaxAngle = Mathf.DegToRad(50) };
@@ -353,7 +342,7 @@ public partial class WorldLab : Node3D
         _pivot = new Node3D { Name = "CameraPivot" };
         _arm = new SpringArm3D { SpringLength = _zoom, CollisionMask = 1, Margin = .3f };
         _arm.AddExcludedObject(_player.GetRid());
-        _camera = new Camera3D { Current = true, Fov = 70, Near = .1f, Far = 60000 };
+        _camera = new Camera3D { Current = true, Fov = GameSettings.Fov.F, Near = .1f, Far = 90000 };
         _arm.AddChild(_camera);
         _pivot.AddChild(_arm);
         AddChild(_pivot);
@@ -385,13 +374,17 @@ public partial class WorldLab : Node3D
         layer.AddChild(_overlay);
 
         _menu = new PanelContainer { Visible = false, AnchorLeft = .5f, AnchorRight = .5f, AnchorTop = .5f, AnchorBottom = .5f,
-            OffsetLeft = -260, OffsetRight = 260, OffsetTop = -280, OffsetBottom = 280 };
+            OffsetLeft = -330, OffsetRight = 330, OffsetTop = -330, OffsetBottom = 330 };
         layer.AddChild(_menu);
-        var box = new VBoxContainer();
-        _menu.AddChild(box);
+        var tabs = new TabContainer();
+        _menu.AddChild(tabs);
+
+        // ---- World: teleport, movement, time of day, leave
+        var box = new VBoxContainer { Name = "World" };
+        tabs.AddChild(box);
         box.AddChild(new Label { Text = "Thornwake — rewrite world preview", HorizontalAlignment = HorizontalAlignment.Center });
         box.AddChild(new Label { Text = "Teleport" });
-        _landmarkList = new ItemList { CustomMinimumSize = new Vector2(0, 170) };
+        _landmarkList = new ItemList { CustomMinimumSize = new Vector2(0, 220) };
         _landmarkList.ItemActivated += i => { var l = _landmarks[(int)i]; Teleport(l.X, l.Z); ToggleMenu(false); };
         box.AddChild(_landmarkList);
         var go = new Button { Text = "Go to selected place" };
@@ -405,25 +398,41 @@ public partial class WorldLab : Node3D
         box.AddChild(new Label { Text = "Time of day" });
         _timeSlider = new HSlider { MinValue = 5, MaxValue = 20, Step = .1, Value = 10.5 };
         box.AddChild(_timeSlider);
-        box.AddChild(new Label { Text = "New world (preset and seed)" });
-        var row = new HBoxContainer();
-        _profileList = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        foreach (var p in _profiles) _profileList.AddItem(p.Name);
-        _seedEdit = new LineEdit { CustomMinimumSize = new Vector2(110, 0), PlaceholderText = "seed" };
-        row.AddChild(_profileList); row.AddChild(_seedEdit);
-        box.AddChild(row);
-        var generate = new Button { Text = "Generate this world" };
-        generate.Pressed += () => { ToggleMenu(false); Generate(); };
-        box.AddChild(generate);
-        var random = new Button { Text = "Random seed" };
-        random.Pressed += () => _seedEdit.Text = ((int)(GD.Randi() % 100000)).ToString(CultureInfo.InvariantCulture);
-        box.AddChild(random);
+        box.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill });
         var back = new Button { Text = "Back to launcher" };
         back.Pressed += () => { Input.MouseMode = Input.MouseModeEnum.Visible; GetTree().ChangeSceneToFile("res://Game/Launcher.tscn"); };
         box.AddChild(back);
         var quit = new Button { Text = "Quit" };
         quit.Pressed += () => GetTree().Quit();
         box.AddChild(quit);
+
+        // ---- New world: preset, seed, generation parameters
+        var gen = new VBoxContainer { Name = "New world" };
+        tabs.AddChild(gen);
+        var row = new HBoxContainer();
+        _profileList = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        foreach (var p in _profiles) _profileList.AddItem(p.Name);
+        _profileList.ItemSelected += i => _gen.LoadPreset(_profiles[(int)i]);
+        _seedEdit = new LineEdit { CustomMinimumSize = new Vector2(110, 0), PlaceholderText = "seed" };
+        var random = new Button { Text = "Random seed" };
+        random.Pressed += () => _seedEdit.Text = ((int)(GD.Randi() % 100000)).ToString(CultureInfo.InvariantCulture);
+        row.AddChild(_profileList); row.AddChild(_seedEdit); row.AddChild(random);
+        gen.AddChild(row);
+        gen.AddChild(new Label { Text = "Preset values; change any to make a custom world. Hover a name for details.", Modulate = new Color(1, 1, 1, .7f) });
+        gen.AddChild(SettingsUi.List(_gen.All, section => { foreach (var s in _gen.All) if (s.Section == section) s.Value = s.Default; }));
+        var generateRow = new HBoxContainer();
+        var generate = new Button { Text = "Generate this world", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        generate.Pressed += () => { ToggleMenu(false); Generate(); };
+        var reset = new Button { Text = "Reset all to preset" };
+        reset.Pressed += _gen.Reset;
+        generateRow.AddChild(generate); generateRow.AddChild(reset);
+        gen.AddChild(generateRow);
+
+        // ---- Settings: detail, view distance, effects, sky, camera and performance
+        var settings = new VBoxContainer { Name = "Settings" };
+        tabs.AddChild(settings);
+        settings.AddChild(new Label { Text = "Saved automatically. Detail and distance changes rebuild the terrain in the background.", Modulate = new Color(1, 1, 1, .7f) });
+        settings.AddChild(SettingsUi.List(GameSettings.All, GameSettings.ResetSection));
     }
 
     // ------------------------------------------------------------------ headless screenshot run

@@ -74,11 +74,12 @@ public static class GroundCover
     private static float Unit(ulong h, int shift) => (float)Hashing.Unit(Hashing.Mix(h + (ulong)shift));
 
     /// <summary>Grass tufts (level 0 only): dense in meadows, thin in forest, none on rock, sand or in water.</summary>
-    public static List<Transform3D> Grass(TileKey key, in Grid grid, double sea, ulong seed)
+    public static List<Transform3D> Grass(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1)
     {
         var result = new List<Transform3D>();
         var g = grid;
-        Cells(key, 1.25, seed ^ 0x6A55UL, (x, z, h) =>
+        // Default amount 1: ~1.3 tufts per m² in meadows (cell 0.88 m); the cell shrinks as the amount grows.
+        Cells(key, 1.25 / Math.Sqrt(2 * amount), seed ^ 0x6A55UL, (x, z, h) =>
         {
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet) return;
             if (up < .82f || height - sea < 1.6) return;
@@ -92,8 +93,9 @@ public static class GroundCover
     }
 
     /// <summary>Stones (level 0), rocks (levels 0–1), boulders and outcrop clusters (levels 0–2).</summary>
-    public static List<RockInstance> Rocks(TileKey key, in Grid grid, double sea, ulong seed)
+    public static List<RockInstance> Rocks(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1)
     {
+        float a = (float)amount;
         var result = new List<RockInstance>();
         var g = grid;
         void Place(int kind, double x, double z, ulong h, float baseSize, float sizeRange, float sink)
@@ -111,7 +113,7 @@ public static class GroundCover
             {
                 if (!g.At(x, z, out float height, out float up, out _, out _) || height - sea < .3) return;
                 float steep = 1 - up;
-                if (Unit(h, 1) > .1f + 1.2f * steep) return; // more stones on slopes and banks
+                if (Unit(h, 1) > (.1f + 1.2f * steep) * a) return; // more stones on slopes and banks
                 Place(Stone, x, z, h, .12f, .45f, .35f);
             });
         if (key.Level <= 1)
@@ -119,14 +121,14 @@ public static class GroundCover
             {
                 if (!g.At(x, z, out float height, out float up, out _, out _) || height - sea < .5) return;
                 float steep = 1 - up, mountain = g.Mountain(x, z);
-                if (Unit(h, 1) > .05f + 1.5f * steep + .3f * mountain) return;
+                if (Unit(h, 1) > (.05f + 1.5f * steep + .3f * mountain) * a) return;
                 Place(Rock, x, z, h, .5f, 1.2f, .3f);
             });
         Cells(key, 48, seed ^ 0xB0D1UL, (x, z, h) =>
         {
             if (!g.At(x, z, out float height, out float up, out _, out _) || height - sea < 1) return;
             float steep = 1 - up, mountain = g.Mountain(x, z);
-            float chance = .04f + 2.2f * Math.Max(0, steep - .1f) + .5f * mountain;
+            float chance = (.04f + 2.2f * Math.Max(0, steep - .1f) + .5f * mountain) * a;
             if (Unit(h, 1) > chance) return;
             // Steep or mountainous ground grows a small outcrop: one big boulder with smaller ones around it.
             int extra = steep > .3f || mountain > .3f ? 2 + (int)(Unit(h, 2) * 4) : 0;
@@ -145,8 +147,9 @@ public static class GroundCover
     /// Bushes along forest edges and in meadows, stumps and fallen logs inside forests (levels 0–1).
     /// Placeholders from the valley game's models until Tom's scatter assets arrive.
     /// </summary>
-    public static List<RockInstance> Props(TileKey key, in Grid grid, double sea, ulong seed)
+    public static List<RockInstance> Props(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1)
     {
+        float a = (float)amount;
         var result = new List<RockInstance>();
         var g = grid;
         Cells(key, 9, seed ^ 0xB054UL, (x, z, h) =>
@@ -154,7 +157,7 @@ public static class GroundCover
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .8f || height - sea < 2) return;
             // Most bushes at forest edges (cover around 0.3–0.7), a few out in the meadows.
             float edge = 1 - Math.Abs(forest - .5f) * 2;
-            if (Unit(h, 1) > .06f + .4f * Math.Max(0, edge)) return;
+            if (Unit(h, 1) > (.06f + .4f * Math.Max(0, edge)) * a) return;
             float scale = .7f + .7f * Unit(h, 2);
             int kind = Unit(h, 3) < .25f ? BerryBush : Bush;
             result.Add(new RockInstance(kind, new Transform3D(new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(Vector3.One * scale), new Vector3((float)x, height - .05f, (float)z))));
@@ -162,7 +165,7 @@ public static class GroundCover
         Cells(key, 24, seed ^ 0x1065UL, (x, z, h) =>
         {
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .85f || forest < .45f) return;
-            if (Unit(h, 1) > .45f * forest) return;
+            if (Unit(h, 1) > .45f * forest * a) return;
             int kind = Unit(h, 2) < .5f ? Stump : Log;
             float scale = .8f + .5f * Unit(h, 3);
             var basis = new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(Vector3.One * scale);
@@ -183,17 +186,19 @@ public static class GroundCover
     private static readonly bool[] ConiferSpecies = { true, true, true, true, true, false, false, false, false, false, false, false, false, false, true, false, false };
     private static readonly float[] HeightOf = { 16, 15, 17, 19, 18, 13, 14, 12, 14, 13, 15, 12, 18, 11, 9, 13, 13 };
 
-    /// <summary>Distant tree cards (levels 3–5): sparser but larger with distance; the terrain tint fills in beyond.</summary>
-    public static List<FarTree> FarTrees(TileKey key, in Grid grid, double sea, ulong seed)
+    /// <summary>Distant tree cards (beyond the full trees, levels 3–5 by default): sparser but larger with distance;
+    /// the terrain tint fills in beyond.</summary>
+    public static List<FarTree> FarTrees(TileKey key, in Grid grid, double sea, ulong seed, double density = 1)
     {
         var result = new List<FarTree>();
         var g = grid;
-        double cell = key.Level switch { 3 => 13, 4 => 22, _ => 36 };
-        float grow = key.Level switch { 3 => 1.1f, 4 => 1.35f, _ => 1.7f };
+        double cell = key.Level switch { <= 2 => 8, 3 => 10, 4 => 18, 5 => 30, _ => 50 };
+        float grow = key.Level switch { <= 2 => 1f, 3 => 1.1f, 4 => 1.45f, 5 => 1.9f, _ => 2.4f };
+        float keep = (float)Math.Min(1.15, density);
         Cells(key, cell, seed ^ 0xFA77EEUL, (x, z, h) =>
         {
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .65f) return;
-            if (Unit(h, 1) > forest * .85f) return;
+            if (Unit(h, 1) > forest * .85f * keep) return;
             double elevation = height - sea;
             int[] list = elevation < 550 ? new[] { 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 0, 1 } : elevation < 1250 ? new[] { 0, 1, 2, 3, 4, 8, 9, 5, 6, 15 } : new[] { 0, 1, 2, 3, 4, 3, 4, 14 };
             int species = list[(int)(Hashing.Mix(h + 99) % (ulong)list.Length)];

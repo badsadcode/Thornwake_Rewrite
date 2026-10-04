@@ -114,6 +114,13 @@ public sealed record TerrainStyle
     /// <summary>Rivers with at least this catchment (km²) form a delta on flat coasts.</summary>
     public double DeltaMinCatchmentKm2 { get; init; } = 1500;
 
+    /// <summary>Meander amplitude multiplier (0 = straight between bends).</summary>
+    public double MeanderStrength { get; init; } = 1;
+    /// <summary>Multiplier on the valley-scale bends and kilometre-scale wander of rivers.</summary>
+    public double WanderStrength { get; init; } = 1;
+    /// <summary>Multiplier on along-river width variation (pools, narrows, broad stretches).</summary>
+    public double WidthVariation { get; init; } = 1;
+
     public static TerrainStyle For(WorldProfile profile) => new()
     {
         LowlandDetail = 20 + profile.HillHeight * .05,

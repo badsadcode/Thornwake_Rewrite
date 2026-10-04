@@ -18,7 +18,9 @@ namespace Thornwake.Rewrite;
 /// </summary>
 public partial class WorldStreamer : Node3D
 {
-    public const int Levels = 8, TopRadius = 2;
+    public const int TopRadius = 2;
+    /// <summary>LOD levels (7 → ~10 km, 8 → ~20 km, 9 → ~40 km view distance); from the terrain distance setting.</summary>
+    public int Levels { get; private set; } = 8;
     public int Resident => _tiles.Count;
     public int Pending => _jobs.Count;
     public int Missing { get; private set; }
@@ -39,6 +41,8 @@ public partial class WorldStreamer : Node3D
     private double _originX, _originZ;
     private readonly Dictionary<TileKey, Node3D> _tiles = new();
     private readonly Dictionary<TileKey, long> _tileTriangles = new();
+    private readonly Dictionary<TileKey, long> _tileRevision = new();
+    private DetailConfig _config = DetailConfig.Current;
     private readonly HashSet<TileKey> _desired = new();
     private readonly Dictionary<TileKey, (Task<TileData> Task, long Revision)> _jobs = new();
     private readonly HashSet<TileKey> _failed = new();
@@ -71,14 +75,29 @@ public partial class WorldStreamer : Node3D
         _card = card;
     }
 
+    public ShaderMaterial WaterMaterial => _water;
+
     public void ShowGrid(bool show) => _terrain.SetShaderParameter("show_grid", show);
 
     public void Configure(TerrainSampler sampler, double originX, double originZ)
     {
         _revision++;
         foreach (var node in _tiles.Values) { RemoveChild(node); node.QueueFree(); }
-        _tiles.Clear(); _tileTriangles.Clear(); _failed.Clear(); _desired.Clear();
+        _tiles.Clear(); _tileTriangles.Clear(); _tileRevision.Clear(); _failed.Clear(); _desired.Clear();
+        _config = DetailConfig.Current; Levels = 7 + GameSettings.TerrainDistance.Index;
         _sampler = sampler; _originX = originX; _originZ = originZ; Triangles = 0; Built = 0; MaxCommitMs = 0;
+    }
+
+    /// <summary>
+    /// Detail or distance settings changed: rebuild every tile in the background. Old tiles stay on screen until
+    /// their replacements are committed, so there are no holes.
+    /// </summary>
+    public void Refresh()
+    {
+        _revision++;
+        _config = DetailConfig.Current;
+        Levels = 7 + GameSettings.TerrainDistance.Index;
+        _failed.Clear();
     }
 
     /// <summary>Move the float origin; every resident tile is repositioned (no rebuild).</summary>
@@ -111,21 +130,24 @@ public partial class WorldStreamer : Node3D
             LastBuildMs = task.Result.BuildMs;
             if (_tiles.Remove(key, out var old)) { RemoveChild(old); old.QueueFree(); Triangles -= _tileTriangles[key]; }
             AddChild(node);
-            _tiles[key] = node;
+            _tiles[key] = node; _tileRevision[key] = revision;
             long tris = task.Result.Indices.Length / 3;
             _tileTriangles[key] = tris; Triangles += tris; Built++;
             LastCommitMs = commit.Elapsed.TotalMilliseconds; MaxCommitMs = Math.Max(MaxCommitMs, LastCommitMs);
         }
 
         // Schedule missing tiles: finest level first, then nearest.
-        var missing = _desired.Where(k => !_tiles.ContainsKey(k) && !_failed.Contains(k)).ToList();
+        var missing = _desired.Where(k => (!_tiles.ContainsKey(k) || _tileRevision[k] != _revision) && !_failed.Contains(k)).ToList();
         Missing = missing.Count;
         if (_jobs.Count < _maxJobs)
         {
-            var sampler = _sampler; long revision = _revision;
-            foreach (var key in missing.Where(k => !_jobs.ContainsKey(k))
+            var sampler = _sampler; long revision = _revision; var config = _config;
+            foreach (var key in missing.Where(k => !_jobs.ContainsKey(k) || _jobs[k].Revision != _revision)
                          .OrderBy(k => k.Level).ThenBy(k => Distance(k, px, pz)).Take(_maxJobs - _jobs.Count))
-                _jobs[key] = (Task.Run(() => TileBuilder.Build(sampler, key)), revision);
+            {
+                if (_jobs.TryGetValue(key, out var stale)) { if (!stale.Task.IsCompleted) continue; _jobs.Remove(key); }
+                _jobs[key] = (Task.Run(() => TileBuilder.Build(sampler, key, config)), revision);
+            }
         }
 
         // Drop tiles that are no longer wanted once everything wanted is on screen (no holes while moving).
@@ -133,7 +155,7 @@ public partial class WorldStreamer : Node3D
             foreach (var key in _tiles.Keys.Where(k => !_desired.Contains(k)).ToList())
             {
                 var node = _tiles[key]; RemoveChild(node); node.QueueFree();
-                _tiles.Remove(key); Triangles -= _tileTriangles[key]; _tileTriangles.Remove(key);
+                _tiles.Remove(key); Triangles -= _tileTriangles[key]; _tileTriangles.Remove(key); _tileRevision.Remove(key);
             }
     }
 
@@ -208,20 +230,20 @@ public partial class WorldStreamer : Node3D
             body.AddChild(new CollisionShape3D { Shape = new ConcavePolygonShape3D { Data = data.CollisionFaces, BackfaceCollision = true } });
             root.AddChild(body);
         }
-        if (data.Trees.Count > 0) _trees.Instance(root, data.Trees, key.Level == 2 ? 2 : 1, key.Level == 0);
+        if (data.Trees.Count > 0) _trees.Instance(root, data.Trees, key.Level >= 2 ? 2 : 1, key.Level == 0 && GameSettings.Shadows.Index > 0);
         GrassCommitted += data.Grass.Count; RocksCommitted += data.Rocks.Count; PropsCommitted += data.Props.Count; FarTreesCommitted += data.FarTrees.Count;
         if (data.Grass.Count > 0)
-            root.AddChild(Multi(_grass, data.Grass.ToArray(), GeometryInstance3D.ShadowCastingSetting.Off, 120));
+            root.AddChild(Multi(_grass, data.Grass.ToArray(), GeometryInstance3D.ShadowCastingSetting.Off, GameSettings.GrassDistance.F));
         foreach (var kind in data.Rocks.GroupBy(r => r.Kind))
             root.AddChild(Multi(RockMeshes.Get(kind.Key), kind.Select(r => r.Transform).ToArray(),
                 kind.Key == GroundCover.Stone ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,
-                kind.Key == GroundCover.Stone ? 90 : 0));
+                kind.Key == GroundCover.Stone ? 90 * GameSettings.ScatterDistance.F : kind.Key == GroundCover.Rock ? 400 * GameSettings.ScatterDistance.F : 0));
         foreach (var kind in data.Props.GroupBy(p => p.Kind))
         {
             var transforms = kind.Select(p => p.Transform).ToArray();
             foreach (var (mesh, part) in _props.Parts(kind.Key))
                 root.AddChild(Multi(mesh, transforms.Select(t => t * part).ToArray(),
-                    key.Level == 0 ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off, 260));
+                    key.Level == 0 ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off, 260 * GameSettings.ScatterDistance.F));
         }
         if (data.FarTrees.Count > 0)
         {

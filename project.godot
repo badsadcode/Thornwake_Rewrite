@@ -27,3 +27,10 @@ environment/defaults/default_clear_color=Color(0.13,0.18,0.19,1)
 
 [environment]
 defaults/default_clear_color=Color(0.13,0.18,0.19,1)
+
+[shader_globals]
+
+cloud_state={
+"type": "vec4",
+"value": Vector4(0, 0, 0.45, 0)
+}

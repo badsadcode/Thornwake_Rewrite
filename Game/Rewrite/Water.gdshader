@@ -19,6 +19,7 @@ uniform vec3 foam_color : source_color = vec3(0.93, 0.95, 0.95);
 uniform float refraction : hint_range(0.0, 0.1) = 0.03;
 uniform float caustic_strength : hint_range(0.0, 2.0) = 0.8;
 uniform float reflection_strength : hint_range(0.0, 1.0) = 0.9;
+uniform int ssr_steps : hint_range(0, 64) = 32; // 0 = sky reflection only (settings: water reflections)
 uniform float swell_height = 0.35;
 uniform vec3 sky_horizon : source_color = vec3(0.70, 0.76, 0.78);
 uniform vec3 sky_zenith : source_color = vec3(0.32, 0.47, 0.62);
@@ -112,11 +113,12 @@ void fragment() {
 	// Screen-space reflection, sky as fallback.
 	vec3 ray = normalize(reflect(VERTEX, n_view));
 	vec4 hit = vec4(0.0);
-	float step_length = 0.25;
+	float step_length = ssr_steps <= 16 ? 0.4 : 0.25;
+	float growth = ssr_steps <= 16 ? 1.38 : 1.18; // fewer steps reach as far, more coarsely
 	vec3 march = VERTEX + ray * 0.1;
-	for (int i = 0; i < 32; i++) {
+	for (int i = 0; i < ssr_steps; i++) {
 		march += ray * step_length;
-		step_length *= 1.18;
+		step_length *= growth;
 		vec4 clip = PROJECTION_MATRIX * vec4(march, 1.0);
 		if (clip.w <= 0.0) break;
 		vec2 uv = clip.xy / clip.w * 0.5 + 0.5;
@@ -125,7 +127,7 @@ void fragment() {
 		float gap = scene_z - march.z;
 		if (gap > 0.0 && gap < step_length * 2.5 + 0.3) {
 			vec2 edge = smoothstep(vec2(0.0), vec2(0.08), uv) * smoothstep(vec2(0.0), vec2(0.08), 1.0 - uv);
-			hit = vec4(textureLod(screen_tex, uv, 0.0).rgb, edge.x * edge.y * (1.0 - float(i) / 32.0));
+			hit = vec4(textureLod(screen_tex, uv, 0.0).rgb, edge.x * edge.y * (1.0 - float(i) / float(ssr_steps)));
 			break;
 		}
 	}

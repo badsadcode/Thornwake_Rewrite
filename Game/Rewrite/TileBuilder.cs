@@ -16,6 +16,17 @@ public readonly record struct TileKey(int Level, long X, long Z)
 /// <summary>A tree to draw: species index into <see cref="TreeCatalog"/>, local transform.</summary>
 public readonly record struct TreeInstance(int Species, Transform3D Transform);
 
+/// <summary>
+/// Player detail settings captured when a tile build is scheduled (worker threads never read live settings, so a
+/// tile is built consistently even if a slider moves meanwhile).
+/// </summary>
+public readonly record struct DetailConfig(double Grass, double ForestCover, double ForestDensity, double Rocks, double Props,
+    int TreeLevels, int FarTreeLevels)
+{
+    public static DetailConfig Current => new(GameSettings.GrassDensity.Value, GameSettings.ForestCover.Value, GameSettings.ForestDensity.Value,
+        GameSettings.RockDensity.Value, GameSettings.PropDensity.Value, 2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index);
+}
+
 /// <summary>CPU-side tile data, built on a worker thread; engine resources are created on the main thread.</summary>
 public sealed class TileData
 {
@@ -48,10 +59,7 @@ public static class TileBuilder
 {
     public const double BaseTile = 64;
     public const int Cells = 32, Side = Cells + 1;
-    /// <summary>Levels at which trees are drawn (0 = nearest); beyond, the terrain shader paints forest colour.</summary>
-    public const int TreeLevels = 3;
-
-    public static TileData Build(TerrainSampler sampler, TileKey key)
+    public static TileData Build(TerrainSampler sampler, TileKey key, DetailConfig config)
     {
         var timer = System.Diagnostics.Stopwatch.StartNew();
         double size = key.Size, spacing = size / Cells, x0 = key.MinX, z0 = key.MinZ;
@@ -66,7 +74,7 @@ public static class TileBuilder
                 double x = x0 + (i - 1) * spacing, z = z0 + (j - 1) * spacing;
                 var t = sampler.Sample(x, z, minWavelength);
                 heights[j * s2 + i] = t.Height;
-                if (i >= 1 && j >= 1 && i <= Side && j <= Side) { samples[(j - 1) * Side + i - 1] = t; forest[(j - 1) * Side + i - 1] = Vegetation.ForestDensity(sampler, x, z, t); }
+                if (i >= 1 && j >= 1 && i <= Side && j <= Side) { samples[(j - 1) * Side + i - 1] = t; forest[(j - 1) * Side + i - 1] = Vegetation.ForestDensity(sampler, x, z, t, config.ForestCover); }
             }
 
         double sea = sampler.Plan.Profile.SeaLevel;
@@ -154,15 +162,17 @@ public static class TileBuilder
         {
             Key = key, Vertices = vertices, Normals = normals, Colors = colors, Uv = uv, Uv2 = uv2, Indices = indices.ToArray(),
             CollisionFaces = key.Level == 0 ? Faces(vertices) : null,
-            Trees = key.Level < TreeLevels ? Vegetation.Trees(sampler, key) : new List<TreeInstance>(),
+            // Full trees on the nearest levels; beyond, tree cards, then the terrain shader's forest tint.
+            Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };
         BuildWater(data, samples, heights, s2, spacing);
         var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0);
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
-        if (key.Level == 0) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed);
-        if (key.Level <= 2) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed);
-        if (key.Level <= 1) data.Props = GroundCover.Props(key, grid, sea, coverSeed);
-        if (key.Level is >= 3 and <= 5) data.FarTrees = GroundCover.FarTrees(key, grid, sea, coverSeed);
+        if (key.Level == 0 && config.Grass > 0) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);
+        if (key.Level <= 2 && config.Rocks > 0) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed, config.Rocks);
+        if (key.Level <= 1 && config.Props > 0) data.Props = GroundCover.Props(key, grid, sea, coverSeed, config.Props);
+        if (key.Level >= config.TreeLevels && key.Level <= config.FarTreeLevels)
+            data.FarTrees = GroundCover.FarTrees(key, grid, sea, coverSeed, config.ForestDensity);
         data.BuildMs = timer.Elapsed.TotalMilliseconds;
         return data;
 

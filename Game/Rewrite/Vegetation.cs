@@ -23,36 +23,38 @@ public static class Vegetation
     private static readonly int[] Conifer = { 0, 1, 2, 3, 4, 3, 4, 14 };
 
     /// <summary>0..1 forest cover: broad patches of woodland and meadow, thinning toward the tree line.</summary>
-    public static double ForestDensity(TerrainSampler sampler, double x, double z, in TerrainSample t)
+    public static double ForestDensity(TerrainSampler sampler, double x, double z, in TerrainSample t, double coverSetting = 1)
     {
-        if (t.Water != WaterKind.None) return 0;
+        if (t.Water != WaterKind.None || coverSetting <= 0) return 0;
         double elevation = t.Height - sampler.Plan.Profile.SeaLevel;
         if (elevation < 2.5) return 0;
         ulong seed = Hashing.Mix(unchecked((ulong)sampler.Plan.Manifest.Seed * 0x2545F4914F6CDD1DUL + 77));
-        double patches = Noise.Fbm(x, z, 2600, 4, 60, seed, .55) * 2.2 + .4;
+        double patches = Noise.Fbm(x, z, 2600, 4, 60, seed, .55) * 2.2 + .4 + (coverSetting - 1) * .9;
         double treeline = 1750 + 350 * Noise.Gradient(x / 9000, z / 9000, seed + 5);
         double cover = DetMath.Smooth(patches) * DetMath.Smooth((treeline - elevation) / 220) * DetMath.Smooth((elevation - 2.5) / 4);
         return cover * (1 - .7 * DetMath.Smooth((t.Mountain - .45) / .35));
     }
 
-    public static List<TreeInstance> Trees(TerrainSampler sampler, TileKey key)
+    public static List<TreeInstance> Trees(TerrainSampler sampler, TileKey key, in DetailConfig config)
     {
         var trees = new List<TreeInstance>();
+        // Denser than default: smaller world-aligned cells; sparser: fewer cells kept.
+        double cell = Cell / Math.Sqrt(Math.Max(1, config.ForestDensity)), keep = Math.Min(1, config.ForestDensity);
         double x0 = key.MinX, z0 = key.MinZ, size = key.Size, sea = sampler.Plan.Profile.SeaLevel;
-        long c0x = (long)Math.Floor(x0 / Cell), c0z = (long)Math.Floor(z0 / Cell);
-        long c1x = (long)Math.Floor((x0 + size) / Cell), c1z = (long)Math.Floor((z0 + size) / Cell);
+        long c0x = (long)Math.Floor(x0 / cell), c0z = (long)Math.Floor(z0 / cell);
+        long c1x = (long)Math.Floor((x0 + size) / cell), c1z = (long)Math.Floor((z0 + size) / cell);
         ulong seed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0x7EE5UL);
         for (long cz = c0z; cz < c1z; cz++)
             for (long cx = c0x; cx < c1x; cx++)
             {
                 ulong h = Hashing.Lattice(cx, cz, seed);
-                double x = (cx + .15 + .7 * Hashing.Unit(h)) * Cell, z = (cz + .15 + .7 * Hashing.Unit(Hashing.Mix(h))) * Cell;
+                double x = (cx + .15 + .7 * Hashing.Unit(h)) * cell, z = (cz + .15 + .7 * Hashing.Unit(Hashing.Mix(h))) * cell;
                 if (x < x0 || z < z0 || x >= x0 + size || z >= z0 + size) continue;
                 double chance = Hashing.Unit(Hashing.Mix(h ^ 0xABCDEFUL));
-                if (chance > .94) continue; // never a perfectly closed canopy
+                if (chance > .95) continue; // never a perfectly closed canopy
                 var t = sampler.Sample(x, z, 2);
-                double density = ForestDensity(sampler, x, z, t);
-                if (chance > density * .9) continue;
+                double density = ForestDensity(sampler, x, z, t, config.ForestCover);
+                if (chance > density * .92 * keep) continue;
                 // Avoid steep ground: compare with a neighbour sample.
                 double slope = Math.Abs(sampler.Height(x + 2, z, 4) - t.Height) / 2;
                 if (slope > .7) continue;
