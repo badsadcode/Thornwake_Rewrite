@@ -35,6 +35,21 @@ milestone M6), caves.
   edges, stumps and fallen logs in forests (placeholders until your assets arrive), finer close-up ground texture.
 * Beaches: a sand band along the sea instead of blotchy sand on low ground.
 
+## New in build 3 (after Tom's second playtest)
+* **Rivers**: smooth natural courses (no more grid kinks or straight runs), real meander loops, bends and wide
+  swings; pools, narrows and broad stretches; every river mouth now reaches the sea; curvy delta branches; smooth
+  river edges in the distance; water no longer vanishes when you look upstream.
+* **Flowing water**: ripples move downstream and streak along the current; fast water gets foam streaks.
+* **Esc → Settings**: grass and forest density, rocks, bushes; view distances (terrain, trees, tree cards, small
+  objects); shadows, ambient occlusion, bounce light, reflections, glow, sun shafts, volumetric fog, haze,
+  brightness, colour; clouds, cloud shadows, wind; field of view, anti-aliasing, render scale, V-Sync, FPS limit.
+  Saved automatically. Hover a setting's name for an explanation.
+* **Esc → New world**: preset and seed plus world shape (size, continents, islands, coast, mountain ranges and
+  heights), terrain (rolling ground, plains, crags, erosion) and rivers and lakes (number, width, meanders,
+  wandering, width variety, lakes, deltas).
+* **Sky**: drifting clouds with matching cloud shadows on the land; sun shafts through trees and gaps in clouds.
+* Denser grass (2×) and forests by default; distant tree cards look like crowns when seen from above.
+
 ## Controls
 | Key | Action |
 |---|---|
@@ -51,14 +66,11 @@ milestone M6), caves.
 | F12 | Screenshot (saved to `%APPDATA%\Thornwake\`) |
 
 ## Please check (and tell me what you think)
-1. **Frame rate and hitches** on your PC, walking and flying fast (F, then Shift/Ctrl). The FPS is on the HUD.
-2. **Terrain feel**: too flat, too rough, too many or too few hills? How do plains and mountains look?
-3. **Rivers and lakes**: do they look natural? Too many rivers, too few, too wide, too narrow?
-4. **Water look**: colour and clarity of sea, lakes and rivers; foam amount; should it look more stylised
-   to match the low-poly trees and buildings?
-5. **Forests**: density, species mix, how far away trees disappear (they turn into darker green ground
-   beyond about 1 km).
-6. Use **Esc → Teleport** to visit the largest lake, the greatest river mouth, the foothills and the summit.
-   Try another preset/seed from the same menu.
-7. Anything broken: holes in the ground, falling through, water in the wrong place, odd seams. F12 saves a
-   screenshot; the HUD position line lets me find the exact spot.
+1. **Frame rate** with the new defaults (more grass, clouds, sun shafts). If it drops, try Esc → Settings:
+   grass density, shadows, render scale. Tell me which setting made the biggest difference.
+2. **Rivers** from above and up close: curves, widths, mouths and deltas. Use **New world → Rivers and lakes**
+   to try more or fewer meanders or rivers, and tell me the values you like (they can become the defaults).
+3. **Flowing water**: is the direction readable? Too strong or too weak?
+4. **Sky**: cloud amount, cloud shadow darkness, sun shafts (try an evening sun: Esc → World → time of day ~17).
+5. **Forests**: density and the change from 3D trees to distant cards.
+6. Anything broken: F12 saves a screenshot; the HUD position line lets me find the exact spot.

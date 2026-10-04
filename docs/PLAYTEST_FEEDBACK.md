@@ -62,3 +62,32 @@ Then a new Windows build.
 | 9 | River in a trench | River surface from detailed terrain + slope-limited valley sides; verified at Tom's location |
 | 10 | More tree/bush variety, giant trees | Waiting for Tom's assets; spec in `docs/ASSET_SPEC.md` |
 | 12 | Blotchy sand at the coast | Beach is now a band along the sea, softer edge |
+
+## Round 2 (build 2, 2026-10-04)
+Tom's notes (one screenshot at Mountain kingdoms 42, -59499 / 115353, and one at Vast world 52913, -603613 / 507460):
+* Grass should be denser.
+* Deltas and river ends: rivers stop short of the sea; delta branches are straight lines.
+* River courses still too straight; widths still look the same; edges look jagged from a distance.
+* Frame rate still good; tree cards better.
+* Forests a little sparse; forest density should be a player setting. The world generation and the game will be
+  highly customisable: many parameters for players.
+* Generation time does not matter much (one-off at world creation).
+* Post-processing wishes: sun shafts, clouds, cloud shadows, nice effects, screen-space effects, reflections, all
+  tweakable, with view distances per object type.
+* Looking upstream, river water disappears a little further away and appears when closer; downstream fine.
+* Water on slopes could show the direction it flows.
+
+### Round 2 — status
+| Item | Status |
+|---|---|
+| Straight rivers | Root causes: the D8 grid path was only lightly smoothed (kinks every cell) and meander wavelengths could collapse (zigzags). Now: grid path resampled and Gaussian-smoothed; sine meanders with natural bend radii; valley bends (few hundred m) and km-scale wander |
+| Same widths | Pools, narrows and occasional broad stretches (0.4–3.5×), wider on flat ground; never below the minimum width |
+| Rivers stop before the sea | Sea mouths now continue ~900 m straight out past the detailed coastline; lake outlets start inside the lake |
+| Straight delta branches | Delta branches are meandered like rivers |
+| Jagged edges at distance | Coarse tiles use a channel edge that is linear in distance, so the interpolated waterline is smooth; narrow channels stay at least one vertex spacing wide far away; the bed tint follows the real waterline |
+| Denser grass | 2× by default; slider 0–3× and distance setting |
+| Sparse forests | Forest cover 1.15× and density 1.2× by default; both sliders; tree cards seen from above become crowns (no thin lines) |
+| Customisation | Settings tab (detail, view distances, effects, sky, camera/performance) and New world tab (world shape, terrain, rivers and lakes) |
+| Post-processing | Clouds, cloud shadows matching the clouds, sun shafts, glow, SSAO, SSIL, SSR, volumetric fog, haze, exposure, saturation, water reflection quality, AA mode, render scale (FSR), FOV, V-Sync, FPS limit |
+| Upstream water vanishing | The water faded where the bed behind it (seen up a rising river) was higher than the surface point: depth now never below the sight line's drop through the water |
+| Flow direction | Ripples move downstream and streak along the current; foam streaks on fast water |

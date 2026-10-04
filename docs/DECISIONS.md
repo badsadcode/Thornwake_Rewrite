@@ -98,3 +98,38 @@ The original valley game keeps the project's MSAA setting.
 The woodland pack's lowest LOD is still 200–700 triangles. Beyond ~400 m trees are camera-facing quads with a
 pixel-stepped silhouette in the species' crown colour (FarTree.gdshader), placed by the same forest rules with
 coarser cells at greater distance; beyond ~6 km the terrain's forest tint carries the look.
+
+## D17 — River courses: smoothed grid path + sine meanders (2026-10-04)
+The D8 cell path (750–1000 m cells) is resampled every quarter cell and Gaussian smoothed (σ ≈ 0.8 cell, ends
+fixed), then displaced perpendicular to it by three scales: a sine meander whose wavelength drifts ±40 % around
+12 widths with amplitude ≤ 0.16 wavelengths (bend radius ≥ ~2 widths, as in real rivers); valley bends (2-octave
+noise, ~700 m); km-scale wander. Points every ~0.9 widths (12–110 m). Delta branches use the same shaping.
+Sea mouths continue 900 m straight out so they always meet the detailed coastline. All three scales and the width
+variation are `TerrainStyle` parameters (New world tab).
+
+## D18 — LOD-aware channel edge (2026-10-04)
+On tiles coarser than level 0 the sampler replaces the channel's cross-section within ±1.5 vertex spacings of
+the waterline by a straight ramp in distance (same slope inside and out). Linear interpolation of such a function
+reproduces the waterline exactly, so distant river edges are smooth instead of saw-toothed. Channels narrower than
+one spacing are drawn one spacing wide (continuous rather than dotted far away). Level 0 (collision) is unchanged.
+
+## D19 — Settings as data (2026-10-04)
+`GameSettings` holds every player setting as a `Setting` (key, section, range/options, default, tooltip,
+"rebuild tiles" flag); the menu is generated from the list and values persist in `user://rewrite_settings.cfg`.
+Tile builds capture a `DetailConfig` snapshot when scheduled (worker threads never read live settings); a detail or
+distance change rebuilds tiles in place (old tiles stay until replaced). World-generation parameters are a separate
+list (`WorldGenOptions`) applied to the preset profile and `TerrainStyle` at generation; the same preset, seed and
+parameters always give the same world.
+
+## D20 — Clouds via a global shader uniform; shadows via a decal (2026-10-04)
+Sky clouds sample a tileable noise texture on a plane 1.6 km up. Cloud position and coverage are a *global* shader
+uniform, so per-frame updates do not dirty the sky material (which would re-bake the radiance map every frame).
+Cloud shadows: one large decal (3×3 copies of the same tile, so it can jump by a tile invisibly) offset along the sun
+direction, which darkens everything opaque (terrain, trees, rocks, the player) under its cloud. Sun shafts: a
+screen-space radial pass over unoccluded sky pixels (cheap; works with clouds, ridges and canopies).
+
+## D21 — River current from the water surface gradient (2026-10-04)
+Each water vertex gets a current vector: downhill along the water level's gradient on the tile grid, speed
+√slope × 6 m/s (0.3–3.5), smoothed and extended to bank vertices. The shader advects ripples in two cross-faded
+phases (a standard flow map) and smears them along the flow with a second tap; no rotated coordinates, because at
+world positions of hundreds of km rotating them scrambles the pattern.
