@@ -39,11 +39,11 @@ void fragment() {
 	float snow = smoothstep(snow_line - 250.0 + (n1 - 0.5) * 600.0, snow_line + 150.0, h) * (1.0 - smoothstep(0.55, 0.8, slope));
 	c = mix(c, vec3(0.93, 0.94, 0.96), snow);
 	c *= 0.92 + 0.16 * n3;
-	// Close-up detail (fades out by ~70 m): pixel-stepped speckle and small clumps at 12.5 cm texels, in the spirit
+	// Close-up detail (fades out by ~45 m): pixel-stepped speckle and small clumps at 6 cm texels, in the spirit
 	// of the valley game's nearest-filtered pixel textures. Stronger on grass, finer and greyer on rock.
-	float near = 1.0 - smoothstep(25.0, 70.0, length(VERTEX));
+	float near = 1.0 - smoothstep(15.0, 45.0, length(VERTEX));
 	if (near > 0.0) {
-		vec2 texel = floor(p * 8.0);
+		vec2 texel = floor(p * 16.0);
 		float speck = hash(texel);
 		float clump = vnoise(p * 1.6) * 0.6 + vnoise(p * 4.3) * 0.4;
 		float rockiness = smoothstep(0.30, 0.52, slope);

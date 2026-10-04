@@ -445,7 +445,11 @@ public partial class WorldLab : Node3D
                 if (_shotHeight > 0) { SetFly(true); _player.Position += Vector3.Up * _shotHeight; }
                 _smokeStage = 2; _smokeTimer = 0;
             }
-            else if (_smokeStage == 2 && settled && _smokeTimer > 1.5) { Screenshot(_shotPath); GetTree().Quit(0); }
+            else if (_smokeStage == 2 && settled && _smokeTimer > 1.5)
+            {
+                GD.Print($"SCATTER grass={_streamer.GrassCommitted} rocks={_streamer.RocksCommitted} props={_streamer.PropsCommitted} farTrees={_streamer.FarTreesCommitted}");
+                Screenshot(_shotPath); GetTree().Quit(0);
+            }
             return;
         }
         void Shot(string name) => Screenshot(Path.Combine(_smokeDirectory!, name));

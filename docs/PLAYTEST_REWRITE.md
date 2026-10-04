@@ -26,6 +26,15 @@ Not in this build yet: harvesting, building, crafting and saving in the new worl
 original valley game until milestone M9), the shallow-water simulation (water you can disturb or flood with:
 milestone M6), caves.
 
+## New in build 2 (after Tom's first playtest)
+* Rivers: natural curves and meanders, varying width, wider estuary mouths, small deltas on big rivers, smooth
+  junctions; no more trenches (river levels follow the actual valley floor).
+* Water: the straight lines are gone (caused by MSAA; this world now uses FXAA anti-aliasing).
+* Distant forests stay visible out to ~6 km (simple tree cards far away).
+* Ground detail: grass tufts, stones, rocks, boulders and small rock outcrops on steep ground, bushes at forest
+  edges, stumps and fallen logs in forests (placeholders until your assets arrive), finer close-up ground texture.
+* Beaches: a sand band along the sea instead of blotchy sand on low ground.
+
 ## Controls
 | Key | Action |
 |---|---|

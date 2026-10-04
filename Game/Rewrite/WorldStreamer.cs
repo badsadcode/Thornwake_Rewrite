@@ -27,6 +27,11 @@ public partial class WorldStreamer : Node3D
     public double LastCommitMs { get; private set; }
     public double MaxCommitMs { get; private set; }
     public long Triangles { get; private set; }
+    /// <summary>Instances committed so far (diagnostics): grass tufts, rocks, props, far tree cards.</summary>
+    public long GrassCommitted { get; private set; }
+    public long RocksCommitted { get; private set; }
+    public long PropsCommitted { get; private set; }
+    public long FarTreesCommitted { get; private set; }
     public bool Settled => _sampler != null && Missing == 0 && _jobs.Count == 0;
 
     private TerrainSampler? _sampler;
@@ -204,6 +209,7 @@ public partial class WorldStreamer : Node3D
             root.AddChild(body);
         }
         if (data.Trees.Count > 0) _trees.Instance(root, data.Trees, key.Level == 2 ? 2 : 1, key.Level == 0);
+        GrassCommitted += data.Grass.Count; RocksCommitted += data.Rocks.Count; PropsCommitted += data.Props.Count; FarTreesCommitted += data.FarTrees.Count;
         if (data.Grass.Count > 0)
             root.AddChild(Multi(_grass, data.Grass.ToArray(), GeometryInstance3D.ShadowCastingSetting.Off, 120));
         foreach (var kind in data.Rocks.GroupBy(r => r.Kind))
@@ -233,9 +239,14 @@ public partial class WorldStreamer : Node3D
 
     private static MultiMeshInstance3D Multi(Mesh mesh, Transform3D[] transforms, GeometryInstance3D.ShadowCastingSetting shadows, float visibleTo)
     {
+        // Visibility ranges are measured from the node's origin, and tile roots sit at sea level (possibly hundreds of
+        // metres below the ground): place the node at the centre of its instances instead.
+        var centre = Vector3.Zero;
+        foreach (var t in transforms) centre += t.Origin;
+        if (transforms.Length > 0) centre /= transforms.Length;
         var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = mesh, InstanceCount = transforms.Length };
-        for (int i = 0; i < transforms.Length; i++) multi.SetInstanceTransform(i, transforms[i]);
-        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows };
+        for (int i = 0; i < transforms.Length; i++) multi.SetInstanceTransform(i, transforms[i].Translated(-centre));
+        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows, Position = centre };
         if (visibleTo > 0) { node.VisibilityRangeEnd = visibleTo; node.VisibilityRangeEndMargin = 15; node.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self; }
         return node;
     }
