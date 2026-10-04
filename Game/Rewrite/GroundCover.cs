@@ -192,13 +192,15 @@ public static class GroundCover
     {
         var result = new List<FarTree>();
         var g = grid;
-        double cell = key.Level switch { <= 2 => 8, 3 => 10, 4 => 18, 5 => 30, _ => 50 };
-        float grow = key.Level switch { <= 2 => 1f, 3 => 1.1f, 4 => 1.45f, 5 => 1.9f, _ => 2.4f };
+        // Cell and size per level so cards cover the ground about as much as the full trees they replace
+        // (trees: one per ~6.4 m cell).
+        double cell = key.Level switch { <= 2 => 7, 3 => 8, 4 => 13, 5 => 21, _ => 34 };
+        float grow = key.Level switch { <= 2 => 1.05f, 3 => 1.2f, 4 => 1.6f, 5 => 2.2f, _ => 3f };
         float keep = (float)Math.Min(1.15, density);
         Cells(key, cell, seed ^ 0xFA77EEUL, (x, z, h) =>
         {
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .65f) return;
-            if (Unit(h, 1) > forest * .85f * keep) return;
+            if (Unit(h, 1) > forest * .92f * keep) return;
             double elevation = height - sea;
             int[] list = elevation < 550 ? new[] { 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 0, 1 } : elevation < 1250 ? new[] { 0, 1, 2, 3, 4, 8, 9, 5, 6, 15 } : new[] { 0, 1, 2, 3, 4, 3, 4, 14 };
             int species = list[(int)(Hashing.Mix(h + 99) % (ulong)list.Length)];

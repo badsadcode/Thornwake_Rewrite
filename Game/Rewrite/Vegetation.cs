@@ -29,7 +29,9 @@ public static class Vegetation
         double elevation = t.Height - sampler.Plan.Profile.SeaLevel;
         if (elevation < 2.5) return 0;
         ulong seed = Hashing.Mix(unchecked((ulong)sampler.Plan.Manifest.Seed * 0x2545F4914F6CDD1DUL + 77));
-        double patches = Noise.Fbm(x, z, 2600, 4, 60, seed, .55) * 2.2 + .4 + (coverSetting - 1) * .9;
+        // Steep enough that land is mostly either forest or meadow, with short edges (a wide band of half-wooded land
+        // looked like scattered trees everywhere near the player).
+        double patches = Noise.Fbm(x, z, 2600, 4, 60, seed, .55) * 3.4 + .45 + (coverSetting - 1) * 1.1;
         double treeline = 1750 + 350 * Noise.Gradient(x / 9000, z / 9000, seed + 5);
         double cover = DetMath.Smooth(patches) * DetMath.Smooth((treeline - elevation) / 220) * DetMath.Smooth((elevation - 2.5) / 4);
         return cover * (1 - .7 * DetMath.Smooth((t.Mountain - .45) / .35));
