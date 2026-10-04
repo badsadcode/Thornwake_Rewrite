@@ -270,3 +270,23 @@ yet, rivers narrower than ~4 m are not represented, filled basins make some very
 
 **Next (unless Tom's feedback says otherwise):** finish M2 tuning from feedback; M3 slope-aligned gully detail
 and materials; M6 local shallow-water simulation (GangTheGAME WaterField port) in active chunks near the player.
+
+**2026-10-04, stretch 2: playtest round 1 fixes → build 2 sent to Tom.** Details and status per item:
+`docs/PLAYTEST_FEEDBACK.md`; decisions D14–D16. Summary:
+* Rivers: surfaces from detailed terrain, slope-limited valleys, natural meanders + wander, width variation,
+  estuaries, deltas, funnel junctions, continuous all-segment blending (`Hydrology.RefineSurfaces`,
+  `Hydrology.AddDeltas`, `TerrainSampler.Profile`). Tests: 19, ~2.8 M checks.
+* Water lines: MSAA → FXAA in the new world.
+* Visuals: far tree cards (`FarTree.gdshader`), ground cover (`GroundCover`: grass, stones, rocks, boulders,
+  outcrops, bushes, stumps, logs), `RockMeshes`, `PropCatalog` placeholders, close-up terrain detail, beach band.
+* Tooling: `WorldLab -- --world-shot=<png> --at=x,z [--view=yaw,pitch,zoom] [--fly-height=m] [--msaa=0|2|4]`
+  renders one screenshot (prints `SCATTER` instance counts).
+* Asset pipeline for Tom's upcoming batches: `docs/ASSET_SPEC.md`.
+
+Costs after stretch 2 (cloud, 4 cores): plan build mountainous ~1.7 s, vast ~6 s; retained memory mountainous
+~36 MB, vast ~205 MB (mostly river polylines + index: optimise with float attributes and world-scaled buckets);
+point sample ~0.6 µs macro / ~1.5 µs full detail; 64 m tile at 1 m ~1 µs/vertex.
+
+**Next:** wait for Tom's build-2 feedback and asset batches. Otherwise continue with: M6 local shallow-water
+simulation near the player (GangTheGAME WaterField port), river data memory optimisation, slope-aligned gully
+detail (M3), and level-0 terrain at 1 m spacing near the player (shoreline steps).
