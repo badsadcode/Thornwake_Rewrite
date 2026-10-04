@@ -1,5 +1,7 @@
 # Master world architecture decision record
 
+> **2026-10-04 playable follow-up:** the [A4 visual-validation lab](PLAYABLE_A4_WORLD_VALIDATION.md) is implemented. Use `TEST_PLAYABLE_WORLD.cmd` and the [playable guide](PLAYABLE_WORLD_TEST_GUIDE.md). Desktop now uses Forward+. Historical findings below remain unchanged; [current status](CURRENT_WORLD_GENERATION_STATUS.md) owns continuation. Next: Tom walks/flies through both validation worlds and reports locations.
+
 > **Current implementation and continuation:** [CURRENT_WORLD_GENERATION_STATUS.md](CURRENT_WORLD_GENERATION_STATUS.md) records accepted terrain A4, retained topology 3, rejected topology 4 and experimental topology 5. The dated architecture/spike evidence below is preserved; follow the active index for the next milestone.
 
 > 2026-09-29: `THORNWAKE_MASTER_REWORK_SUPPLEMENT_v1.md` supersedes conflicting policy below. In particular, ordinary lakes/ponds use finite storage, rivers/springs provide rate-limited inflow, and valid abstract downstream exports are distinct from arbitrary chunk-edge drains. See [the historical drainage checkpoint](MASTER_DRAINAGE_CHECKPOINT.md) for its inspected source state and validation; use the active index above for continuation. The older investigation/results below remain historical.

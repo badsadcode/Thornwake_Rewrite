@@ -1,5 +1,9 @@
 # Technical architecture — prototype 0.6.2
 
+## Desktop rendering (2026-10-04)
+
+Godot 4.5.1 .NET **Forward+** is the intended desktop renderer. The earlier GL Compatibility settings were inherited from the legacy prototype and are superseded. The separate mobile override is `mobile`; mobile builds are not a validation target and do not determine desktop architecture. Do not silently revert desktop rendering to Compatibility. The playable A4 lab checks the active rendering method/driver at runtime; its checkpoint records rendered compatibility checks for the preserved scenes.
+
 ## Ecology and world sandbox
 
 `Core/Vegetation` stores planted trees, bushes, fruit state and cleared natural stumps. Growth and fruit progress use double precision and advance through active simulation time; menus, offline time and calendar speed do not advance them. Defaults are eight active hours for a tree, two for a bush and one for fruit regrowth. World settings permit growth durations up to 720 hours. Harvested natural bushes transition into persistent vegetation and retain their location. Felled trees become stumps without automatic tree respawn.

@@ -1,5 +1,7 @@
 # Master Rework B1: streaming foundation
 
+> **2026-10-04 playable follow-up:** the [A4 visual-validation lab](PLAYABLE_A4_WORLD_VALIDATION.md) is implemented. Use `TEST_PLAYABLE_WORLD.cmd` and the [playable guide](PLAYABLE_WORLD_TEST_GUIDE.md). Desktop now uses Forward+. Historical findings below remain unchanged; [current status](CURRENT_WORLD_GENERATION_STATUS.md) owns continuation. Next: Tom walks/flies through both validation worlds and reports locations.
+
 2026-09-28. Status: baseline/audit complete; first streaming foundation implemented. Final terrain backend decision and large-world gameplay integration remain pending.
 
 ## Delivered

@@ -1,5 +1,7 @@
 # Milestones
 
+> **2026-10-04 playable follow-up:** the [A4 visual-validation lab](PLAYABLE_A4_WORLD_VALIDATION.md) is implemented. Use `TEST_PLAYABLE_WORLD.cmd` and the [playable guide](PLAYABLE_WORLD_TEST_GUIDE.md). Desktop now uses Forward+. Historical findings below remain unchanged; [current status](CURRENT_WORLD_GENERATION_STATUS.md) owns continuation. Next: Tom walks/flies through both validation worlds and reports locations.
+
 > **Current Master Rework priority (2026-10-04):** see [the active status/continuation index](CURRENT_WORLD_GENERATION_STATUS.md). The release milestones and their Next/Then sections below are historical valley-roadmap context, not authorization to begin construction, settlements or later gameplay now.
 
 ## Delivered: 0.8.0 — seeded landscapes and new-world setup

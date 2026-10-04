@@ -1,0 +1,671 @@
+{
+  "Date": "2026-10-04",
+  "BaseCommit": "c49ffb43cd99c567c6e0ec080181d8aeec3fab95",
+  "CoreAssertions": 4851436,
+  "PlayableCoreChecks": 37688,
+  "HistoricalFixturesUnchanged": 11,
+  "Reports": [
+    {
+      "Renderer": "forward_plus / vulkan",
+      "Manifest": {
+        "Format": 1,
+        "Algorithm": 4,
+        "WorldId": "114fc132be8b4869a9aa32375231f5cf",
+        "Seed": 42,
+        "OriginX": 0,
+        "OriginZ": 0,
+        "ContentRevision": "macro-content-v1",
+        "Profile": {
+          "Id": "mountainous",
+          "Name": "Mountain kingdoms",
+          "WorldSize": 768000,
+          "Continents": 4,
+          "Islands": 40,
+          "ContinentRadius": 105000,
+          "IslandRadius": 8500,
+          "CoastRoughness": 0.23,
+          "SeaLevel": 0,
+          "OceanDepth": 3000,
+          "LowlandHeight": 360,
+          "HillHeight": 300,
+          "HillScale": 11000,
+          "RangesPerContinent": 4,
+          "MountainHeight": 3800,
+          "MountainWidth": 12000
+        },
+        "ProfileDigest": "5c42b679c95ad262289147ef8051e6970fee226b2e5f47c7b4762d2f997ccb55"
+      },
+      "Checks": 14808,
+      "Seconds": 123.97456999999675,
+      "Captures": [
+        {
+          "Name": "01-spawn",
+          "Global": {
+            "X": -220403.30003586118,
+            "Y": 1195.8095586231564,
+            "Z": 88842.45244827365
+          },
+          "Origin": {
+            "X": -220416,
+            "Y": 1024,
+            "Z": 88832
+          },
+          "Local": [
+            12.699965,
+            171.80956,
+            10.452448
+          ],
+          "Resident": 625,
+          "Detailed": 49,
+          "Region": {
+            "X": -13776,
+            "Z": 5552
+          },
+          "Camera": [
+            10.373154,
+            173.55357,
+            16.826775
+          ],
+          "WorkerMs": 6.1585,
+          "ColliderMs": 0,
+          "CommitMs": 0.25,
+          "MaxCommitMs": 53.786,
+          "Triangles": 174080,
+          "_rebases": 1,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "02-ground",
+          "Global": {
+            "X": -220390.0833572418,
+            "Y": 1196.3171117237423,
+            "Z": 88836.33145179843
+          },
+          "Origin": {
+            "X": -220416,
+            "Y": 1024,
+            "Z": 88832
+          },
+          "Local": [
+            25.916643,
+            172.31711,
+            4.3314514
+          ],
+          "Resident": 772,
+          "Detailed": 49,
+          "Region": {
+            "X": -13775,
+            "Z": 5552
+          },
+          "Camera": [
+            23.589832,
+            174.06113,
+            10.705779
+          ],
+          "WorkerMs": 6.2308,
+          "ColliderMs": 0,
+          "CommitMs": 0.2571,
+          "MaxCommitMs": 53.786,
+          "Triangles": 192896,
+          "_rebases": 1,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "03-flight",
+          "Global": {
+            "X": -219647.13787880246,
+            "Y": 1629.6505124500607,
+            "Z": 86801.02322425936
+          },
+          "Origin": {
+            "X": -219648,
+            "Y": 1536,
+            "Z": 86784
+          },
+          "Local": [
+            0.8621212,
+            93.65051,
+            17.023224
+          ],
+          "Resident": 765,
+          "Detailed": 64,
+          "Region": {
+            "X": -13728,
+            "Z": 5425
+          },
+          "Camera": [
+            -1.4646901,
+            95.39453,
+            23.397552
+          ],
+          "WorkerMs": 110.4304,
+          "ColliderMs": 35.6214,
+          "CommitMs": 36.1504,
+          "MaxCommitMs": 53.786,
+          "Triangles": 220800,
+          "_rebases": 4,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "04-mountain-approach",
+          "Global": {
+            "X": -162666.41991997682,
+            "Y": 2650.9548211762044,
+            "Z": -174046.7013433374
+          },
+          "Origin": {
+            "X": -162816,
+            "Y": 2560,
+            "Z": -174080
+          },
+          "Local": [
+            149.58008,
+            90.95482,
+            33.298656
+          ],
+          "Resident": 1250,
+          "Detailed": 49,
+          "Region": {
+            "X": -10167,
+            "Z": -10878
+          },
+          "Camera": [
+            154.38986,
+            92.42704,
+            38.108437
+          ],
+          "WorkerMs": 4.7551,
+          "ColliderMs": 0,
+          "CommitMs": 0.2289,
+          "MaxCommitMs": 53.786,
+          "Triangles": 254080,
+          "_rebases": 5,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "05-ridge-slope",
+          "Global": {
+            "X": -165160.797437677,
+            "Y": 3835.712609365318,
+            "Z": -176552.3037221826
+          },
+          "Origin": {
+            "X": -165376,
+            "Y": 3584,
+            "Z": -176640
+          },
+          "Local": [
+            215.20256,
+            251.71262,
+            87.69628
+          ],
+          "Resident": 866,
+          "Detailed": 65,
+          "Region": {
+            "X": -10323,
+            "Z": -11035
+          },
+          "Camera": [
+            220.01234,
+            253.18484,
+            92.50606
+          ],
+          "WorkerMs": 84.688,
+          "ColliderMs": 34.2068,
+          "CommitMs": 34.5617,
+          "MaxCommitMs": 53.786,
+          "Triangles": 235648,
+          "_rebases": 6,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "06-coast",
+          "Global": {
+            "X": 60936.98889669447,
+            "Y": 3,
+            "Z": 88842.45244827365
+          },
+          "Origin": {
+            "X": 60928,
+            "Y": 0,
+            "Z": 88832
+          },
+          "Local": [
+            8.988896,
+            3,
+            10.452448
+          ],
+          "Resident": 643,
+          "Detailed": 49,
+          "Region": {
+            "X": 3808,
+            "Z": 5552
+          },
+          "Camera": [
+            2.230351,
+            5.0149407,
+            10.452449
+          ],
+          "WorkerMs": 3.4443,
+          "ColliderMs": 0,
+          "CommitMs": 0.2265,
+          "MaxCommitMs": 53.786,
+          "Triangles": 176384,
+          "_rebases": 7,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "07-basin-diagnostics",
+          "Global": {
+            "X": -213000,
+            "Y": 378.4671453135962,
+            "Z": 111000
+          },
+          "Origin": {
+            "X": -213248,
+            "Y": 256,
+            "Z": 110848
+          },
+          "Local": [
+            248,
+            122.46715,
+            152
+          ],
+          "Resident": 67,
+          "Detailed": 49,
+          "Region": {
+            "X": -13313,
+            "Z": 6937
+          },
+          "Camera": [
+            241.24146,
+            124.482086,
+            152
+          ],
+          "WorkerMs": 5.7873,
+          "ColliderMs": 0,
+          "CommitMs": 0.2173,
+          "MaxCommitMs": 53.786,
+          "Triangles": 102656,
+          "_rebases": 8,
+          "Hydrology": "Regional/inspection v1 | selected cell 10524 | 72 proposals | 0 provisional reaches\nUNRESOLVED basin 72 / stage 316,79 / 72 shore cells"
+        },
+        {
+          "Name": "08-return",
+          "Global": {
+            "X": -220403.30003586118,
+            "Y": 1195.8095586231564,
+            "Z": 88842.45244827365
+          },
+          "Origin": {
+            "X": -220416,
+            "Y": 1024,
+            "Z": 88832
+          },
+          "Local": [
+            12.699965,
+            171.80956,
+            10.452448
+          ],
+          "Resident": 49,
+          "Detailed": 49,
+          "Region": {
+            "X": -13776,
+            "Z": 5552
+          },
+          "Camera": [
+            5.941419,
+            173.8245,
+            10.452448
+          ],
+          "WorkerMs": 111.5845,
+          "ColliderMs": 34.7734,
+          "CommitMs": 35.2157,
+          "MaxCommitMs": 53.786,
+          "Triangles": 100352,
+          "_rebases": 10,
+          "Hydrology": "Regional/inspection v1 | selected cell 10524 | 72 proposals | 0 provisional reaches\nUNRESOLVED basin 72 / stage 316,79 / 72 shore cells"
+        }
+      ],
+      "Builds": 2813,
+      "Unloaded": 2733,
+      "Discarded": 0,
+      "Rebases": 10,
+      "PeakResident": 1250,
+      "PeakDetailed": 65,
+      "PeakTriangles": 254080,
+      "Status": "PLAYABLE_WORLD_SMOKE_PASS"
+    },
+    {
+      "Renderer": "forward_plus / vulkan",
+      "Manifest": {
+        "Format": 1,
+        "Algorithm": 4,
+        "WorldId": "8ba532624ba64e68b41364a3730747bf",
+        "Seed": 7319,
+        "OriginX": 0,
+        "OriginZ": 0,
+        "ContentRevision": "macro-content-v1",
+        "Profile": {
+          "Id": "vast-world",
+          "Name": "Vast world (2048 km)",
+          "WorldSize": 2048000,
+          "Continents": 6,
+          "Islands": 128,
+          "ContinentRadius": 210000,
+          "IslandRadius": 18000,
+          "CoastRoughness": 0.25,
+          "SeaLevel": 0,
+          "OceanDepth": 3500,
+          "LowlandHeight": 300,
+          "HillHeight": 220,
+          "HillScale": 12000,
+          "RangesPerContinent": 4,
+          "MountainHeight": 3400,
+          "MountainWidth": 15000
+        },
+        "ProfileDigest": "9f862e14824bd03753cbde614e0a9c167f7d5c16ac18ad2aa58b640fd1dd3aa1"
+      },
+      "Checks": 15152,
+      "Seconds": 126.73185633333516,
+      "Captures": [
+        {
+          "Name": "01-spawn",
+          "Global": {
+            "X": 165906.8913716025,
+            "Y": 1807.0003567666126,
+            "Z": -182109.5766265233
+          },
+          "Origin": {
+            "X": 165888,
+            "Y": 1792,
+            "Z": -182272
+          },
+          "Local": [
+            18.89137,
+            15.000357,
+            162.42337
+          ],
+          "Resident": 625,
+          "Detailed": 49,
+          "Region": {
+            "X": 10369,
+            "Z": -11382
+          },
+          "Camera": [
+            16.56456,
+            16.744377,
+            168.7977
+          ],
+          "WorkerMs": 6.7348,
+          "ColliderMs": 0,
+          "CommitMs": 0.2335,
+          "MaxCommitMs": 35.8963,
+          "Triangles": 174080,
+          "_rebases": 1,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "02-ground",
+          "Global": {
+            "X": 165920.26237952182,
+            "Y": 1807.4396019906117,
+            "Z": -182115.77302239733
+          },
+          "Origin": {
+            "X": 165888,
+            "Y": 1792,
+            "Z": -182272
+          },
+          "Local": [
+            32.26238,
+            15.439602,
+            156.22697
+          ],
+          "Resident": 773,
+          "Detailed": 49,
+          "Region": {
+            "X": 10370,
+            "Z": -11383
+          },
+          "Camera": [
+            29.935568,
+            17.183622,
+            162.6013
+          ],
+          "WorkerMs": 8.3362,
+          "ColliderMs": 0,
+          "CommitMs": 0.3135,
+          "MaxCommitMs": 35.8963,
+          "Triangles": 193024,
+          "_rebases": 1,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "03-flight",
+          "Global": {
+            "X": 166663.2078560538,
+            "Y": 2240.772903534801,
+            "Z": -184151.0811126073
+          },
+          "Origin": {
+            "X": 166400,
+            "Y": 2048,
+            "Z": -183808
+          },
+          "Local": [
+            263.20786,
+            192.7729,
+            -343.08112
+          ],
+          "Resident": 767,
+          "Detailed": 62,
+          "Region": {
+            "X": 10416,
+            "Z": -11510
+          },
+          "Camera": [
+            260.88104,
+            194.51692,
+            -336.7068
+          ],
+          "WorkerMs": 123.6817,
+          "ColliderMs": 33.3572,
+          "CommitMs": 33.7054,
+          "MaxCommitMs": 35.8963,
+          "Triangles": 217216,
+          "_rebases": 3,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "04-mountain-approach",
+          "Global": {
+            "X": 689885.557161938,
+            "Y": 2621.15584242336,
+            "Z": -708124.3111062904
+          },
+          "Origin": {
+            "X": 689664,
+            "Y": 2560,
+            "Z": -708352
+          },
+          "Local": [
+            221.55716,
+            61.15584,
+            227.68889
+          ],
+          "Resident": 1250,
+          "Detailed": 49,
+          "Region": {
+            "X": 43117,
+            "Z": -44258
+          },
+          "Camera": [
+            226.36694,
+            62.62807,
+            232.49867
+          ],
+          "WorkerMs": 5.4213,
+          "ColliderMs": 0,
+          "CommitMs": 0.2411,
+          "MaxCommitMs": 35.8963,
+          "Triangles": 254080,
+          "_rebases": 4,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "05-ridge-slope",
+          "Global": {
+            "X": 687392.6488195766,
+            "Y": 3258.458096676737,
+            "Z": -710631.3949323555
+          },
+          "Origin": {
+            "X": 687360,
+            "Y": 3072,
+            "Z": -710656
+          },
+          "Local": [
+            32.64882,
+            186.4581,
+            24.605068
+          ],
+          "Resident": 925,
+          "Detailed": 63,
+          "Region": {
+            "X": 42962,
+            "Z": -44415
+          },
+          "Camera": [
+            37.4586,
+            187.93033,
+            29.414848
+          ],
+          "WorkerMs": 100.1687,
+          "ColliderMs": 35.1435,
+          "CommitMs": 35.5587,
+          "MaxCommitMs": 37.5249,
+          "Triangles": 239360,
+          "_rebases": 5,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "06-coast",
+          "Global": {
+            "X": 348095.4604873514,
+            "Y": 3,
+            "Z": -182109.5766265233
+          },
+          "Origin": {
+            "X": 347904,
+            "Y": 0,
+            "Z": -182272
+          },
+          "Local": [
+            191.46048,
+            3,
+            162.42337
+          ],
+          "Resident": 643,
+          "Detailed": 49,
+          "Region": {
+            "X": 21755,
+            "Z": -11382
+          },
+          "Camera": [
+            184.70193,
+            5.0149407,
+            162.42337
+          ],
+          "WorkerMs": 4.4295,
+          "ColliderMs": 0,
+          "CommitMs": 0.2073,
+          "MaxCommitMs": 37.5249,
+          "Triangles": 176384,
+          "_rebases": 6,
+          "Hydrology": "Hydrology: not inspected. F5 for one selected tile."
+        },
+        {
+          "Name": "07-basin-diagnostics",
+          "Global": {
+            "X": 88000,
+            "Y": 312.8751592543465,
+            "Z": 584000
+          },
+          "Origin": {
+            "X": 87808,
+            "Y": 256,
+            "Z": 583936
+          },
+          "Local": [
+            192,
+            56.87516,
+            64
+          ],
+          "Resident": 66,
+          "Detailed": 49,
+          "Region": {
+            "X": 5500,
+            "Z": 36500
+          },
+          "Camera": [
+            185.24146,
+            58.890102,
+            64
+          ],
+          "WorkerMs": 5.4056,
+          "ColliderMs": 0,
+          "CommitMs": 0.2307,
+          "MaxCommitMs": 40.9713,
+          "Triangles": 102528,
+          "_rebases": 7,
+          "Hydrology": "Regional/inspection v1 | selected cell 12869 | 43 proposals | 0 provisional reaches\nUNRESOLVED basin 143 / stage 325,09 / 154 shore cells"
+        },
+        {
+          "Name": "08-return",
+          "Global": {
+            "X": 165906.8913716025,
+            "Y": 1807.0003567666126,
+            "Z": -182109.5766265233
+          },
+          "Origin": {
+            "X": 165888,
+            "Y": 1792,
+            "Z": -182272
+          },
+          "Local": [
+            18.89137,
+            15.000357,
+            162.42337
+          ],
+          "Resident": 49,
+          "Detailed": 49,
+          "Region": {
+            "X": 10369,
+            "Z": -11382
+          },
+          "Camera": [
+            12.132826,
+            17.015299,
+            162.42337
+          ],
+          "WorkerMs": 140.3118,
+          "ColliderMs": 31.233,
+          "CommitMs": 31.5983,
+          "MaxCommitMs": 40.9713,
+          "Triangles": 100352,
+          "_rebases": 9,
+          "Hydrology": "Regional/inspection v1 | selected cell 12869 | 43 proposals | 0 provisional reaches\nUNRESOLVED basin 143 / stage 325,09 / 154 shore cells"
+        }
+      ],
+      "Builds": 2812,
+      "Unloaded": 2736,
+      "Discarded": 2,
+      "Rebases": 9,
+      "PeakResident": 1250,
+      "PeakDetailed": 63,
+      "PeakTriangles": 254080,
+      "Status": "PLAYABLE_WORLD_SMOKE_PASS"
+    }
+  ]
+}

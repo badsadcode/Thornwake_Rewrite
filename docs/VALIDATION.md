@@ -233,3 +233,7 @@ This is a diagnostic/refinement foundation. No terrain was carved, local water w
 ## Receiver-aware topology 5 completion (2026-10-04)
 
 The preserved validation run completed successfully: 111,177 receiver checks; 37 six-case comparison checks; all required historical hydrology and accepted A4 regressions; **4,813,748 full Core assertions**; Core/Game builds with **0 warnings/errors**; **11 historical fixture files byte-identical**. See [the V5 checkpoint](MASTER_HYDROLOGY_RECEIVER_DOMAIN.md) for exact per-suite totals and [current status](CURRENT_WORLD_GENERATION_STATUS.md) for the active continuation. Topology 5 is retained only as an opt-in experiment; topology 3 remains the baseline. This is not new rendered gameplay/water acceptance or a packaged release. Earlier measurements and visual evidence above remain historical.
+
+## Playable A4 Forward+ validation (2026-10-04)
+
+Full Core: **4,851,436 assertions**, including **37,688 playable checks**; Game build **0 warnings/errors**; **11 historical fixtures byte-identical**. Rendered Mountainous/42 and Vast/7319 passed with 14,808 and 15,152 runtime checks, 10 and 9 rebases. Legacy gameplay, macro drainage/regional preview, connected cave water and streaming lab also passed under Forward+/Vulkan. See [the checkpoint](PLAYABLE_A4_WORLD_VALIDATION.md) for exact metrics, limitations and retained evidence. Next: Tom tests the playable lab; no automatic later-system work.

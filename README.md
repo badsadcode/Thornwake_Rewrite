@@ -1,5 +1,7 @@
 # Thornwake — Harthwood Valley
 
+> **Playable A4 development lab:** double-click `TEST_PLAYABLE_WORLD.cmd`; see [controls and setup](docs/PLAYABLE_WORLD_TEST_GUIDE.md) and [validation checkpoint](docs/PLAYABLE_A4_WORLD_VALIDATION.md). Current desktop source uses Forward+; the OpenGL requirement below describes the older packaged prototype, not this development build.
+
 > Master Rework development status and the current continuation point are in [CURRENT_WORLD_GENERATION_STATUS.md](docs/CURRENT_WORLD_GENERATION_STATUS.md). Accepted macro terrain A4, retained hydrology topology 3 and opt-in topology 5 are separate from the playable valley/release described below.
 
 A standalone Windows 3D fantasy life prototype based on `Persistent_Fantasy_Life_RPG_Game_Design_Bible_v0.1.md`. This is the first playable milestone described in section 89, with small farming and settlement economy experiments. It is not the full commercial game or a multiplayer release.

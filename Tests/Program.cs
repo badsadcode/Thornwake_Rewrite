@@ -3,6 +3,7 @@ using Thornwake.Core;
 
 try
 {
+if (args.Contains("--playable-world")) { PlayableWorldTests.Run(); return; }
 if (args.Contains("--receiver-domain")) { HydrologyReceiverTests.Run(); return; }
 if (args.Contains("--record-receiver-domain")) { HydrologyReceiverTests.Run(record:true); return; }
 if (args.Contains("--receiver-matrix")) { HydrologyReceiverTests.Measure(); return; }
@@ -69,6 +70,7 @@ passed += HydrologySpillAttributionTests.Run();
 passed += HydrologyReceiverTests.Run();
 passed += HydrologyCoverageTests.Run();
 passed += MacroChunkTests.Run();
+passed += PlayableWorldTests.Run();
 passed += DrainageTests.Run();
 passed += DrainagePreviewTests.Run();
 passed += RegionalDrainageTests.Run();

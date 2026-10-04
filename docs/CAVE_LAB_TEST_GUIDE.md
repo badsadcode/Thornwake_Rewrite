@@ -1,5 +1,7 @@
 # Cave terrain test guide
 
+> 2026-10-04: preserved under desktop Forward+ and revalidated with the connected-flow smoke. This is an isolated historical fixture; the current playable A4 milestone and continuation are in [current status](CURRENT_WORLD_GENERATION_STATUS.md).
+
 This is the next Master Rework architecture test, separate from the normal Thornwake world. It is a small authored terrain/cave fixture used to validate real underground geometry, collision, excavation and persistence. It is not the finished natural-cave generator.
 
 ## Start

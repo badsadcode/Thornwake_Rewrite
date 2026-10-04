@@ -1,5 +1,7 @@
 # World generation preview
 
+> **2026-10-04 playable follow-up:** the [A4 visual-validation lab](PLAYABLE_A4_WORLD_VALIDATION.md) is implemented. Use `TEST_PLAYABLE_WORLD.cmd` and the [playable guide](PLAYABLE_WORLD_TEST_GUIDE.md). Desktop now uses Forward+. Historical findings below remain unchanged; [current status](CURRENT_WORLD_GENERATION_STATUS.md) owns continuation. Next: Tom walks/flies through both validation worlds and reports locations.
+
 Start **TEST_WORLD_GENERATION.cmd**. This opens the isolated macro map, not a replacement for the current playable valley. The default Vast world preset is **2,048 x 2,048 km**.
 
 - New macro worlds default to **Algorithm 4 (accepted)**. Choose **Algorithm 3 (preserved)** to inspect historical terrain. Choose a seed/profile, then **Generate**. Five JSON profiles cover mainland, several continents, island seas, mountain-heavy and vast worlds.

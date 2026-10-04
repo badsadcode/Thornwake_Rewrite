@@ -12,9 +12,9 @@ Updated 2026-10-04. **Active implementation/continuation index**, not a replacem
 
 ## Implemented and verified
 
-A4 provides immutable world/profile manifests, continents/islands and accepted mountain morphology. Bounded world coordinates, region sampling and residency planning exist. Coarse drainage, regional river/lake proposals, inspection, reconciliation, adaptive topology, deterministic replay, neighbour reuse and diagnostics are implemented. The [receiver checkpoint](MASTER_HYDROLOGY_RECEIVER_DOMAIN.md) records the latest implementation and complete validation: **4,813,748 Core assertions**, Game build **0 warnings/errors**, **11 historical fixtures unchanged**.
+A4 provides immutable world/profile manifests, continents/islands and accepted mountain morphology. Bounded world coordinates, region sampling and residency planning exist. Coarse drainage, regional river/lake proposals, inspection, reconciliation, adaptive topology, deterministic replay, neighbour reuse and diagnostics are implemented. The [receiver checkpoint](MASTER_HYDROLOGY_RECEIVER_DOMAIN.md) records that hydrology milestone and its validation: **4,813,748 Core assertions**, Game build **0 warnings/errors**, **11 historical fixtures unchanged**.
 
-The normal playable valley and isolated streaming/cave/water/map labs are preserved. They do **not** constitute an integrated, enormous, playable A4 world. Production macro-world rendering/LOD, collision residency/rebasing, local volume promotion, persistent region transactions and actor adapters still need integration/validation.
+The dedicated [playable A4 lab](PLAYABLE_A4_WORLD_VALIDATION.md) now integrates bounded streamed terrain, nearby collision, a validation player, double/global to float/local rebasing, distant geography, conservative static sea and hydrology diagnostics. Desktop uses **Forward+**, verified at runtime. The normal playable valley and isolated streaming/cave/water/map labs remain available. This is a development vertical slice, not production terrain LOD, local volume promotion, persistent region transactions or gameplay migration. Current full Core validation: **4,851,436 assertions**; see the playable checkpoint for rendered evidence and build results.
 
 ## Known limitations
 
@@ -26,11 +26,11 @@ The normal playable valley and isolated streaming/cave/water/map labs are preser
 
 ## Immediate continuation
 
-The receiver milestone was validated, committed and pushed as `4c69bbcd1ae8aceb03a11c616ebd09e547de3831`. The subsequent [read-only readiness assessment](PLAYABLE_WORLD_READINESS.md) recommends **A: Hydrology foundation is sufficient to begin playable world visual validation; carry remaining hydrology limitations as explicit known issues.**
+**Next action: Tom launches `TEST_PLAYABLE_WORLD.cmd`, walks and flies through Mountainous/42 and Vast World/7319, and reports suspicious locations with F8 plus screenshots.** Read the [test guide](PLAYABLE_WORLD_TEST_GUIDE.md) and [completed vertical-slice checkpoint](PLAYABLE_A4_WORLD_VALIDATION.md). Do not automatically begin another generation or hydrology experiment.
 
-**Next milestone: playable A4 world visual-validation vertical slice**, using frozen manifests, bounded streamed terrain/collision and safe coordinate rebasing, representative conservative water, then the intended presentation/traversal/debug inspection foundation. This is a recommendation, not implemented work or permission to auto-start. Use uncertainty overlays for unresolved water, locally checked labelled static test surfaces where appropriate, and no implicit fluid coupling or terrain carving. Read the assessment for the practical representation rules.
+The prior readiness recommendation A has now been implemented as a separate visual-validation scene. Candidate lakes remain diagnostic outlines; inspected river windows require local bank checks; there is no runtime fluid coupling or terrain carving. Accepted terrain A4 and all historical fingerprints remain unchanged. The earlier GL Compatibility desktop setting was inherited from the prototype and is superseded by Forward+; the mobile override remains separate and unvalidated.
 
-The previous automatic priority of another targeted adaptive-sampling experiment is **deferred**. No new sampling, minimax optimization, storage or other hydrology milestone is required before beginning visual validation on the current evidence. Such work needs a concrete integration/visible-geography blocker, not merely an opportunity to optimize initial generation. All historical checkpoints retain their original technical findings; this user-requested practical readiness decision supersedes their development order without changing Master/Supplement design intent.
+After Tom's feedback, choose a bounded follow-up addressing concrete player-scale geography, presentation or integration findings. Production LOD/edit authority and unresolved hydrology remain explicit future work; climate, biomes, geology, natural caves, storage, runtime water and other future systems are not authorized by this checkpoint. Historical checkpoint tails must not override this stop condition.
 
 ## Documentation review and historical record
 

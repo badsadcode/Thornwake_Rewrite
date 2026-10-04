@@ -1,5 +1,7 @@
 # Playable-world readiness assessment
 
+> **2026-10-04 playable follow-up:** the [A4 visual-validation lab](PLAYABLE_A4_WORLD_VALIDATION.md) is implemented. Use `TEST_PLAYABLE_WORLD.cmd` and the [playable guide](PLAYABLE_WORLD_TEST_GUIDE.md). Desktop now uses Forward+. Historical findings below remain unchanged; [current status](CURRENT_WORLD_GENERATION_STATUS.md) owns continuation. Next: Tom walks/flies through both validation worlds and reports locations.
+
 2026-10-04. Read-only assessment performed **after** validated receiver milestone `4c69bbcd1ae8aceb03a11c616ebd09e547de3831` was committed and pushed. No implementation experiment, code change, scene change or default promotion was performed. This document records the assessment; [current status](CURRENT_WORLD_GENERATION_STATUS.md) owns the active continuation.
 
 ## Evidence and practical gate
