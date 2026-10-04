@@ -10,15 +10,18 @@ namespace Thornwake.WorldGen;
 /// </summary>
 public sealed class WorldPlan
 {
-    /// <summary>Raster channels: A4 land influence; relief above the lowland base (hills + mountains, metres);
+    /// <summary>Raster channels: A4 land influence; eroded macro height (metres above sea level, negative at sea);
     /// mountain share 0..1 of profile mountain height.</summary>
-    public const int LandChannel = 0, ReliefChannel = 1, MountainChannel = 2;
+    public const int LandChannel = 0, HeightChannel = 1, MountainChannel = 2;
     public WorldManifest Manifest { get; }
     public WorldProfile Profile => Manifest.Profile;
     public TerrainStyle Style { get; }
     public WorldLayout Layout { get; }
     public MacroRaster Macro { get; }
+    public Hydrology Hydrology { get; }
     public double BuildMilliseconds { get; }
+    /// <summary>Time spent on the layout raster alone (before erosion/hydrology).</summary>
+    public double RasterMilliseconds { get; }
 
     /// <summary>Raster resolution: cells of at most ~750 m, between 512 and 2048 cells across.</summary>
     public static int RasterSizeFor(WorldProfile profile)
@@ -59,9 +62,27 @@ public sealed class WorldPlan
                 double rugged = layout.RuggedBroad(wx, wz) * .92;
                 mountain = Math.Min(1, core * (.28 + .72 * rugged) + shoulder * (.08 + .24 * rugged));
             }
-            channels[ReliefChannel][k] = (float)(hills + mountain * p.MountainHeight);
+            channels[HeightChannel][k] = (float)(hills + mountain * p.MountainHeight); // relief; converted below
             channels[MountainChannel][k] = (float)mountain;
         });
+        RasterMilliseconds = timer.Elapsed.TotalMilliseconds;
+
+        // Macro height above sea level: the A4 lowland ramp from the coast plus faded relief; sea floor below 0.
+        var landRaster = Macro.Channel(LandChannel); var heightRaster = Macro.Channel(HeightChannel);
+        var height = new double[size * size];
+        for (int k = 0; k < height.Length; k++)
+        {
+            double land = landRaster[k];
+            if (land <= 0) { height[k] = -p.OceanDepth * DetMath.Smooth(-land / .6); continue; }
+            double h = p.LowlandHeight * DetMath.Smooth(land / .4) + DetMath.Smooth(land / .18) * heightRaster[k];
+            h = Math.Max(p.LowlandHeight * DetMath.Smooth(land / .08) * .05, h);
+            height[k] = Math.Max(h, .5); // every land cell stays above the sea for routing
+        }
+        var hydroTimer = Stopwatch.StartNew();
+        ulong riverSeed = Hashing.FeatureSeed(manifest.Seed, 100 + WorldManifest.CurrentGenerator, manifest.ProfileDigest, "rivers");
+        Hydrology = new Hydrology(Macro, height, p, Style, riverSeed);
+        Hydrology.BuildMilliseconds = hydroTimer.Elapsed.TotalMilliseconds;
+        for (int k = 0; k < height.Length; k++) heightRaster[k] = (float)height[k];
         BuildMilliseconds = timer.Elapsed.TotalMilliseconds;
     }
 }

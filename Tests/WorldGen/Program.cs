@@ -29,6 +29,7 @@ var timer = Stopwatch.StartNew();
 try
 {
     CoreTests.Register(filter, record);
+    HydrologyTests.Register(filter);
 }
 catch (TestFailure failure)
 {
@@ -48,7 +49,9 @@ internal static class Maps
             if (only != null && only != id) continue;
             var sw = Stopwatch.StartNew();
             var sampler = CoreTests.Sampler(id, seed);
-            Console.WriteLine($"{id}/{seed}: plan {sampler.Plan.BuildMilliseconds:0} ms, raster {sampler.Plan.Macro.Size}² ({sampler.Plan.Macro.Bytes / 1048576.0:0.0} MB)");
+            var hy = sampler.Plan.Hydrology;
+            Console.WriteLine($"{id}/{seed}: plan {sampler.Plan.BuildMilliseconds:0} ms (raster {sampler.Plan.RasterMilliseconds:0} ms, hydrology {hy.BuildMilliseconds:0} ms), " +
+                $"raster {sampler.Plan.Macro.Size}² ({sampler.Plan.Macro.Bytes / 1048576.0:0.0} MB), {hy.Reaches.Count} reaches, {hy.Lakes.Count} lakes, max incision {hy.MaxIncision:0} m");
             var p = sampler.Plan.Profile;
             MapRender.Window(sampler, Path.Combine(directory, $"{id}-{seed}-world.png"), sampler.Plan.Manifest.OriginX, sampler.Plan.Manifest.OriginZ, p.WorldSize, 1024);
             var continent = sampler.Plan.Layout.Land[0];
@@ -78,6 +81,17 @@ internal static class Probe
     // Diagnostic: distribution of walking-scale detail and relief on lowland.
     public static void Run()
     {
+        foreach (var (id, seed) in new[] { ("mountainous", 42), ("vast-world", 7319), ("archipelago", 42) })
+        {
+            var hy = CoreTests.Sampler(id, seed).Plan.Hydrology;
+            foreach (var r in hy.Reaches)
+                if (r.DownstreamReach >= 0 && Math.Abs(r.Surface[^1] - hy.Reaches[r.DownstreamReach].Surface[0]) > .011)
+                {
+                    var nx = hy.Reaches[r.DownstreamReach];
+                    Console.WriteLine($"{id}: reach {r.Id} end {r.Surface[^1]} -> {nx.Id} start {nx.Surface[0]},{nx.Surface[1]} startLake {nx.StartLake} upstream [{string.Join(",", nx.UpstreamReaches.Select(u => hy.Reaches[u].Surface[^1].ToString("0.000")))}] len {nx.Points.Length}");
+                }
+        }
+        return;
         var s = CoreTests.Sampler("mountainous", 42);
         var f = s.Plan.Layout.Land[0];
         var rng = new Random(1);

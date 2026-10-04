@@ -88,6 +88,25 @@ public sealed record TerrainStyle
     /// <summary>Typical sideways shift (m) of the coastline by sub-raster coast noise.</summary>
     public double CoastDetailShift { get; init; } = 260;
 
+    // ---- erosion and hydrology (M2)
+    /// <summary>Stream-power coefficient K·dt (per √m² of catchment per metre of flow length).</summary>
+    public double ErosionStrength { get; init; } = .006;
+    public int ErosionIterations { get; init; } = 10;
+    /// <summary>Depressions shallower than this (m) are filled instead of becoming lakes.</summary>
+    public double LakeMinDepth { get; init; } = 8;
+    /// <summary>Depressions smaller than this many raster cells are filled instead of becoming lakes.</summary>
+    public int LakeMinCells { get; init; } = 4;
+    /// <summary>Maximum share of land covered by lakes (largest by volume kept first).</summary>
+    public double LakeShare { get; init; } = .03;
+    /// <summary>Catchment (km²) at which a river starts (smaller streams are later regional/local detail).</summary>
+    public double RiverMinCatchmentKm2 { get; init; } = 30;
+    /// <summary>Channel width = this × √(catchment km²), clamped.</summary>
+    public double RiverWidthPerSqrtKm2 { get; init; } = .9;
+    public double RiverMinWidth { get; init; } = 4;
+    public double RiverMaxWidth { get; init; } = 320;
+    /// <summary>Minimum water-surface fall per metre of river (keeps flow direction unambiguous).</summary>
+    public double RiverMinSlope { get; init; } = .00005;
+
     public static TerrainStyle For(WorldProfile profile) => new()
     {
         LowlandDetail = 20 + profile.HillHeight * .05,

@@ -295,7 +295,7 @@ internal static class CoreTests
                     s.HeightGrid(cx, cz, spacing, 33, 33, buffer);
                     sha.AppendData(System.Runtime.InteropServices.MemoryMarshal.AsBytes(buffer.AsSpan()));
                 }
-                foreach (var c in new[] { WorldPlan.LandChannel, WorldPlan.ReliefChannel, WorldPlan.MountainChannel })
+                foreach (var c in new[] { WorldPlan.LandChannel, WorldPlan.HeightChannel, WorldPlan.MountainChannel })
                     sha.AppendData(System.Runtime.InteropServices.MemoryMarshal.AsBytes(s.Plan.Macro.Channel(c).AsSpan()));
                 cases.Add(new($"{profile.Id}/{seed}", Convert.ToHexString(sha.GetHashAndReset()).ToLowerInvariant()));
             }

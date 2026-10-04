@@ -8,7 +8,10 @@ public readonly record struct TerrainSample(
     double Height,       // metres, absolute (sea level = profile SeaLevel)
     double Land,         // land influence after coast detail: > 0 land, ≤ 0 sea
     double Mountain,     // 0..1 share of profile mountain height
-    double Detail);      // metres of walking-scale relief included in Height
+    double Detail,       // metres of walking-scale relief included in Height
+    WaterKind Water,     // water body covering this point (None if dry)
+    double WaterLevel,   // absolute surface elevation of that water (NaN if dry)
+    int WaterBody);      // lake id or river reach id (-1 for sea / none)
 
 /// <summary>
 /// The terrain authority for generated (unedited) ground: a pure, thread-safe function of world position.
@@ -23,13 +26,14 @@ public sealed class TerrainSampler
     private readonly WorldProfile _p;
     private readonly TerrainStyle _style;
     private readonly MacroRaster _macro;
+    private readonly Hydrology _hydrology;
     private readonly double _ox, _oz;
     private readonly ulong _detailSeed, _rockSeed, _coastSeed, _regionSeed;
     private readonly double _coastBand;
 
     public TerrainSampler(WorldPlan plan)
     {
-        Plan = plan; _p = plan.Profile; _style = plan.Style; _macro = plan.Macro;
+        Plan = plan; _p = plan.Profile; _style = plan.Style; _macro = plan.Macro; _hydrology = plan.Hydrology;
         _ox = plan.Manifest.OriginX; _oz = plan.Manifest.OriginZ;
         var m = plan.Manifest;
         ulong Seed(string layer) => Hashing.FeatureSeed(m.Seed, 100 + WorldManifest.CurrentGenerator, m.ProfileDigest, layer);
@@ -42,7 +46,8 @@ public sealed class TerrainSampler
 
     public TerrainSample Sample(double x, double z, double minWavelength = 2)
     {
-        _macro.Sample(x, z, WorldPlan.LandChannel, WorldPlan.ReliefChannel, WorldPlan.MountainChannel, out double land, out double relief, out double mountainShare);
+        _macro.Sample(x, z, WorldPlan.LandChannel, WorldPlan.HeightChannel, WorldPlan.MountainChannel, out double land, out double macroHeight, out double mountainShare);
+        double rasterLand = land;
         double lx = x - _ox, lz = z - _oz;
 
         // Sub-raster coastline: shift the coast sideways by a fractal distance (metres), converted to land
@@ -58,11 +63,11 @@ public sealed class TerrainSampler
         if (land <= 0)
         {
             double depth = _p.OceanDepth * DetMath.Smooth(-land / .6);
-            return new(_p.SeaLevel - depth, land, 0, 0);
+            return new(_p.SeaLevel - depth, land, 0, 0, WaterKind.Ocean, _p.SeaLevel, -1);
         }
 
-        double coastFade = DetMath.Smooth(land / .18);
-        double baseHeight = _p.LowlandHeight * DetMath.Smooth(land / .4) + coastFade * relief;
+        // Eroded macro height; the coastal ramp follows the detailed coastline rather than the raster's.
+        double baseHeight = macroHeight + _p.LowlandHeight * (DetMath.Smooth(land / .4) - DetMath.Smooth(rasterLand / .4));
         baseHeight = Math.Max(_p.LowlandHeight * DetMath.Smooth(land / .08) * .05, baseHeight);
         mountainShare = DetMath.Clamp(mountainShare, 0, 1);
 
@@ -84,9 +89,34 @@ public sealed class TerrainSampler
             }
             detail *= inland;
         }
-        // Generated land never dips below the sea; inland basins are hydrology's job (M2).
-        double height = Math.Max(baseHeight + detail, .2 * inland + .05);
-        return new(_p.SeaLevel + height, land, mountainShare, detail);
+        // Rivers: channel, banks and floodplain replace the terrain near the river; detail fades toward it.
+        var water = WaterKind.None; double level = double.NaN; int body = -1;
+        double height;
+        if (_hydrology.NearestRiver(x, z, 0, out var river))
+        {
+            double half = river.Width * .5, bank = Math.Max(8, river.Width * .8), flood = Math.Max(30, river.Width * 2.5);
+            double d = river.Distance, surface = river.Surface - _p.SeaLevel;
+            double terrain = Math.Max(baseHeight + detail * DetMath.Smooth((d - half) / (bank + flood)), .2 * inland + .05);
+            double bankTop = surface + .6 + .15 * river.Depth;
+            if (d < half)
+            {
+                double u = d / half;
+                height = surface - river.Depth * (1 - u * u);
+                water = WaterKind.River; level = river.Surface; body = river.Reach;
+            }
+            else if (d < half + bank) height = Math.Max(surface + (bankTop - surface) * DetMath.Smooth((d - half) / bank),
+                Math.Min(terrain, bankTop));
+            else height = bankTop + (terrain - bankTop) * DetMath.Smooth((d - half - bank) / flood);
+        }
+        else height = Math.Max(baseHeight + detail, .2 * inland + .05); // generated land never dips below the sea
+
+        if (water == WaterKind.None)
+        {
+            int lake = _hydrology.LakeNear(x, z);
+            if (lake >= 0 && _p.SeaLevel + height < _hydrology.Lakes[lake].Level)
+            { water = WaterKind.Lake; level = _hydrology.Lakes[lake].Level; body = lake; }
+        }
+        return new(_p.SeaLevel + height, land, mountainShare, detail, water, level, body);
     }
 
     /// <summary>Terrain without walking-scale detail (macro shape only), for comparisons and maps.</summary>
