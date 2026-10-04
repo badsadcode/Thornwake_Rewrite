@@ -73,7 +73,7 @@ public sealed class Hydrology
     private readonly List<Lake> _lakes = new();
     private readonly List<RiverReach> _reaches = new();
     private SegmentIndex _index = null!;
-    private readonly double _seaLevel;
+    private readonly double _seaLevel, _minWidth;
 
 
     private static readonly int[] Dx = { 1, 1, 0, -1, -1, -1, 0, 1 };
@@ -85,7 +85,7 @@ public sealed class Hydrology
     /// </summary>
     internal Hydrology(MacroRaster raster, double[] height, WorldProfile profile, TerrainStyle style, ulong seed)
     {
-        _raster = raster; _seaLevel = profile.SeaLevel;
+        _raster = raster; _seaLevel = profile.SeaLevel; _minWidth = style.RiverMinWidth;
         int n = raster.Size, count = n * n;
         double cell = raster.Cell, cellArea = cell * cell;
         var original = (double[])height.Clone();
@@ -389,7 +389,25 @@ public sealed class Hydrology
             // Tributaries funnel toward the receiving channel; mouths open into estuaries.
             double endWidth = mouth ? widths[^1] * style.RiverMouthWidening
                 : end >= 0 && chainAt.TryGetValue(end, out int down) ? Math.Max(widths[^1], chains[down].Width[0] * .85) : widths[^1];
-            var reach = BuildReach(id, cells, surface, widths, depths, catchment, n, seed, endWidth, mouth);
+            bool toSea = end < 0 || height[end] <= 0;
+            var course = cells; var cs = surface; var cw = widths; var cd = depths; var ca = catchment;
+            if (startLake >= 0)
+            {
+                // A lake outlet starts inside the lake (at the cell that spills into it), so it always leaves the
+                // actual shoreline instead of starting somewhere on the dry ground beyond it.
+                int sx = cells[0] % n, sz = cells[0] / n;
+                for (int dir = 0; dir < 8; dir++)
+                {
+                    int x = sx + Dx[dir], z = sz + Dz[dir];
+                    if (x < 0 || z < 0 || x >= n || z >= n) continue;
+                    int lakeCell = z * n + x;
+                    if (LakeCell[lakeCell] != startLake || receiver[lakeCell] != cells[0]) continue;
+                    course = new List<int>(cells); course.Insert(0, lakeCell);
+                    cs = Prepend(surface, surface[0]); cw = Prepend(widths, widths[0]); cd = Prepend(depths, depths[0]); ca = Prepend(catchment, catchment[0]);
+                    break;
+                }
+            }
+            var reach = BuildReach(id, course, cs, cw, cd, ca, n, seed, endWidth, mouth, toSea);
             reach.StartLake = startLake;
             reach.EndCell = end;
             if (startLake >= 0) _lakes[startLake].OutletReach = id;
@@ -406,6 +424,12 @@ public sealed class Hydrology
     }
 
     private static double Freeboard(double depth) => .6 + .15 * depth;
+    private static double[] Prepend(double[] values, double first)
+    {
+        var result = new double[values.Length + 1];
+        result[0] = first; Array.Copy(values, 0, result, 1, values.Length);
+        return result;
+    }
 
     /// <summary>
     /// Recompute every reach's water surface from the eroded height raster sampled bicubically along its final
@@ -496,25 +520,30 @@ public sealed class Hydrology
                 double ex = pts[^1].X - dz * spread * side + dx * dl * .1, ez = pts[^1].Z + dx * spread * side + dz * dl * .1;
                 for (int i = 0; i < 8 && Land(ex, ez) > 0; i++) { ex += dx * _raster.Cell * .5; ez += dz * _raster.Cell * .5; }
                 if (Land(ex, ez) > 0) continue;
-                // Quadratic Bezier with a sideways bow.
+                // Base course: a quadratic Bezier bowing away from the main channel, then meandered like any river.
                 double cx = pts[kb].X + dx * dl * .55 - dz * spread * .35 * side, cz = pts[kb].Z + dz * dl * .55 + dx * spread * .35 * side;
-                int segments = Math.Max(4, (int)(dl / 60));
-                var points = new Point2[segments + 1]; var surface = new double[segments + 1];
-                var width = new double[segments + 1]; var depth = new double[segments + 1]; var catchment = new double[segments + 1];
+                const int Segments = 24;
+                var bx = new double[Segments + 1]; var bz = new double[Segments + 1];
+                var attr = new double[4][];
+                for (int a = 0; a < 4; a++) attr[a] = new double[Segments + 1];
                 double s0 = main.Surface[kb];
-                for (int i = 0; i <= segments; i++)
+                for (int i = 0; i <= Segments; i++)
                 {
-                    double t = i / (double)segments, u = 1 - t;
-                    points[i] = new(u * u * pts[kb].X + 2 * u * t * cx + t * t * ex, u * u * pts[kb].Z + 2 * u * t * cz + t * t * ez);
-                    surface[i] = Math.Max(_seaLevel, s0 - (s0 - _seaLevel) * t - 1e-4 * i);
-                    width[i] = main.Width[kb] * (.35 + .35 * t);
-                    depth[i] = main.Depth[kb] * .7;
-                    catchment[i] = main.Catchment[kb] * .25;
+                    double t = i / (double)Segments, u = 1 - t;
+                    bx[i] = u * u * pts[kb].X + 2 * u * t * cx + t * t * ex; bz[i] = u * u * pts[kb].Z + 2 * u * t * cz + t * t * ez;
+                    attr[0][i] = Math.Max(_seaLevel, s0 - (s0 - _seaLevel) * t);
+                    attr[1][i] = main.Width[kb] * (.3 + .3 * t);
+                    attr[2][i] = main.Depth[kb] * .7;
+                    attr[3][i] = main.Catchment[kb] * .25;
                 }
+                var branch = Shape(_reaches.Count, bx, bz, attr, s0 - _seaLevel, Hashing.Mix(h + (ulong)(side + 5)), main.Width[kb] * .6 * 1.6, true, true, .35);
+                // Strictly descending to the sea.
+                var surface = branch.Surface;
+                for (int i = 1; i < surface.Length; i++) surface[i] = Math.Max(_seaLevel, Math.Min(surface[i], surface[i - 1] - 1e-4));
                 surface[^1] = _seaLevel;
                 _reaches.Add(new RiverReach
                 {
-                    Id = _reaches.Count, Points = points, Surface = surface, Width = width, Depth = depth, Catchment = catchment,
+                    Id = _reaches.Count, Points = branch.Points, Surface = surface, Width = branch.Width, Depth = branch.Depth, Catchment = branch.Catchment,
                     EndsInSea = true, Distributary = true, ParentReach = id, ParentPoint = kb,
                 });
             }
@@ -522,89 +551,176 @@ public sealed class Hydrology
     }
 
     /// <summary>
-    /// Turn D8 cell centres into a natural channel: Catmull–Rom smoothing at ~1/8 cell spacing, then meanders
-    /// (perpendicular noise displacement scaled by width, zero at both ends so junctions stay joined).
+    /// Turn D8 cell centres into a natural channel. The cell path is resampled every quarter cell and Gaussian
+    /// smoothed (σ ≈ 0.8 cell, ends fixed so junctions stay joined), which removes the 45°/90° grid kinks; then
+    /// <see cref="Shape"/> adds meanders, valley-scale wander and width variation.
     /// </summary>
     private RiverReach BuildReach(int id, List<int> cells, double[] surface, double[] width, double[] depth, double[] catchment, int n, ulong seed,
-        double endWidth, bool mouth)
+        double endWidth, bool mouth, bool toSea)
     {
         int m = cells.Count;
         var cx = new double[m]; var cz = new double[m];
         for (int i = 0; i < m; i++) { cx[i] = _raster.CellX(cells[i] % n); cz[i] = _raster.CellZ(cells[i] / n); }
-        // Round off the 45°/90° steps of D8 routing before the spline (endpoints fixed so junctions stay joined).
-        for (int pass = 0; pass < 4; pass++)
-        {
-            double px = cx[0], pz = cz[0];
-            for (int i = 1; i < m - 1; i++)
-            {
-                double nx = .25 * px + .5 * cx[i] + .25 * cx[i + 1], nz = .25 * pz + .5 * cz[i] + .25 * cz[i + 1];
-                px = cx[i]; pz = cz[i]; cx[i] = nx; cz[i] = nz;
-            }
-        }
-        // Adaptive subdivision: points every ~2.5 channel widths (25-120 m); meander wavelengths are >= 200 m.
-        var subs = new int[m];
-        int total = 1;
-        for (int i = 0; i < m - 1; i++)
-        {
-            double seg = Math.Sqrt(Sq(cx[i + 1] - cx[i]) + Sq(cz[i + 1] - cz[i]));
-            double spacing = DetMath.Clamp((width[i] + width[i + 1]) * 1.25, 25, 120);
-            subs[i] = Math.Clamp((int)Math.Ceiling(seg / spacing), 2, 96);
-            total += subs[i];
-        }
-        var points = new Point2[total]; var s = new double[total]; var w = new double[total]; var d = new double[total]; var a = new double[total];
-        int kk = 0;
-        for (int i = 0; i < m - 1; i++)
-            for (int j = 0; j < subs[i]; j++, kk++)
-            {
-                double t = j / (double)subs[i];
-                int i0 = Math.Max(0, i - 1), i3 = Math.Min(m - 1, i + 2);
-                points[kk] = new(CatmullRom(cx[i0], cx[i], cx[i + 1], cx[i3], t), CatmullRom(cz[i0], cz[i], cz[i + 1], cz[i3], t));
-                s[kk] = surface[i] + (surface[i + 1] - surface[i]) * t + _seaLevel;
-                w[kk] = width[i] + (width[i + 1] - width[i]) * t;
-                d[kk] = depth[i] + (depth[i + 1] - depth[i]) * t;
-                a[kk] = catchment[i] + (catchment[i + 1] - catchment[i]) * t;
-            }
-        points[^1] = new(cx[m - 1], cz[m - 1]); s[^1] = surface[m - 1] + _seaLevel; w[^1] = width[m - 1]; d[^1] = depth[m - 1]; a[^1] = catchment[m - 1];
-
-        // Meanders: arclength-parameterised noise. Flat reaches meander strongly; steep ones stay straighter.
-        var length = new double[total];
-        for (int k = 1; k < total; k++) length[k] = length[k - 1] + Math.Sqrt(Sq(points[k].X - points[k - 1].X) + Sq(points[k].Z - points[k - 1].Z));
-        double reachLength = length[^1];
-        double slope = reachLength > 0 ? Math.Max(0, surface[0] - surface[m - 1]) / reachLength : 0;
-        double flatness = 1 - DetMath.Smooth((slope - .0008) / .012);
-        var displaced = (Point2[])points.Clone();
+        var sea = new double[m];
+        for (int i = 0; i < m; i++) sea[i] = surface[i] + _seaLevel;
+        var (bx, bz, battr) = Resample(cx, cz, new[] { sea, width, depth, catchment }, _ => _raster.Cell * .25);
+        for (int pass = 0; pass < 20; pass++) SmoothPass(bx, bz);
+        double drop = Math.Max(0, surface[0] - surface[m - 1]);
         ulong noiseSeed = seed ^ Hashing.Mix((ulong)cells[0] + 0x51ED27UL);
+        return Shape(id, bx, bz, battr, drop, noiseSeed, endWidth, mouth, toSea, 1);
+    }
+
+    /// <summary>
+    /// Fine channel from a smooth base course: Catmull–Rom densified, resampled every ~0.9 widths, then
+    /// <list type="bullet">
+    /// <item>meanders: a sine with drifting wavelength (~12 widths, ±40 %) and amplitude (up to ~0.16 wavelengths, so
+    /// bend radii stay above ~2 widths, as in natural rivers), strongest on flat ground;</item>
+    /// <item>bends and wander: irregular swings of a few hundred metres and kilometre-scale swings across the valley floor;</item>
+    /// <item>width: pools and narrows, occasional broad stretches, wider on flat ground; funnels into the receiving
+    /// channel or an estuary at the end;</item>
+    /// <item>sea mouths continue straight out to sea, so the channel always meets the detailed coastline.</item>
+    /// </list>
+    /// Both ends stay exactly in place (junctions remain joined). Attributes: surface (absolute), width, depth, catchment.
+    /// </summary>
+    private RiverReach Shape(int id, double[] bx, double[] bz, double[][] battr, double drop, ulong noiseSeed, double endWidth, bool mouth,
+        bool toSea, double wanderScale)
+    {
+        // Densify the base course (Catmull–Rom) so the adaptive resampling below follows a smooth curve.
+        int nb = bx.Length;
+        const int Sub = 8;
+        var dx = new double[(nb - 1) * Sub + 1]; var dz = new double[dx.Length];
+        var dattr = battr.Select(_ => new double[dx.Length]).ToArray();
+        for (int i = 0; i < nb - 1; i++)
+            for (int j = 0; j < Sub; j++)
+            {
+                double t = j / (double)Sub;
+                int i0 = Math.Max(0, i - 1), i3 = Math.Min(nb - 1, i + 2), k = i * Sub + j;
+                dx[k] = CatmullRom(bx[i0], bx[i], bx[i + 1], bx[i3], t); dz[k] = CatmullRom(bz[i0], bz[i], bz[i + 1], bz[i3], t);
+                for (int a = 0; a < battr.Length; a++) dattr[a][k] = battr[a][i] + (battr[a][i + 1] - battr[a][i]) * t;
+            }
+        dx[^1] = bx[^1]; dz[^1] = bz[^1];
+        for (int a = 0; a < battr.Length; a++) dattr[a][^1] = battr[a][^1];
+        var (px, pz, attr) = Resample(dx, dz, dattr, v => DetMath.Clamp(v[1] * .9 + 6, 12, 110)); // ≥ 10 points per meander wavelength
+        double[] s = attr[0], w = attr[1], d = attr[2], a2 = attr[3];
+        int total = px.Length;
+        var length = new double[total];
+        for (int k = 1; k < total; k++) length[k] = length[k - 1] + Math.Sqrt(Sq(px[k] - px[k - 1]) + Sq(pz[k] - pz[k - 1]));
+        double reachLength = length[^1];
+        double slope = reachLength > 0 ? drop / reachLength : 0;
+        // Model terrain is steeper than real lowland, so "flat" is generous: full meandering below ~0.3 %.
+        double flatness = 1 - DetMath.Smooth((slope - .003) / .03);
+
+        // Meanders and wander, perpendicular to the base course.
+        var rx = (double[])px.Clone(); var rz = (double[])pz.Clone();
+        double phase = Hashing.Unit(noiseSeed) * 6.283185307179586;
+        double wander = _raster.Cell * .35 * (.4 + .6 * flatness) * wanderScale;
+        double wanderLength = Math.Max(2200, _raster.Cell * 3);
         for (int k = 1; k < total - 1; k++)
         {
-            double tx = points[k + 1].X - points[k - 1].X, tz = points[k + 1].Z - points[k - 1].Z;
+            double tx = px[k + 1] - px[k - 1], tz = pz[k + 1] - pz[k - 1];
             double len = Math.Sqrt(tx * tx + tz * tz);
             if (len <= 0) continue;
-            // Smooth bends: wavelength at least 4.5x the amplitude (natural meander proportions, no kinks), mostly
-            // one octave with a little variation.
-            double amplitude = Math.Min(_raster.Cell * .3, w[k] * 4 + 30) * (.3 + .7 * flatness);
-            double wavelength = Math.Max(Math.Max(200, w[k] * 14), amplitude * 4.5);
-            double envelope = DetMath.Smooth(length[k] / (wavelength * .75)) * DetMath.Smooth((reachLength - length[k]) / (wavelength * .75));
-            double offset = Noise.Fbm(length[k], 0, wavelength, 2, 0, noiseSeed, .3) * 2.4 * amplitude * envelope;
-            // Slow wander across the valley floor on a kilometre scale, so long rivers never run ruler-straight.
-            double wander = _raster.Cell * .26 * (.15 + .85 * flatness);
-            double wanderLength = Math.Max(1100, wander * 5);
-            double wanderEnvelope = DetMath.Smooth(length[k] / (wanderLength * .6)) * DetMath.Smooth((reachLength - length[k]) / (wanderLength * .6));
-            offset += Noise.Gradient(length[k] / wanderLength + 3.7, 11.1, noiseSeed + 3) * 2.4 * wander * wanderEnvelope;
-            displaced[k] = new(points[k].X - tz / len * offset, points[k].Z + tx / len * offset);
+            double baseLambda = Math.Max(140, w[k] * 12), sk = length[k];
+            double lambda = baseLambda * (1 + .25 * DetMath.Clamp(2.5 * Noise.Gradient(sk / (baseLambda * 3) + 1.3, 7.7, noiseSeed + 1), -1.6, 1.6));
+            phase += 6.283185307179586 * (length[k] - length[k - 1]) / lambda;
+            // Amplitude tied to the local wavelength: bend radius λ / (4π² · 0.13 · m) stays above ~2 widths.
+            double ratio = .13 + .1 * (1 - DetMath.Smooth((w[k] - 4) / 30)); // creeks may wind a little tighter
+            double amplitude = lambda * ratio * DetMath.Clamp(.7 + 1.5 * Noise.Gradient(sk / (baseLambda * 4) + 4.1, 2.3, noiseSeed + 2), .2, 1.2)
+                * (.45 + .55 * flatness);
+            double envelope = DetMath.Smooth(sk / (baseLambda * .75)) * DetMath.Smooth((reachLength - sk) / (baseLambda * .75));
+            double offset = amplitude * DetMath.Sin(phase) * envelope;
+            // Calmer toward the downstream end, so channels meeting at a shallow angle do not cross before they join.
+            double wanderEnvelope = DetMath.Smooth(sk / (wanderLength * .4)) * DetMath.Smooth((reachLength - sk) / (wanderLength * .7));
+            offset += Noise.Gradient(sk / wanderLength + 3.7, 11.1, noiseSeed + 3) * 2.5 * wander * wanderEnvelope;
+            // Valley bends between the two scales: irregular swings of a few hundred metres, also on steep ground.
+            double bendLength = Math.Max(700, w[k] * 25), bendEnvelope = DetMath.Smooth(sk / (bendLength * .5)) * DetMath.Smooth((reachLength - sk) / bendLength);
+            offset += Noise.Fbm(sk, 23.9, bendLength, 2, 0, noiseSeed + 4, .45) * 2.5 * (65 + w[k] * 2.5) * (.6 + .4 * flatness) * bendEnvelope;
+            rx[k] = px[k] - tz / len * offset; rz[k] = pz[k] + tx / len * offset;
         }
-        // Width varies along the river (pools and narrows), returning to the network's widths at both ends;
-        // the last stretch widens toward the receiving channel or into an estuary.
+
+        // Width: pools and narrows, broad stretches, wider on flat ground; network widths kept at both ends.
         double tail = mouth ? DetMath.Clamp(endWidth * 5, 250, 1200) : Math.Max(endWidth * 3, 40);
         for (int k = 0; k < total; k++)
         {
-            double ends = DetMath.Smooth(length[k] / 150) * DetMath.Smooth((reachLength - length[k]) / 150);
-            double vary = 1 + .3 * Noise.Fbm(length[k], 17.3, Math.Max(300, w[k] * 25), 2, 0, noiseSeed + 7, .5) * 2.4 * ends;
-            double funnel = DetMath.Smooth(1 - (reachLength - length[k]) / tail);
-            double baseWidth = w[k] * Math.Max(.6, vary);
+            double sk = length[k], ends = DetMath.Smooth(sk / 150) * DetMath.Smooth((reachLength - sk) / 150);
+            double z1 = 2.5 * Noise.Fbm(sk, 17.3, Math.Max(400, w[k] * 30), 2, 0, noiseSeed + 7, .5);
+            double z2 = 2.5 * Noise.Gradient(sk / Math.Max(150, w[k] * 8) + 5.1, 2.7, noiseSeed + 8);
+            double pool = DetMath.Smooth((2.5 * Noise.Gradient(sk / Math.Max(900, w[k] * 45) + 9.3, 4.4, noiseSeed + 9) - .9) / .8);
+            double vary = DetMath.Clamp((1 + .3 * z1 + .12 * z2) * (1 + .9 * pool) * (.8 + .4 * flatness), .5, 2.6);
+            double funnel = DetMath.Smooth(1 - (reachLength - sk) / tail);
+            // Never narrower than the style's minimum; narrows get shallower so their banks stay walkable.
+            double baseWidth = Math.Max(w[k] * (1 + (vary - 1) * ends), Math.Min(w[k], _minWidth));
+            if (baseWidth < w[k]) d[k] *= Math.Sqrt(baseWidth / w[k]);
             w[k] = baseWidth + (Math.Max(endWidth, baseWidth) - baseWidth) * funnel * funnel;
             if (mouth) d[k] *= 1 + .25 * funnel;
         }
-        return new RiverReach { Id = id, Points = displaced, Surface = s, Width = w, Depth = d, Catchment = a };
+
+        var points = new Point2[total];
+        for (int k = 0; k < total; k++) points[k] = new(rx[k], rz[k]);
+        if (toSea && total >= 2)
+        {
+            // Continue straight out to sea: the detailed coastline can lie a few hundred metres beyond the raster's.
+            double ex = rx[^1] - rx[^2], ez = rz[^1] - rz[^2], el = Math.Sqrt(ex * ex + ez * ez);
+            if (el > 0)
+            {
+                ex /= el; ez /= el;
+                const int Extra = 8;
+                var p2 = new Point2[total + Extra]; var s2 = new double[total + Extra]; var w2 = new double[total + Extra];
+                var d2 = new double[total + Extra]; var a3 = new double[total + Extra];
+                Array.Copy(points, p2, total); Array.Copy(s, s2, total); Array.Copy(w, w2, total); Array.Copy(d, d2, total); Array.Copy(a2, a3, total);
+                for (int e = 0; e < Extra; e++)
+                {
+                    double t = (e + 1) * 110;
+                    p2[total + e] = new(rx[^1] + ex * t, rz[^1] + ez * t);
+                    s2[total + e] = _seaLevel; w2[total + e] = w[^1]; d2[total + e] = d[^1]; a3[total + e] = a2[^1];
+                }
+                points = p2; s = s2; w = w2; d = d2; a2 = a3;
+            }
+        }
+        return new RiverReach { Id = id, Points = points, Surface = s, Width = w, Depth = d, Catchment = a2 };
+    }
+
+    /// <summary>Resample a polyline at arclength steps chosen per point from its interpolated attributes; ends kept.</summary>
+    private static (double[] X, double[] Z, double[][] Attr) Resample(double[] x, double[] z, double[][] attr, Func<double[], double> step)
+    {
+        var ox = new List<double> { x[0] }; var oz = new List<double> { z[0] };
+        var oa = attr.Select(a => new List<double> { a[0] }).ToArray();
+        var current = attr.Select(a => a[0]).ToArray();
+        double next = step(current), lastStep = next;
+        for (int i = 0; i + 1 < x.Length; i++)
+        {
+            double segment = Math.Sqrt(Sq(x[i + 1] - x[i]) + Sq(z[i + 1] - z[i])), t = 0;
+            while (segment - t >= next)
+            {
+                t += next;
+                double f = t / segment;
+                ox.Add(x[i] + (x[i + 1] - x[i]) * f); oz.Add(z[i] + (z[i + 1] - z[i]) * f);
+                for (int a = 0; a < attr.Length; a++) { current[a] = attr[a][i] + (attr[a][i + 1] - attr[a][i]) * f; oa[a].Add(current[a]); }
+                next = step(current);
+                lastStep = next;
+            }
+            next -= segment - t;
+        }
+        // Replace a too-close final sample by the exact end point, otherwise append the end.
+        if (ox.Count > 1 && lastStep - next < lastStep * .4)
+        {
+            ox.RemoveAt(ox.Count - 1); oz.RemoveAt(oz.Count - 1);
+            foreach (var list in oa) list.RemoveAt(list.Count - 1);
+        }
+        ox.Add(x[^1]); oz.Add(z[^1]);
+        for (int a = 0; a < attr.Length; a++) oa[a].Add(attr[a][^1]);
+        return (ox.ToArray(), oz.ToArray(), oa.Select(l => l.ToArray()).ToArray());
+    }
+
+    /// <summary>One [¼ ½ ¼] smoothing pass with both ends fixed.</summary>
+    private static void SmoothPass(double[] x, double[] z)
+    {
+        double px = x[0], pz = z[0];
+        for (int i = 1; i < x.Length - 1; i++)
+        {
+            double nx = .25 * px + .5 * x[i] + .25 * x[i + 1], nz = .25 * pz + .5 * z[i] + .25 * z[i + 1];
+            px = x[i]; pz = z[i]; x[i] = nx; z[i] = nz;
+        }
     }
 
     private static double CatmullRom(double p0, double p1, double p2, double p3, double t) =>

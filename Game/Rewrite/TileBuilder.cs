@@ -70,6 +70,26 @@ public static class TileBuilder
             }
 
         double sea = sampler.Plan.Profile.SeaLevel;
+        // Submerged-bed tint from the signed depth below the nearest water surface (dry vertices beside water use the
+        // neighbouring level): interpolates to exactly 0.5 at the waterline, so the tint follows the real shoreline
+        // instead of colouring whole triangles.
+        var submerged = new float[Side * Side];
+        for (int j = 0; j < Side; j++)
+            for (int i = 0; i < Side; i++)
+            {
+                int k = j * Side + i;
+                double level = samples[k].Water != WaterKind.None ? samples[k].WaterLevel : double.NaN;
+                if (double.IsNaN(level))
+                    for (int b = -1; b <= 1; b++)
+                        for (int a = -1; a <= 1; a++)
+                        {
+                            int x = i + a, z = j + b;
+                            if (x < 0 || z < 0 || x >= Side || z >= Side || samples[z * Side + x].Water == WaterKind.None) continue;
+                            double l = samples[z * Side + x].WaterLevel;
+                            if (double.IsNaN(level) || l > level) level = l;
+                        }
+                submerged[k] = double.IsNaN(level) ? 0 : (float)DetMath.Clamp(.5 + (level - samples[k].Height) * .5, 0, 1);
+            }
         int skirt = Side * 4;
         var vertices = new Vector3[Side * Side + skirt];
         var normals = new Vector3[vertices.Length];
@@ -88,7 +108,7 @@ public static class TileBuilder
                 // B: beach (dry ground just above the sea); A: submerged ground (river/lake/sea bed).
                 // Beach: a band along the sea (low land influence) and only a few metres above it.
                 double beach = t.Water != WaterKind.None ? 0 : (1 - DetMath.Smooth(t.Land / .0035)) * (1 - DetMath.Smooth((h - sea) / 3.5));
-                colors[k] = new Color((float)forest[k], (float)t.Mountain, (float)beach, t.Water != WaterKind.None ? 1 : 0);
+                colors[k] = new Color((float)forest[k], (float)t.Mountain, (float)beach, submerged[k]);
                 // World xz folded into a 4 km period keeps float precision for shader noise far from the origin.
                 uv[k] = new Vector2((float)Fold(x0 + i * spacing), (float)Fold(z0 + j * spacing));
                 uv2[k] = new Vector2((float)(h - sea), 0);

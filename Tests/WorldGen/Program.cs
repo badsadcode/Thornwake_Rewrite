@@ -7,6 +7,7 @@ using Thornwake.WorldGen;
 //   dotnet run --project Tests/WorldGen -- --filter=coast    run tests whose name contains "coast"
 //   dotnet run --project Tests/WorldGen -- --record          re-record frozen fingerprints (generator change only!)
 //   dotnet run --project Tests/WorldGen -- --maps=<dir>      write hill-shaded PNG previews instead of testing
+//   dotnet run --project Tests/WorldGen -- --window=<profile>,<seed>,<x>,<z>,<side>,<pixels>,<png>   one close-up map
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 string? filter = args.FirstOrDefault(a => a.StartsWith("--filter="))?[9..];
@@ -16,6 +17,65 @@ bool record = args.Contains("--record");
 if (args.Contains("--probe"))
 {
     Probe.Run();
+    return 0;
+}
+
+// Ad hoc close-up: --window=<profile>,<seed>,<x>,<z>,<side m>,<pixels>,<png>
+string? window = args.FirstOrDefault(a => a.StartsWith("--window="))?[9..];
+if (window != null)
+{
+    var v = window.Split(',');
+    var ws = CoreTests.Sampler(v[0], int.Parse(v[1]));
+    MapRender.Window(ws, v[6], double.Parse(v[2]), double.Parse(v[3]), double.Parse(v[4]), int.Parse(v[5]));
+    return 0;
+}
+
+// Ad hoc: --dump=<profile>,<seed>,<x>,<z> prints the river reach nearest to a point
+string? dump = args.FirstOrDefault(a => a.StartsWith("--dump="))?[7..];
+if (dump != null)
+{
+    var v = dump.Split(',');
+    var ds = CoreTests.Sampler(v[0], int.Parse(v[1]));
+    double qx = double.Parse(v[2]), qz = double.Parse(v[3]);
+    var hy = ds.Plan.Hydrology;
+    Console.WriteLine($"cell {ds.Plan.Macro.Cell:0} m");
+    if (hy.NearestRiver(qx, qz, 3000, out var hit))
+    {
+        var r = hy.Reaches[hit.Reach];
+        Console.WriteLine($"reach {r.Id} points {r.Points.Length} sea {r.EndsInSea} distributary {r.Distributary}");
+        for (int k = 0; k < r.Points.Length; k++)
+        {
+            double turn = 0;
+            if (k > 0 && k + 1 < r.Points.Length)
+            {
+                double a1 = Math.Atan2(r.Points[k].Z - r.Points[k - 1].Z, r.Points[k].X - r.Points[k - 1].X);
+                double a2 = Math.Atan2(r.Points[k + 1].Z - r.Points[k].Z, r.Points[k + 1].X - r.Points[k].X);
+                turn = Math.IEEERemainder(a2 - a1, 2 * Math.PI) * 180 / Math.PI;
+            }
+            Console.WriteLine($"{k} {r.Points[k].X:0} {r.Points[k].Z:0} w {r.Width[k]:0.0} s {r.Surface[k]:0.00} turn {turn:0}");
+        }
+    }
+    return 0;
+}
+
+// Ad hoc: --line=<profile>,<seed>,<x0>,<z0>,<x1>,<z1>,<n> prints samples along a line
+string? line = args.FirstOrDefault(a => a.StartsWith("--line="))?[7..];
+if (line != null)
+{
+    var v = line.Split(',');
+    var ls = CoreTests.Sampler(v[0], int.Parse(v[1]));
+    double x0 = double.Parse(v[2]), z0 = double.Parse(v[3]), x1 = double.Parse(v[4]), z1 = double.Parse(v[5]);
+    int count = int.Parse(v[6]);
+    Span<RiverHit> hits = stackalloc RiverHit[32];
+    for (int i = 0; i <= count; i++)
+    {
+        double x = x0 + (x1 - x0) * i / count, z = z0 + (z1 - z0) * i / count;
+        var t = ls.Sample(x, z);
+        int n = ls.Plan.Hydrology.NearbyRivers(x, z, hits);
+        Console.WriteLine($"{x:0.0} {z:0.0} h {t.Height:0.000} {t.Water} hits {n} nearest {(n > 0 ? hits[0].Distance : -1):0.0} w {(n > 0 ? hits[0].Width : 0):0.0}");
+        if (args.Contains("--hits"))
+            for (int j = 0; j < n; j++) Console.WriteLine($"    reach {hits[j].Reach} d {hits[j].Distance:0.00} s {hits[j].Surface:0.000} w {hits[j].Width:0.00}");
+    }
     return 0;
 }
 

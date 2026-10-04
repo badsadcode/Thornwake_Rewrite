@@ -1,6 +1,6 @@
 // Rewrite world terrain. Palette taken from the Harthwood valley game (sRGB values, converted to linear below).
 // Vertex data: UV = world xz folded to a 4 km period (noise), UV2.x = height above sea level,
-// COLOR = (forest cover, mountain share, beach, submerged bed).
+// COLOR = (forest cover, mountain share, beach, submerged bed: 0.5 + depth below water / 2 m).
 shader_type spatial;
 render_mode diffuse_burley;
 
@@ -21,7 +21,7 @@ void vertex() {
 void fragment() {
 	vec2 p = UV;
 	float h = UV2.x;
-	float forest = COLOR.r, mountain = COLOR.g, wet = COLOR.b, submerged = COLOR.a;
+	float forest = COLOR.r, mountain = COLOR.g, wet = COLOR.b, submerged = smoothstep(0.5, 0.8, COLOR.a);
 	float slope = 1.0 - clamp(world_normal.y, 0.0, 1.0);
 	float n1 = vnoise(p * 0.012), n2 = vnoise(p * 0.21), n3 = vnoise(p * 1.7);
 

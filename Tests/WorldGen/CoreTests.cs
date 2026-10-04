@@ -222,6 +222,7 @@ internal static class CoreTests
         var rng = new Random(9);
         var f = s.Plan.Layout.Land[0];
         double sumStd = 0; int windows = 0; double steepest = 0;
+        var where = (X: 0.0, Z: 0.0);
         var h = new double[65 * 65];
         while (windows < 40)
         {
@@ -231,10 +232,13 @@ internal static class CoreTests
             s.HeightGrid(x, z, 1, 65, 65, h);
             double mean = h.Average(), std = Math.Sqrt(h.Select(v => (v - mean) * (v - mean)).Average());
             for (int j = 0; j < 64; j++) for (int i = 0; i < 64; i++)
-                steepest = Math.Max(steepest, Math.Max(Math.Abs(h[j * 65 + i + 1] - h[j * 65 + i]), Math.Abs(h[(j + 1) * 65 + i] - h[j * 65 + i])));
+            {
+                double step = Math.Max(Math.Abs(h[j * 65 + i + 1] - h[j * 65 + i]), Math.Abs(h[(j + 1) * 65 + i] - h[j * 65 + i]));
+                if (step > steepest) { steepest = step; where = (x + i, z + j); }
+            }
             sumStd += std; windows++;
         }
-        T.Note($"lowland 64 m windows: mean height std-dev {sumStd / windows:0.00} m, steepest 1 m step {steepest:0.00} m");
+        T.Note($"lowland 64 m windows: mean height std-dev {sumStd / windows:0.00} m, steepest 1 m step {steepest:0.00} m at ({where.X:0}, {where.Z:0})");
         T.Check(sumStd / windows > .25, "walking-scale relief present on lowland");
         T.Check(steepest < 1.2, "lowland stays walkable (no >50° 1 m steps)");
     }
