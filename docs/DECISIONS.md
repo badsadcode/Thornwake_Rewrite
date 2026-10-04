@@ -133,3 +133,14 @@ Each water vertex gets a current vector: downhill along the water level's gradie
 √slope × 6 m/s (0.3–3.5), smoothed and extended to bank vertices. The shader advects ripples in two cross-faded
 phases (a standard flow map) and smears them along the flow with a second tap; no rotated coordinates, because at
 world positions of hundreds of km rotating them scrambles the pattern.
+
+## D22 — Local water simulation: a moving 128 m window over the generated world (2026-10-05)
+GangTheGAME's WaterField ("virtual pipes" shallow water, exact mass conservation) is ported engine-free as
+`Game/Simulation/LocalWater.cs` and adapted to world scale: 0.5 m cells (0.25 m in GangTheGAME: 4× cheaper, and the
+world's mesh is 2 m), a window of 8×8 chunks of 16 m that follows the player in whole chunks, a dormant store for wet
+chunks that leave the window (resumed when they return), and only the wet bounding box stepped (~1.4 ms per step
+with rain over the whole window). Ground is interpolated exactly like the rendered level-0 mesh. Generated rivers,
+lakes and the sea are *sinks*: simulated water that reaches them joins them. The generated water bodies themselves
+are not simulated (their levels come from hydrology, which is not a hydraulic equilibrium; simulating them would
+make them drift away from the rendered rivers). Simulating rivers locally (e.g. damming) is a later step once
+terrain editing (M8) exists.

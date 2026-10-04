@@ -24,6 +24,8 @@ public partial class WorldLab : Node3D
     private SpringArm3D _arm = null!;
     private Camera3D _camera = null!;
     private Atmosphere _atmosphere = null!;
+    private LocalWaterView _water = null!;
+    private bool _rain;
     private readonly WorldGenOptions _gen = new();
     private Label _hud = null!, _overlay = null!, _help = null!;
     private PanelContainer _menu = null!;
@@ -47,7 +49,8 @@ public partial class WorldLab : Node3D
     private string? _smokeDirectory, _shotPath;
     private (double X, double Z)? _shotAt;
     private (float Yaw, float Pitch, float Zoom)? _shotView;
-    private float _shotHeight;
+    private float _shotHeight, _shotWait;
+    private readonly List<(double X, double Z, double Volume)> _shotPours = new();
     private int _smokeStage;
     private double _smokeTimer;
 
@@ -63,6 +66,8 @@ public partial class WorldLab : Node3D
         _streamer = new WorldStreamer { Name = "Terrain" };
         AddChild(_streamer);
         _atmosphere.SetWater(_streamer.WaterMaterial);
+        _water = new LocalWaterView { Name = "LocalWater" };
+        AddChild(_water);
         BuildPlayer();
         _atmosphere.AttachCamera(_camera);
         BuildUi();
@@ -82,6 +87,10 @@ public partial class WorldLab : Node3D
             // --set=<setting key>=<value>, e.g. --set=fx.water_reflections=0 (testing; also saved)
             if (arg.StartsWith("--set=")) { var kv = arg[6..].Split('='); var setting = GameSettings.All.FirstOrDefault(x => x.Key == kv[0]); if (setting != null) setting.Value = double.Parse(kv[1], CultureInfo.InvariantCulture); }
             if (arg.StartsWith("--debug-draw=")) GetViewport().DebugDraw = (Viewport.DebugDrawEnum)int.Parse(arg[13..], CultureInfo.InvariantCulture);
+            // Screenshot of simulated water: --pour=x,z,m³ (repeatable) --rain --wait=s (simulated seconds before the shot)
+            if (arg.StartsWith("--pour=")) { var v = arg[7..].Split(','); _shotPours.Add((double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture), double.Parse(v[2], CultureInfo.InvariantCulture))); }
+            if (arg == "--rain") _rain = true;
+            if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg == "--grid") { _gridShown = true; _streamer.ShowGrid(true); }
             if (arg.StartsWith("--hour=")) _timeSlider.Value = double.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--menu=")) { _menu.Visible = true; _menu.GetChild<TabContainer>(0).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); }
@@ -123,6 +132,8 @@ public partial class WorldLab : Node3D
         var start = _landmarks.Count > 0 ? _landmarks[0] : Landmarks.Dry(_sampler, "Start", _sampler.Plan.Layout.Land[0].Center.X, _sampler.Plan.Layout.Land[0].Center.Z);
         _originX = Math.Floor(start.X / 64) * 64; _originZ = Math.Floor(start.Z / 64) * 64;
         _streamer.Configure(_sampler, _originX, _originZ);
+        _water.Configure(_sampler, _streamer.WaterMaterial, _originX, _originZ);
+        _rain = false;
         Teleport(start.X, start.Z);
         var plan = _sampler.Plan;
         foreach (string arg in OS.GetCmdlineUserArgs())
@@ -163,6 +174,7 @@ public partial class WorldLab : Node3D
         _originX = ox; _originZ = oz;
         _player.Position += shift;
         _streamer.Rebase(ox, oz);
+        _water.Rebase(ox, oz);
     }
 
     private bool _custom;
@@ -222,9 +234,13 @@ public partial class WorldLab : Node3D
         bool sprint = !typing && Input.IsKeyPressed(Key.Shift);
         var velocity = _player.Velocity;
 
+        UpdateLocalWater(dt, typing);
         var water = _sampler.Sample(PlayerX, PlayerZ);
         double feet = _player.Position.Y;
-        _swimming = !_fly && water.Water != WaterKind.None && water.WaterLevel - feet > 1.25;
+        double level = water.Water != WaterKind.None ? water.WaterLevel : double.NaN;
+        float simulated = _water.Sim?.SurfaceAt(PlayerX, PlayerZ) ?? float.NaN;
+        if (!float.IsNaN(simulated) && (double.IsNaN(level) || simulated > level)) level = simulated;
+        _swimming = !_fly && !double.IsNaN(level) && level - feet > 1.25;
 
         if (_fly)
         {
@@ -238,7 +254,7 @@ public partial class WorldLab : Node3D
             float speed = sprint ? 3.2f : 1.8f;
             velocity.X = move.X * speed; velocity.Z = move.Z * speed;
             // Buoyancy holds the head above the surface.
-            float target = (float)(water.WaterLevel - 1.3);
+            float target = (float)(level - 1.3);
             velocity.Y = Mathf.Clamp((target - _player.Position.Y) * 3f, -2f, 2f);
             if (!typing && Input.IsKeyPressed(Key.Space)) velocity.Y = 1.5f;
         }
@@ -266,6 +282,40 @@ public partial class WorldLab : Node3D
         else _walkPhase = Mathf.Lerp(_walkPhase, Mathf.Round(_walkPhase / Mathf.Pi) * Mathf.Pi, 1 - Mathf.Exp(-10 * dt));
         float swing = Mathf.Sin(_walkPhase) * (_fly ? 0 : .55f);
         Limb("LeftLeg", swing); Limb("RightLeg", -swing); Limb("LeftArm", -swing * .8f); Limb("RightArm", swing * .8f);
+    }
+
+    /// <summary>Local water: simulate, and the debug tools (G pour at the aimed point, J toggle a spring there).</summary>
+    private double _simTime;
+
+    private void UpdateLocalWater(float dt, bool typing)
+    {
+        _simTime += dt;
+        var sim = _water.Sim;
+        if (sim == null) return;
+        sim.RainRate = _rain ? 6e-5f * GameSettings.RainStrength.F : 0;
+        _water.Step(dt, PlayerX, PlayerZ);
+        if (!typing && Input.IsKeyPressed(Key.G) && Aim() is { } at) sim.Add(at.X, at.Z, 2.5 * dt);
+    }
+
+    /// <summary>World point under the screen centre (terrain collision), or null.</summary>
+    private (double X, double Z)? Aim()
+    {
+        var from = _camera.GlobalPosition;
+        var to = from - _camera.GlobalTransform.Basis.Z * 250;
+        var query = PhysicsRayQueryParameters3D.Create(from, to, 1);
+        var hit = GetWorld3D().DirectSpaceState.IntersectRay(query);
+        if (hit.Count == 0) return null;
+        var p = hit["position"].AsVector3();
+        return (_originX + p.X, _originZ + p.Z);
+    }
+
+    private void ToggleSpring()
+    {
+        var sim = _water.Sim;
+        if (sim == null || Aim() is not { } at) return;
+        var near = sim.Sources.Find(s => Math.Abs(s.X - at.X) < 4 && Math.Abs(s.Z - at.Z) < 4);
+        if (near != null) { sim.Sources.Remove(near); _status = "Spring removed."; }
+        else { sim.Sources.Add(new Thornwake.Hydraulics.LocalWater.Source { X = at.X, Z = at.Z, Rate = .6f }); _status = "Spring placed (J on it again removes it)."; }
     }
 
     private void Limb(string name, float angle)
@@ -298,6 +348,9 @@ public partial class WorldLab : Node3D
             $"Position {PlayerX:0} , {PlayerZ:0}   ground {t.Height:0.0} m   {where}\n" +
             $"{mode}   FPS {Engine.GetFramesPerSecond():0}   tiles {_streamer.Resident} (+{_streamer.Missing} queued)   " +
             $"terrain triangles {_streamer.Triangles / 1000}k   tile build {_streamer.LastBuildMs:0.0} ms, commit {_streamer.LastCommitMs:0.0} ms";
+        if (_water.Sim is { Added: > 0 } sim)
+            _hud.Text += $"\nWater simulation: {sim.Volume():0.0} m³ on the land, {sim.Absorbed:0.0} m³ joined rivers/lakes{(_rain ? ", raining" : "")}" +
+                $"{(sim.Sources.Count > 0 ? $", {sim.Sources.Count} spring(s)" : "")}";
     }
 
     // ------------------------------------------------------------------ input
@@ -325,6 +378,9 @@ public partial class WorldLab : Node3D
             case Key.F1: _help.Visible = !_help.Visible; break;
             case Key.F2: _showHud = !_showHud; _hud.Visible = _showHud; break;
             case Key.F3: _gridShown = !_gridShown; _streamer.ShowGrid(_gridShown); break;
+            case Key.J: if (!_menu.Visible) ToggleSpring(); break;
+            case Key.H: if (!_menu.Visible) { _rain = !_rain; _status = _rain ? "Rain on (H stops it)." : "Rain stopped."; } break;
+            case Key.K: if (!_menu.Visible) { _water.Clear(); _rain = false; _status = "Simulated water cleared."; } break;
             case Key.F12: Screenshot(Path.Combine(OS.GetUserDataDir(), $"screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png")); break;
         }
     }
@@ -379,8 +435,9 @@ public partial class WorldLab : Node3D
         {
             Text = "WASD move · Shift sprint · Space jump/swim up · mouse look (Tab frees cursor) · wheel zoom\n" +
                    "F fly (Space/C up/down, Shift faster, Ctrl ×6) · N noclip · Esc menu: teleport, new world, time of day\n" +
+                   "Water: hold G pour where you look · J spring · H rain · K clear\n" +
                    "F1 hide help · F2 hide HUD · F3 tile grid · F12 screenshot (saved to the user data folder)",
-            AnchorTop = 1, AnchorBottom = 1, OffsetTop = -78, OffsetLeft = 14, OffsetRight = 900,
+            AnchorTop = 1, AnchorBottom = 1, OffsetTop = -100, OffsetLeft = 14, OffsetRight = 900,
         };
         _help.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .8f));
         layer.AddChild(_help);
@@ -471,9 +528,11 @@ public partial class WorldLab : Node3D
             else if (_smokeStage == 1 && settled)
             {
                 if (_shotHeight > 0) { SetFly(true); _player.Position += Vector3.Up * _shotHeight; }
-                _smokeStage = 2; _smokeTimer = 0;
+                foreach (var (x, z, v) in _shotPours) _water.Sim?.Sources.Add(new Thornwake.Hydraulics.LocalWater.Source { X = x, Z = z, Rate = (float)(v / Math.Max(1, _shotWait * .5)) });
+                _smokeStage = 2; _smokeTimer = 0; _simTime = 0;
             }
-            else if (_smokeStage == 2 && settled && _smokeTimer > 1.5)
+            else if (_smokeStage == 2 && _shotPours.Count > 0 && _simTime > _shotWait * .5 && _water.Sim is { } sim && sim.Sources.Count > 0) sim.Sources.Clear();
+            else if (_smokeStage == 2 && settled && _smokeTimer > 1.5 && _simTime >= _shotWait)
             {
                 GD.Print($"SCATTER grass={_streamer.GrassCommitted} rocks={_streamer.RocksCommitted} props={_streamer.PropsCommitted} farTrees={_streamer.FarTreesCommitted}");
                 Screenshot(_shotPath); GetTree().Quit(0);

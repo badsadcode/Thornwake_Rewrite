@@ -133,6 +133,12 @@ public static class GameSettings
     public static readonly Setting CloudSpeed = Add(new("sky.cloud_speed", "Sky", "Wind speed", 0, 4, .1, 1,
         "How fast clouds (and their shadows) drift.", "×"));
 
+    // ---- simulation (live)
+    public static readonly Setting WaterSimulation = Add(new("sim.water", "Simulation", "Local water simulation", 0, 1, 1, 1,
+        "Simulated water around the player (G pour, J spring, H rain, K clear). Runs in a 128 m area that follows you."));
+    public static readonly Setting RainStrength = Add(new("sim.rain", "Simulation", "Rain strength", .1, 4, .1, 1,
+        "How hard it rains when rain is on (H). 1 = a heavy storm, exaggerated so runoff shows within a minute.", "×"));
+
     // ---- camera and performance (live)
     public static readonly Setting Fov = Add(new("view.fov", "Camera and performance", "Field of view", 50, 110, 1, 70, "Vertical field of view.", "°"));
     public static readonly Setting AntiAliasing = Add(new("perf.aa", "Camera and performance", "Anti-aliasing", 0, 2, 1, 1,

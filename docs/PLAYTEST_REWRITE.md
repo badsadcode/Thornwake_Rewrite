@@ -64,6 +64,10 @@ milestone M6), caves.
 | F1 / F2 | Hide help / hide HUD |
 | F3 | Show terrain tile grid |
 | F12 | Screenshot (saved to `%APPDATA%\Thornwake\`) |
+| G (hold) | Pour water where you look (local water simulation) |
+| J | Place / remove a spring where you look |
+| H | Rain on / off (Esc → Settings → Simulation: rain strength) |
+| K | Clear all simulated water |
 
 ## Please check (and tell me what you think)
 1. **Frame rate** with the new defaults (more grass, clouds, sun shafts). If it drops, try Esc → Settings:
