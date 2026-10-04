@@ -290,3 +290,26 @@ point sample ~0.6 µs macro / ~1.5 µs full detail; 64 m tile at 1 m ~1 µs/vert
 **Next:** wait for Tom's build-2 feedback and asset batches. Otherwise continue with: M6 local shallow-water
 simulation near the player (GangTheGAME WaterField port), river data memory optimisation, slope-aligned gully
 detail (M3), and level-0 terrain at 1 m spacing near the player (shoreline steps).
+
+**2026-10-04, stretch 3: playtest round 2 → build 3.** Details per item: `docs/PLAYTEST_FEEDBACK.md` (round 2);
+decisions D17–D21. Summary:
+* Rivers: smoothed grid path, sine meanders + valley bends + wander, width variety, sea mouths reach the detailed
+  coast, lake outlets start in the lake, meandering delta branches, LOD-aware channel edges (smooth far shorelines),
+  crease-free bank profile (`Hydrology.Shape`, `TerrainSampler.Profile/ChannelProfile`).
+* Water: visible looking upstream (depth fade fix), river current per water vertex with flow-mapped ripples and
+  foam streaks, cleaner banks.
+* Settings: `GameSettings` (persisted, generated menu: detail, view distances, effects, sky, camera/performance) and
+  `WorldGenOptions` (New world tab: shape, terrain, rivers and lakes). Detail changes rebuild tiles in place.
+* Atmosphere (`Atmosphere.cs`, `Sky.gdshader`, `SunShafts.gdshader`): clouds, matching cloud shadows (decal), sun
+  shafts, glow, SSAO/SSIL/SSR, volumetric fog, haze, exposure, saturation, warm low sun.
+* Denser grass (2×) and forests; far tree cards become crowns from above.
+* Tooling: `WorldLab` switches `--hour=h --menu=tab --set=key=value --grid --debug-draw=n --dump-tile=x,z`;
+  `Tests/WorldGen` modes `--window=…`, `--dump=…`, `--line=…`.
+
+Costs after stretch 3 (cloud, 4 cores): plan build mountainous ~2.3 s, vast ~5.8 s; retained memory mountainous
+~51 MB, vast ~314 MB (3.4 M river points at ~0.9-width spacing, 10 M index entries; transient allocation during the
+vast build ~1.8 GB). This is now the top technical debt.
+
+**Next:** river data memory (float32 positions relative to reach origin, attributes as half/float, index storing
+segment ranges instead of per-segment entries, larger point spacing on straight stretches); then M6 local
+shallow-water simulation near the player; level-0 terrain at 1 m near the player; M3 gully detail.

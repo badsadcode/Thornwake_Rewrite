@@ -278,6 +278,10 @@ public partial class WorldStreamer : Node3D
     {
         _revision++;
         foreach (var (task, _) in _jobs.Values) _ = task.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        // Let running tile builds finish (a few ms each) so no worker is inside managed code while the engine shuts
+        // down (an intermittent exit-time crash seen once under Wine).
+        var running = _jobs.Values.Select(j => j.Task).Where(t => !t.IsCompleted).ToArray();
+        try { if (running.Length > 0) Task.WaitAll(running, 3000); } catch (AggregateException) { }
     }
 }
 
