@@ -80,3 +80,21 @@ water and trees all come from the same CPU tile data and it is verifiable in the
 Both the new world and the original valley game must be reachable from one EXE. `Game/Launcher.tscn` offers both;
 existing command-line tooling keeps working (`--smoke-test` forwards to the valley game). The `TEST_*.cmd`
 scripts open their scenes directly and are unaffected; `TEST_REWRITE_WORLD.cmd` opens the new world.
+
+## D14 — River surfaces from the detailed terrain along the final course (2026-10-04)
+Tom's "canyon" screenshot: surfaces came from coarse 750 m raster cells while the terrain the player sees is the
+bicubic raster plus detail; meandering courses climbed valley sides and the capped floodplain cut trenches. Surfaces
+are now recomputed from the bicubic height along the smoothed, meandering course (network order, same junction/lake
+rules), valley sides are slope-limited, and the terrain combines all nearby river segments continuously (per reach:
+true nearest distance + softly averaged level/width/depth). Cost: point samples near rivers ~2× slower; tile building
+almost unchanged; Vast world keeps ~200 MB of river data (optimisation noted for later).
+
+## D15 — FXAA instead of MSAA in the new world (2026-10-04)
+The water shader reads the screen and depth textures. With MSAA it produced lines along water triangle edges (Tom's
+screenshots) and, in the cloud renderer, lost refraction entirely. The new world scene disables MSAA and uses FXAA.
+The original valley game keeps the project's MSAA setting.
+
+## D16 — Distant trees as shader-drawn cards (2026-10-04)
+The woodland pack's lowest LOD is still 200–700 triangles. Beyond ~400 m trees are camera-facing quads with a
+pixel-stepped silhouette in the species' crown colour (FarTree.gdshader), placed by the same forest rules with
+coarser cells at greater distance; beyond ~6 km the terrain's forest tint carries the look.

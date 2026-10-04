@@ -47,3 +47,18 @@ More screenshots pending from Tom; plan the fixes after reviewing them.
 4. Ground detail: grass blades, stones, rocks, boulders, outcrops; close-up terrain texture.
 5. Coast: beach band by distance to the sea.
 Then a new Windows build.
+
+### Round 1 — status of fixes
+| # | Item | Status |
+|---|---|---|
+| 1 | Distant trees vanish | Far tree cards for 0.4–6 km (levels 3–5), terrain forest tint beyond |
+| 2 | Rivers too straight from above | Fixed root cause (meander amplitude vs wavelength made zigzags); natural meanders + km-scale wander on flat ground |
+| 3 | Uniform river width | Width varies along reaches (0.6–1.3×), pools/narrows |
+| 4 | River mouths | Estuaries (3× widening over the last 250–1,200 m); simple 2-branch deltas for large rivers on flat coasts |
+| 5 | Junctions | Tributaries funnel into the receiving channel; all nearby rivers combine continuously |
+| 6 | Lines on water | Caused by MSAA with the screen/depth-reading water shader; new world uses FXAA instead |
+| 7 | Flat-looking ground | Grass tufts (valley mesh), stones, rocks, boulders, outcrops on steep ground |
+| 8 | Close-up texture | Pixel-style close-up detail in the terrain shader (fades out by 70 m) |
+| 9 | River in a trench | River surface from detailed terrain + slope-limited valley sides; verified at Tom's location |
+| 10 | More tree/bush variety, giant trees | Waiting for Tom's assets; spec in `docs/ASSET_SPEC.md` |
+| 12 | Blotchy sand at the coast | Beach is now a band along the sea, softer edge |
