@@ -16,7 +16,7 @@ public readonly record struct ChunkGround(float[] Floor, bool[] Sink);
 /// <item>Only a window of <see cref="WindowChunks"/>² chunks (128 m at 0.5 m cells) around the player is simulated;
 /// it moves in whole chunks. Chunks leaving the window keep their water in a dormant store and resume it when they
 /// come back; the rest of the world costs nothing.</item>
-/// <item>Ground comes from the deterministic terrain, interpolated exactly like the rendered 2 m mesh, so water lies
+/// <item>Ground comes from the deterministic terrain, interpolated exactly like the rendered level-0 mesh (1 m), so water lies
 /// on what the player sees.</item>
 /// <item>Generated rivers, lakes and the sea are sinks: water running into them joins them (and is counted).</item>
 /// <item>Only the wet bounding box (plus a rim) is stepped.</item>
@@ -64,11 +64,11 @@ public sealed class LocalWater
 
     public LocalWater(Func<long, long, ChunkGround> load) { _load = load; }
 
-    /// <summary>Ground from the terrain sampler, matching the rendered level-0 mesh (2 m vertices, same triangles,
+    /// <summary>Ground from the terrain sampler, matching the rendered level-0 mesh (1 m vertices, same triangles,
     /// same LOD filter), with generated water bodies as sinks.</summary>
     public static ChunkGround FromSampler(TerrainSampler sampler, long chunkX, long chunkZ)
     {
-        const double MeshSpacing = 2;
+        const double MeshSpacing = 1;
         int vertices = (int)(ChunkSize / MeshSpacing) + 1;
         double x0 = chunkX * ChunkSize, z0 = chunkZ * ChunkSize;
         var height = new double[vertices * vertices];

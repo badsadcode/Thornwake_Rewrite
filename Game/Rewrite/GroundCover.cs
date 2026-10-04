@@ -28,8 +28,9 @@ public static class GroundCover
     {
         public readonly Vector3[] Vertices, Normals; public readonly double[] Forest; public readonly TerrainSample[] Samples;
         public readonly double Spacing, X0, Z0;
-        public Grid(Vector3[] vertices, Vector3[] normals, double[] forest, TerrainSample[] samples, double spacing, double x0, double z0)
-        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; }
+        public readonly int Side;
+        public Grid(Vector3[] vertices, Vector3[] normals, double[] forest, TerrainSample[] samples, double spacing, double x0, double z0, int side)
+        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; }
 
         /// <summary>Height, normal Y, forest and wetness at tile-local (x, z), matching the mesh triangles (a,b,c / b,d,c).</summary>
         public bool At(double x, double z, out float height, out float up, out float forest, out bool wet)
@@ -37,9 +38,9 @@ public static class GroundCover
             height = 0; up = 0; forest = 0; wet = false;
             double gx = x / Spacing, gz = z / Spacing;
             int i = (int)Math.Floor(gx), j = (int)Math.Floor(gz);
-            if (i < 0 || j < 0 || i >= TileBuilder.Cells || j >= TileBuilder.Cells) return false;
+            if (i < 0 || j < 0 || i >= Side - 1 || j >= Side - 1) return false;
             double fx = gx - i, fz = gz - j;
-            int n = TileBuilder.Side, a = j * n + i, b = a + 1, c = a + n, d = c + 1;
+            int n = Side, a = j * n + i, b = a + 1, c = a + n, d = c + 1;
             double ha = Vertices[a].Y, hb = Vertices[b].Y, hc = Vertices[c].Y, hd = Vertices[d].Y;
             height = (float)(fx + fz <= 1 ? ha + (hb - ha) * fx + (hc - ha) * fz : hd + (hc - hd) * (1 - fx) + (hb - hd) * (1 - fz));
             int nearest = (fz < .5 ? j : j + 1) * n + (fx < .5 ? i : i + 1);
@@ -51,8 +52,8 @@ public static class GroundCover
 
         public float Mountain(double x, double z)
         {
-            int i = Math.Clamp((int)Math.Round(x / Spacing), 0, TileBuilder.Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, TileBuilder.Side - 1);
-            return (float)Samples[j * TileBuilder.Side + i].Mountain;
+            int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
+            return (float)Samples[j * Side + i].Mountain;
         }
     }
 

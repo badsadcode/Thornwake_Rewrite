@@ -10,7 +10,7 @@ using Thornwake.WorldGen;
 namespace Thornwake.Rewrite;
 
 /// <summary>
-/// Streams the terrain as nested LOD rings (a quadtree "clipmap" in tiles): level 0 is 64 m tiles at 2 m spacing
+/// Streams the terrain as nested LOD rings (a quadtree "clipmap" in tiles): level 0 is 64 m tiles at 1 m spacing
 /// around the player; each coarser level doubles tile size and covers the ring outside the finer one, out to
 /// level 7 (8 km tiles, ~20 km radius). Tiles are built on worker threads from the deterministic sampler and
 /// committed on the main thread within a time budget. Positions are float offsets from a double-precision origin

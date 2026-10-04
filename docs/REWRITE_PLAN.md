@@ -323,7 +323,10 @@ G pour / J spring / H rain / K clear; swimming in simulated water; ground that h
 minutes (`WetGround.gdshader`); puddles soak away (~1 mm/min); 8 headless tests (conservation, downhill, level
 pool, sinks, moving window, real terrain, soaking, cost ~1–1.4 ms per step for a full window under rain).
 
-**Next:** Tom's build-3 feedback and asset batches first when they arrive. Then: M6 second step (optional local
-river simulation once terrain edits exist; splashes; sound), level-0
-terrain at 1 m near the player (shoreline steps), M3 gully detail, M8 terrain edits (digging) feeding both the
+Same night: level-0 tiles now have 1 m vertices (64 cells per 64 m tile; `TileBuilder.CellsFor`): smoother
+shorelines and creek beds near the player (+~240 k triangles, ~6 ms per level-0 tile build on a worker); the water
+simulation's ground follows. Forests: sharper forest/meadow patches; tree cards as dense as the trees they replace.
+
+**Next:** Tom's build-3/4 feedback and asset batches first when they arrive. Then: M6 second step (optional local
+river simulation once terrain edits exist; splashes; sound), M3 gully detail, M8 terrain edits (digging) feeding both the
 sampler and the water.

@@ -50,6 +50,14 @@ milestone M6), caves.
 * **Sky**: drifting clouds with matching cloud shadows on the land; sun shafts through trees and gaps in clouds.
 * Denser grass (2×) and forests by default; distant tree cards look like crowns when seen from above.
 
+## New in build 4 (same night as build 3)
+* **Water simulation** around you: hold **G** to pour water where you look, **J** places a spring, **H** starts
+  rain, **K** clears it. Water runs downhill, pools in hollows, joins rivers and lakes, slowly soaks in and leaves
+  dark wet ground that dries over a few minutes. You can swim in deep simulated water.
+* **Finer ground near you** (1 m instead of 2 m): smoother shorelines and creek banks.
+* **Forests**: clearer forest and meadow patches; distant tree cards as dense as the real trees they replace.
+* Less memory for big worlds (Vast world ~200 MB instead of ~310 MB).
+
 ## Controls
 | Key | Action |
 |---|---|

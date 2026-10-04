@@ -31,6 +31,8 @@ public readonly record struct DetailConfig(double Grass, double ForestCover, dou
 public sealed class TileData
 {
     public required TileKey Key { get; init; }
+    /// <summary>Vertices per tile side (the nearest level is finer).</summary>
+    public required int Side { get; init; }
     public required Vector3[] Vertices { get; init; }
     public required Vector3[] Normals { get; init; }
     public required Color[] Colors { get; init; }
@@ -59,8 +61,11 @@ public static class TileBuilder
 {
     public const double BaseTile = 64;
     public const int Cells = 32, Side = Cells + 1;
+    /// <summary>Cells across a tile: the nearest level is twice as fine (1 m vertices: smoother shorelines, small creeks).</summary>
+    public static int CellsFor(int level) => level == 0 ? 64 : Cells;
     public static TileData Build(TerrainSampler sampler, TileKey key, DetailConfig config)
     {
+        int Cells = CellsFor(key.Level), Side = Cells + 1;
         var timer = System.Diagnostics.Stopwatch.StartNew();
         double size = key.Size, spacing = size / Cells, x0 = key.MinX, z0 = key.MinZ;
         double minWavelength = spacing * 2;
@@ -160,13 +165,13 @@ public static class TileBuilder
 
         var data = new TileData
         {
-            Key = key, Vertices = vertices, Normals = normals, Colors = colors, Uv = uv, Uv2 = uv2, Indices = indices.ToArray(),
+            Key = key, Side = Side, Vertices = vertices, Normals = normals, Colors = colors, Uv = uv, Uv2 = uv2, Indices = indices.ToArray(),
             CollisionFaces = key.Level == 0 ? Faces(vertices) : null,
             // Full trees on the nearest levels; beyond, tree cards, then the terrain shader's forest tint.
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };
-        BuildWater(data, samples, heights, s2, spacing);
-        var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0);
+        BuildWater(data, samples, heights, s2, spacing, Side);
+        var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side);
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
         if (key.Level == 0 && config.Grass > 0) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);
         if (key.Level <= 2 && config.Rocks > 0) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed, config.Rocks);
@@ -198,9 +203,8 @@ public static class TileBuilder
     /// neighbouring level, so the plane runs under the bank and the visible shoreline is the exact terrain
     /// intersection. Colour: R = depth / 20 m, G = kind (0 sea, .5 lake, 1 river).
     /// </summary>
-    private static void BuildWater(TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing)
+    private static void BuildWater(TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing, int n)
     {
-        int n = Side;
         var wet = new bool[n * n];
         bool any = false;
         for (int k = 0; k < n * n; k++) { wet[k] = samples[k].Water != WaterKind.None; any |= wet[k]; }
@@ -241,16 +245,15 @@ public static class TileBuilder
                 indices.Add(a); indices.Add(b); indices.Add(c);
                 indices.Add(b); indices.Add(d); indices.Add(c);
             }
-        data.Water = (vertices, colors, Flow(samples, vertices, wet, spacing), indices.ToArray());
+        data.Water = (vertices, colors, Flow(samples, vertices, wet, spacing, n), indices.ToArray());
     }
 
     /// <summary>
     /// River current per water vertex (world xz, m/s): downhill along the water surface's gradient (central
     /// differences between wet neighbours), speed growing with the square root of the slope. Still water elsewhere.
     /// </summary>
-    private static Vector2[] Flow(TerrainSample[] samples, Vector3[] water, bool[] wet, double spacing)
+    private static Vector2[] Flow(TerrainSample[] samples, Vector3[] water, bool[] wet, double spacing, int n)
     {
-        int n = Side;
         var flow = new Vector2[n * n];
         for (int j = 0; j < n; j++)
             for (int i = 0; i < n; i++)

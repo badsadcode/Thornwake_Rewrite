@@ -144,19 +144,19 @@ public partial class WorldLab : Node3D
                 double qx = double.Parse(v[0], CultureInfo.InvariantCulture), qz = double.Parse(v[1], CultureInfo.InvariantCulture);
                 var key = new TileKey(0, (long)Math.Floor(qx / TileBuilder.BaseTile), (long)Math.Floor(qz / TileBuilder.BaseTile));
                 var data = TileBuilder.Build(_sampler, key, DetailConfig.Current);
-                double meanForest = 0; for (int k = 0; k < TileBuilder.Side * TileBuilder.Side; k++) meanForest += data.Colors[k].R;
-                GD.Print($"TILE {key} water {(data.Water is { } w ? w.Indices.Length / 3 : -1)} triangles, trees {data.Trees.Count}, mean forest {meanForest / (TileBuilder.Side * TileBuilder.Side):0.00}, cards {data.FarTrees.Count}");
+                double meanForest = 0; for (int k = 0; k < data.Side * data.Side; k++) meanForest += data.Colors[k].R;
+                GD.Print($"TILE {key} water {(data.Water is { } w ? w.Indices.Length / 3 : -1)} triangles, trees {data.Trees.Count}, mean forest {meanForest / (data.Side * data.Side):0.00}, cards {data.FarTrees.Count}");
                 foreach (int level in new[] { 1, 2, 3 })
                 {
                     var k2 = new TileKey(level, (long)Math.Floor(qx / (TileBuilder.BaseTile * (1 << level))), (long)Math.Floor(qz / (TileBuilder.BaseTile * (1 << level))));
                     var d2 = TileBuilder.Build(_sampler, k2, DetailConfig.Current);
-                    double mf = 0; for (int k = 0; k < TileBuilder.Side * TileBuilder.Side; k++) mf += d2.Colors[k].R;
-                    GD.Print($"TILE {k2} trees {d2.Trees.Count}, mean forest {mf / (TileBuilder.Side * TileBuilder.Side):0.00}, cards {d2.FarTrees.Count}");
+                    double mf = 0; for (int k = 0; k < d2.Side * d2.Side; k++) mf += d2.Colors[k].R;
+                    GD.Print($"TILE {k2} trees {d2.Trees.Count}, mean forest {mf / (d2.Side * d2.Side):0.00}, cards {d2.FarTrees.Count}");
                 }
                 if (data.Water is { } water)
                     for (int k = 0; k < water.Vertices.Length; k++)
                         if (water.Colors[k].R > 0 || water.Vertices[k].Y > data.Vertices[k].Y)
-                            GD.Print($"  v{k} ({k % TileBuilder.Side},{k / TileBuilder.Side}) water {water.Vertices[k].Y:0.00} ground {data.Vertices[k].Y:0.00}");
+                            GD.Print($"  v{k} ({k % data.Side},{k / data.Side}) water {water.Vertices[k].Y:0.00} ground {data.Vertices[k].Y:0.00}");
             }
         _status = $"{plan.Profile.Name}{(_custom ? " (custom)" : "")}, seed {plan.Manifest.Seed}: generated in {(Time.GetTicksMsec() - _generationStarted) / 1000:0.0} s " +
             $"({plan.Hydrology.Reaches.Count} river reaches, {plan.Hydrology.Lakes.Count} lakes).";
