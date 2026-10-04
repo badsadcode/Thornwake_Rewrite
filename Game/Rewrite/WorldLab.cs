@@ -43,13 +43,21 @@ public partial class WorldLab : Node3D
     private string _status = "";
 
     // Headless screenshot mode: --world-smoke=<dir> [--preset=id] [--seed=n]
-    private string? _smokeDirectory;
+    private string? _smokeDirectory, _shotPath;
+    private (double X, double Z)? _shotAt;
+    private (float Yaw, float Pitch, float Zoom)? _shotView;
+    private float _shotHeight;
     private int _smokeStage;
     private double _smokeTimer;
 
     public override void _Ready()
     {
         _profiles = WorldProfile.ParseCatalog(Godot.FileAccess.GetFileAsString("res://Content/world_profiles.json"));
+        // The water shader reads the screen and depth textures; with MSAA those reads produce lines along the water
+        // mesh's triangle edges (Tom's playtest) and wrong refraction. This scene uses FXAA instead (the valley game
+        // keeps the project's MSAA setting).
+        GetViewport().Msaa3D = Viewport.Msaa.Disabled;
+        GetViewport().ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Fxaa;
         BuildEnvironment();
         _streamer = new WorldStreamer { Name = "Terrain" };
         AddChild(_streamer);
@@ -61,6 +69,12 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--preset=")) preset = arg[9..];
             if (arg.StartsWith("--seed=")) seed = int.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--world-smoke=")) _smokeDirectory = arg[14..];
+            // Single screenshot: --world-shot=<png> --at=x,z [--view=yaw,pitch,zoom] [--msaa=0|2|4] [--fly-height=m]
+            if (arg.StartsWith("--world-shot=")) { _shotPath = arg[13..]; _smokeDirectory = Path.GetDirectoryName(_shotPath) ?? "."; }
+            if (arg.StartsWith("--at=")) { var v = arg[5..].Split(','); _shotAt = (double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture)); }
+            if (arg.StartsWith("--view=")) { var v = arg[7..].Split(','); _shotView = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture), float.Parse(v[2], CultureInfo.InvariantCulture)); }
+            if (arg.StartsWith("--msaa=")) GetViewport().Msaa3D = arg[7..] switch { "0" => Viewport.Msaa.Disabled, "4" => Viewport.Msaa.Msaa4X, _ => Viewport.Msaa.Msaa2X };
+            if (arg.StartsWith("--fly-height=")) _shotHeight = float.Parse(arg[13..], CultureInfo.InvariantCulture);
         }
         int index = Math.Max(0, _profiles.ToList().FindIndex(p => p.Id == preset));
         _profileList.Select(index);
@@ -418,6 +432,22 @@ public partial class WorldLab : Node3D
     {
         _smokeTimer += delta;
         bool settled = _streamer.Settled && !_holding;
+        if (_shotPath != null)
+        {
+            if (_smokeStage == 0)
+            {
+                if (_shotAt is { } at) Teleport(at.X, at.Z);
+                if (_shotView is { } v) { _yaw = v.Yaw; _pitch = v.Pitch; _zoom = v.Zoom; _arm.SpringLength = v.Zoom; }
+                _smokeStage = 1; _smokeTimer = 0;
+            }
+            else if (_smokeStage == 1 && settled)
+            {
+                if (_shotHeight > 0) { SetFly(true); _player.Position += Vector3.Up * _shotHeight; }
+                _smokeStage = 2; _smokeTimer = 0;
+            }
+            else if (_smokeStage == 2 && settled && _smokeTimer > 1.5) { Screenshot(_shotPath); GetTree().Quit(0); }
+            return;
+        }
         void Shot(string name) => Screenshot(Path.Combine(_smokeDirectory!, name));
         switch (_smokeStage)
         {

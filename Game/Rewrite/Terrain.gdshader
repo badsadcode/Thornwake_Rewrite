@@ -33,12 +33,27 @@ void fragment() {
 	vec3 rock = mix(vec3(0.467, 0.463, 0.416), vec3(0.560, 0.545, 0.500), n2);             // valley 77766a
 	c = mix(c, rock, smoothstep(0.30, 0.52, slope + (n2 - 0.5) * 0.10 + mountain * 0.06));
 	vec3 sand = mix(vec3(0.800, 0.725, 0.520), vec3(0.700, 0.640, 0.470), n2);             // valley cbb984
-	c = mix(c, sand, smoothstep(0.2, 0.7, wet + (n2 - 0.5) * 0.5) * (1.0 - smoothstep(0.25, 0.5, slope)));
+	c = mix(c, sand, smoothstep(0.3, 0.65, wet + (n2 - 0.5) * 0.25) * (1.0 - smoothstep(0.25, 0.5, slope)));
 	vec3 bed = mix(vec3(0.360, 0.340, 0.260), vec3(0.450, 0.420, 0.330), n2);              // gravel and silt under water
 	c = mix(c, bed, submerged);
 	float snow = smoothstep(snow_line - 250.0 + (n1 - 0.5) * 600.0, snow_line + 150.0, h) * (1.0 - smoothstep(0.55, 0.8, slope));
 	c = mix(c, vec3(0.93, 0.94, 0.96), snow);
 	c *= 0.92 + 0.16 * n3;
+	// Close-up detail (fades out by ~70 m): pixel-stepped speckle and small clumps at 12.5 cm texels, in the spirit
+	// of the valley game's nearest-filtered pixel textures. Stronger on grass, finer and greyer on rock.
+	float near = 1.0 - smoothstep(25.0, 70.0, length(VERTEX));
+	if (near > 0.0) {
+		vec2 texel = floor(p * 8.0);
+		float speck = hash(texel);
+		float clump = vnoise(p * 1.6) * 0.6 + vnoise(p * 4.3) * 0.4;
+		float rockiness = smoothstep(0.30, 0.52, slope);
+		vec3 grass_detail = mix(vec3(0.86), vec3(1.12, 1.10, 0.92), step(0.72, speck)) * mix(0.9, 1.08, clump);
+		grass_detail = mix(grass_detail, vec3(0.78, 0.74, 0.62), step(0.965, speck) * (1.0 - forest * 0.5)); // bare soil flecks
+		vec3 rock_detail = vec3(0.88 + 0.22 * hash(floor(p * 12.0)));
+		vec3 detail = mix(grass_detail, rock_detail, rockiness);
+		detail = mix(detail, vec3(0.92 + 0.12 * speck), max(snow, wet)); // calmer on snow and sand
+		c *= mix(vec3(1.0), detail, near);
+	}
 	if (show_grid) {
 		vec2 g = abs(fract(p / 64.0) - 0.5);
 		if (max(g.x, g.y) > 0.495) c = vec3(0.1, 0.8, 0.8);

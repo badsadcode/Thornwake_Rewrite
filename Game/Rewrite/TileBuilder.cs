@@ -31,6 +31,9 @@ public sealed class TileData
     /// <summary>Triangle soup for a ConcavePolygonShape3D (level 0 only).</summary>
     public Vector3[]? CollisionFaces { get; init; }
     public List<TreeInstance> Trees { get; init; } = new();
+    public List<Transform3D> Grass { get; set; } = new();
+    public List<RockInstance> Rocks { get; set; } = new();
+    public List<FarTree> FarTrees { get; set; } = new();
     public double BuildMs { get; set; }
 }
 
@@ -82,7 +85,8 @@ public static class TileBuilder
                 normals[k] = new Vector3((float)-dx, (float)(2 * spacing), (float)-dz).Normalized();
                 var t = samples[k];
                 // B: beach (dry ground just above the sea); A: submerged ground (river/lake/sea bed).
-                double beach = t.Water != WaterKind.None ? 0 : DetMath.Clamp(1 - (h - sea) / 1.4, 0, 1);
+                // Beach: a band along the sea (low land influence) and only a few metres above it.
+                double beach = t.Water != WaterKind.None ? 0 : (1 - DetMath.Smooth(t.Land / .0035)) * (1 - DetMath.Smooth((h - sea) / 3.5));
                 colors[k] = new Color((float)forest[k], (float)t.Mountain, (float)beach, t.Water != WaterKind.None ? 1 : 0);
                 // World xz folded into a 4 km period keeps float precision for shader noise far from the origin.
                 uv[k] = new Vector2((float)Fold(x0 + i * spacing), (float)Fold(z0 + j * spacing));
@@ -132,6 +136,11 @@ public static class TileBuilder
             Trees = key.Level < TreeLevels ? Vegetation.Trees(sampler, key) : new List<TreeInstance>(),
         };
         BuildWater(data, samples, heights, s2, spacing);
+        var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0);
+        ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
+        if (key.Level == 0) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed);
+        if (key.Level <= 2) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed);
+        if (key.Level is >= 3 and <= 5) data.FarTrees = GroundCover.FarTrees(key, grid, sea, coverSeed);
         data.BuildMs = timer.Elapsed.TotalMilliseconds;
         return data;
 

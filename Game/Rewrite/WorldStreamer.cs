@@ -38,7 +38,8 @@ public partial class WorldStreamer : Node3D
     private readonly Dictionary<TileKey, (Task<TileData> Task, long Revision)> _jobs = new();
     private readonly HashSet<TileKey> _failed = new();
     private readonly int _maxJobs = Math.Max(1, System.Environment.ProcessorCount - 1);
-    private ShaderMaterial _terrain = null!, _water = null!;
+    private ShaderMaterial _terrain = null!, _water = null!, _farTree = null!;
+    private Mesh _grass = null!, _card = null!;
     private TreeCatalog _trees = null!;
 
     public override void _Ready()
@@ -46,6 +47,22 @@ public partial class WorldStreamer : Node3D
         _terrain = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Terrain.gdshader") };
         _water = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Water.gdshader") };
         _trees = new TreeCatalog();
+        _farTree = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/FarTree.gdshader") };
+        _grass = Visuals.GrassMesh();
+        // Unit card: x in [-0.5, 0.5], y in [0, 1]; the shader faces it to the camera and scales it per instance.
+        var card = new ArrayMesh();
+        using (var arrays = new Godot.Collections.Array())
+        {
+            arrays.Resize((int)Mesh.ArrayType.Max);
+            arrays[(int)Mesh.ArrayType.Vertex] = new[] { new Vector3(-.5f, 0, 0), new Vector3(.5f, 0, 0), new Vector3(.5f, 1, 0), new Vector3(-.5f, 1, 0) };
+            arrays[(int)Mesh.ArrayType.TexUV] = new[] { new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0), new Vector2(0, 0) };
+            arrays[(int)Mesh.ArrayType.Normal] = new[] { Vector3.Back, Vector3.Back, Vector3.Back, Vector3.Back };
+            arrays[(int)Mesh.ArrayType.Index] = new[] { 0, 2, 1, 0, 3, 2 };
+            card.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        }
+        // Cards are moved in the vertex shader; give the mesh a generous box so culling never drops them.
+        card.CustomAabb = new Aabb(new Vector3(-40, -5, -40), new Vector3(80, 60, 80));
+        _card = card;
     }
 
     public void ShowGrid(bool show) => _terrain.SetShaderParameter("show_grid", show);
@@ -186,7 +203,33 @@ public partial class WorldStreamer : Node3D
             root.AddChild(body);
         }
         if (data.Trees.Count > 0) _trees.Instance(root, data.Trees, key.Level == 2 ? 2 : 1, key.Level == 0);
+        if (data.Grass.Count > 0)
+            root.AddChild(Multi(_grass, data.Grass.ToArray(), GeometryInstance3D.ShadowCastingSetting.Off, 120));
+        foreach (var kind in data.Rocks.GroupBy(r => r.Kind))
+            root.AddChild(Multi(RockMeshes.Get(kind.Key), kind.Select(r => r.Transform).ToArray(),
+                kind.Key == GroundCover.Stone ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,
+                kind.Key == GroundCover.Stone ? 90 : 0));
+        if (data.FarTrees.Count > 0)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = _card, InstanceCount = data.FarTrees.Count };
+            for (int i = 0; i < data.FarTrees.Count; i++)
+            {
+                var t = data.FarTrees[i];
+                multi.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(new Vector3(1, t.Height, 1)), t.Position));
+                multi.SetInstanceCustomData(i, new Color(t.Crown.R, t.Crown.G, t.Crown.B, t.Conifer ? 1 : 0));
+            }
+            root.AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = _farTree, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        }
         return root;
+    }
+
+    private static MultiMeshInstance3D Multi(Mesh mesh, Transform3D[] transforms, GeometryInstance3D.ShadowCastingSetting shadows, float visibleTo)
+    {
+        var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = mesh, InstanceCount = transforms.Length };
+        for (int i = 0; i < transforms.Length; i++) multi.SetInstanceTransform(i, transforms[i]);
+        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows };
+        if (visibleTo > 0) { node.VisibilityRangeEnd = visibleTo; node.VisibilityRangeEndMargin = 15; node.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self; }
+        return node;
     }
 
     public override void _ExitTree()
