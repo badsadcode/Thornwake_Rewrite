@@ -226,7 +226,7 @@ public partial class WorldLab : Node3D
             if (Input.IsKeyPressed(Key.A)) input.X -= 1;
             if (Input.IsKeyPressed(Key.D)) input.X += 1;
         }
-        if (_smokeDirectory != null && _smokeStage == 2) input = new Vector2(0, -1);
+        if (_smokeDirectory != null && _shotPath == null && _smokeStage == 2) input = new Vector2(0, -1);
         input = input.LimitLength(1);
         var forward = new Vector3(-Mathf.Sin(_yaw), 0, -Mathf.Cos(_yaw));
         var right = new Vector3(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));

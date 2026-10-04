@@ -316,5 +316,13 @@ interpolation reproduces. Vast world: retained 314 → 205 MB, peak working set 
 samples unchanged or faster. Further savings would need float32 positions (API change) or coarser meander
 sampling (visible facets on small creeks), so this is left here.
 
-**Next:** M6 local shallow-water simulation near the player (GangTheGAME WaterField port); level-0 terrain at
-1 m near the player; M3 gully detail; Tom's build-3 feedback and asset batches first when they arrive.
+**M6 first version (night of 2026-10-04/05):** `Game/Simulation/LocalWater.cs` (decision D22) — GangTheGAME's
+virtual-pipes shallow water at 0.5 m in a 128 m window following the player, dormant chunks, rivers/lakes/sea as
+sinks, ground matching the rendered mesh; `LocalWaterView` draws it with the terrain water material; debug tools
+G pour / J spring / H rain / K clear; swimming in simulated water; 7 headless tests (conservation, downhill, level
+pool, sinks, moving window, real terrain, cost ~1.4 ms per step for a full window under rain).
+
+**Next:** Tom's build-3 feedback and asset batches first when they arrive. Then: M6 second step (simulated water
+wets/darkens the ground; puddles persist; optional local river simulation once terrain edits exist), level-0
+terrain at 1 m near the player (shoreline steps), M3 gully detail, M8 terrain edits (digging) feeding both the
+sampler and the water.
