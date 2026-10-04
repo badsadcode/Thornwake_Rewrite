@@ -57,7 +57,7 @@ public sealed class TerrainSampler
             _macro.SampleGradient(WorldPlan.LandChannel, x, z, out double gx, out double gz);
             double gradient = Math.Sqrt(gx * gx + gz * gz);
             double shift = _style.CoastDetailShift * Noise.Fbm(lx, lz, _macro.Cell * 2.5, 7, minWavelength, _coastSeed, .55);
-            land += shift * gradient;
+            land += shift * gradient * DetMath.Smooth(1 - Math.Abs(land) / _coastBand); // fades out: no step at the band edge
         }
 
         if (land <= 0)
@@ -89,28 +89,53 @@ public sealed class TerrainSampler
             }
             detail *= inland;
         }
-        // Rivers: channel, banks and floodplain replace the terrain near the river; detail fades toward it.
+        // Rivers: channel, banks and slope-limited valley sides replace the terrain near a river; walking-scale detail
+        // fades toward it. Two nearby rivers (a confluence) combine continuously: deepest carving wins (softly),
+        // highest bank wins, so the junction reads as one water body.
         var water = WaterKind.None; double level = double.NaN; int body = -1;
-        double height;
-        if (_hydrology.NearestRiver(x, z, 0, out var river))
+        double floor = .2 * inland + .05, height;
+        Span<RiverHit> rivers = stackalloc RiverHit[32];
+        int nearby = _hydrology.NearbyRivers(x, z, rivers);
+        if (nearby > 0)
         {
-            double half = river.Width * .5, bank = Math.Max(8, river.Width * .8);
-            double d = river.Distance, surface = river.Surface - _p.SeaLevel;
-            double bankTop = surface + .6 + .15 * river.Depth;
-            double rough = Math.Max(baseHeight, .2 * inland + .05);
-            double flood = Hydrology.Floodplain(river.Width, rough - bankTop);
-            double terrain = Math.Max(baseHeight + detail * DetMath.Smooth((d - half) / (bank + flood)), .2 * inland + .05);
-            if (d < half)
+            // One smooth profile per reach: true nearest distance, with water level/width/depth softly averaged over the
+            // reach's nearby segments (exponential weights by extra distance). Continuous along the river and across
+            // the midline of tight bends (rational weights; no exp in the hot path). Reaches then combine: deepest carve,
+            // highest bank.
+            Span<RiverHit> reaches = stackalloc RiverHit[16];
+            int count = 0;
+            for (int i = 0; i < nearby && count < reaches.Length; i++)
             {
-                double u = d / half;
-                height = surface - river.Depth * (1 - u * u);
-                water = WaterKind.River; level = river.Surface; body = river.Reach;
+                int reach = rivers[i].Reach;
+                bool seen = false;
+                for (int j = 0; j < count; j++) if (reaches[j].Reach == reach) { seen = true; break; }
+                if (seen) continue;
+                double dmin = double.PositiveInfinity;
+                for (int j = i; j < nearby; j++) if (rivers[j].Reach == reach) dmin = Math.Min(dmin, rivers[j].Distance);
+                double tau = 4 + .2 * dmin, wsum = 0, surface = 0, width = 0, depth = 0, catchment = 0;
+                for (int j = i; j < nearby; j++)
+                {
+                    if (rivers[j].Reach != reach) continue;
+                    double q = (rivers[j].Distance - dmin) / tau, w = 1 / (1 + q * q * (1 + q));
+                    wsum += w; surface += w * rivers[j].Surface; width += w * rivers[j].Width; depth += w * rivers[j].Depth; catchment += w * rivers[j].Catchment;
+                }
+                reaches[count++] = new RiverHit(reach, dmin, surface / wsum, width / wsum, depth / wsum, catchment / wsum);
             }
-            else if (d < half + bank) height = Math.Max(surface + (bankTop - surface) * DetMath.Smooth((d - half) / bank),
-                Math.Min(terrain, bankTop));
-            else height = bankTop + (terrain - bankTop) * DetMath.Smooth((d - half - bank) / flood);
+            double rise = Math.Max(baseHeight, floor), damp = 1;
+            for (int i = 0; i < count; i++) damp = Math.Min(damp, DetailDamp(reaches[i]));
+            double terrain = Math.Max(baseHeight + detail * damp, floor);
+            double carve = 0, raise = 0, wetInside = 0;
+            for (int i = 0; i < count; i++)
+            {
+                double delta = Profile(reaches[i], terrain, rise, out _, out double inside) - terrain;
+                carve = Math.Min(carve, delta);
+                raise = Math.Max(raise, delta);
+                if (inside > wetInside) { wetInside = inside; water = WaterKind.River; level = reaches[i].Surface; body = reaches[i].Reach; }
+            }
+            // Inside a channel, another river's raised bank never lifts the bed above this water.
+            height = wetInside > 0 ? Math.Min(terrain + carve, level - _p.SeaLevel - .05) : terrain + carve + raise;
         }
-        else height = Math.Max(baseHeight + detail, .2 * inland + .05); // generated land never dips below the sea
+        else height = Math.Max(baseHeight + detail, floor); // generated land never dips below the sea
 
         if (water == WaterKind.None)
         {
@@ -119,6 +144,38 @@ public sealed class TerrainSampler
             { water = WaterKind.Lake; level = _hydrology.Lakes[lake].Level; body = lake; }
         }
         return new(_p.SeaLevel + height, land, mountainShare, detail, water, level, body);
+    }
+
+    // Walking-scale detail fades over a wide corridor around a river (valley floors are smoother than hillsides).
+    // Depends only on the hit's geometry, and reaches 1 exactly at the river's influence edge (continuity).
+    private static double DetailDamp(in RiverHit r) =>
+        DetMath.Smooth((r.Distance - r.Width * .5) / (Hydrology.Bank(r.Width) + Hydrology.MaxFloodplain(r.Width)));
+
+    /// <summary>
+    /// River cross-section at the hit distance: parabolic channel, gentle banks up to just above the water, then a
+    /// valley side blending back to the terrain over a width that grows with the height to climb (about 1 in 4).
+    /// <paramref name="weight"/> is 1 near the river, 0 at the edge of its influence; <paramref name="inside"/> > 0 in water.
+    /// </summary>
+    private double Profile(in RiverHit r, double terrain, double rise, out double weight, out double inside)
+    {
+        double half = r.Width * .5, bank = Hydrology.Bank(r.Width), d = r.Distance, surface = r.Surface - _p.SeaLevel;
+        double bankTop = surface + .6 + .15 * r.Depth;
+        double flood = Hydrology.Floodplain(r.Width, rise - bankTop);
+        weight = 1 - DetMath.Smooth((d - half - bank) / flood);
+        inside = (half - d) / half;
+        if (d < half) { double u = d / half; return surface - r.Depth * (1 - u * u); }
+        if (d < half + bank) return Math.Max(surface + (bankTop - surface) * DetMath.Smooth((d - half) / bank), Math.Min(terrain, bankTop));
+        // Where the ground is lower than the bank top, only a short levee is raised (long raised ramps from many
+        // segments at different levels would stack into terraces along steep rivers).
+        double ramp = terrain < bankTop ? Math.Min(flood, bank * 2 + 10) : flood;
+        return bankTop + (terrain - bankTop) * DetMath.Smooth((d - half - bank) / ramp);
+    }
+
+    private static double SmoothMin(double a, double b, double k)
+    {
+        if (k <= 1e-9) return Math.Min(a, b);
+        double h = DetMath.Clamp(.5 + .5 * (b - a) / k, 0, 1);
+        return b + (a - b) * h - k * h * (1 - h);
     }
 
     /// <summary>Terrain without walking-scale detail (macro shape only), for comparisons and maps.</summary>

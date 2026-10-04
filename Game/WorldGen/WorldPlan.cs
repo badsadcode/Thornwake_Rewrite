@@ -83,6 +83,7 @@ public sealed class WorldPlan
         Hydrology = new Hydrology(Macro, height, p, Style, riverSeed);
         Hydrology.BuildMilliseconds = hydroTimer.Elapsed.TotalMilliseconds;
         for (int k = 0; k < height.Length; k++) heightRaster[k] = (float)height[k];
+        Hydrology.RefineSurfaces(Style);
         BuildMilliseconds = timer.Elapsed.TotalMilliseconds;
     }
 }

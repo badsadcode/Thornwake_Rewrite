@@ -31,3 +31,19 @@ More screenshots pending from Tom; plan the fixes after reviewing them.
   whose width follows the height difference (no hard cap), so cuts become natural valleys.
 * Ridge/peak/mountain-slope views and forested mountainsides: look as intended (keep).
 * Visible again: forest edges ending abruptly where tree LOD stops (item 1).
+
+### Round 1, part 3 (4 more screenshots)
+* Riverside forest with willows: looks good. Straight lines on the river surface are clearly visible (item 6).
+* Coast: blotchy sand/grass mix, a flat sand plateau with a jagged edge above a wide brown shallow bed (item 12, new):
+  beach should be a band along the sea, not every low flat area.
+* River junction from above: two straight channels meeting at an angle (items 2, 5).
+* Wide river: lines on the water again.
+
+### Plan for round 1 fixes (in this order)
+1. Rivers: surface from detailed terrain along the course + slope-limited valley sides (fixes trenches); stronger
+   meanders where flat; width variation; estuary mouths and simple deltas; blended junctions.
+2. Water surface lines: reproduce and fix.
+3. Distant forests: far tree LOD.
+4. Ground detail: grass blades, stones, rocks, boulders, outcrops; close-up terrain texture.
+5. Coast: beach band by distance to the sea.
+Then a new Windows build.

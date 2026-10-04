@@ -28,7 +28,8 @@ internal static class HydrologyTests
                     T.Check(r.Surface[k] < r.Surface[k - 1] || r.Surface[k] == r.Surface[k - 1] && r.Surface[k] <= s.Plan.Profile.SeaLevel + 1e-9,
                         $"reach {r.Id} surface rises at point {k}: {r.Surface[k - 1]} -> {r.Surface[k]}");
                 T.Check(r.Surface[^1] >= s.Plan.Profile.SeaLevel - 1e-9, "never below the sea");
-                T.Check(r.Width.All(w => w >= s.Plan.Style.RiverMinWidth && w <= s.Plan.Style.RiverMaxWidth), "width within limits");
+                // Width varies along a reach (down to 0.6×) and widens into estuaries (up to RiverMouthWidening×).
+                T.Check(r.Width.All(w => w >= s.Plan.Style.RiverMinWidth * .35 && w <= s.Plan.Style.RiverMaxWidth * s.Plan.Style.RiverMouthWidening), "width within limits");
                 if (r.DownstreamReach >= 0)
                 {
                     var next = hy.Reaches[r.DownstreamReach];

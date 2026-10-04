@@ -109,6 +109,10 @@ public sealed record TerrainStyle
     public double RiverMaxWidth { get; init; } = 320;
     /// <summary>Minimum water-surface fall per metre of river (keeps flow direction unambiguous).</summary>
     public double RiverMinSlope { get; init; } = .00005;
+    /// <summary>Width multiplier at a river mouth (estuary).</summary>
+    public double RiverMouthWidening { get; init; } = 3;
+    /// <summary>Rivers with at least this catchment (km²) form a delta on flat coasts.</summary>
+    public double DeltaMinCatchmentKm2 { get; init; } = 1500;
 
     public static TerrainStyle For(WorldProfile profile) => new()
     {

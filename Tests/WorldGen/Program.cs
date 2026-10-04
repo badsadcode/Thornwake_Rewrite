@@ -71,6 +71,14 @@ internal static class Maps
             double cx = continent.Center.X;
             while (sampler.Height(cx, continent.Center.Z) > p.SeaLevel) cx += 400;
             MapRender.Window(sampler, Path.Combine(directory, $"{id}-{seed}-coast-8km.png"), cx, continent.Center.Z, 8000, 800);
+            // River close-ups: the largest mouth (estuary/delta), a confluence and a meandering middle stretch.
+            var mouth = hy.Reaches.Where(r => r.EndsInSea && !r.Distributary).OrderByDescending(r => r.Catchment[^1]).First();
+            MapRender.Window(sampler, Path.Combine(directory, $"{id}-{seed}-river-mouth-6km.png"), mouth.Points[^1].X, mouth.Points[^1].Z, 6000, 900);
+            var join = hy.Reaches.Where(r => r.UpstreamReaches.Count >= 2 && r.Catchment[0] > 300).OrderBy(r => r.Catchment[0]).First();
+            MapRender.Window(sampler, Path.Combine(directory, $"{id}-{seed}-river-junction-2km.png"), join.Points[0].X, join.Points[0].Z, 2000, 800);
+            var mid = hy.Reaches.Where(r => r.Catchment[^1] is > 200 and < 2000 && r.Points.Length > 40).OrderBy(r => r.Id).First();
+            var mp = mid.Points[mid.Points.Length / 2];
+            MapRender.Window(sampler, Path.Combine(directory, $"{id}-{seed}-river-middle-3km.png"), mp.X, mp.Z, 3000, 900);
             Console.WriteLine($"  maps written in {sw.Elapsed.TotalSeconds:0.0} s");
         }
     }
@@ -78,44 +86,29 @@ internal static class Maps
 
 internal static class Probe
 {
-    // Diagnostic: distribution of walking-scale detail and relief on lowland.
+    // Diagnostic: walking-scale relief statistics and river data sizes. Extend ad hoc when investigating.
     public static void Run()
     {
-        foreach (var (id, seed) in new[] { ("mountainous", 42), ("vast-world", 7319), ("archipelago", 42) })
+        foreach (var (id, seed) in new[] { ("mountainous", 42), ("balanced", 0) })
         {
-            var hy = CoreTests.Sampler(id, seed).Plan.Hydrology;
-            foreach (var r in hy.Reaches)
-                if (r.DownstreamReach >= 0 && Math.Abs(r.Surface[^1] - hy.Reaches[r.DownstreamReach].Surface[0]) > .011)
-                {
-                    var nx = hy.Reaches[r.DownstreamReach];
-                    Console.WriteLine($"{id}: reach {r.Id} end {r.Surface[^1]} -> {nx.Id} start {nx.Surface[0]},{nx.Surface[1]} startLake {nx.StartLake} upstream [{string.Join(",", nx.UpstreamReaches.Select(u => hy.Reaches[u].Surface[^1].ToString("0.000")))}] len {nx.Points.Length}");
-                }
+            var s = CoreTests.Sampler(id, seed);
+            var hy = s.Plan.Hydrology;
+            Console.WriteLine($"{id}/{seed}: {hy.Reaches.Count} reaches ({hy.Reaches.Count(r => r.Distributary)} delta branches), " +
+                $"{hy.PointCount} river points, {hy.IndexEntries} index entries");
+            var f = s.Plan.Layout.Land[0];
+            var rng = new Random(1);
+            var ranges = new List<double>();
+            var h = new double[129 * 129];
+            for (int i = 0; i < 200; i++)
+            {
+                double x = f.Center.X + (rng.NextDouble() - .5) * f.RadiusX, z = f.Center.Z + (rng.NextDouble() - .5) * f.RadiusX;
+                var t = s.Sample(x, z);
+                if (t.Land < .1 || t.Mountain > .05) continue;
+                s.HeightGrid(x, z, 2, 129, 129, h);
+                ranges.Add(h.Max() - h.Min());
+            }
+            ranges.Sort();
+            Console.WriteLine($"  lowland relief in 256 m windows: median {ranges[ranges.Count / 2]:0.0} m, p90 {ranges[ranges.Count * 9 / 10]:0.0} m");
         }
-        return;
-        var s = CoreTests.Sampler("mountainous", 42);
-        var f = s.Plan.Layout.Land[0];
-        var rng = new Random(1);
-        var details = new List<double>(); var rolling = new List<double>(); var ranges = new List<double>();
-        var h = new double[129 * 129];
-        for (int i = 0; i < 400; i++)
-        {
-            double x = f.Center.X + (rng.NextDouble() - .5) * f.RadiusX, z = f.Center.Z + (rng.NextDouble() - .5) * f.RadiusX;
-            var t = s.Sample(x, z);
-            if (t.Land < .1 || t.Mountain > .05) continue;
-            details.Add(Math.Abs(t.Detail));
-            rolling.Add(Math.Abs(Noise.ErodedFbm(x, z, 1600, 11, 2, 99, .6)));
-            s.HeightGrid(x, z, 2, 129, 129, h);
-            ranges.Add(h.Max() - h.Min());
-        }
-        static string Q(List<double> v) { v.Sort(); return $"p10 {v[v.Count / 10]:0.00} median {v[v.Count / 2]:0.00} p90 {v[v.Count * 9 / 10]:0.00}"; }
-        Console.WriteLine($"|detail| m: {Q(details)}");
-        Console.WriteLine($"|ErodedFbm| raw: {Q(rolling)}");
-        Console.WriteLine($"relief range in 256 m windows: {Q(ranges)}");
-        var plain = new List<double>();
-        for (int i = 0; i < 4000; i++) plain.Add(Math.Abs(Noise.Fbm(rng.NextDouble() * 1e5, rng.NextDouble() * 1e5, 1600, 11, 2, 99, .6)));
-        Console.WriteLine($"|Fbm| raw: {Q(plain)}");
-        var grad = new List<double>();
-        for (int i = 0; i < 4000; i++) grad.Add(Math.Abs(Noise.Gradient(rng.NextDouble() * 1e5, rng.NextDouble() * 1e5, 5)));
-        Console.WriteLine($"|Gradient| raw: {Q(grad)}");
     }
 }

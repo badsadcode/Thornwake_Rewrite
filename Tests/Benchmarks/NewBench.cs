@@ -4,12 +4,14 @@ using Thornwake.WorldGen;
 /// <summary>Numbers for the rewrite's world core (Game/WorldGen), comparable with <see cref="LegacyBench"/>.</summary>
 internal static class NewBench
 {
+    private static long _before;
     public static void Run(Report report, string profileId, int seed, bool quick)
     {
         var profile = WorldProfile.LoadCatalog(Path.Combine(AppContext.BaseDirectory, "Content/world_profiles.json")).Single(p => p.Id == profileId);
         var manifest = WorldManifest.Create(seed, profile);
         string key = $"new.{profileId}";
 
+        _before = GC.GetTotalMemory(true);
         long before = Bench.Allocated();
         var sw = Stopwatch.StartNew();
         var plan = new WorldPlan(manifest);
@@ -17,6 +19,10 @@ internal static class NewBench
         report.Add(key + ".plan_raster_mb", plan.Macro.Bytes / 1048576.0);
         report.Add(key + ".plan_alloc_mb", (Bench.Allocated() - before) / 1048576.0);
         var sampler = new TerrainSampler(plan);
+        long baseline = GC.GetTotalMemory(true);
+        report.Add(key + ".retained_mb_after_build", (baseline - _before) / 1048576.0);
+        report.Add(key + ".river_points", plan.Hydrology.PointCount);
+        report.Add(key + ".river_index_entries", plan.Hydrology.IndexEntries);
 
         var land = plan.Layout.Land[0];
         var rng = new Random(1234);
