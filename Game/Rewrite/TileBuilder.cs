@@ -33,6 +33,7 @@ public sealed class TileData
     public List<TreeInstance> Trees { get; init; } = new();
     public List<Transform3D> Grass { get; set; } = new();
     public List<RockInstance> Rocks { get; set; } = new();
+    public List<RockInstance> Props { get; set; } = new();
     public List<FarTree> FarTrees { get; set; } = new();
     public double BuildMs { get; set; }
 }
@@ -140,6 +141,7 @@ public static class TileBuilder
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
         if (key.Level == 0) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed);
         if (key.Level <= 2) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed);
+        if (key.Level <= 1) data.Props = GroundCover.Props(key, grid, sea, coverSeed);
         if (key.Level is >= 3 and <= 5) data.FarTrees = GroundCover.FarTrees(key, grid, sea, coverSeed);
         data.BuildMs = timer.Elapsed.TotalMilliseconds;
         return data;

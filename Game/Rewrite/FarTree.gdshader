@@ -41,7 +41,9 @@ void fragment() {
 		inside = step(length(c), lump);
 	}
 	float speckle = hash(floor(UV * 24.0) + seed * 13.0);
-	vec3 colour = crown * (0.7 + 0.5 * y + 0.25 * speckle);
+	// Matched to the near forest by eye: darker and less saturated, like foliage seen through distance haze.
+	vec3 colour = crown * (0.42 + 0.3 * y + 0.15 * speckle);
+	colour = mix(colour, vec3(dot(colour, vec3(0.33))), 0.25);
 	if (inside < 0.5) { colour = vec3(0.18, 0.13, 0.08); }
 	ALPHA = max(inside, trunk);
 	ALPHA_SCISSOR_THRESHOLD = 0.5;

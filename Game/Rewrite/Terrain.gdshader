@@ -47,9 +47,9 @@ void fragment() {
 		float speck = hash(texel);
 		float clump = vnoise(p * 1.6) * 0.6 + vnoise(p * 4.3) * 0.4;
 		float rockiness = smoothstep(0.30, 0.52, slope);
-		vec3 grass_detail = mix(vec3(0.86), vec3(1.12, 1.10, 0.92), step(0.72, speck)) * mix(0.9, 1.08, clump);
-		grass_detail = mix(grass_detail, vec3(0.78, 0.74, 0.62), step(0.965, speck) * (1.0 - forest * 0.5)); // bare soil flecks
-		vec3 rock_detail = vec3(0.88 + 0.22 * hash(floor(p * 12.0)));
+		vec3 grass_detail = mix(vec3(0.94), vec3(1.06, 1.05, 0.96), step(0.72, speck)) * mix(0.95, 1.04, clump);
+		grass_detail = mix(grass_detail, vec3(0.86, 0.83, 0.74), step(0.97, speck) * (1.0 - forest * 0.5)); // bare soil flecks
+		vec3 rock_detail = vec3(0.93 + 0.12 * hash(floor(p * 12.0)));
 		vec3 detail = mix(grass_detail, rock_detail, rockiness);
 		detail = mix(detail, vec3(0.92 + 0.12 * speck), max(snow, wet)); // calmer on snow and sand
 		c *= mix(vec3(1.0), detail, near);

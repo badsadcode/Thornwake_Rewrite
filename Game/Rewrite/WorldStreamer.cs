@@ -41,6 +41,7 @@ public partial class WorldStreamer : Node3D
     private ShaderMaterial _terrain = null!, _water = null!, _farTree = null!;
     private Mesh _grass = null!, _card = null!;
     private TreeCatalog _trees = null!;
+    private readonly PropCatalog _props = new();
 
     public override void _Ready()
     {
@@ -209,6 +210,13 @@ public partial class WorldStreamer : Node3D
             root.AddChild(Multi(RockMeshes.Get(kind.Key), kind.Select(r => r.Transform).ToArray(),
                 kind.Key == GroundCover.Stone ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,
                 kind.Key == GroundCover.Stone ? 90 : 0));
+        foreach (var kind in data.Props.GroupBy(p => p.Kind))
+        {
+            var transforms = kind.Select(p => p.Transform).ToArray();
+            foreach (var (mesh, part) in _props.Parts(kind.Key))
+                root.AddChild(Multi(mesh, transforms.Select(t => t * part).ToArray(),
+                    key.Level == 0 ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off, 260));
+        }
         if (data.FarTrees.Count > 0)
         {
             var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = _card, InstanceCount = data.FarTrees.Count };

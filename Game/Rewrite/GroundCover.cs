@@ -20,6 +20,7 @@ public readonly record struct RockInstance(int Kind, Transform3D Transform);
 public static class GroundCover
 {
     public const int Stone = 0, Rock = 1, Boulder = 2;
+    public const int Bush = 0, BerryBush = 1, Stump = 2, Log = 3;
     public static readonly string[] RockKinds = { "stone", "rock", "boulder" };
 
     /// <summary>Grid view of a built tile (33×33 vertices) used for interpolation.</summary>
@@ -136,6 +137,36 @@ public static class GroundCover
                 double ox = x + (Unit(hh, 1) - .5f) * 9, oz = z + (Unit(hh, 2) - .5f) * 9;
                 Place(Boulder, ox, oz, hh, 1f, 2.5f, .4f);
             }
+        });
+        return result;
+    }
+
+    /// <summary>
+    /// Bushes along forest edges and in meadows, stumps and fallen logs inside forests (levels 0–1).
+    /// Placeholders from the valley game's models until Tom's scatter assets arrive.
+    /// </summary>
+    public static List<RockInstance> Props(TileKey key, in Grid grid, double sea, ulong seed)
+    {
+        var result = new List<RockInstance>();
+        var g = grid;
+        Cells(key, 9, seed ^ 0xB054UL, (x, z, h) =>
+        {
+            if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .8f || height - sea < 2) return;
+            // Most bushes at forest edges (cover around 0.3–0.7), a few out in the meadows.
+            float edge = 1 - Math.Abs(forest - .5f) * 2;
+            if (Unit(h, 1) > .06f + .4f * Math.Max(0, edge)) return;
+            float scale = .7f + .7f * Unit(h, 2);
+            int kind = Unit(h, 3) < .25f ? BerryBush : Bush;
+            result.Add(new RockInstance(kind, new Transform3D(new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(Vector3.One * scale), new Vector3((float)x, height - .05f, (float)z))));
+        });
+        Cells(key, 24, seed ^ 0x1065UL, (x, z, h) =>
+        {
+            if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .85f || forest < .45f) return;
+            if (Unit(h, 1) > .45f * forest) return;
+            int kind = Unit(h, 2) < .5f ? Stump : Log;
+            float scale = .8f + .5f * Unit(h, 3);
+            var basis = new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(Vector3.One * scale);
+            result.Add(new RockInstance(kind, new Transform3D(basis, new Vector3((float)x, height - (kind == Log ? .08f : .03f), (float)z))));
         });
         return result;
     }
