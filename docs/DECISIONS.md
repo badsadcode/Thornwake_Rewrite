@@ -52,3 +52,21 @@ Priority-flood depression filling (Barnes 2014), D8 flow and accumulation, impli
 sampler. These are linear or n·log n on the raster, well understood, and produce the visible rivers, lakes and
 valleys the Master plan asks for. The old chain's useful policies (ocean outlets only, lakes have spill levels
 and outlets, macro is a skeleton refined locally, finite lakes with rate-limited river inflow) are kept as rules.
+
+## D9 — Rasterize A4's hills and broad mountain relief; drop its finest mountain octave (2026-10-04)
+Measured: evaluating A4's hill noise, mountain warp and 3-octave ridged relief per sample made even the
+macro-only sample cost 0.4 µs. All of it except the finest octave (≈ 0.16 mountain widths, 0.7–2.4 km) is smooth
+at raster scale, so it now lives in the `Relief` and `Mountain` channels. The finest octave is replaced by the
+new walking-scale ridged rock detail, which also removes A4's long value-noise crease arcs. Result: macro sample
+0.13 µs, and heights still track A4 (median Δ 0.3 m).
+
+## D10 — Noise amplitudes mean "typical height" (2026-10-04)
+Raw Perlin-style gradient noise has a standard deviation of only ~0.18, and normalising fBm by the sum of
+amplitudes shrinks it again, so the first detail pass was ~10× flatter than its parameters said. Gradient noise
+is now scaled to ~0.4 std and fractal sums use RMS normalisation; skipped LOD octaves never renormalise, so
+distant tiles equal near tiles minus small bumps.
+
+## D11 — Detail is LOD-aware through a minimum wavelength (2026-10-04)
+Every sampler call takes `minWavelength` (≈ 2 × vertex spacing). Octaves below it are skipped, the last one fades,
+so far terrain costs fewer octaves and does not alias. Collision and gameplay use 2 m. Tests check that a 64 m LOD
+stays within ~2 m mean of the 2 m terrain.

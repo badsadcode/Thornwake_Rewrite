@@ -12,6 +12,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Game/Core/*.cs" Link="Legacy/%(Filename)%(Extension)" />
+    <Compile Include="../../Game/WorldGen/**/*.cs" Link="WorldGen/%(RecursiveDir)%(Filename)%(Extension)" />
     <Content Include="../../Content/*.json" Link="Content/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

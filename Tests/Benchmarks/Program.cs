@@ -13,6 +13,9 @@ report.Add("machine.cores", Environment.ProcessorCount);
 if (all || args.Contains("--legacy"))
     foreach (var (profile, seed) in new[] { ("mountainous", 42), ("vast-world", 7319) })
         LegacyBench.Run(report, profile, seed, quick);
+if (all || args.Contains("--new"))
+    foreach (var (profile, seed) in new[] { ("mountainous", 42), ("vast-world", 7319) })
+        NewBench.Run(report, profile, seed, quick);
 report.Add("process.peak_working_set_mb", Process.GetCurrentProcess().PeakWorkingSet64 / 1048576.0);
 Console.WriteLine(report.Text());
 if (output != null) File.WriteAllText(output, report.Json());

@@ -140,8 +140,8 @@ Status legend: ✅ done · 🔨 in progress · ⏳ next · ☐ later
 | # | Milestone | Status |
 |---|---|---|
 | M0 | Setup: branch, cloud toolchain (`tools/setup-cloud.sh`), baseline benchmarks, plan/decision docs | ✅ |
-| M1 | Deterministic world-gen core: DetMath, hashing, gradient noise, profiles/manifest, A4 layout port, MacroRaster, TerrainSampler with player-scale detail, batch tile sampling, PNG map previews, tests and benchmarks | 🔨 |
-| M2 | Erosion and hydrology on the raster: priority-flood, D8 flow, Braun–Willett stream-power valleys, river network (IDs, discharge, monotonic stage), lakes with spill level and outlet, channel and lake carving into the sampler | ☐ |
+| M1 | Deterministic world-gen core: DetMath, hashing, gradient noise, profiles/manifest, A4 layout port, MacroRaster, TerrainSampler with player-scale detail, batch tile sampling, PNG map previews, tests and benchmarks | ✅ |
+| M2 ⏳ | Erosion and hydrology on the raster: priority-flood, D8 flow, Braun–Willett stream-power valleys, river network (IDs, discharge, monotonic stage), lakes with spill level and outlet, channel and lake carving into the sampler | ☐ |
 | M3 | Landforms and surface: material classification (grass/soil/sand/gravel/rock/snow), moisture, cliffs/plateaus/floodplain shaping, coast detail; data-driven landform parameters per profile | ☐ |
 | M4 | Streaming terrain renderer: new `WorldLab.tscn`, quadtree LOD with skirts, worker pool, budgeted commits, HeightMapShape3D near-collision, rebasing, valley-game terrain look (shader port), frame-cost benchmarks | ☐ |
 | M5 | Static water: ocean/lake/river meshes from hydrology; water shader ported from GangTheGAME with per-body profiles; Gerstner swell; shoreline foam; underwater fog | ☐ |
@@ -179,15 +179,32 @@ Single-threaded unless noted. Tom's desktop will be faster; compare ratios, not 
 Rendered A4 lab (software Vulkan in the cloud, so FPS is meaningless here): walking-scale ground is flat
 green with no relief below kilometre scale. Captures are not committed (artifacts are ignored).
 
-### After (filled in as milestones land)
+### After M1 (Game/WorldGen), 2026-10-04, same machine
 
-| Measure | Target | Result |
-|---|---|---|
-| Point sample (full detail) | ≤ 0.5 µs | — |
-| 64 m tile at 1 m spacing (4,225 verts) | ≤ 3 ms | — |
-| World plan build (1024² raster, 4 cores) | ≤ 1 s | — |
-| Plan memory | ≤ 64 MB | — |
-| Cross-platform fingerprints | identical Linux/Windows | — |
+| Measure | mountainous / 42 | vast-world / 7319 | vs A4 |
+|---|---:|---:|---|
+| World plan build (layout + 3-channel raster, 4 cores) | 414 ms (1024²) | 818 ms (2048²) | new one-off cost |
+| Plan memory (rasters) | 12 MB | 48 MB | |
+| Point sample, macro only | 0.14 µs | 0.12 µs | **16× / 11× faster** |
+| Point sample, full walking-scale detail (2 m) | ~1.2 µs | ~0.8 µs | similar cost, far more detail |
+| 256 m tile at 8 m (legacy lab's near tile, 33²) | 0.75 ms | 0.74 ms | **~30× faster** (21–31 ms) |
+| 64 m tile at 1 m (rewrite near tile, 65²) | 3.8 ms | 3.6 ms | — (A4 would be ~90 ms) |
+| Cost per detailed vertex | 0.9 µs at 1 m | 0.86 µs | **~23× cheaper**, at 8× the resolution |
+| 1 m tiles per second, all 4 cores | ~980 | ~975 | |
+| Benchmark peak working set | 104 MB (both worlds) | | |
+
+Container timings vary by ±15 % between runs. Fidelity to the accepted A4 shapes (test "Macro height tracks
+A4"): 100 % land/sea agreement on sampled points; median height difference 0.2–0.3 m; 95th percentile 15–50 m
+on relief of 2.9–4.2 km (A4's finest mountain octave is now walking-scale rock detail). Layout (continents,
+islands, belt splines, feature IDs) is identical to A4.
+
+| Target | Result |
+|---|---|
+| Point sample (full detail) ≤ 0.5 µs | ❌ 0.8–1.3 µs — detail octaves dominate; optimise in M4 if tile building needs it (macro part is 0.13 µs) |
+| 64 m tile at 1 m ≤ 3 ms | ≈ 3.6–3.8 ms single core; ~1 ms effective on 4 workers |
+| Plan build ≤ 1 s | ✅ 0.4–0.8 s |
+| Plan memory ≤ 64 MB | ✅ 12–48 MB |
+| Cross-platform fingerprints | ✅ on Linux; needs one run on Tom's Windows machine (Q3) |
 
 ---
 
@@ -195,7 +212,8 @@ green with no relief below kilometre scale. Captures are not committed (artifact
 
 * Cloud/Linux setup: `bash tools/setup-cloud.sh`, then `godot --headless --import --path .`
 * Game build: `dotnet build Thornwake.csproj`
-* New core tests: `dotnet run --project Tests/WorldGen` (added in M1)
+* New core tests: `dotnet run -c Release --project Tests/WorldGen` (`-- --filter=<text>`, `-- --record` after an intentional generator change)
+* Map previews (PNG, no engine): `dotnet run -c Release --project Tests/WorldGen -- --maps=<dir> [--profile=mountainous]`
 * Benchmarks: see section 5
 * Original Core tests (Windows; fingerprints fail on Linux): `dotnet run --project Tests/Thornwake.Core.Tests.csproj`
 * Render a scene in the cloud: `xvfb-run -a -s "-screen 0 1440x900x24" godot --path . <scene.tscn> -- <args>`
@@ -205,5 +223,26 @@ green with no relief below kilometre scale. Captures are not committed (artifact
 
 ## 7. Status and next steps
 
-**2026-10-04, stretch 1.** M0 done: branch pushed, toolchain verified in the cloud (dotnet 8, Godot 4.5.1,
-headless import, software-Vulkan rendering), baselines recorded, docs written. **Next: M1** (see table).
+**2026-10-04, stretch 1.**
+* M0 done: branch pushed, toolchain verified in the cloud (dotnet 8, Godot 4.5.1, headless import,
+  software-Vulkan rendering), baselines recorded, docs written.
+* M1 done: `Game/WorldGen/` — `DetMath` (fdlibm kernels, ≤ 4e-16 from libm), `Hashing`/`RandomStream`
+  (A4-compatible), `Noise` (A4 value noise; gradient noise with derivatives; eroded, plain and ridged fBm with
+  LOD-stable normalisation), `WorldProfile`/`TerrainStyle`/`WorldManifest`, `WorldLayout` (exact A4 layout port),
+  `MacroRaster` (bicubic, parallel fill), `WorldPlan`, `TerrainSampler` (point + grid API, LOD knob).
+  Tests in `Tests/WorldGen` (13 tests, 735,760 checks, ~6 s) and benchmarks in `Tests/Benchmarks`.
+  The game is unaffected (new code is not yet used by any scene).
+
+**Next: M2 (erosion + hydrology on the raster).** Concretely:
+1. Add a `Height` raster channel = macro base height (lowland ramp + coastFade·relief) so erosion can work on
+   real elevations; the sampler then reads eroded height instead of recomputing the base.
+2. Priority-flood (Barnes 2014, ε-variant) over the land part of the raster; D8 receivers; topological order.
+3. Braun–Willett implicit stream-power erosion (a few iterations, uplift = original macro height, K scaled by
+   profile) plus thermal smoothing; store the eroded height. Keep the coast and A4 range crests recognisable.
+4. Flow accumulation → river network above a discharge threshold → polylines with stable IDs, upstream/downstream
+   links, monotonic bed profile; lakes = filled depressions above size/depth thresholds, with spill level and
+   outlet river (finite storage metadata per Supplement §9.4).
+5. Sampler: carve river channels (distance to segments via a spatial hash; width/depth from discharge;
+   meanders from noise) and lake beds; return water level/kind at a point (for M5 water meshes).
+6. Tests: rivers descend monotonically and end in ocean or lake; lakes sit at spill level; carving continuous
+   across tiles; determinism fingerprints; maps showing river networks.

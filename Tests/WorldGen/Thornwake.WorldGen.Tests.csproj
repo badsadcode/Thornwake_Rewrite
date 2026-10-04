@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Headless tests for the rewrite's engine-independent world core (Game/WorldGen).
+       The original Game/Core is compiled too, so new output can be compared directly with A4. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UseAppHost>false</UseAppHost>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Game/WorldGen/**/*.cs" Link="WorldGen/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../Game/Core/*.cs" Link="Legacy/%(Filename)%(Extension)" />
+    <Content Include="../../Content/*.json" Link="Content/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
