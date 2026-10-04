@@ -73,13 +73,18 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--preset=")) preset = arg[9..];
             if (arg.StartsWith("--seed=")) seed = int.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--world-smoke=")) _smokeDirectory = arg[14..];
-            // Single screenshot: --world-shot=<png> --at=x,z [--view=yaw,pitch,zoom] [--msaa=0|2|4] [--fly-height=m] [--hour=h]
+            // Single screenshot: --world-shot=<png> --at=x,z [--view=yaw,pitch,zoom] [--msaa=0|2|4] [--fly-height=m] [--hour=h] [--menu=tab]
             if (arg.StartsWith("--world-shot=")) { _shotPath = arg[13..]; _smokeDirectory = Path.GetDirectoryName(_shotPath) ?? "."; }
             if (arg.StartsWith("--at=")) { var v = arg[5..].Split(','); _shotAt = (double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--view=")) { var v = arg[7..].Split(','); _shotView = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture), float.Parse(v[2], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--msaa=")) GetViewport().Msaa3D = arg[7..] switch { "0" => Viewport.Msaa.Disabled, "4" => Viewport.Msaa.Msaa4X, _ => Viewport.Msaa.Msaa2X };
             if (arg.StartsWith("--fly-height=")) _shotHeight = float.Parse(arg[13..], CultureInfo.InvariantCulture);
+            // --set=<setting key>=<value>, e.g. --set=fx.water_reflections=0 (testing; also saved)
+            if (arg.StartsWith("--set=")) { var kv = arg[6..].Split('='); var setting = GameSettings.All.FirstOrDefault(x => x.Key == kv[0]); if (setting != null) setting.Value = double.Parse(kv[1], CultureInfo.InvariantCulture); }
+            if (arg.StartsWith("--debug-draw=")) GetViewport().DebugDraw = (Viewport.DebugDrawEnum)int.Parse(arg[13..], CultureInfo.InvariantCulture);
+            if (arg == "--grid") { _gridShown = true; _streamer.ShowGrid(true); }
             if (arg.StartsWith("--hour=")) _timeSlider.Value = double.Parse(arg[7..], CultureInfo.InvariantCulture);
+            if (arg.StartsWith("--menu=")) { _menu.Visible = true; _menu.GetChild<TabContainer>(0).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); }
         }
         int index = Math.Max(0, _profiles.ToList().FindIndex(p => p.Id == preset));
         _profileList.Select(index);
@@ -120,6 +125,20 @@ public partial class WorldLab : Node3D
         _streamer.Configure(_sampler, _originX, _originZ);
         Teleport(start.X, start.Z);
         var plan = _sampler.Plan;
+        foreach (string arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--dump-tile="))
+            {
+                // Debug: water mesh facts of the level-0 tile at x,z.
+                var v = arg[12..].Split(',');
+                double qx = double.Parse(v[0], CultureInfo.InvariantCulture), qz = double.Parse(v[1], CultureInfo.InvariantCulture);
+                var key = new TileKey(0, (long)Math.Floor(qx / TileBuilder.BaseTile), (long)Math.Floor(qz / TileBuilder.BaseTile));
+                var data = TileBuilder.Build(_sampler, key, DetailConfig.Current);
+                GD.Print($"TILE {key} water {(data.Water is { } w ? w.Indices.Length / 3 : -1)} triangles");
+                if (data.Water is { } water)
+                    for (int k = 0; k < water.Vertices.Length; k++)
+                        if (water.Colors[k].R > 0 || water.Vertices[k].Y > data.Vertices[k].Y)
+                            GD.Print($"  v{k} ({k % TileBuilder.Side},{k / TileBuilder.Side}) water {water.Vertices[k].Y:0.00} ground {data.Vertices[k].Y:0.00}");
+            }
         _status = $"{plan.Profile.Name}{(_custom ? " (custom)" : "")}, seed {plan.Manifest.Seed}: generated in {(Time.GetTicksMsec() - _generationStarted) / 1000:0.0} s " +
             $"({plan.Hydrology.Reaches.Count} river reaches, {plan.Hydrology.Lakes.Count} lakes).";
         _overlay.Text = "Loading terrain…";

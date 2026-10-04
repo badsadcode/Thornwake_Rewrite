@@ -52,7 +52,8 @@ if (dump != null)
                 double a2 = Math.Atan2(r.Points[k + 1].Z - r.Points[k].Z, r.Points[k + 1].X - r.Points[k].X);
                 turn = Math.IEEERemainder(a2 - a1, 2 * Math.PI) * 180 / Math.PI;
             }
-            Console.WriteLine($"{k} {r.Points[k].X:0} {r.Points[k].Z:0} w {r.Width[k]:0.0} s {r.Surface[k]:0.00} turn {turn:0}");
+            var at = ds.Sample(r.Points[k].X, r.Points[k].Z);
+            Console.WriteLine($"{k} {r.Points[k].X:0} {r.Points[k].Z:0} w {r.Width[k]:0.0} s {r.Surface[k]:0.00} turn {turn:0} ground {at.Height:0.00} {at.Water} level {at.WaterLevel:0.00}");
         }
     }
     return 0;

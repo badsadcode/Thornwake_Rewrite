@@ -27,6 +27,7 @@ uniform vec3 sky_zenith : source_color = vec3(0.32, 0.47, 0.62);
 varying float vertex_depth;
 varying float body;
 varying vec3 world_position;
+varying vec2 current; // river current (world xz, m/s)
 
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 vec2 hash2(vec2 p) { return vec2(hash(p), hash(p + 17.31)); }
@@ -58,6 +59,21 @@ vec3 view_from_depth(vec2 uv, float raw, mat4 inv_projection) {
 	vec4 v = inv_projection * vec4(uv * 2.0 - 1.0, raw, 1.0);
 	return v.xyz / v.w;
 }
+// Ripples carried by the current: advected downstream in two phases that cross-fade (moves forever without
+// smearing) and smeared along the flow with a second tap, so fast water reads as streaks. No rotated coordinates:
+// at world positions of hundreds of km, rotating them by a slightly varying flow direction scrambles the pattern.
+float flow_ripples(vec2 q, vec2 f, float t) {
+	float s = length(f);
+	vec2 dir = s > 0.001 ? f / s : vec2(1.0, 0.0);
+	const float cycle = 1.6;
+	float p0 = fract(t / cycle), p1 = fract(t / cycle + 0.5);
+	float w0 = 1.0 - abs(2.0 * p0 - 1.0);
+	vec2 a = q - f * p0 * cycle, b = q - f * p1 * cycle + vec2(13.1, 7.7);
+	float tap = 0.4 + smoothstep(0.2, 1.8, s) * 1.4;
+	float ra = ripples(a, t, 0.0) + ripples(a - dir * tap, t, 0.0);
+	float rb = ripples(b, t, 0.0) + ripples(b - dir * tap, t, 0.0);
+	return (ra * w0 + rb * (1.0 - w0)) * 0.5;
+}
 // Sum of a few directional sine waves (open sea only).
 float swell(vec2 p, float t) {
 	return sin(dot(p, vec2(0.021, 0.013)) + t * 0.55) * 0.5 + sin(dot(p, vec2(-0.016, 0.027)) + t * 0.71) * 0.3
@@ -67,6 +83,7 @@ float swell(vec2 p, float t) {
 void vertex() {
 	vertex_depth = COLOR.r * 20.0;
 	body = COLOR.g;
+	current = UV;
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	float open_sea = (1.0 - step(0.25, body)) * smoothstep(1.0, 8.0, vertex_depth);
 	VERTEX.y += swell(world_position.xz, TIME) * swell_height * open_sea;
@@ -77,10 +94,13 @@ void fragment() {
 	float sea = 1.0 - step(0.25, body), river = step(0.75, body), lake = 1.0 - sea - river;
 	float speed = mix(1.0, 3.0, river);
 	float e = 0.05;
-	float h = ripples(p, TIME, speed);
+	bool flowing = length(current) > 0.05;
+	float h = flowing ? flow_ripples(p, current, TIME) : ripples(p, TIME, speed);
 	// Ripples fade with distance so far water does not sparkle (they are far smaller than a pixel there).
 	float amp = (mix(0.05, 0.09, river) + sea * 0.03) / (1.0 + length(VERTEX) / 120.0);
-	vec2 slope = vec2(ripples(p + vec2(e, 0.0), TIME, speed) - h, ripples(p + vec2(0.0, e), TIME, speed) - h) / e * amp;
+	vec2 slope = flowing
+		? vec2(flow_ripples(p + vec2(e, 0.0), current, TIME) - h, flow_ripples(p + vec2(0.0, e), current, TIME) - h) / e * amp * (1.0 + 0.4 * min(length(current), 2.5))
+		: vec2(ripples(p + vec2(e, 0.0), TIME, speed) - h, ripples(p + vec2(0.0, e), TIME, speed) - h) / e * amp;
 	// Swell slope on the open sea.
 	float open_sea = sea * smoothstep(1.0, 8.0, vertex_depth);
 	slope += vec2(swell(p + vec2(0.5, 0.0), TIME) - swell(p - vec2(0.5, 0.0), TIME), swell(p + vec2(0.0, 0.5), TIME) - swell(p - vec2(0.0, 0.5), TIME)) * swell_height * open_sea;
@@ -99,8 +119,12 @@ void fragment() {
 	float path = max(0.0, length(rbehind) - length(VERTEX));
 	vec3 surface_world = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	vec3 bottom_world = (INV_VIEW_MATRIX * vec4(rbehind, 1.0)).xyz;
-	float depth_below = max(0.0, surface_world.y - bottom_world.y);
-	float contact_depth = max(0.0, surface_world.y - (INV_VIEW_MATRIX * vec4(behind, 1.0)).y);
+	// Depth from height differences, but never less than the sight line's drop through the water: looking up a
+	// rising river, the bed behind the surface can lie higher than the surface point itself, which made the water
+	// fully transparent there (Tom: "upstream water disappears a little further away").
+	float drop = abs(normalize(VERTEX).y);
+	float depth_below = max(max(0.0, surface_world.y - bottom_world.y), path * drop * 0.5);
+	float contact_depth = max(max(0.0, surface_world.y - (INV_VIEW_MATRIX * vec4(behind, 1.0)).y), straight_path * drop * 0.5);
 
 	// Transmitted light: the ground through the water, with caustics in the shallows.
 	vec3 ground = textureLod(screen_tex, ruv, 0.0).rgb;
@@ -136,6 +160,18 @@ void fragment() {
 	float bubbles = 0.55 + 0.45 * noise(p * 1.5 + TIME * 0.4);
 	float contact = 1.0 - smoothstep(0.0, mix(0.03, 0.12, sea), contact_depth);
 	float foam = clamp(contact * mix(0.3, 0.6, sea) * smoothstep(0.5, 0.8, bubbles), 0.0, 1.0);
+	// Fast water: foam streaks drifting downstream show which way it flows (same two-phase advection).
+	float fs = length(current);
+	if (fs > 0.6) {
+		vec2 dir = current / fs;
+		const float c = 2.4;
+		float f0 = fract(TIME / c), f1 = fract(TIME / c + 0.5), w0 = 1.0 - abs(2.0 * f0 - 1.0);
+		vec2 qa = p - current * f0 * c, qb = p - current * f1 * c + vec2(5.3, 2.9);
+		float sa = (noise(qa * 0.9) + noise((qa - dir * 1.6) * 0.9) + noise((qa - dir * 3.2) * 0.9)) / 3.0;
+		float sb = (noise(qb * 0.9) + noise((qb - dir * 1.6) * 0.9) + noise((qb - dir * 3.2) * 0.9)) / 3.0;
+		float streak = sa * w0 + sb * (1.0 - w0);
+		foam = max(foam, smoothstep(0.62, 0.8, streak) * smoothstep(0.6, 2.4, fs) * 0.5 / (1.0 + length(VERTEX) / 60.0));
+	}
 
 	vec3 transmitted = ground * transmittance;
 	vec3 ray_world = normalize((INV_VIEW_MATRIX * vec4(ray, 0.0)).xyz);

@@ -38,7 +38,7 @@ public sealed class TileData
     public required Vector2[] Uv2 { get; init; }
     public required int[] Indices { get; init; }
     /// <summary>Water surface mesh (null when the tile is dry).</summary>
-    public (Vector3[] Vertices, Color[] Colors, int[] Indices)? Water { get; set; }
+    public (Vector3[] Vertices, Color[] Colors, Vector2[] Flow, int[] Indices)? Water { get; set; }
     /// <summary>Triangle soup for a ConcavePolygonShape3D (level 0 only).</summary>
     public Vector3[]? CollisionFaces { get; init; }
     public List<TreeInstance> Trees { get; init; } = new();
@@ -215,15 +215,18 @@ public static class TileBuilder
                 if (wet[k]) { level = samples[k].WaterLevel; kind = Kind(samples[k].Water); }
                 else
                 {
+                    // Average of the wet neighbours (the maximum lifted the sheet over the downstream bank of steep
+                    // creeks, where the upstream neighbour is higher).
+                    double sum = 0; int count = 0;
                     for (int b = -1; b <= 1; b++)
                         for (int a = -1; a <= 1; a++)
                         {
                             int x = i + a, z = j + b;
                             if (x < 0 || z < 0 || x >= n || z >= n || !wet[z * n + x]) continue;
-                            double l = samples[z * n + x].WaterLevel;
-                            if (double.IsNaN(level) || l > level) { level = l; kind = Kind(samples[z * n + x].Water); }
+                            sum += samples[z * n + x].WaterLevel; count++;
+                            kind = Math.Max(kind, Kind(samples[z * n + x].Water));
                         }
-                    if (double.IsNaN(level)) level = data.Vertices[k].Y - 1; // unused vertex, keep it under ground
+                    level = count > 0 ? sum / count : data.Vertices[k].Y - 1; // unused vertex: keep it under ground
                 }
                 double ground = heights[(j + 1) * s2 + i + 1];
                 vertices[k] = new Vector3(i * (float)spacing, (float)level, j * (float)spacing);
@@ -238,7 +241,64 @@ public static class TileBuilder
                 indices.Add(a); indices.Add(b); indices.Add(c);
                 indices.Add(b); indices.Add(d); indices.Add(c);
             }
-        data.Water = (vertices, colors, indices.ToArray());
+        data.Water = (vertices, colors, Flow(samples, vertices, wet, spacing), indices.ToArray());
+    }
+
+    /// <summary>
+    /// River current per water vertex (world xz, m/s): downhill along the water surface's gradient (central
+    /// differences between wet neighbours), speed growing with the square root of the slope. Still water elsewhere.
+    /// </summary>
+    private static Vector2[] Flow(TerrainSample[] samples, Vector3[] water, bool[] wet, double spacing)
+    {
+        int n = Side;
+        var flow = new Vector2[n * n];
+        for (int j = 0; j < n; j++)
+            for (int i = 0; i < n; i++)
+            {
+                int k = j * n + i;
+                if (!wet[k] || samples[k].Water != WaterKind.River) continue;
+                double Slope(int a, int b)
+                {
+                    bool fa = a >= 0 && wet[a] && samples[a].Water == WaterKind.River, fb = b >= 0 && wet[b] && samples[b].Water == WaterKind.River;
+                    if (fa && fb) return (water[b].Y - water[a].Y) / (2 * spacing);
+                    if (fb) return (water[b].Y - water[k].Y) / spacing;
+                    if (fa) return (water[k].Y - water[a].Y) / spacing;
+                    return 0;
+                }
+                double gx = Slope(i > 0 ? k - 1 : -1, i < n - 1 ? k + 1 : -1);
+                double gz = Slope(j > 0 ? k - n : -1, j < n - 1 ? k + n : -1);
+                double g = Math.Sqrt(gx * gx + gz * gz);
+                if (g < 1e-6) continue;
+                double speed = Math.Clamp(Math.Sqrt(g) * 6, .3, 3.5);
+                flow[k] = new Vector2((float)(-gx / g * speed), (float)(-gz / g * speed));
+            }
+        // Bank vertices (under the dry ground beside the water) take their wet neighbours' current, then two passes
+        // of 3×3 averaging over river vertices: smooth directions, no slow-down toward the banks.
+        var river = new bool[n * n];
+        for (int k = 0; k < n * n; k++) river[k] = flow[k] != Vector2.Zero;
+        for (int pass = 0; pass < 3; pass++)
+        {
+            var next = (Vector2[])flow.Clone();
+            for (int j = 0; j < n; j++)
+                for (int i = 0; i < n; i++)
+                {
+                    int k = j * n + i;
+                    if (pass == 0 && river[k]) continue;
+                    if (pass > 0 && !river[k]) continue;
+                    var sum = Vector2.Zero; int count = 0;
+                    for (int b = -1; b <= 1; b++)
+                        for (int a = -1; a <= 1; a++)
+                        {
+                            int x = i + a, z = j + b;
+                            if (x < 0 || z < 0 || x >= n || z >= n || !river[z * n + x]) continue;
+                            sum += flow[z * n + x]; count++;
+                        }
+                    if (count > 0) next[k] = sum / count;
+                }
+            flow = next;
+            if (pass == 0) for (int k = 0; k < n * n; k++) river[k] |= flow[k] != Vector2.Zero;
+        }
+        return flow;
     }
 
     private static double Kind(WaterKind kind) => kind switch { WaterKind.Lake => .5, WaterKind.River => 1, _ => 0 };

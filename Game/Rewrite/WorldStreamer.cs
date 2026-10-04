@@ -218,6 +218,7 @@ public partial class WorldStreamer : Node3D
             arrays.Resize((int)Mesh.ArrayType.Max);
             arrays[(int)Mesh.ArrayType.Vertex] = water.Vertices;
             arrays[(int)Mesh.ArrayType.Color] = water.Colors;
+            arrays[(int)Mesh.ArrayType.TexUV] = water.Flow;
             arrays[(int)Mesh.ArrayType.Normal] = Enumerable.Repeat(Vector3.Up, water.Vertices.Length).ToArray();
             arrays[(int)Mesh.ArrayType.Index] = water.Indices;
             var mesh = new ArrayMesh();
