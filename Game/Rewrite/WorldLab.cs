@@ -58,6 +58,7 @@ public partial class WorldLab : Node3D
     private (float Yaw, float Pitch, float Zoom)? _shotView;
     private float _shotHeight, _shotWait;
     private bool _shotRain;
+    private float _shotDive;
     private (float Ground, float Puddles)? _shotWet;
     private readonly List<(double X, double Z, double Volume)> _shotPours = new();
     private readonly List<(double X0, double Z0, double X1, double Z1, double Depth)> _shotDigs = new();
@@ -103,6 +104,8 @@ public partial class WorldLab : Node3D
             // Screenshot of simulated water: --pour=x,z,m³ (repeatable) --rain --wait=s (simulated seconds before the shot)
             if (arg.StartsWith("--pour=")) { var v = arg[7..].Split(','); _shotPours.Add((double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture), double.Parse(v[2], CultureInfo.InvariantCulture))); }
             if (arg == "--rain") _shotRain = true;
+            // --dive=m: the player (and camera) this many metres under the water surface
+            if (arg.StartsWith("--dive=")) _shotDive = float.Parse(arg[7..], CultureInfo.InvariantCulture);
             // --wet=ground,puddles: cosmetic rain look (0..1 each) without simulating rain
             if (arg.StartsWith("--wet=")) { var v = arg[6..].Split(','); _shotWet = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture)); }
             // --dig=x0,z0,x1,z1,depth: a straight trench (negative depth raises a bank) for screenshots and tests
@@ -331,9 +334,33 @@ public partial class WorldLab : Node3D
         UpdateCamera();
         var cam = _camera.GlobalPosition;
         _atmosphere.Update(delta, (float)_timeSlider.Value, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
+        UpdateUnderwater(cam);
         _hudTimer -= delta;
         if (_hudTimer <= 0) { _hudTimer = .2; UpdateHud(); }
         if (_smokeDirectory != null) Smoke(delta);
+    }
+
+    /// <summary>Water surface above a world point (generated water, simulated water, waves), NaN if dry.</summary>
+    private double WaterSurface(double x, double z, out WaterKind kind)
+    {
+        var t = _sampler!.Sample(x, z);
+        kind = t.Water;
+        double level = t.Water != WaterKind.None ? t.WaterLevel : double.NaN;
+        float simulated = _water.Sim?.SurfaceAt(x, z) ?? float.NaN;
+        if (!float.IsNaN(simulated) && (double.IsNaN(level) || simulated > level)) { level = simulated; if (kind == WaterKind.None) kind = WaterKind.River; }
+        if (t.Water is WaterKind.Ocean or WaterKind.Lake && !double.IsNaN(level))
+            level += _atmosphere.Waves.Height(x, z, _atmosphere.OceanTime, level - t.Height, t.Water == WaterKind.Lake);
+        return level;
+    }
+
+    private float _cameraDepth;
+
+    private void UpdateUnderwater(Vector3 cam)
+    {
+        if (_sampler == null) return;
+        double level = WaterSurface(_originX + cam.X, _originZ + cam.Z, out var kind);
+        _cameraDepth = double.IsNaN(level) ? 0 : (float)(level - cam.Y);
+        _atmosphere.SetUnderwater(_cameraDepth, kind);
     }
 
     public override void _PhysicsProcess(double delta)
@@ -358,14 +385,9 @@ public partial class WorldLab : Node3D
         var velocity = _player.Velocity;
 
         UpdateLocalWater(dt, typing);
-        var water = _sampler.Sample(PlayerX, PlayerZ);
         double feet = _player.Position.Y;
-        double level = water.Water != WaterKind.None ? water.WaterLevel : double.NaN;
-        float simulated = _water.Sim?.SurfaceAt(PlayerX, PlayerZ) ?? float.NaN;
-        if (!float.IsNaN(simulated) && (double.IsNaN(level) || simulated > level)) level = simulated;
         // Swim on the waves (the same waves the water shader draws).
-        if (water.Water is WaterKind.Ocean or WaterKind.Lake && !double.IsNaN(level))
-            level += _atmosphere.Waves.Height(PlayerX, PlayerZ, _atmosphere.OceanTime, level - water.Height, water.Water == WaterKind.Lake);
+        double level = WaterSurface(PlayerX, PlayerZ, out _);
         _swimming = !_fly && !double.IsNaN(level) && level - feet > 1.25;
 
         if (_fly)
@@ -379,10 +401,17 @@ public partial class WorldLab : Node3D
         {
             float speed = sprint ? 3.2f : 1.8f;
             velocity.X = move.X * speed; velocity.Z = move.Z * speed;
-            // Buoyancy holds the head above the surface.
+            bool dive = !typing && (Input.IsKeyPressed(Key.C) || Input.IsKeyPressed(Key.Q)), up = !typing && Input.IsKeyPressed(Key.Space);
             float target = (float)(level - 1.3);
-            velocity.Y = Mathf.Clamp((target - _player.Position.Y) * 3f, -2f, 2f);
-            if (!typing && Input.IsKeyPressed(Key.Space)) velocity.Y = 1.5f;
+            bool submerged = _player.Position.Y < target - .4f;
+            if (dive) velocity.Y = sprint ? -3f : -1.8f;            // C/Q: dive down to the bottom
+            else if (up) velocity.Y = sprint ? 3f : 1.8f;           // Space: swim up
+            else if (submerged)
+            {
+                // Under water: swimming forward follows the view (look down to go deeper); idle, you drift up slowly.
+                velocity.Y = input.Y < 0 ? Mathf.Sin(_pitch + .32f) * speed * -input.Y + .15f : .5f; // relative to the default view
+            }
+            else velocity.Y = Mathf.Clamp((target - _player.Position.Y) * 3f, -2f, 2f); // buoyancy: head above the surface
         }
         else
         {
@@ -584,7 +613,7 @@ public partial class WorldLab : Node3D
         layer.AddChild(_hud);
         _help = new Label
         {
-            Text = "WASD move · Shift sprint · Space jump/swim up · mouse look (Tab frees cursor) · wheel zoom\n" +
+            Text = "WASD move · Shift sprint · Space jump/swim up · C dive · mouse look (Tab frees cursor) · wheel zoom\n" +
                    "F fly (Space/C up/down, Shift faster, Ctrl ×6) · N noclip · Esc menu: teleport, new world, time of day\n" +
                    "Water: hold G pour where you look · J spring · H rain · K clear\n" +
                    "Tools: 1 hands · 2 shovel · 3 pickaxe · 4 hoe · 5 terraform (dev) — left/right mouse use\n" +
@@ -714,6 +743,12 @@ public partial class WorldLab : Node3D
             else if (_smokeStage == 1 && settled)
             {
                 if (_shotHeight > 0) { SetFly(true); _player.Position += Vector3.Up * _shotHeight; }
+                if (_shotDive > 0 && !double.IsNaN(WaterSurface(PlayerX, PlayerZ, out _)))
+                {
+                    SetNoclip(true);
+                    var p = _player.Position;
+                    _player.Position = new Vector3(p.X, (float)(WaterSurface(PlayerX, PlayerZ, out _) - _shotDive), p.Z);
+                }
                 foreach (var (x, z, v) in _shotPours) _water.Sim?.Sources.Add(new Thornwake.Hydraulics.LocalWater.Source { X = x, Z = z, Rate = (float)(v / Math.Max(1, _shotWait * .5)) });
                 if (_shotRain) _rain = true;
                 _smokeStage = 2; _smokeTimer = 0; _simTime = 0;

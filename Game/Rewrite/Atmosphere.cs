@@ -30,6 +30,8 @@ public partial class Atmosphere : Node3D
     private double _windX, _windZ;
     private float _shadowCoverage = -1;
     private MeshInstance3D? _shaftQuad;
+    private readonly ShaderMaterial _underwater = new() { Shader = GD.Load<Shader>("res://Game/Rewrite/Underwater.gdshader"), RenderPriority = 127 };
+    private float _daylight = 1;
     private GpuParticles3D? _rainParticles;
     private byte[] _noiseBase = Array.Empty<byte>();
     /// <summary>Rain on (the water simulation's rain): the sky clouds over, light dims, haze thickens, rain falls.</summary>
@@ -97,6 +99,11 @@ public partial class Atmosphere : Node3D
             ExtraCullMargin = 16384, Position = new Vector3(0, 0, -1), GIMode = GeometryInstance3D.GIModeEnum.Disabled,
         };
         camera.AddChild(_shaftQuad);
+        camera.AddChild(new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(2, 2) }, MaterialOverride = _underwater, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            ExtraCullMargin = 16384, Position = new Vector3(0, 0, -1), GIMode = GeometryInstance3D.GIModeEnum.Disabled,
+        });
         // Rain: streaks falling around the camera (world-space particles, so they do not swing with the view).
         var streak = new StandardMaterial3D
         {
@@ -117,6 +124,27 @@ public partial class Atmosphere : Node3D
         };
         camera.AddChild(_rainParticles);
         ApplyAll();
+    }
+
+    /// <summary>
+    /// Camera under water: <paramref name="depth"/> metres below the surface (≤ 0 = above water). Kind picks the
+    /// water's colour and clarity (sea clear blue-green, lakes greener, rivers greener and murkier).
+    /// </summary>
+    public void SetUnderwater(float depth, WorldGen.WaterKind kind)
+    {
+        bool under = depth > .02f;
+        _underwater.SetShaderParameter("active", under ? 1f : 0f);
+        if (!under) return;
+        _underwater.SetShaderParameter("surface_depth", depth);
+        _underwater.SetShaderParameter("daylight", _daylight);
+        var (color, density) = kind switch
+        {
+            WorldGen.WaterKind.Lake => (new Color(.06f, .24f, .2f), .09f),
+            WorldGen.WaterKind.River => (new Color(.08f, .2f, .15f), .16f),
+            _ => (new Color(.04f, .26f, .33f), .05f),
+        };
+        _underwater.SetShaderParameter("water_color", color);
+        _underwater.SetShaderParameter("density", density);
     }
 
     /// <summary>The terrain water material: reflection quality follows the settings.</summary>
@@ -188,6 +216,7 @@ public partial class Atmosphere : Node3D
         double seaState = Math.Clamp(GameSettings.SeaState.Value + _storm * .45, 0, 1);
         if (Math.Abs(seaState - _wavesState) > .01) UpdateWaves(seaState);
         Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, _storm);
+        _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, _storm);
         Environment.FogDensity = .00009f * GameSettings.Haze.F * Mathf.Lerp(1, 4, _storm);
         Environment.FogEnabled = GameSettings.Haze.Value > 0 || _storm > 0;
         // The sky's radiance map is not re-baked for the storm (global uniform), so dim the ambient light directly.
