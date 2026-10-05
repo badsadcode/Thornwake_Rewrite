@@ -251,6 +251,7 @@ public partial class WorldStreamer : Node3D
         {
             var body = new StaticBody3D { CollisionLayer = 1, CollisionMask = 0 };
             body.AddChild(new CollisionShape3D { Shape = new ConcavePolygonShape3D { Data = data.CollisionFaces, BackfaceCollision = true } });
+            ObjectCollision.Add(body, data);
             root.AddChild(body);
         }
         if (data.Trees.Count > 0) _trees.Instance(root, data.Trees, key.Level >= 2 ? 2 : 1, key.Level == 0 && GameSettings.Shadows.Index > 0);
