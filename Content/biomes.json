@@ -127,7 +127,7 @@
     "Placement": { "Weight": 1, "Mountain": [0.15, 1], "RegionSize": [15, 80], "Patch": { "Within": [], "Coverage": 0.07 },
       "ForbiddenNeighbours": ["arctic"] },
     "Appearance": { "Ground": "VolcanicGround", "RockExposure": 0.7, "Darkness": 0.3, "MapColor": "3a3030" },
-    "Vegetation": { "Trees": { "DeadTrees": 1, "ConiferTrees": 0.15 }, "TreeDensity": 0.05, "Grass": 0.1 },
+    "Vegetation": { "Trees": { "DeadTrees": 1, "ConiferTrees": 0.1 }, "TreeDensity": 0.025, "Grass": 0.1 },
     "Props": { "Rocks": 2, "Logs": 0.1 },
     "Terrain": { "Crags": 1.5, "Features": { "volcano": 1 } },
     "Atmosphere": { "Fog": 0.2, "AmbientTint": "b09080" },

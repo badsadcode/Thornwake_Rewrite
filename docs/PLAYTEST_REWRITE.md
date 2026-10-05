@@ -78,6 +78,21 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 10 — biomes (phase 1)
+* **14 biomes** placed from a new climate model (temperature from latitude and height, rain carried inland by the
+  wind, rain shadows behind mountains): Temperate grassland, Temperate forest, Ancient forest, Taiga, Tundra,
+  Arctic/Glacier, Alpine, Swamp, Blighted swamp, Jungle, Desert, Badlands, Savanna, Volcanic. Each has its own ground
+  colours, tree mix and density, grass, bare rock and snow. Borders blend softly; rare biomes (Ancient forest,
+  Blighted swamp, Volcanic) appear as patches inside others.
+* **F4** colours the ground by biome; the HUD shows the biome you stand in, temperature and rainfall.
+  New world → **Show biomes** draws the biome map; new **Climate** settings (latitude, latitude span, warmth,
+  wetness) move the biomes around.
+* **Your own biomes**: JSON files in `%APPDATA%\Thornwake\biomes\` (and `asset_sets\`), no code needed — see
+  `docs/BIOMES.md`.
+* Biomes don't change the shape of the land yet (needle rocks, canyons, volcanoes, dunes come in later phases).
+  Missing art (palms, cacti, dead trees, vines, reeds) uses the closest existing trees for now.
+* Terrain version **Build 9** (New world) turns biomes off and gives exactly the build 9 world.
+
 ## New in build 9
 * **Diving and under water**: while swimming, **C** (or Q) dives, **Space** swims up, swimming forward under water
   follows where you look, and you drift up slowly when idle. Under water the view turns blue-green with distance,

@@ -18,7 +18,7 @@
   { "Id": "AlpineGround", "Kind": "ground", "Grass": "6e7a4c", "Dry": "8b8762", "Soil": "6a5b48", "ForestFloor": "4a5536", "Rock": "85837b" },
   { "Id": "SwampGround", "Kind": "ground", "Grass": "4c5a34", "Dry": "5f6440", "Soil": "3e3628", "ForestFloor": "33402a", "Rock": "5d5e55" },
   { "Id": "BlightedGround", "Kind": "ground", "Grass": "3e3d30", "Dry": "4f4a39", "Soil": "302a22", "ForestFloor": "2a2a22", "Rock": "4a4844" },
-  { "Id": "JungleGround", "Kind": "ground", "Grass": "3f6a30", "Dry": "57793b", "Soil": "6e4a30", "ForestFloor": "2b4421", "Rock": "6a6a5c" },
+  { "Id": "JungleGround", "Kind": "ground", "Grass": "3d5c2e", "Dry": "516a38", "Soil": "6e4a30", "ForestFloor": "2b4421", "Rock": "6a6a5c" },
   { "Id": "DesertGround", "Kind": "ground", "Grass": "a08d5c", "Dry": "ad9870", "Soil": "a0805c", "ForestFloor": "8f7d55", "Rock": "9a7f62" },
   { "Id": "BadlandsGround", "Kind": "ground", "Grass": "857a56", "Dry": "967259", "Soil": "8a5a42", "ForestFloor": "6e6246", "Rock": "94583e" },
   { "Id": "SavannaGround", "Kind": "ground", "Grass": "9a944f", "Dry": "b8a65f", "Soil": "8f6640", "ForestFloor": "6e7140", "Rock": "8e7a62" },

@@ -32,8 +32,8 @@ public static class GroundCover
         /// <summary>Per vertex 0.5 + depth below the nearest water surface / 2 m (0.5 = waterline), as in the tile colours.</summary>
         public readonly float[] Shore;
         public Grid(Vector3[] vertices, Vector3[] normals, double[] forest, TerrainSample[] samples, double spacing, double x0, double z0, int side, float[] shore,
-            Vector2[]? uv2 = null, float[]? biome1 = null)
-        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; EditedAmount = uv2; Biome1 = biome1; }
+            Vector2[]? uv2 = null, float[]? biome1 = null, float[]? props = null)
+        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; EditedAmount = uv2; Biome1 = biome1; PropScale = props; }
 
         /// <summary>Per vertex biome data (rgb dry colour, a = plant cover), as on the terrain mesh.</summary>
         public readonly float[]? Biome1;
@@ -44,6 +44,17 @@ public static class GroundCover
             if (Biome1 == null) return 1;
             int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
             return Biome1[(j * Side + i) * 4 + 3];
+        }
+
+        /// <summary>Per vertex biome prop multipliers (rocks, bushes/logs).</summary>
+        public readonly float[]? PropScale;
+
+        /// <summary>Biome multiplier for rocks (kind 0) or bushes, stumps and logs (kind 1) at tile-local (x, z).</summary>
+        public float Props(double x, double z, int kind)
+        {
+            if (PropScale == null) return 1;
+            int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
+            return PropScale[(j * Side + i) * 2 + kind];
         }
 
         /// <summary>Bilinear <see cref="Shore"/> at tile-local (x, z).</summary>
@@ -170,7 +181,7 @@ public static class GroundCover
             {
                 if (!g.At(x, z, out float height, out float up, out _, out _) || height - sea < .3) return;
                 float steep = 1 - up;
-                if (Unit(h, 1) > (.1f + 1.2f * steep) * a) return; // more stones on slopes and banks
+                if (Unit(h, 1) > (.1f + 1.2f * steep) * a * g.Props(x, z, 0)) return; // more stones on slopes and banks
                 Place(Stone, x, z, h, .12f, .45f, .35f);
             });
         if (key.Level <= 1)
@@ -178,14 +189,14 @@ public static class GroundCover
             {
                 if (!g.At(x, z, out float height, out float up, out _, out _) || height - sea < .5) return;
                 float steep = 1 - up, mountain = g.Mountain(x, z);
-                if (Unit(h, 1) > (.05f + 1.5f * steep + .3f * mountain) * a) return;
+                if (Unit(h, 1) > (.05f + 1.5f * steep + .3f * mountain) * a * g.Props(x, z, 0)) return;
                 Place(Rock, x, z, h, .5f, 1.2f, .3f);
             });
         Cells(key, 48, seed ^ 0xB0D1UL, (x, z, h) =>
         {
             if (!g.At(x, z, out float height, out float up, out _, out _) || height - sea < 1) return;
             float steep = 1 - up, mountain = g.Mountain(x, z);
-            float chance = (.04f + 2.2f * Math.Max(0, steep - .1f) + .5f * mountain) * a;
+            float chance = (.04f + 2.2f * Math.Max(0, steep - .1f) + .5f * mountain) * a * g.Props(x, z, 0);
             if (Unit(h, 1) > chance) return;
             // Steep or mountainous ground grows a small outcrop: one big boulder with smaller ones around it.
             int extra = steep > .3f || mountain > .3f ? 2 + (int)(Unit(h, 2) * 4) : 0;
@@ -214,7 +225,8 @@ public static class GroundCover
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .8f || height - sea < 2) return;
             // Most bushes at forest edges (cover around 0.3–0.7), a few out in the meadows.
             float edge = 1 - Math.Abs(forest - .5f) * 2;
-            if (Unit(h, 1) > (.06f + .4f * Math.Max(0, edge)) * a) return;
+            // Biome: bush amount × plant cover (few bushes in deserts, on ash or ice).
+            if (Unit(h, 1) > (.06f + .4f * Math.Max(0, edge)) * a * g.Props(x, z, 1) * Math.Min(1, g.Plants(x, z) * 1.5f)) return;
             float scale = .7f + .7f * Unit(h, 2);
             int kind = Unit(h, 3) < .25f ? BerryBush : Bush;
             result.Add(new RockInstance(kind, new Transform3D(new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(Vector3.One * scale), new Vector3((float)x, height - .05f, (float)z))));
@@ -222,7 +234,7 @@ public static class GroundCover
         Cells(key, 24, seed ^ 0x1065UL, (x, z, h) =>
         {
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .85f || forest < .45f) return;
-            if (Unit(h, 1) > .45f * forest * a) return;
+            if (Unit(h, 1) > .45f * forest * a * g.Props(x, z, 1)) return;
             int kind = Unit(h, 2) < .5f ? Stump : Log;
             float scale = .8f + .5f * Unit(h, 3);
             var basis = new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(Vector3.One * scale);

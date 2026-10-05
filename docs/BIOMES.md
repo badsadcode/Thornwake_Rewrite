@@ -5,7 +5,7 @@ remove one.
 
 ## Where the files are
 * Built-in biomes: `Content/biomes.json` (a list). Built-in asset sets: `Content/asset_sets.json`.
-* Your own: the user folder (Windows: `%APPDATA%\Godot\app_userdata\Thornwake\`)
+* Your own: the user folder (Windows: `%APPDATA%\Thornwake\`)
   * `biomes/*.json` — each file holds one biome or a list of biomes;
   * `asset_sets/*.json` — each file holds one asset set or a list.
 * A custom biome with the same `Id` as a built-in one **replaces** it (that is how you tweak a built-in biome).

@@ -133,6 +133,7 @@ public static class TileBuilder
         var biome1 = new float[vertices.Length * 4];
         var biome2 = new float[vertices.Length * 4];
         var biome3 = new float[vertices.Length * 4];
+        var props = new float[Side * Side * 2]; // biome rock and bush/log multipliers (ground cover only, no skirts)
         var climate = sampler.Plan.Climate;
         var biomes = sampler.Plan.Biomes;
         for (int j = 0; j < Side; j++)
@@ -166,6 +167,8 @@ public static class TileBuilder
                 Put(biome1, k, Mix(A.Dry, B.Dry, sa, sb, dark), Math.Min(1, plants));
                 Put(biome2, k, Mix(A.Map, B.Map, sa, sb, 1), A.Def.Appearance.RockExposure * share + B.Def.Appearance.RockExposure * (1 - share));
                 Put(biome3, k, Mix(A.Rock, B.Rock, sa, sb, 1), A.Def.Water.Wetness * share + B.Def.Water.Wetness * (1 - share));
+                props[k * 2] = (float)(A.Def.Props.Rocks * share + B.Def.Props.Rocks * (1 - share));
+                props[k * 2 + 1] = (float)(A.Def.Props.Logs * share + B.Def.Props.Logs * (1 - share));
             }
         // Skirts: a copy of each edge pushed down, so a coarser neighbour's edge never shows a gap.
         float drop = (float)(2 + spacing * 1.5);
@@ -218,7 +221,7 @@ public static class TileBuilder
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };
         BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater);
-        var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2, biome1);
+        var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2, biome1, props);
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
         if (key.Level == 0 && config.Grass > 0) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);
         if (key.Level == 0 && config.Grass > 0) data.Reeds = GroundCover.Reeds(key, grid, sea, coverSeed, config.Grass);
