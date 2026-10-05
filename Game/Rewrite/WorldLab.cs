@@ -51,6 +51,7 @@ public partial class WorldLab : Node3D
     private (float Yaw, float Pitch, float Zoom)? _shotView;
     private float _shotHeight, _shotWait;
     private readonly List<(double X, double Z, double Volume)> _shotPours = new();
+    private readonly List<(double X0, double Z0, double X1, double Z1, double Depth)> _shotDigs = new();
     private int _smokeStage;
     private double _smokeTimer;
 
@@ -90,6 +91,8 @@ public partial class WorldLab : Node3D
             // Screenshot of simulated water: --pour=x,z,m³ (repeatable) --rain --wait=s (simulated seconds before the shot)
             if (arg.StartsWith("--pour=")) { var v = arg[7..].Split(','); _shotPours.Add((double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture), double.Parse(v[2], CultureInfo.InvariantCulture))); }
             if (arg == "--rain") _rain = true;
+            // --dig=x0,z0,x1,z1,depth: a straight trench (negative depth raises a bank) for screenshots and tests
+            if (arg.StartsWith("--dig=")) { var v = arg[6..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray(); _shotDigs.Add((v[0], v[1], v[2], v[3], v[4])); }
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg == "--grid") { _gridShown = true; _streamer.ShowGrid(true); }
             if (arg.StartsWith("--hour=")) _timeSlider.Value = double.Parse(arg[7..], CultureInfo.InvariantCulture);
@@ -303,7 +306,20 @@ public partial class WorldLab : Node3D
         sim.RainRate = _rain ? 6e-5f * GameSettings.RainStrength.F : 0;
         _water.Step(dt, PlayerX, PlayerZ);
         if (!typing && Input.IsKeyPressed(Key.G) && Aim() is { } at) sim.Add(at.X, at.Z, 2.5 * dt);
+        // Terrain edits: hold V to dig, B to raise (brush applied a few times a second; tiles rebuild behind it).
+        _editClock += dt;
+        bool dig = !typing && Input.IsKeyPressed(Key.V), raise = !typing && Input.IsKeyPressed(Key.B);
+        if ((dig || raise) && _editClock >= .12 && _sampler != null && Aim() is { } spot)
+        {
+            double amount = (raise ? 1 : -1) * .7 * _editClock;
+            _editClock = 0;
+            var r = _sampler.Edits.Apply(spot.X, spot.Z, 1.8, amount);
+            _streamer.Invalidate(r.MinX - 1, r.MinZ - 1, r.MaxX + 1, r.MaxZ + 1);
+            sim.ReloadGround(r.MinX - 1, r.MinZ - 1, r.MaxX + 1, r.MaxZ + 1);
+        }
     }
+
+    private double _editClock;
 
     /// <summary>World point under the screen centre (terrain collision), or null.</summary>
     private (double X, double Z)? Aim()
@@ -443,7 +459,7 @@ public partial class WorldLab : Node3D
         {
             Text = "WASD move · Shift sprint · Space jump/swim up · mouse look (Tab frees cursor) · wheel zoom\n" +
                    "F fly (Space/C up/down, Shift faster, Ctrl ×6) · N noclip · Esc menu: teleport, new world, time of day\n" +
-                   "Water: hold G pour where you look · J spring · H rain · K clear\n" +
+                   "Water: hold G pour where you look · J spring · H rain · K clear · Ground: hold V dig, B raise\n" +
                    "F1 hide help · F2 hide HUD · F3 tile grid · F12 screenshot (saved to the user data folder)",
             AnchorTop = 1, AnchorBottom = 1, OffsetTop = -100, OffsetLeft = 14, OffsetRight = 900,
         };
@@ -530,6 +546,16 @@ public partial class WorldLab : Node3D
             if (_smokeStage == 0)
             {
                 if (_shotAt is { } at) Teleport(at.X, at.Z);
+                foreach (var (dx0, dz0, dx1, dz1, depth) in _shotDigs)
+                {
+                    double length = Math.Sqrt((dx1 - dx0) * (dx1 - dx0) + (dz1 - dz0) * (dz1 - dz0));
+                    for (double t = 0; t <= length; t += 1.5)
+                    {
+                        double ex = dx0 + (dx1 - dx0) * t / length, ez = dz0 + (dz1 - dz0) * t / length;
+                        var r = _sampler!.Edits.Apply(ex, ez, 1.6, -depth * .5);
+                        _streamer.Invalidate(r.MinX - 1, r.MinZ - 1, r.MaxX + 1, r.MaxZ + 1);
+                    }
+                }
                 if (_shotView is { } v) { _yaw = v.Yaw; _pitch = v.Pitch; _zoom = v.Zoom; _arm.SpringLength = v.Zoom; }
                 _smokeStage = 1; _smokeTimer = 0;
             }

@@ -13,6 +13,8 @@ internal static class SimulationTests
         T.Run("Water: real terrain ground and sinks", RealTerrain, filter);
         T.Run("Water: step cost with rain over the window", Cost, filter);
         T.Run("Water: puddles soak away and leave wet ground", Soak, filter);
+        T.Run("Edits: dig and raise the generated ground", Edits, filter);
+        T.Run("Edits: water follows a dug channel", DugChannel, filter);
     }
 
     private static Func<long, long, ChunkGround> Ground(Func<double, double, double> height, Func<double, double, bool>? sink = null) => (cx, cz) =>
@@ -109,6 +111,49 @@ internal static class SimulationTests
         // A 6 cm deep, ~100 m² puddle loses ~1 mm a minute over its whole area.
         T.Check(w.Soaked > .6 && w.Volume() < 2.4, $"puddle soaks away ({w.Soaked:0.00} m³ soaked in ten minutes, {w.Volume():0.00} m³ left)");
         T.Check(w.WetnessAt(0, 0) > 0, "ground still wet where the puddle was");
+    }
+
+    private static void Edits()
+    {
+        var s = CoreTests.Sampler("mountainous", 42);
+        var f = s.Plan.Layout.Land[0];
+        double x = Math.Round(f.Center.X + 1234.5), z = Math.Round(f.Center.Z - 777.25); // on a 1 m edit vertex
+        double before = s.Height(x, z), beside = s.Height(x + 40, z);
+        s.Edits.Apply(x, z, 3, -1.5);
+        T.Near(s.Height(x, z), before - 1.5, 1e-6, "brush centre lowered by the full amount");
+        T.Near(s.Height(x + 40, z), beside, 0, "ground outside the brush unchanged");
+        T.Check(s.Edits.Delta(x + 2, z) < 0 && s.Edits.Delta(x + 2, z) > -1.5, "smooth brush edge");
+        // Raise ground out of a river: dry there.
+        var reach = s.Plan.Hydrology.Reaches.First(r => r.Catchment[^1] > 500 && !r.Distributary);
+        var p = reach.Points[reach.Points.Length / 2];
+        T.Check(s.Sample(p.X, p.Z).Water == WaterKind.River, "river centre is wet");
+        s.Edits.Apply(p.X, p.Z, 6, 20);
+        T.Check(s.Sample(p.X, p.Z).Water == WaterKind.None, "ground raised out of the river is dry");
+        s.Edits.Clear();
+        T.Near(s.Height(x, z), before, 0, "clearing edits restores the generated ground");
+        T.Check(s.Sample(p.X, p.Z).Water == WaterKind.River, "and the river");
+    }
+
+    private static void DugChannel()
+    {
+        // A level basin full of water next to dry flat ground; digging a channel lets the water run out into it.
+        var edits = new TerrainEdits();
+        Func<double, double, double> ground = (x, z) => (Math.Abs(x) < 8 && Math.Abs(z) < 8 ? 49 : 50) + edits.Delta(x, z);
+        var w = new LocalWater(Ground(ground)) { Infiltration = 0 };
+        w.Follow(0, 0);
+        for (double x = -7; x <= 7; x += .5) for (double z = -7; z <= 7; z += .5) w.Add(x, z, .9 * .25);
+        for (int i = 0; i < 600; i++) w.Step(1 / 60f);
+        double outside = 0;
+        for (double x = 10; x < 40; x += .5) outside += w.DepthAt(x, 0);
+        T.Check(outside < .01, "water held in the basin");
+        for (double x = 6; x <= 40; x += .5) edits.Apply(x, 0, 1.5, -1.6 - x * .01);
+        w.ReloadGround(0, -5, 45, 5);
+        for (int i = 0; i < 1800; i++) w.Step(1 / 60f);
+        outside = 0;
+        for (double x = 12; x < 40; x += .5) outside += w.DepthAt(x, 0);
+        T.Note($"after digging: water along the channel sums to {outside:0.00} m of depth over 56 cells");
+        T.Check(outside > .5, "water flows into the dug channel");
+        Balance(w, "channel");
     }
 
     private static void Cost()

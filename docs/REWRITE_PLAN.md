@@ -327,6 +327,9 @@ Same night: level-0 tiles now have 1 m vertices (64 cells per 64 m tile; `TileBu
 shorelines and creek beds near the player (+~240 k triangles, ~6 ms per level-0 tile build on a worker); the water
 simulation's ground follows. Forests: sharper forest/meadow patches; tree cards as dense as the trees they replace.
 
+**M8 first step (night of 2026-10-05):** `TerrainEdits` (D23): hold V to dig / B to raise at the aimed point;
+tiles, collision and the water simulation's ground follow; tests for the edit layer and for water flowing into a dug
+channel. Also reeds and damp earth along river and lake banks.
+
 **Next:** Tom's build-3/4 feedback and asset batches first when they arrive. Then: M6 second step (optional local
-river simulation once terrain edits exist; splashes; sound), M3 gully detail, M8 terrain edits (digging) feeding both the
-sampler and the water.
+river simulation once terrain edits exist; splashes; sound), M3 gully detail, M8 next steps (save edits, soil/rock material layers, tools).

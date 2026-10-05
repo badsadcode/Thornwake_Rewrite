@@ -58,6 +58,11 @@ milestone M6), caves.
 * **Forests**: clearer forest and meadow patches; distant tree cards as dense as the real trees they replace.
 * Less memory for big worlds (Vast world ~200 MB instead of ~310 MB).
 
+## New since build 4 (in the next build)
+* **Digging**: hold **V** to dig and **B** to raise the ground where you look. Water follows: dig a channel from a
+  pond and it drains into it. (Edits are not saved yet.)
+* **Banks**: reed clumps along rivers and lakes, a darker damp strip just above the waterline.
+
 ## Controls
 | Key | Action |
 |---|---|
@@ -76,6 +81,8 @@ milestone M6), caves.
 | J | Place / remove a spring where you look |
 | H | Rain on / off (Esc → Settings → Simulation: rain strength) |
 | K | Clear all simulated water |
+| V (hold) | Dig the ground where you look |
+| B (hold) | Raise the ground where you look |
 
 ## Please check (and tell me what you think)
 1. **Frame rate** with the new defaults (more grass, clouds, sun shafts). If it drops, try Esc → Settings:

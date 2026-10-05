@@ -100,6 +100,18 @@ public partial class WorldStreamer : Node3D
         _failed.Clear();
     }
 
+    /// <summary>The ground changed inside a world rectangle (terrain edit): rebuild the tiles there at the nearest
+    /// levels (coarser tiles would barely change). Old tiles stay until replaced.</summary>
+    public void Invalidate(double minX, double minZ, double maxX, double maxZ, int maxLevel = 2)
+    {
+        foreach (var key in _tiles.Keys)
+            if (key.Level <= maxLevel && key.MinX <= maxX && key.MinX + key.Size >= minX && key.MinZ <= maxZ && key.MinZ + key.Size >= minZ)
+            {
+                _tileRevision[key] = -1;
+                if (_jobs.TryGetValue(key, out var job)) _jobs[key] = (job.Task, -1);
+            }
+    }
+
     /// <summary>Move the float origin; every resident tile is repositioned (no rebuild).</summary>
     public void Rebase(double originX, double originZ)
     {

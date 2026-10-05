@@ -205,6 +205,32 @@ public sealed class LocalWater
         Grow(ix, iz);
     }
 
+    /// <summary>The ground changed (terrain edit) inside a world rectangle: reload floor and sinks there, keep the water.</summary>
+    public void ReloadGround(double minX, double minZ, double maxX, double maxZ)
+    {
+        if (!_placed) return;
+        long c0x = (long)Math.Floor(minX / ChunkSize), c1x = (long)Math.Floor(maxX / ChunkSize);
+        long c0z = (long)Math.Floor(minZ / ChunkSize), c1z = (long)Math.Floor(maxZ / ChunkSize);
+        for (long gz = c0z; gz <= c1z; gz++)
+            for (long gx = c0x; gx <= c1x; gx++)
+            {
+                if (!InWindow(gx, gz)) continue;
+                var ground = _load(gx, gz);
+                int bx = (int)(gx - OriginChunkX) * ChunkCells, bz = (int)(gz - OriginChunkZ) * ChunkCells;
+                for (int j = 0; j < ChunkCells; j++)
+                    for (int i = 0; i < ChunkCells; i++)
+                    {
+                        int n = Index(bx + i, bz + j);
+                        _floor[n] = ground.Floor[j * ChunkCells + i];
+                        _sink[n] = ground.Sink[j * ChunkCells + i];
+                        if (_depth[n] > Dry) Grow(bx + i, bz + j);
+                    }
+                _dirty.Add((gx, gz));
+                // Water standing next to the change must be stepped (it may now flow into a new channel).
+                Grow(Math.Max(0, bx - 1), Math.Max(0, bz - 1)); Grow(Math.Min(Side - 1, bx + ChunkCells), Math.Min(Side - 1, bz + ChunkCells));
+            }
+    }
+
     /// <summary>Water depth at a world position (0 where dry or outside the window).</summary>
     public float DepthAt(double x, double z) => ToCell(x, z, out int ix, out int iz) ? _depth[Index(ix, iz)] : 0;
 

@@ -23,6 +23,8 @@ public readonly record struct TerrainSample(
 public sealed class TerrainSampler
 {
     public WorldPlan Plan { get; }
+    /// <summary>Player edits on top of the generated ground (empty for a fresh world: no cost, identical output).</summary>
+    public TerrainEdits Edits { get; } = new();
     private readonly WorldProfile _p;
     private readonly TerrainStyle _style;
     private readonly MacroRaster _macro;
@@ -63,7 +65,9 @@ public sealed class TerrainSampler
         if (land <= 0)
         {
             double depth = _p.OceanDepth * DetMath.Smooth(-land / .6);
-            return new(_p.SeaLevel - depth, land, 0, 0, WaterKind.Ocean, _p.SeaLevel, -1);
+            double seabed = _p.SeaLevel - depth + Edits.Delta(x, z);
+            return seabed < _p.SeaLevel ? new(seabed, land, 0, 0, WaterKind.Ocean, _p.SeaLevel, -1)
+                : new(seabed, land, 0, 0, WaterKind.None, double.NaN, -1);
         }
 
         // Eroded macro height; the coastal ramp follows the detailed coastline rather than the raster's.
@@ -142,6 +146,14 @@ public sealed class TerrainSampler
             int lake = _hydrology.LakeNear(x, z);
             if (lake >= 0 && _p.SeaLevel + height < _hydrology.Lakes[lake].Level)
             { water = WaterKind.Lake; level = _hydrology.Lakes[lake].Level; body = lake; }
+        }
+        double edit = Edits.Delta(x, z);
+        if (edit != 0)
+        {
+            height += edit;
+            // Ground raised out of a river or lake is dry (lowered ground does not fill by itself: the local water
+            // simulation does that).
+            if (water != WaterKind.None && _p.SeaLevel + height >= level - .02) { water = WaterKind.None; level = double.NaN; body = -1; }
         }
         return new(_p.SeaLevel + height, land, mountainShare, detail, water, level, body);
     }

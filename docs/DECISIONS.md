@@ -144,3 +144,13 @@ lakes and the sea are *sinks*: simulated water that reaches them joins them. The
 are not simulated (their levels come from hydrology, which is not a hydraulic equilibrium; simulating them would
 make them drift away from the rendered rivers). Simulating rivers locally (e.g. damming) is a later step once
 terrain editing (M8) exists.
+
+## D23 — Terrain edits as a sparse 1 m offset layer read by the sampler (2026-10-05)
+`TerrainEdits` stores player changes as height offsets on a 1 m vertex grid in 32 m chunks (bilinear), consulted at
+the end of `TerrainSampler.Sample`, so every consumer (tile meshes, collision, scatter, the water simulation's
+ground) sees the same edited ground with no special cases; an unedited world pays one empty-dictionary check and is
+bit-identical to the generator (fingerprints unchanged). Chunks are copy-on-write, so tile builders on worker
+threads never see a half-applied edit. An edit rebuilds the tiles it touches at levels 0–2 (old tiles stay until
+replaced) and reloads the water simulation's ground there. Ground raised out of a river or lake is dry; lowered
+ground does not fill by itself (the local water simulation does that). Not yet: saving edits, material layers
+(soil/rock), tools and costs (M9 gameplay).
