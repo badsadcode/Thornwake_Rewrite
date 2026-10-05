@@ -22,6 +22,8 @@ public partial class Atmosphere : Node3D
     public Godot.Environment Environment { get; private set; } = null!;
 
     private const double CloudPeriod = 6000, CloudHeight = 1600;
+    // Cloud texture size (setting "Cloud resolution"). The cloud shadow decal stays at 256 (it is blurry anyway).
+    private int _cloudPixels;
     private const int Tile = 256;
     private ShaderMaterial _sky = null!, _shafts = null!;
     private Decal _shadow = null!;
@@ -62,6 +64,7 @@ public partial class Atmosphere : Node3D
         var raw = _noise.GetData();
         _noiseBase = new byte[Tile * Tile];
         for (int i = 0; i < _noiseBase.Length; i++) _noiseBase[i] = raw[i * 4];
+        _cloudPixels = Tile;
         _sky = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Sky.gdshader") };
         _sky.SetShaderParameter("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(_noise)));
         _sky.SetShaderParameter("cloud_period", CloudPeriod);
@@ -187,6 +190,13 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
         _sky.SetShaderParameter("quality", GameSettings.CloudQuality.Index);
+        int pixels = 256 << GameSettings.CloudResolution.Index;
+        if (pixels != _cloudPixels)
+        {
+            // Same pattern (periodic noise, same seed) with finer detail; the sky material keeps its uniforms.
+            _cloudPixels = pixels;
+            _sky.SetShaderParameter("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(pixels == Tile ? _noise : CloudNoise(pixels, 4242))));
+        }
         _sky.SetShaderParameter("sun_glare", GameSettings.SunGlare.F);
         _sky.SetShaderParameter("sun_style", GameSettings.SunStyle.Index);
         _shafts.SetShaderParameter("intensity", GameSettings.SunShafts.F);
@@ -591,10 +601,12 @@ public partial class Atmosphere : Node3D
             {
                 float u = x / (float)size, v = y / (float)size;
                 // Billowy base: fold the fbm (|2n-1|) and invert, rounding the cloud tops.
-                float n = Fbm(u, v, 4, 4, 1);
-                float b = 1 - MathF.Abs(2 * Fbm(u, v, 8, 3, 9) - 1);
+                // Bigger textures add finer octaves (the large shapes stay the same).
+                int extra = size > 256 ? (int)Math.Round(Math.Log2(size / 256.0)) : 0;
+                float n = Fbm(u, v, 4, 4 + extra, 1);
+                float b = 1 - MathF.Abs(2 * Fbm(u, v, 8, 3 + extra, 9) - 1);
                 float baseValue = Math.Clamp((n * .75f + b * .25f - .2f) / .6f, 0, 1);
-                float detail = Fbm(u, v, 8, 4, 21);
+                float detail = Fbm(u, v, 8, 4 + extra, 21);
                 int i = (y * size + x) * 4;
                 data[i] = (byte)(baseValue * 255); data[i + 1] = (byte)(detail * 255); data[i + 2] = 0; data[i + 3] = 255;
             }

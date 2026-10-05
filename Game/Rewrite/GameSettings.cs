@@ -145,6 +145,9 @@ public static class GameSettings
     public static readonly Setting CloudQuality = Add(new("sky.cloud_quality", "Sky", "Cloud quality", 0, 2, 1, 1,
         "One layer; layered (high cirrus, the main clouds and low fast clouds, each with its own wind); volumetric (experimental, " +
         "lit 3D clouds — heavier on the GPU).", options: new[] { "one layer", "layered", "volumetric (experimental)" }));
+    public static readonly Setting CloudResolution = Add(new("sky.cloud_resolution", "Sky", "Cloud resolution", 0, 2, 1, 1,
+        "Detail of the cloud texture: crisper edges and finer wisps at higher settings (a little more memory and start-up time).",
+        options: new[] { "256", "512", "1024" }));
     public static readonly Setting BiomeMoods = Add(new("sky.biome_moods", "Sky", "Biome skies", 0, 2, 1, 0,
         "Each biome tints the sky and haze a little (jungle humid, desert dusty, volcanic ashen, blighted swamp gloomy). " +
         "Off keeps the realistic sky everywhere.", options: new[] { "off (realistic)", "subtle", "strong" }));
