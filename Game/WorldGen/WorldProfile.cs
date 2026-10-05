@@ -37,7 +37,7 @@ public sealed record WorldProfile
         if (string.IsNullOrWhiteSpace(Id) || Id.Length > 64 || Id.Any(c => !(c is >= 'a' and <= 'z' or >= '0' and <= '9' or '-' or '_' or '.')))
             throw new InvalidDataException("Invalid world profile id.");
         if (string.IsNullOrWhiteSpace(Name) || Name.Length > 80) throw new InvalidDataException("Invalid world profile name.");
-        if (!Range(WorldSize, 16000, 4096000) || Continents < 1 || Continents > 8 || Islands < 0 || Islands > 128 ||
+        if (!Range(WorldSize, 16000, 4096000) || Continents < 1 || Continents > 16 || Islands < 0 || Islands > 400 ||
             !Range(ContinentRadius, WorldSize * .035, WorldSize * .28) || !Range(IslandRadius, WorldSize * .002, WorldSize * .025) ||
             !Range(CoastRoughness, 0, .3) || !Range(SeaLevel, -1000, 1000) || !Range(OceanDepth, 50, 8000) ||
             !Range(LowlandHeight, 10, 800) || !Range(HillHeight, 0, 800) || !Range(HillScale, 500, WorldSize * .1) ||

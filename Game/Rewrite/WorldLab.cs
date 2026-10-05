@@ -37,6 +37,12 @@ public partial class WorldLab : Node3D
     private HSlider _timeSlider = null!;
 
     private IReadOnlyList<WorldProfile> _profiles = Array.Empty<WorldProfile>();
+    private IReadOnlyList<WorldRecipe> _recipes = Array.Empty<WorldRecipe>();
+    private Task<WorldPlan>? _preview;
+    private string _previewKey = "", _pendingKey = "";
+    private WorldPlan? _previewPlan;
+    private TextureRect _previewImage = null!;
+    private Label _previewInfo = null!, _typeInfo = null!;
     private TerrainSampler? _sampler;
     private Task<TerrainSampler>? _generation;
     private List<Landmark> _landmarks = new();
@@ -60,6 +66,7 @@ public partial class WorldLab : Node3D
     public override void _Ready()
     {
         _profiles = WorldProfile.ParseCatalog(Godot.FileAccess.GetFileAsString("res://Content/world_profiles.json"));
+        _recipes = WorldRecipe.Catalog(_profiles, LoadCustomTypes());
         // The water shader reads the screen and depth textures; with MSAA those reads produce lines along the water
         // mesh's triangle edges (Tom's playtest) and wrong refraction. This scene uses FXAA or TAA instead (the valley
         // game keeps the project's MSAA setting); Atmosphere applies the anti-aliasing setting.
@@ -103,9 +110,9 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--hour=")) _timeSlider.Value = double.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--menu=")) { _menu.Visible = true; _menu.GetChild<TabContainer>(0).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); }
         }
-        int index = Math.Max(0, _profiles.ToList().FindIndex(p => p.Id == preset));
+        int index = Math.Max(0, _recipes.ToList().FindIndex(r => r.Id == preset));
         _profileList.Select(index);
-        _gen.LoadPreset(_profiles[index]);
+        SelectType(index);
         // --set=gen.<key>=<value> also sets world-generation parameters (after the preset has loaded its values).
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--set=gen."))
@@ -114,6 +121,7 @@ public partial class WorldLab : Node3D
                 if (_gen.All.FirstOrDefault(x => x.Key == kv[0]) is { } g) g.Value = double.Parse(kv[1], CultureInfo.InvariantCulture);
             }
         _seedEdit.Text = seed.ToString(CultureInfo.InvariantCulture);
+        if (OS.GetCmdlineUserArgs().Contains("--preview")) StartPreview();
         if (_smokeDirectory == null) Input.MouseMode = Input.MouseModeEnum.Captured;
         Generate();
     }
@@ -124,15 +132,94 @@ public partial class WorldLab : Node3D
     {
         if (_generation != null) return;
         if (!int.TryParse(_seedEdit.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seed)) { _status = "Seed must be a whole number."; return; }
-        var preset = _profiles[Math.Max(0, _profileList.Selected)];
+        var recipe = _recipes[Math.Max(0, _profileList.Selected)];
         WorldProfile profile; TerrainStyle style;
-        try { (profile, style) = _gen.Build(preset); }
+        try { (profile, style) = _gen.Build(recipe); }
         catch (Exception error) { _status = "These world parameters are not valid: " + error.Message; return; }
         _custom = !_gen.IsPreset;
         _overlay.Text = $"Generating {profile.Name}{(_custom ? " (custom)" : "")}, seed {seed}…\ncontinents → erosion → rivers and lakes";
         _overlay.Visible = true;
         _generationStarted = Time.GetTicksMsec();
-        _generation = Task.Run(() => new TerrainSampler(new WorldPlan(WorldManifest.Create(seed, profile), style: style)));
+        // The previewed world is exactly this one: reuse its plan instead of generating it again.
+        var reuse = _previewPlan != null && _previewKey == PlanKey(seed) ? _previewPlan : null;
+        _generation = Task.Run(() => new TerrainSampler(reuse ?? new WorldPlan(WorldManifest.Create(seed, profile), style: style)));
+    }
+
+    private const string CustomTypes = "user://world_types";
+
+    /// <summary>World types the player saved (one JSON file each, editable by hand for deeper tweaks).</summary>
+    private static List<WorldRecipe> LoadCustomTypes()
+    {
+        var list = new List<WorldRecipe>();
+        using var dir = DirAccess.Open(CustomTypes);
+        if (dir == null) return list;
+        foreach (var file in dir.GetFiles())
+        {
+            if (!file.EndsWith(".json")) continue;
+            try { list.Add(WorldRecipe.FromJson(Godot.FileAccess.GetFileAsString($"{CustomTypes}/{file}"))); }
+            catch (Exception error) { GD.PushWarning($"World type {file} skipped: {error.Message}"); }
+        }
+        return list;
+    }
+
+    private void SaveCustomType(string name)
+    {
+        name = name.Trim();
+        if (name.Length == 0) { _previewInfo.Text = "Give the new world type a name first."; return; }
+        var current = _recipes[Math.Max(0, _profileList.Selected)];
+        try
+        {
+            var (profile, _) = _gen.Build(current);
+            var recipe = WorldRecipe.Create(name, $"Custom world type based on {current.Name}, {profile.WorldSize / 1000:0} km.", profile,
+                current.Mainland, _gen.TypeSettings());
+            DirAccess.MakeDirRecursiveAbsolute(CustomTypes);
+            using (var f = Godot.FileAccess.Open($"{CustomTypes}/{recipe.Id}.json", Godot.FileAccess.ModeFlags.Write)) f.StoreString(recipe.ToJson());
+            _recipes = WorldRecipe.Catalog(_profiles, LoadCustomTypes());
+            _profileList.Clear();
+            foreach (var r in _recipes) _profileList.AddItem(r.Name);
+            int index = _recipes.ToList().FindIndex(r => r.Id == recipe.Id);
+            _profileList.Select(index);
+            SelectType(index);
+            _previewInfo.Text = $"Saved world type \"{recipe.Name}\" ({ProjectSettings.GlobalizePath($"{CustomTypes}/{recipe.Id}.json")}). It adapts to any world size like the built-in types.";
+        }
+        catch (Exception error) { _previewInfo.Text = "Could not save the world type: " + error.Message; }
+    }
+
+    private void SelectType(int index)
+    {
+        var recipe = _recipes[Math.Clamp(index, 0, _recipes.Count - 1)];
+        _gen.LoadRecipe(recipe);
+        _typeInfo.Text = recipe.Description;
+    }
+
+    /// <summary>Identity of the world the creation screen describes (type, seed, every parameter).</summary>
+    private string PlanKey(int seed) =>
+        $"{_recipes[Math.Max(0, _profileList.Selected)].Id}|{seed}|" + string.Join(",", _gen.All.Select(x => x.Value.ToString("R", CultureInfo.InvariantCulture)));
+
+    private void StartPreview()
+    {
+        if (_preview != null) return;
+        if (!int.TryParse(_seedEdit.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seed)) { _previewInfo.Text = "Seed must be a whole number."; return; }
+        WorldProfile profile; TerrainStyle style;
+        try { (profile, style) = _gen.Build(_recipes[Math.Max(0, _profileList.Selected)]); }
+        catch (Exception error) { _previewInfo.Text = "Not valid: " + error.Message; return; }
+        _pendingKey = PlanKey(seed);
+        _previewInfo.Text = $"Generating the map of {profile.Name}…";
+        _preview = Task.Run(() => new WorldPlan(WorldManifest.Create(seed, profile), style: style));
+    }
+
+    private void FinishPreview()
+    {
+        var task = _preview!;
+        _preview = null;
+        if (task.IsFaulted) { _previewInfo.Text = "Map failed: " + task.Exception?.GetBaseException().Message; return; }
+        var plan = task.Result;
+        _previewPlan = plan; _previewKey = _pendingKey;
+        _previewImage.Texture = ImageTexture.CreateFromImage(WorldPreview.Render(plan, 512));
+        var p = plan.Profile;
+        _previewInfo.Text = $"{p.WorldSize / 1000:0} km × {p.WorldSize / 1000:0} km · {p.Continents} continent(s), {p.Islands} islands · " +
+            $"land {WorldPreview.LandShare(plan) * 100:0} % · {plan.Hydrology.Reaches.Count} river reaches, {plan.Hydrology.Lakes.Count} lakes · " +
+            $"built in {plan.BuildMilliseconds / 1000:0.0} s";
     }
 
     private void FinishGeneration()
@@ -224,6 +311,7 @@ public partial class WorldLab : Node3D
     public override void _Process(double delta)
     {
         if (_generation is { IsCompleted: true }) FinishGeneration();
+        if (_preview is { IsCompleted: true }) FinishPreview();
         if (_sampler == null) return;
         Rebase(PlayerX, PlayerZ);
         _streamer.Update(PlayerX, PlayerZ);
@@ -509,7 +597,7 @@ public partial class WorldLab : Node3D
         layer.AddChild(_overlay);
 
         _menu = new PanelContainer { Visible = false, AnchorLeft = .5f, AnchorRight = .5f, AnchorTop = .5f, AnchorBottom = .5f,
-            OffsetLeft = -330, OffsetRight = 330, OffsetTop = -330, OffsetBottom = 330 };
+            OffsetLeft = -520, OffsetRight = 520, OffsetTop = -340, OffsetBottom = 340 };
         layer.AddChild(_menu);
         var tabs = new TabContainer();
         _menu.AddChild(tabs);
@@ -541,24 +629,47 @@ public partial class WorldLab : Node3D
         quit.Pressed += () => GetTree().Quit();
         box.AddChild(quit);
 
-        // ---- New world: preset, seed, generation parameters
+        // ---- New world: size, world type, seed, parameters (Auto unless changed), map preview
         var gen = new VBoxContainer { Name = "New world" };
         tabs.AddChild(gen);
         var row = new HBoxContainer();
+        row.AddChild(new Label { Text = "World type" });
         _profileList = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        foreach (var p in _profiles) _profileList.AddItem(p.Name);
-        _profileList.ItemSelected += i => _gen.LoadPreset(_profiles[(int)i]);
+        foreach (var r in _recipes) _profileList.AddItem(r.Name);
+        _profileList.ItemSelected += i => SelectType((int)i);
         _seedEdit = new LineEdit { CustomMinimumSize = new Vector2(110, 0), PlaceholderText = "seed" };
         var random = new Button { Text = "Random seed" };
         random.Pressed += () => _seedEdit.Text = ((int)(GD.Randi() % 100000)).ToString(CultureInfo.InvariantCulture);
-        row.AddChild(_profileList); row.AddChild(_seedEdit); row.AddChild(random);
+        row.AddChild(_profileList); row.AddChild(new Label { Text = "Seed" }); row.AddChild(_seedEdit); row.AddChild(random);
         gen.AddChild(row);
-        gen.AddChild(new Label { Text = "Preset values; change any to make a custom world. Hover a name for details.", Modulate = new Color(1, 1, 1, .7f) });
-        gen.AddChild(SettingsUi.List(_gen.All, section => { foreach (var s in _gen.All) if (s.Section == section) s.Value = s.Default; }));
+        _typeInfo = new Label { Modulate = new Color(1, 1, 1, .75f), AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        gen.AddChild(_typeInfo);
+        var columns = new HBoxContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        gen.AddChild(columns);
+        var parameters = SettingsUi.List(_gen.All, section => { foreach (var s in _gen.All) if (s.Section == section) s.Value = s.Default; });
+        parameters.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        columns.AddChild(parameters);
+        var side = new VBoxContainer { CustomMinimumSize = new Vector2(400, 0) };
+        columns.AddChild(side);
+        _previewImage = new TextureRect { CustomMinimumSize = new Vector2(400, 400), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = CanvasItem.TextureFilterEnum.Linear };
+        side.AddChild(_previewImage);
+        var previewButton = new Button { Text = "Preview map" };
+        previewButton.Pressed += StartPreview;
+        side.AddChild(previewButton);
+        _previewInfo = new Label { Text = "Choose size, type and seed; parameters on auto adapt to both. Preview the map, then generate.",
+            AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(400, 0) };
+        side.AddChild(_previewInfo);
+        var saveRow = new HBoxContainer();
+        var typeName = new LineEdit { PlaceholderText = "new world type name", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var save = new Button { Text = "Save as world type" };
+        save.Pressed += () => SaveCustomType(typeName.Text);
+        saveRow.AddChild(typeName); saveRow.AddChild(save);
+        side.AddChild(saveRow);
         var generateRow = new HBoxContainer();
         var generate = new Button { Text = "Generate this world", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         generate.Pressed += () => { ToggleMenu(false); Generate(); };
-        var reset = new Button { Text = "Reset all to preset" };
+        var reset = new Button { Text = "Reset all to auto" };
         reset.Pressed += _gen.Reset;
         generateRow.AddChild(generate); generateRow.AddChild(reset);
         gen.AddChild(generateRow);

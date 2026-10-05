@@ -5,9 +5,9 @@ using Thornwake.WorldGen;
 namespace Thornwake.Rewrite;
 
 /// <summary>
-/// World-generation parameters shown in the "New world" tab. Shape values start from the chosen preset (absolute
-/// numbers); terrain and water values are multipliers on the preset's defaults (1 = as designed). The same preset,
-/// seed and parameters always give the same world.
+/// World-generation parameters of the "New world" tab: world size, then the world type's recipe with every shape
+/// parameter on Auto (the recipe decides for this size) unless overridden; terrain, water and forest values are
+/// multipliers (1 = as designed). The same type, size, seed and parameters always give the same world.
 /// </summary>
 public sealed class WorldGenOptions
 {
@@ -15,7 +15,7 @@ public sealed class WorldGenOptions
     private Setting Add(Setting s) { All.Add(s); return s; }
 
     // ---- world shape (profile)
-    public readonly Setting Size, Continents, Islands, ContinentSize, CoastRoughness, Ranges, MountainHeight, HillHeight, Classic;
+    public readonly Setting Size, Continents, Islands, ContinentSize, CoastRoughness, Ranges, MountainHeight, MountainWidth, HillHeight, Classic;
     // ---- terrain
     public readonly Setting Hills, Plains, Rock, CoastDetail, Erosion, Shores;
     // ---- water
@@ -29,14 +29,20 @@ public sealed class WorldGenOptions
         Classic = Add(new("gen.version", S, "Terrain version", 0, 2, 1, 0,
             "Generate the terrain as in an earlier build, to compare or go back: Preview 7 (before smooth river mouths), Build 5 (before natural banks and steeper shores).",
             options: new[] { "current", "Preview 7", "Build 5" }));
-        Size = Add(new("gen.size", S, "World size", .5, 2, .05, 1, "Scales the whole world: continents, islands, hills and mountain ranges.", "×"));
-        Continents = Add(new("gen.continents", S, "Continents", 1, 8, 1, 4, "Number of large landmasses."));
-        Islands = Add(new("gen.islands", S, "Islands", 0, 128, 1, 40, "Number of small islands."));
-        ContinentSize = Add(new("gen.continent_size", S, "Continent size", .6, 1.6, .05, 1, "Continent radius relative to the preset.", "×"));
-        CoastRoughness = Add(new("gen.coast", S, "Coastline roughness", 0, .3, .01, .2, "Large bays, peninsulas and capes."));
-        Ranges = Add(new("gen.ranges", S, "Mountain ranges per continent", 0, 6, 1, 2, "Number of mountain belts on each continent."));
-        MountainHeight = Add(new("gen.mountain_height", S, "Mountain height", 0, 6000, 50, 2500, "Height of the highest peaks above the lowland.", "m"));
-        HillHeight = Add(new("gen.hill_height", S, "Hill height", 0, 800, 10, 200, "Height of the broad hills between the mountains.", "m"));
+        Size = Add(new("gen.size", S, "World size", 0, WorldRecipe.Sizes.Length - 1, 1, 4, "Width and length of the world. The world type adapts to any size.",
+            options: Array.ConvertAll(WorldRecipe.Sizes, k => $"{k:0} km × {k:0} km")));
+        var counts = new string[WorldRecipe.MaxContinents + 1];
+        counts[0] = "auto";
+        for (int i = 1; i <= WorldRecipe.MaxContinents; i++) counts[i] = i.ToString();
+        Continents = Add(new("gen.continents", S, "Continents", 0, WorldRecipe.MaxContinents, 1, 0, "Large landmasses. Auto: chosen from the world type and size.", options: counts));
+        Islands = Add(new("gen.islands", S, "Islands", -1, WorldRecipe.MaxIslands, 1, -1, "Small islands (left end = auto: from the world type and size).") { AutoAt = -1 });
+        ContinentSize = Add(new("gen.continent_size", S, "Continent size", .5, 1.6, .05, 1, "Landmass size relative to what the world type would choose.", "×"));
+        CoastRoughness = Add(new("gen.coast", S, "Coastline roughness", 0, 1.5, .05, 1, "Large bays, peninsulas and capes.", "×"));
+        Ranges = Add(new("gen.ranges", S, "Mountain ranges per continent", 0, 7, 1, 0, "Mountain belts on each continent.",
+            options: new[] { "auto", "0", "1", "2", "3", "4", "5", "6" }));
+        MountainHeight = Add(new("gen.mountain_height", S, "Mountain height", 0, 2, .05, 1, "Height of the peaks.", "×"));
+        MountainWidth = Add(new("gen.mountain_width", S, "Mountain width", .5, 2, .05, 1, "Width of the mountain ranges.", "×"));
+        HillHeight = Add(new("gen.hill_height", S, "Broad hills", 0, 2.5, .05, 1, "Height of the broad hills between the mountains.", "×"));
 
         Hills = Add(new("gen.hills", T, "Rolling ground", 0, 3, .05, 1, "Walking-scale hills and hollows on the lowland.", "×"));
         Plains = Add(new("gen.plains", T, "Plains flatness", 0, 1, .05, .6, "How flat the plains between hill country are (1 = very flat)."));
@@ -60,18 +66,48 @@ public sealed class WorldGenOptions
         Deltas = Add(new("gen.deltas", W, "Deltas", 0, 4, .05, 1, "How readily large rivers split into deltas on flat coasts (0 = none).", "×"));
     }
 
-    /// <summary>Show a preset's own values (shape) and reset the multipliers.</summary>
-    public void LoadPreset(WorldProfile p)
+    /// <summary>Select a world type: its native size, every shape parameter on Auto, multipliers reset.</summary>
+    public void LoadRecipe(WorldRecipe recipe)
     {
         void Set(Setting s, double v) { s.Default = Math.Clamp(v, s.Min, s.Max); s.Value = s.Default; }
-        Set(Size, 1); Set(Continents, p.Continents); Set(Islands, p.Islands); Set(ContinentSize, 1); Set(CoastRoughness, p.CoastRoughness);
-        Set(Ranges, p.RangesPerContinent); Set(MountainHeight, p.MountainHeight); Set(HillHeight, p.HillHeight);
-        var style = TerrainStyle.For(p);
+        int native = Array.IndexOf(WorldRecipe.Sizes, recipe.NativeKm);
+        Set(Size, native >= 0 ? native : 4);
+        Set(Continents, 0); Set(Islands, -1); Set(Ranges, 0);
+        foreach (var s in new[] { ContinentSize, CoastRoughness, MountainHeight, MountainWidth, HillHeight }) Set(s, 1);
+        var style = TerrainStyle.For(recipe.Base);
         Set(Plains, 1 - style.PlainsRoughness);
         Set(Classic, 0);
         Set(ForestCover, 1.15); Set(ForestDensity, 1.2); Set(Rocks, 1); Set(Props, 1);
         foreach (var s in new[] { Hills, Rock, CoastDetail, Erosion, Shores, Rivers, RiverWidth, Meanders, Wander, WidthVariation, Banks, Lakes, Deltas }) Set(s, 1);
+        // A world type may start from its own parameter values (saved custom types).
+        foreach (var (key, value) in recipe.Settings)
+            if (All.Find(x => x.Key == key) is { } setting && !ShapeKeys.Contains(key)) Set(setting, value);
     }
+
+    /// <summary>Keys baked into a world type's profile (or chosen per world) rather than stored as its parameters.</summary>
+    private static readonly HashSet<string> ShapeKeys = new()
+    {
+        "gen.version", "gen.size", "gen.continents", "gen.islands", "gen.continent_size", "gen.coast", "gen.ranges",
+        "gen.mountain_height", "gen.mountain_width", "gen.hill_height",
+    };
+
+    /// <summary>Current non-shape parameter values, to store with a new world type.</summary>
+    public Dictionary<string, double> TypeSettings()
+    {
+        var result = new Dictionary<string, double>();
+        foreach (var s in All) if (!ShapeKeys.Contains(s.Key)) result[s.Key] = s.Value;
+        return result;
+    }
+
+    public WorldChoices Choices => new()
+    {
+        SizeKm = WorldRecipe.Sizes[Size.Index],
+        Continents = Continents.Index == 0 ? null : Continents.Index,
+        Islands = Islands.Value < 0 ? null : (int)Islands.Value,
+        Ranges = Ranges.Index == 0 ? null : Ranges.Index - 1,
+        ContinentSize = ContinentSize.Value, CoastRoughness = CoastRoughness.Value, MountainHeight = MountainHeight.Value,
+        MountainWidth = MountainWidth.Value, Hills = HillHeight.Value,
+    };
 
     public void Reset() { foreach (var s in All) s.Value = s.Default; }
 
@@ -79,26 +115,9 @@ public sealed class WorldGenOptions
     public bool IsPreset => All.TrueForAll(s => s.Value == s.Default);
 
     /// <summary>The profile and terrain style these parameters describe, starting from <paramref name="preset"/>.</summary>
-    public (WorldProfile Profile, TerrainStyle Style) Build(WorldProfile preset)
+    public (WorldProfile Profile, TerrainStyle Style) Build(WorldRecipe recipe)
     {
-        double f = Size.Value;
-        double world = Math.Clamp(preset.WorldSize * f, 16000, 4096000);
-        double radius = Math.Clamp(preset.ContinentRadius * f * ContinentSize.Value, world * .035, world * .28);
-        var profile = preset with
-        {
-            WorldSize = world,
-            Continents = Continents.Index,
-            Islands = Islands.Index,
-            ContinentRadius = radius,
-            IslandRadius = Math.Clamp(preset.IslandRadius * f, world * .002, world * .025),
-            CoastRoughness = CoastRoughness.Value,
-            HillHeight = HillHeight.Value,
-            HillScale = Math.Clamp(preset.HillScale * f, 500, world * .1),
-            RangesPerContinent = Ranges.Index,
-            MountainHeight = MountainHeight.Value,
-            MountainWidth = Math.Clamp(preset.MountainWidth * f, 500, radius * .5),
-        };
-        profile.Validate();
+        var profile = recipe.Resolve(Choices);
         var b = TerrainStyle.For(profile);
         var style = b with
         {

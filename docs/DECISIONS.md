@@ -241,6 +241,33 @@ The river's tile water sheet was stretched over dug ground next to it while the 
 at its own level: overlapping sheets with gaps. Dug vertices are now left to the simulation, and the simulation also
 draws river/lake cells next to its water at their surface, so the two meet.
 
+## D35 — World types are size-independent recipes (2026-10-05)
+Tom: pick world size, world type, seed and optional parameters (Auto by default), see a 2D map, then generate —
+inspired by Azgaar's Fantasy Map Generator, no Azgaar code. A `WorldRecipe` anchors each type on a tuned preset at
+its native size and returns exactly that preset there with every choice on Auto (existing worlds unchanged; tested
+by digest). At other sizes counts follow coverage (continents and islands ∝ size^0.8, radii adjusted so the land
+share stays in range — tested at 128 km / native / 4096 km); mainland types keep one landmass; mountains narrow on
+small worlds. Overrides (continents, islands, ranges, size/roughness/height/width multipliers) win over Auto.
+Compromise: the presets' land share (13–19 %) is lower than Tom's suggested targets; raising it would change every
+existing world, so *Continent size ×* is the knob for now. Details: WORLD_CREATION.md.
+
+## D36 — World types as data; player-made types (2026-10-05)
+A world type is a JSON definition (id, name, description, mainland flag, full `WorldProfile`, starting parameter
+values). The creation screen saves the current setup as a new type in `user://world_types/`, loaded at startup and
+listed after the built-in types; files are hand-editable for deeper tweaks and validated on load (broken files are
+skipped). Next: an optional `Landforms` step list (Azgaar-style heightmap templates as Thornwake's own bounded,
+size-relative landform operations: range, hills, basin, trough, strait, raise/lower, mask, island chain) applied
+to the macro layer before erosion; empty list = identical worlds. Then a world type editor with a live map.
+
+## D37 — Rain water persists; cosmetic puddles (2026-10-05)
+Tom: rain water vanished the moment rain stopped, but unlimited rain must not flood the world. The simulation now
+has soil with limited capacity: infiltration falls as the soil saturates (∝ (1 − saturation)²) down to a small
+floor, saturated soil drains slowly, and standing water evaporates slowly. A dug pond fills during rain and stays
+for a long time; puddles on open ground soak away over minutes (tested: 2.3 of 3 m³ left after 10 min). Wetness
+edges are blurred and noise-thresholded instead of 0.5 m squares. Separately, a cosmetic `rain_wetness` global
+darkens and glosses all terrain and draws non-simulated puddles in hollows, fading after the rain. Reservoirs (river
+and lake water) feed only edited cells, so they never leak into untouched banks.
+
 ## Planned — Biomes
 Tom: many biomes, each with its own terrain, plants and atmosphere. Plan: a biome map from climate (temperature from
 latitude/elevation, moisture from distance to sea and rain shadow) drives `TerrainStyle` per region (blended at

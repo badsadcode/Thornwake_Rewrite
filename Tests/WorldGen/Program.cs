@@ -116,6 +116,7 @@ try
     CoreTests.Register(filter, record);
     HydrologyTests.Register(filter);
     SimulationTests.Register(filter);
+    RecipeTests.Register(filter);
 }
 catch (TestFailure failure)
 {

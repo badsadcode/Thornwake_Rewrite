@@ -86,6 +86,16 @@ milestone M6), caves.
   the sea/lake floor, and the river's greener water spreads into the bay.
 * **Digging by rivers**: no more gaps between river water and water in a dug channel.
 * **Going back**: New world → Terrain version: current / Preview 7 / Build 5.
+* **New world screen** (Esc → New world): pick a **world type** (Balanced continents, Great mainland, Archipelago,
+  Mountain kingdoms, Many small continents, Islands + mainland, classic), a **seed**, a **world size** from 32 to
+  4096 km, and optionally override any parameter (all on **Auto** by default). **Preview map** shows the whole world
+  in 2D before you generate. A type keeps its character at every size (bigger worlds get more landmasses, not giant
+  ones). See docs/WORLD_CREATION.md.
+* **Your own world types**: set things up, type a name, **Save as world type**. It is listed with the others and
+  works at any size; the JSON file in the user folder can be edited for deeper tweaks.
+* **Rain water stays**: puddles and dug ponds no longer vanish when the rain stops. Soil soaks up water until it is
+  saturated, then water stands; it drains and evaporates slowly, so ponds last and the world does not flood.
+  Wet ground has soft edges instead of squares, and all ground darkens and gets small puddles while it rains.
 
 ## New in build 7
 * **Digging tools** (1–5, left/right mouse): **shovel** digs soil and fills from a soil bag (1.5 m³, weak on rock),
