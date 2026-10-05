@@ -118,7 +118,7 @@ public sealed class WorldRecipe
                 Template("shattered", "Shattered lands", 50,
                     L("Raise") with { X = R(.5), Z = R(.5), Size = R(.4, .43), Land = 2.4, Relief = .3 },
                     L("Mask") with { Shape = "Edges", Strength = .5 },
-                    L("Strait") with { Count = R(6, 9), Length = R(.3, .6), Size = R(.008, .014) },
+                    L("Strait") with { Count = R(6, 9), X = R(.25, .75), Z = R(.25, .75), Length = R(.25, .5), Size = R(.008, .014) },
                     L("Range") with { Count = R(3, 4) },
                     L("Hills") with { Count = R(4, 7) }), mainland: true),
             new("rift", "Rift continent", "A great continent split by a rift valley full of long lakes, walled by mountains.",
