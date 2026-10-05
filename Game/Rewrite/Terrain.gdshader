@@ -41,7 +41,10 @@ void fragment() {
 	// River and lake banks (not sea beaches): from the waterline to ~0.5 m above it (wide where the river has a low
 	// beach), in patches of dark mud,
 	// pale sand or gravel, and plain damp grass, varying along the shore every few tens of metres.
-	float damp = smoothstep(0.24, 0.44, COLOR.a + (n3 - 0.5) * 0.08) * (1.0 - submerged) * (1.0 - wet) * (1.0 - smoothstep(0.45, 0.7, slope));
+	// Wide, noisy threshold: COLOR.a is per vertex (1 m apart near the player), and a sharp step would show the
+	// triangle grid as square patches on flat floodplains.
+	float damp_noise = (n3 - 0.5) * 0.14 + (vnoise(p * 0.47 + 3.7) - 0.5) * 0.16;
+	float damp = smoothstep(0.2, 0.5, COLOR.a + damp_noise) * (1.0 - submerged) * (1.0 - wet) * (1.0 - smoothstep(0.45, 0.7, slope));
 	float patch_kind = vnoise(p * 0.045 + vec2(17.0, 3.0));
 	vec3 mud = vec3(0.30, 0.25, 0.18) * (0.9 + 0.2 * n3);
 	vec3 shore_sand = mix(vec3(0.66, 0.60, 0.45), vec3(0.55, 0.52, 0.44), n2);

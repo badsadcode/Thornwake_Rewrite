@@ -344,8 +344,12 @@ with preview); caves planned as a volumetric layer (D31), including generated na
 
 **Round 4 → build 8:** Preview 7 snapshot recorded (docs/SNAPSHOTS.md); smooth river mouths with plume (D32);
 ocean waves with sea states shared with gameplay, swash and breakers (D33); dug river banks without water gaps
-(D34). Biomes noted as a planned milestone.
+(D34). Biomes noted as a planned milestone. Rain water persists with soil saturation, cosmetic puddles (D37).
+World creation (D35, D36, docs/WORLD_CREATION.md): world type + seed + size 32–4096 km + Auto parameters + 2D
+preview map; types are size-independent recipes (existing worlds identical); saved custom types as JSON; landform
+templates (Azgaar-inspired idea, own code) with five template types. 40 tests pass.
 
-**Next:** Tom's feedback and asset batches first. Then boats groundwork (buoyancy on `OceanWaves`), M10 caves (volumetric layer, generated cave systems, carving
+**Next:** Tom's feedback and asset batches first. Then a world type editor (template steps with sliders + live
+map), boats groundwork (buoyancy on `OceanWaves`), M10 caves (volumetric layer, generated cave systems, carving
 with the same tools), saving terrain edits, M9 gameplay (felling/harvesting world objects). Then: M6 second step (optional local
 river simulation once terrain edits exist; splashes; sound), M3 gully detail, M8 next steps (save edits, soil/rock material layers, tools).

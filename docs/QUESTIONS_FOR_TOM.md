@@ -24,3 +24,10 @@ Defaults now: lowland "hill country" up to ~±30 m rolling relief at 0.1–1.6 k
 a few metres, alternating every ~28 km with flatter plains (25 % roughness); mountains get rocky ridged detail
 up to ~5 % of their height. All are single numbers in `TerrainStyle` — say "flatter", "rougher", "bigger
 plains" etc. and I will tune.
+
+## Q5 — How much land? (world creation)
+The built-in world types have about 13–19 % land (the rest is ocean); you suggested ~45–60 % for balanced worlds.
+I kept the current amounts so your existing worlds stay exactly the same. Options: (a) leave it, use *Continent
+size ×* (1.6 ≈ double the land) when you want more; (b) add a "Land share" parameter that targets a percentage;
+(c) make the default types land-richer (changes every existing seed). Tell me which, or a target number.
+
