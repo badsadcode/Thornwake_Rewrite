@@ -36,6 +36,15 @@ public partial class Atmosphere : Node3D
     private byte[] _noiseBase = Array.Empty<byte>();
     /// <summary>Rain on (the water simulation's rain): the sky clouds over, light dims, haze thickens, rain falls.</summary>
     public bool Raining { get; set; }
+    /// <summary>Precipitation 0..1 from the weather (light … storm); <see cref="Raining"/> (manual, H) forces heavy rain.</summary>
+    public float Precipitation { get; set; }
+    /// <summary>Falls as snow (cold, snowy ground).</summary>
+    public bool Snowing { get; set; }
+    /// <summary>Cloud cover from the weather (NaN = the Cloud cover setting).</summary>
+    public float WeatherClouds { get; set; } = float.NaN;
+    /// <summary>Thunderstorm: lightning flashes.</summary>
+    public bool Thunder { get; set; }
+    private float Precip => Raining ? Math.Max(Precipitation, .7f) : Precipitation;
     private float _storm; // 0 fair … 1 full storm, eased
     /// <summary>The waves the water shader draws (same parameters and clock), for swimming and boats.</summary>
     public OceanWaves Waves { get; } = new();
@@ -230,12 +239,13 @@ public partial class Atmosphere : Node3D
         _daylightHours = (float)sky.DaylightHours;
         _sunElevation = elevation;
         UpdateNight(sky, elevation);
-        _storm = Mathf.MoveToward(_storm, Raining ? 1 : 0, (float)delta / 8); // ~8 s to cloud over or clear
+        _storm = Mathf.MoveToward(_storm, Mathf.Clamp(Precip * 1.15f, 0, 1), (float)delta / 8); // ~8 s to cloud over or clear
         OceanTime += delta;
         // Wet look: the ground darkens within ~30 s of rain and dries over ~6 min; puddles fill over ~2 min, last ~15 min.
         float dt = (float)delta;
-        _wetness = Raining ? Mathf.Min(1, _wetness + dt / 30) : Mathf.Max(0, _wetness - dt / 360);
-        _puddles = Raining ? Mathf.Min(1, _puddles + dt / 120) : Mathf.Max(0, _puddles - dt / 900);
+        bool wetting = Precip > .1f && !Snowing;
+        _wetness = wetting ? Mathf.Min(1, _wetness + dt / 30 * Precip * 1.5f) : Mathf.Max(0, _wetness - dt / 360);
+        _puddles = wetting && Precip > .3f ? Mathf.Min(1, _puddles + dt / 120 * Precip * 1.5f) : Mathf.Max(0, _puddles - dt / 900);
         RenderingServer.GlobalShaderParameterSet("rain_wetness", new Vector2(_wetness, _puddles));
         RenderingServer.GlobalShaderParameterSet("ocean_time", (float)(OceanTime % 100000));
         double seaState = Math.Clamp(GameSettings.SeaState.Value + _storm * .45, 0, 1);
@@ -250,9 +260,15 @@ public partial class Atmosphere : Node3D
         UpdateCoverage();
         if (_rainParticles != null)
         {
-            _rainParticles.Emitting = _storm > .35f;
-            _rainParticles.AmountRatio = Mathf.Clamp((_storm - .3f) / .7f, 0, 1) * Math.Clamp(GameSettings.RainStrength.F, .2f, 1);
+            if (Snowing != _particlesSnow) SetParticleKind(Snowing);
+            float p = Precip;
+            _rainParticles.Emitting = p > .05f;
+            _rainParticles.AmountRatio = Mathf.Clamp(p * 1.1f, 0, 1) * Math.Clamp(GameSettings.RainStrength.F, .2f, 1);
+            // Rain slants with the wind; snow drifts with it.
+            if (_rainParticles.ProcessMaterial is ParticleProcessMaterial pm)
+                pm.Direction = new Vector3(Wind.Direction.X * Wind.Speed * (Snowing ? .12f : .02f), -1, Wind.Direction.Y * Wind.Speed * (Snowing ? .12f : .02f));
         }
+        UpdateLightning(delta);
         // Warmer light at a low sun.
         float warm = 1 - Mathf.Clamp(elevation / 30, 0, 1);
         Sun.LightColor = new Color("fff3df").Lerp(new Color("ffc58a"), warm * .8f);
@@ -315,7 +331,7 @@ public partial class Atmosphere : Node3D
     }
 
     /// <summary>Cloud cover in effect: the setting, closing in toward overcast while it rains.</summary>
-    private float Coverage => Mathf.Lerp(GameSettings.Clouds.F, .97f, _storm);
+    private float Coverage => Mathf.Lerp(float.IsNaN(WeatherClouds) ? GameSettings.Clouds.F : WeatherClouds, .97f, _storm);
 
     private void UpdateCoverage()
     {
@@ -323,6 +339,66 @@ public partial class Atmosphere : Node3D
     }
 
     private static double Wrap(double v) => v - Math.Floor(v / CloudPeriod) * CloudPeriod;
+    // ---- precipitation kind and lightning
+    private bool _particlesSnow;
+    private DirectionalLight3D? _flash;
+    private double _nextFlash = 4, _flashTime = -1;
+    private readonly Random _flashRandom = new(1234);
+
+    private void SetParticleKind(bool snow)
+    {
+        _particlesSnow = snow;
+        if (_rainParticles == null) return;
+        var pm = (ParticleProcessMaterial)_rainParticles.ProcessMaterial;
+        if (snow)
+        {
+            _rainParticles.DrawPass1 = new QuadMesh { Size = new Vector2(.07f, .07f), Material = new StandardMaterial3D
+            {
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                AlbedoColor = new Color(1, 1, 1, .85f), BillboardMode = BaseMaterial3D.BillboardModeEnum.Enabled,
+            } };
+            _rainParticles.Lifetime = 9;
+            pm.InitialVelocityMin = 1.2f; pm.InitialVelocityMax = 2f; pm.Gravity = new Vector3(0, -.4f, 0); pm.Spread = 25;
+            pm.TurbulenceEnabled = true; pm.TurbulenceNoiseStrength = 1.5f; pm.TurbulenceNoiseScale = 4;
+        }
+        else
+        {
+            _rainParticles.DrawPass1 = new QuadMesh { Size = new Vector2(.015f, .6f), Material = new StandardMaterial3D
+            {
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                AlbedoColor = new Color(.8f, .85f, .9f, .18f), ProximityFadeEnabled = true, ProximityFadeDistance = 1.5f, BillboardMode = BaseMaterial3D.BillboardModeEnum.FixedY,
+            } };
+            _rainParticles.Lifetime = 1.4;
+            pm.InitialVelocityMin = 13; pm.InitialVelocityMax = 17; pm.Gravity = new Vector3(0, -9.8f, 0); pm.Spread = 3;
+            pm.TurbulenceEnabled = false;
+        }
+    }
+
+    /// <summary>Thunderstorms: every 5–25 s a flash lights the land for a moment (a double flicker).</summary>
+    private void UpdateLightning(double delta)
+    {
+        if (!Thunder || Snowing) { if (_flash != null) _flash.Visible = false; return; }
+        _flash ??= CreateFlash();
+        _nextFlash -= delta;
+        if (_nextFlash <= 0) { _flashTime = 0; _nextFlash = 5 + _flashRandom.NextDouble() * 20; _flash.Basis = Basis.LookingAt(new Vector3((float)_flashRandom.NextDouble() - .5f, -1, (float)_flashRandom.NextDouble() - .5f).Normalized(), Vector3.Forward); }
+        if (_flashTime >= 0)
+        {
+            _flashTime += delta;
+            double t = _flashTime;
+            float e = t < .07 ? 2.5f : t < .12 ? .2f : t < .2 ? 1.8f : t < .45 ? (float)(1.8 * (1 - (t - .2) / .25)) : 0;
+            _flash.LightEnergy = e;
+            _flash.Visible = e > 0;
+            if (t > .5) _flashTime = -1;
+        }
+    }
+
+    private DirectionalLight3D CreateFlash()
+    {
+        var light = new DirectionalLight3D { LightColor = new Color("dfe6ff"), ShadowEnabled = false, Visible = false, SkyMode = DirectionalLight3D.SkyModeEnum.LightOnly };
+        AddChild(light);
+        return light;
+    }
+
     // ---- night: moonlight, stars (sky shader globals)
     private DirectionalLight3D? _moon;
     private float _night, _daylightHours = 14, _sunElevation = 30;

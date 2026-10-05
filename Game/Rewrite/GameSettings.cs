@@ -137,7 +137,7 @@ public static class GameSettings
 
     // ---- sky (live)
     public static readonly Setting Clouds = Add(new("sky.clouds", "Sky", "Cloud cover", 0, 1, .05, .45,
-        "Share of the sky covered by clouds (0 = clear)."));
+        "Share of the sky covered by clouds (0 = clear). With simulated weather on, the weather sets the clouds."));
     public static readonly Setting CloudShadows = Add(new("sky.cloud_shadows", "Sky", "Cloud shadows", 0, 1, .05, .55,
         "How dark the shadows of clouds drifting over the land are.", "×"));
     public static readonly Setting SeaState = Add(new("sky.sea_state", "Sky", "Sea state", 0, 1, .05, .25,
@@ -170,6 +170,11 @@ public static class GameSettings
     // ---- simulation (live)
     public static readonly Setting WaterSimulation = Add(new("sim.water", "Simulation", "Local water simulation", 0, 1, 1, 1,
         "Simulated water around the player (G pour, J spring, H rain, K clear). Runs in a 128 m area that follows you.", rebuild: true));
+    public static readonly Setting WeatherOn = Add(new("sim.weather", "Simulation", "Weather", 0, 1, 1, 1,
+        "Simulated weather: fronts every few game hours bring clouds, rain, storms or snow, more often in wet climates. " +
+        "Off: the Cloud cover setting and H (rain) only."));
+    public static readonly Setting RainFrequency = Add(new("sim.rain_frequency", "Simulation", "Rain frequency", .3, 2.5, .05, 1,
+        "How often weather fronts bring rain (1 = as the climate says).", "×"));
     public static readonly Setting RainStrength = Add(new("sim.rain", "Simulation", "Rain strength", .1, 4, .1, 1,
         "How hard it rains when rain is on (H). 1 = a heavy storm, exaggerated so runoff shows within a minute.", "×"));
 

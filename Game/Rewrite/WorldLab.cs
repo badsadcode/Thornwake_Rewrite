@@ -38,6 +38,7 @@ public partial class WorldLab : Node3D
     private CheckButton _flyToggle = null!, _noclipToggle = null!;
     private HSlider _timeSlider = null!;
     private readonly GameClock _clock = new();
+    private readonly Weather _weather = new();
     private double? _pendingHour;
 
     private IReadOnlyList<WorldProfile> _profiles = Array.Empty<WorldProfile>();
@@ -313,6 +314,26 @@ public partial class WorldLab : Node3D
         _overlay.Text = "Loading terrain…";
     }
 
+    /// <summary>The weather at the player: fronts over game time, rain amount from the local climate, snow when cold.</summary>
+    private void UpdateWeather(double delta, SkyState sky)
+    {
+        if (!GameSettings.WeatherOn.On || _sampler == null)
+        {
+            _atmosphere.Precipitation = 0; _atmosphere.Snowing = false; _atmosphere.Thunder = false; _atmosphere.WeatherClouds = float.NaN;
+            return;
+        }
+        double elevation = _sampler.Height(PlayerX, PlayerZ, 8) - _sampler.Plan.Profile.SeaLevel;
+        var (temperature, rain) = _sampler.Plan.Climate.At(PlayerX, PlayerZ, Math.Max(0, elevation));
+        var (ba, bb, share) = _sampler.Plan.Biomes.Sample(PlayerX, PlayerZ);
+        double groundSnow = _sampler.Plan.Biomes.Pool[ba].Snow * share + _sampler.Plan.Biomes.Pool[bb].Snow * (1 - share);
+        // Screenshots run with the clock stopped; let the weather settle at once there.
+        _weather.Update(_shotPath != null ? 600 : delta, sky.Day * 24 + sky.Hour, rain, temperature, groundSnow, (ulong)_sampler.Plan.Manifest.Seed);
+        _atmosphere.Precipitation = _weather.Precipitation;
+        _atmosphere.Snowing = _weather.Snow;
+        _atmosphere.Thunder = _weather.Thunder;
+        _atmosphere.WeatherClouds = _weather.Cloudiness;
+    }
+
     /// <summary>A biome's sky mood: tint (rgb) and haze (a) — neutral when the biome sets none.</summary>
     private static Vector4 Mood(ResolvedBiome b)
     {
@@ -399,6 +420,7 @@ public partial class WorldLab : Node3D
         double latitude = _sampler.Plan.Climate.Latitude(PlayerZ);
         if (_pendingHour is { } setHour) { _clock.SetHour(setHour, latitude); _pendingHour = null; }
         var sky = _clock.Advance(delta, latitude, run: _shotPath == null);
+        UpdateWeather(delta, sky);
         if (!_timeSlider.HasFocus()) _timeSlider.SetValueNoSignal(sky.Hour);
         _atmosphere.Update(delta, sky, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
         if (GameSettings.GroundFog.Index > 0)
@@ -517,7 +539,8 @@ public partial class WorldLab : Node3D
         _simTime += dt;
         var sim = _water.Sim;
         if (sim == null) return;
-        sim.RainRate = _rain ? 6e-5f * GameSettings.RainStrength.F : 0;
+        float precip = _rain ? .7f : _atmosphere.Precipitation;
+        sim.RainRate = precip > .1f && !_atmosphere.Snowing ? 6e-5f * GameSettings.RainStrength.F * precip / .7f : 0;
         _atmosphere.Raining = _rain;
         _water.Step(dt, PlayerX, PlayerZ);
         if (!typing && Input.IsKeyPressed(Key.G) && Aim() is { } at) sim.Add(at.X, at.Z, 2.5 * dt);
