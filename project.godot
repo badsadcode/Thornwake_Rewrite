@@ -42,3 +42,7 @@ rain_wetness={
 "type": "vec2",
 "value": Vector2(0, 0)
 }
+leaf_translucency={
+"type": "float",
+"value": 0.0
+}

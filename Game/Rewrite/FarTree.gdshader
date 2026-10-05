@@ -4,6 +4,7 @@
 shader_type spatial;
 render_mode skip_vertex_transform, cull_disabled, diffuse_burley, specular_disabled;
 
+global uniform float leaf_translucency;
 varying vec3 crown;
 varying float conifer;
 varying float seed;
@@ -64,5 +65,6 @@ void fragment() {
 	ALPHA = max(inside, trunk);
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
 	ALBEDO = colour;
+	BACKLIGHT = colour * vec3(0.9, 1.08, 0.55) * leaf_translucency * 0.6;
 	ROUGHNESS = 0.95;
 }

@@ -117,6 +117,8 @@ public static class GameSettings
         "Aerial perspective: how quickly distant land fades into the sky colour.", "×"));
     public static readonly Setting Exposure = Add(new("fx.exposure", "Lighting and effects", "Brightness", .5, 1.6, .05, 1,
         "Camera exposure.", "×"));
+    public static readonly Setting LeafTranslucency = Add(new("fx.leaf_translucency", "Lighting and effects", "Leaf translucency", 0, 2, .05, .8,
+        "Subsurface scattering on leaves and plants: sunlight glows through canopies, grass and fronds seen against the sun (0 = off).", "×"));
     public static readonly Setting Saturation = Add(new("fx.saturation", "Lighting and effects", "Colour saturation", .5, 1.5, .05, 1.05,
         "Overall colourfulness.", "×"));
 

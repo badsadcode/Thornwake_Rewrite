@@ -18,6 +18,8 @@ public static class Vegetation
     {
         "Pine_A", "Pine_B", "Pine_C", "Spruce_A", "Spruce_B", "Oak_A", "Oak_B", "Oak_C", "Birch_Green_A", "Birch_Green_B",
         "Birch_Green_C", "Maple_Autumn_A", "Poplar_A", "Willow_A", "Sparse_A", "Birch_Autumn_A", "Birch_Autumn_B",
+        // Placeholder plants (PlaceholderPlants.cs) for biomes without art yet.
+        "Palm_A", "Palm_B", "Cactus_A", "Cactus_B", "Dead_A", "Dead_B", "Acacia_A", "Jungle_A", "Cypress_A", "Shrub_Dry",
     };
     private static readonly int[] Broadleaf = { 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 0, 1 };
     private static readonly int[] Mixed = { 0, 1, 2, 3, 4, 8, 9, 5, 6, 15 };

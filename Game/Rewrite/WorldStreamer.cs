@@ -59,6 +59,8 @@ public partial class WorldStreamer : Node3D
         _trees = new TreeCatalog();
         _farTree = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/FarTree.gdshader") };
         _grass = Visuals.GrassMesh();
+        // Rewrite look: translucent, breeze-bent grass (the valley game keeps its own tuft material).
+        _grass.SurfaceSetMaterial(0, new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Grass.gdshader") });
         // Unit card: x in [-0.5, 0.5], y in [0, 1]; the shader faces it to the camera and scales it per instance.
         var card = new ArrayMesh();
         using (var arrays = new Godot.Collections.Array())
@@ -308,7 +310,8 @@ public partial class WorldStreamer : Node3D
     }
 }
 
-/// <summary>Tree meshes per species and LOD, extracted once from the woodland pack and drawn with MultiMesh.</summary>
+/// <summary>Tree meshes per species and LOD, extracted once from the woodland pack (or built for placeholder plants) and
+/// drawn with MultiMesh.</summary>
 public sealed class TreeCatalog
 {
     private readonly Dictionary<(int Species, int Lod), List<(Mesh Mesh, Transform3D Transform)>> _parts = new();
@@ -316,6 +319,8 @@ public sealed class TreeCatalog
     private List<(Mesh, Transform3D)> Parts(int species, int lod)
     {
         if (_parts.TryGetValue((species, lod), out var parts)) return parts;
+        if (PlaceholderPlants.Has(Vegetation.Species[species]))
+            return _parts[(species, lod)] = PlaceholderPlants.Build(Vegetation.Species[species], lod);
         parts = new List<(Mesh, Transform3D)>();
         var tree = WoodlandAssets.Tree(Vegetation.Species[species]);
         foreach (var source in WoodlandAssets.Meshes(tree.Levels[lod]))

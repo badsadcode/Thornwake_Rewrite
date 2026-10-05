@@ -53,6 +53,13 @@ internal static class ClimateTests
         bool rejected = false;
         try { BiomeRegistry.Parse(biomes, sets, new[] { """{ "Id": "bad", "Name": "Bad", "Appearance": { "Ground": "NoSuchSet" } }""" }); } catch (InvalidDataException) { rejected = true; }
         T.Check(rejected, "a biome naming an unknown asset set is rejected");
+        // Every tree named by a tree set is a model the game has (Vegetation.Species); otherwise it would silently fall
+        // back to the first species.
+        string vegetation = File.ReadAllText(Path.Combine(root, "Game/Rewrite/Vegetation.cs"));
+        int open = vegetation.IndexOf("Species =", StringComparison.Ordinal), close = vegetation.IndexOf("};", open, StringComparison.Ordinal);
+        var species = System.Text.RegularExpressions.Regex.Matches(vegetation[open..close], "\"([A-Za-z_]+)\"").Select(m => m.Groups[1].Value).ToHashSet();
+        var missing = reg.Sets.Values.Where(set => set.Kind == "trees").SelectMany(set => set.Items.Keys).Where(k => !species.Contains(k)).Distinct().ToArray();
+        T.Check(missing.Length == 0 && species.Count >= 27, $"tree sets name only existing models ({species.Count} species; missing: {string.Join(", ", missing)})");
         var plan = CoreTests.Sampler("vast-world", 7319).Plan;
         var spread = Spread(plan.Biomes);
         T.Note("vast world: " + string.Join(", ", spread.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value * 100:0.0} %")));

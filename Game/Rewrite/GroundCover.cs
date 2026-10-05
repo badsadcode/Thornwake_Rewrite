@@ -252,9 +252,13 @@ public static class GroundCover
         new(.24f, .34f, .12f), new(.23f, .33f, .11f), new(.25f, .35f, .12f),                                                  // green birches
         new(.42f, .14f, .06f), new(.18f, .28f, .10f), new(.22f, .32f, .12f), new(.17f, .23f, .10f),                         // maple, poplar, willow, sparse
         new(.50f, .36f, .09f), new(.48f, .33f, .08f),                                                                         // autumn birches
+        new(.15f, .23f, .08f), new(.16f, .24f, .08f), new(.10f, .19f, .09f), new(.10f, .18f, .09f),                         // palms, cacti
+        new(.20f, .18f, .15f), new(.18f, .16f, .13f), new(.19f, .22f, .08f), new(.07f, .16f, .06f), new(.09f, .14f, .08f),  // dead, acacia, jungle, cypress
+        new(.22f, .18f, .12f),                                                                                                // dry shrub
     };
-    private static readonly bool[] ConiferSpecies = { true, true, true, true, true, false, false, false, false, false, false, false, false, false, true, false, false };
-    private static readonly float[] HeightOf = { 16, 15, 17, 19, 18, 13, 14, 12, 14, 13, 15, 12, 18, 11, 9, 13, 13 };
+    private static readonly bool[] ConiferSpecies = { true, true, true, true, true, false, false, false, false, false, false, false, false, false, true, false, false,
+        false, false, true, true, true, true, false, false, false, false };
+    private static readonly float[] HeightOf = { 16, 15, 17, 19, 18, 13, 14, 12, 14, 13, 15, 12, 18, 11, 9, 13, 13, 11, 7, 5, 1.3f, 7, 4, 6, 20, 13, 1.5f };
 
     /// <summary>Distant tree cards (beyond the full trees, levels 3–5 by default): sparser but larger with distance;
     /// the terrain tint fills in beyond.</summary>

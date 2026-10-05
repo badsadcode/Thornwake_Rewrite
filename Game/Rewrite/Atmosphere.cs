@@ -173,6 +173,7 @@ public partial class Atmosphere : Node3D
         e.FogEnabled = GameSettings.Haze.Value > 0;
         e.TonemapExposure = .95f * GameSettings.Exposure.F;
         e.AdjustmentSaturation = GameSettings.Saturation.F;
+        RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
         _shafts.SetShaderParameter("intensity", GameSettings.SunShafts.F);
         if (_shaftQuad != null) _shaftQuad.Visible = GameSettings.SunShafts.Value > 0;
         _shadow.Visible = GameSettings.CloudShadows.Value > 0 && GameSettings.Clouds.Value > 0;

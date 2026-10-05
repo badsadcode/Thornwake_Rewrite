@@ -69,6 +69,9 @@ if (mouths != null)
 }
 
 // Biome maps: --biomes=<dir>,<type id>,<km>,<seed>: climate (temperature, precipitation) and biome maps
+string? plantTextures = args.FirstOrDefault(a => a.StartsWith("--plant-textures="))?[17..];
+if (plantTextures != null) { PlantTextures.Write(plantTextures); Console.WriteLine("plant textures written"); return 0; }
+
 // Biome probe: --biome-probe=<type id>,<km>,<seed>,<x>,<z> → geography, climate and the blend at that point.
 string? biomeProbe = args.FirstOrDefault(a => a.StartsWith("--biome-probe="))?[14..];
 if (biomeProbe != null)

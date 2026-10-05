@@ -58,6 +58,8 @@ public partial class WorldLab : Node3D
     private string? _smokeDirectory, _shotPath;
     private (double X, double Z)? _shotAt;
     private (float Yaw, float Pitch, float Zoom)? _shotView;
+    /// <summary>Screenshot aid: a row of every placeholder plant in front of the camera (--gallery).</summary>
+    private bool _gallery;
     private float _shotHeight, _shotWait;
     private bool _shotRain;
     private float _shotDive;
@@ -117,6 +119,7 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--tool=")) _tools.Select(int.Parse(arg[7..], CultureInfo.InvariantCulture));
             if (arg == "--grid") { _gridShown = true; _streamer.ShowGrid(true); }
             if (arg == "--biome-tint") { _biomeTint = true; _streamer.ShowBiomes(true); }
+            if (arg == "--gallery") _gallery = true;
             if (arg.StartsWith("--hour=")) _timeSlider.Value = double.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--menu=")) { _menu.Visible = true; _menu.GetChild<TabContainer>(0).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); }
         }
@@ -302,6 +305,21 @@ public partial class WorldLab : Node3D
         _status = $"{plan.Profile.Name}{(_custom ? " (custom)" : "")}, seed {plan.Manifest.Seed}: generated in {(Time.GetTicksMsec() - _generationStarted) / 1000:0.0} s " +
             $"({plan.Hydrology.Reaches.Count} river reaches, {plan.Hydrology.Lakes.Count} lakes).";
         _overlay.Text = "Loading terrain…";
+    }
+
+    private void Gallery()
+    {
+        var parent = _player.GetParent();
+        var forward = new Vector3(-Mathf.Sin(_yaw), 0, -Mathf.Cos(_yaw));
+        var right = new Vector3(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));
+        var names = PlaceholderPlants.Names;
+        for (int i = 0; i < names.Length; i++)
+        {
+            var p = _player.Position + forward * (30 + (i % 2) * 6) + right * ((i - (names.Length - 1) / 2f) * 7.5f);
+            double h = _sampler!.Height(p.X + _originX, p.Z + _originZ);
+            var mesh = PlaceholderPlants.Build(names[i], 1)[0].Mesh;
+            parent.AddChild(new MeshInstance3D { Mesh = mesh, Position = new Vector3(p.X, (float)h, p.Z) });
+        }
     }
 
     private void Teleport(double x, double z)
@@ -785,6 +803,7 @@ public partial class WorldLab : Node3D
             else if (_smokeStage == 1 && settled)
             {
                 if (_shotHeight > 0) { SetFly(true); _player.Position += Vector3.Up * _shotHeight; }
+                if (_gallery) Gallery();
                 if (_shotDive > 0 && !double.IsNaN(WaterSurface(PlayerX, PlayerZ, out _)))
                 {
                     SetNoclip(true);

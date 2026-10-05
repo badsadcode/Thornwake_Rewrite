@@ -91,7 +91,7 @@
     "Description": "Very dense vegetation, huge trees, vines, wet valleys and rivers, steep ridges.",
     "Placement": { "Temperature": [19, 40], "Moisture": [1500, 9000], "RegionSize": [40, 400] },
     "Appearance": { "Ground": "JungleGround", "MapColor": "2f8a3a" },
-    "Vegetation": { "Trees": { "JungleTrees": 1 }, "TreeDensity": 2.0, "TreeSize": [1.0, 1.7], "Grass": 1.3, "Vines": "Vines" },
+    "Vegetation": { "Trees": { "JungleTrees": 1 }, "TreeDensity": 2.0, "TreeSize": [0.8, 1.25], "Grass": 1.3, "Vines": "Vines" },
     "Terrain": { "Roughness": 1.25, "Microterrain": 1.4 },
     "Water": { "Wetness": 0.4 }
   },
@@ -100,7 +100,7 @@
     "Description": "Sand and dunes with rocky outcrops, dry riverbeds and very sparse plants.",
     "Placement": { "Temperature": [12, 45], "Moisture": [0, 280], "RegionSize": [60, 600] },
     "Appearance": { "Ground": "DesertGround", "RockExposure": 0.15, "MapColor": "e6cf8f" },
-    "Vegetation": { "Trees": { "DeadTrees": 1 }, "TreeDensity": 0, "Grass": 0.1 },
+    "Vegetation": { "Trees": { "DesertPlants": 1, "PalmTrees": 0.04 }, "TreeDensity": 0.05, "TreeSize": [0.8, 1.3], "Grass": 0.1 },
     "Props": { "Rocks": 1.3, "Logs": 0.1 },
     "Terrain": { "Roughness": 0.7, "Features": { "dunes": 1 } }
   },
@@ -109,7 +109,7 @@
     "Description": "Dry cracked ground, mesas and canyons, exposed rock and scrub; dramatic erosion.",
     "Placement": { "Weight": 0.9, "Temperature": [4, 32], "Moisture": [120, 500], "Slope": [0.04, 1], "Elevation": [200, 3000], "RegionSize": [20, 200] },
     "Appearance": { "Ground": "BadlandsGround", "RockExposure": 0.6, "MapColor": "c27a4e" },
-    "Vegetation": { "Trees": { "SavannaTrees": 1 }, "TreeDensity": 0.05, "Grass": 0.25 },
+    "Vegetation": { "Trees": { "ScrubPlants": 1, "DesertPlants": 0.15 }, "TreeDensity": 0.07, "Grass": 0.25 },
     "Props": { "Rocks": 1.8, "Logs": 0.2 },
     "Terrain": { "Crags": 1.4, "Features": { "mesas": 1, "canyons": 1 } }
   },
@@ -127,7 +127,7 @@
     "Placement": { "Weight": 1, "Mountain": [0.15, 1], "RegionSize": [15, 80], "Patch": { "Within": [], "Coverage": 0.07 },
       "ForbiddenNeighbours": ["arctic"] },
     "Appearance": { "Ground": "VolcanicGround", "RockExposure": 0.7, "Darkness": 0.3, "MapColor": "3a3030" },
-    "Vegetation": { "Trees": { "DeadTrees": 1, "ConiferTrees": 0.1 }, "TreeDensity": 0.01, "Grass": 0.1 },
+    "Vegetation": { "Trees": { "DeadTrees": 1, "ConiferTrees": 0.1 }, "TreeDensity": 0.015, "Grass": 0.1 },
     "Props": { "Rocks": 2, "Logs": 0.1 },
     "Terrain": { "Crags": 1.5, "Features": { "volcano": 1 } },
     "Atmosphere": { "Fog": 0.2, "AmbientTint": "b09080" },

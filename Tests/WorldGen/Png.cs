@@ -1,19 +1,20 @@
 using System.IO.Compression;
 
-/// <summary>Tiny dependency-free PNG writer (8-bit RGB) for map previews.</summary>
+/// <summary>Tiny dependency-free PNG writer (8-bit RGB, or RGBA) for map previews and generated textures.</summary>
 internal static class Png
 {
-    public static void Write(string path, int width, int height, byte[] rgb)
+    public static void Write(string path, int width, int height, byte[] rgb, bool alpha = false)
     {
+        int bpp = alpha ? 4 : 3;
         using var file = File.Create(path);
         file.Write(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
         var header = new byte[13];
         WriteInt(header, 0, width); WriteInt(header, 4, height);
-        header[8] = 8; header[9] = 2; // 8-bit, RGB
+        header[8] = 8; header[9] = (byte)(alpha ? 6 : 2); // 8-bit, RGB or RGBA
         Chunk(file, "IHDR", header);
         using var raw = new MemoryStream();
         using (var z = new ZLibStream(raw, CompressionLevel.Optimal, true))
-            for (int y = 0; y < height; y++) { z.WriteByte(0); z.Write(rgb, y * width * 3, width * 3); }
+            for (int y = 0; y < height; y++) { z.WriteByte(0); z.Write(rgb, y * width * bpp, width * bpp); }
         Chunk(file, "IDAT", raw.ToArray());
         Chunk(file, "IEND", Array.Empty<byte>());
     }
