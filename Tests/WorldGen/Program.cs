@@ -75,12 +75,27 @@ if (typewin != null)
     var v = typewin.Split(',');
     var recipe = WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == v[0]);
     var plan = new WorldPlan(WorldManifest.Create(int.Parse(v[2]), recipe.Resolve(new WorldChoices { SizeKm = double.Parse(v[1]) }), worldId: CoreTests.FixedWorldId));
-    if (v.Length > 9) plan = new WorldPlan(plan.Manifest, style: plan.Style with { Revision = int.Parse(v[9]) });
+    if (v.Length > 9 && int.Parse(v[9]) < 9) plan = new WorldPlan(WorldManifest.Create(int.Parse(v[2]), recipe.Resolve(new WorldChoices { SizeKm = double.Parse(v[1]), ScaleRevision = int.Parse(v[9]) }), worldId: CoreTests.FixedWorldId), style: plan.Style with { Revision = int.Parse(v[9]) });
     if (v.Length > 10) plan = new WorldPlan(plan.Manifest, style: plan.Style with { BankVariation = double.Parse(v[10]) });
     var ts = new TerrainSampler(plan);
     if (v.Length > 8) MapRender.Exaggeration = double.Parse(v[8]);
-    double x = double.Parse(v[3]), z = double.Parse(v[4]);
-    MapRender.Window(ts, v[7], x, z, double.Parse(v[5]), int.Parse(v[6]), 1);
+    double x, z;
+    if (v[3] == "lowland")
+    {
+        // A dry lowland spot halfway from the first landmass centre toward its coast.
+        var home = plan.Layout.Land.Count > 0 ? plan.Layout.Land[0].Center : new Point2(plan.Manifest.OriginX, plan.Manifest.OriginZ);
+        x = home.X; z = home.Z + (plan.Layout.Land.Count > 0 ? plan.Layout.Land[0].RadiusZ * .3 : 0);
+    }
+    else if (v[3] == "peak")
+    {
+        // The highest macro cell (a mountain), for close-ups.
+        var hr = plan.Macro.Channel(WorldPlan.HeightChannel); int best = 0;
+        for (int q = 1; q < hr.Length; q++) if (hr[q] > hr[best]) best = q;
+        x = plan.Macro.CellX(best % plan.Macro.Size); z = plan.Macro.CellZ(best / plan.Macro.Size);
+        Console.WriteLine($"peak at {x:0},{z:0}, profile mountains {plan.Profile.MountainHeight:0} m high, {plan.Profile.MountainWidth:0} m wide, hills {plan.Profile.HillHeight:0} m / {plan.Profile.HillScale:0} m");
+    }
+    else { x = double.Parse(v[3]); z = double.Parse(v[4]); }
+    MapRender.Window(ts, v[7], x, z, double.Parse(v[5]), int.Parse(v[6]), 2);
     var sb = new System.Text.StringBuilder("row: ");
     for (int d = -20; d <= 20; d++) sb.Append($"{ts.Sample(x + d, z).Height:0.0} ");
     Console.WriteLine(sb);

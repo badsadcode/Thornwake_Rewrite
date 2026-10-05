@@ -99,7 +99,9 @@ public sealed class WorldGenOptions
         return result;
     }
 
-    public WorldChoices Choices => new()
+    public WorldChoices Choices => ChoicesBase with { ScaleRevision = Classic.Index >= 1 ? 8 : 9 };
+
+    private WorldChoices ChoicesBase => new()
     {
         SizeKm = WorldRecipe.Sizes[Size.Index],
         Continents = Continents.Index == 0 ? null : Continents.Index,

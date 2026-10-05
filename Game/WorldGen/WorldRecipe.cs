@@ -17,6 +17,9 @@ public sealed record WorldChoices
     public double MountainHeight { get; init; } = 1;
     public double MountainWidth { get; init; } = 1;
     public double Hills { get; init; } = 1;
+    /// <summary>How landforms scale with the world: 9 = mountains and hills keep close to their real size on small
+    /// worlds (D40); 8 = as in build 8 (scaled down with the world: smooth, blobby small worlds).</summary>
+    public int ScaleRevision { get; init; } = 9;
 }
 
 /// <summary>
@@ -222,10 +225,14 @@ public sealed class WorldRecipe
 
         // Mountains: width follows the continents (capped at half their radius), height drops a little where narrow.
         double widthScale = radius / b.ContinentRadius;
-        double mountainWidth = Math.Clamp(b.MountainWidth * Math.Pow(widthScale, .7) * c.MountainWidth, 501, radius * .499);
-        double mountainHeight = Math.Clamp(b.MountainHeight * c.MountainHeight * DetMath.Clamp(Math.Sqrt(mountainWidth / b.MountainWidth), .35, 1), 0, 6000);
-        double hillScale = Math.Clamp(b.HillScale * Math.Pow(f, .6), 501, size * .099);
-        double hillHeight = Math.Clamp(b.HillHeight * c.Hills * DetMath.Clamp(Math.Pow(f, .25), .5, 1), 0, 800);
+        bool real = c.ScaleRevision >= 9;
+        // Revision 9: landforms keep close to their real size on small worlds (a small world is a region of a big one,
+        // not a shrunken copy: shrinking drew mountains as smooth cones and hills as round bumps).
+        double mountainWidth = Math.Clamp(b.MountainWidth * Math.Pow(widthScale, real ? .35 : .7) * c.MountainWidth, 501, radius * .499);
+        double mountainHeight = Math.Clamp(b.MountainHeight * c.MountainHeight * DetMath.Clamp(Math.Sqrt(mountainWidth / b.MountainWidth), real ? .7 : .35, 1), 0, 6000);
+        double hillScale = real ? Math.Clamp(b.HillScale * Math.Pow(f, .3), Math.Min(4000, size * .099), size * .099)
+            : Math.Clamp(b.HillScale * Math.Pow(f, .6), 501, size * .099);
+        double hillHeight = Math.Clamp(b.HillHeight * c.Hills * (real ? DetMath.Clamp(Math.Pow(f, .15), .7, 1) : DetMath.Clamp(Math.Pow(f, .25), .5, 1)), 0, 800);
         double oceanDepth = Math.Clamp(b.OceanDepth * DetMath.Clamp(Math.Pow(f, .3), .3, 1), 50, 8000);
 
         var profile = b with
