@@ -69,6 +69,23 @@ if (mouths != null)
 }
 
 // Biome maps: --biomes=<dir>,<type id>,<km>,<seed>: climate (temperature, precipitation) and biome maps
+// Biome probe: --biome-probe=<type id>,<km>,<seed>,<x>,<z> → geography, climate and the blend at that point.
+string? biomeProbe = args.FirstOrDefault(a => a.StartsWith("--biome-probe="))?[14..];
+if (biomeProbe != null)
+{
+    var v = biomeProbe.Split(',');
+    var recipe = WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == v[0]);
+    var plan = new WorldPlan(WorldManifest.Create(int.Parse(v[2]), recipe.Resolve(new WorldChoices { SizeKm = double.Parse(v[1]) }), worldId: CoreTests.FixedWorldId));
+    double x = double.Parse(v[3]), z = double.Parse(v[4]);
+    plan.Macro.Sample(x, z, WorldPlan.LandChannel, WorldPlan.HeightChannel, WorldPlan.MountainChannel, out double land, out double h, out double m);
+    var sampler = new TerrainSampler(plan);
+    var (t, p) = plan.Climate.At(x, z, Math.Max(0, h));
+    var (a, b, share) = plan.Biomes.Sample(x, z);
+    Console.WriteLine($"macro land {land:0.000} height {h:0} m mountain {m:0.00}; ground {sampler.Height(x, z):0.0} m; {t:0.0} °C {p:0} mm; lat {plan.Climate.Latitude(z):0.0}");
+    Console.WriteLine($"biome {plan.Biomes.Pool[a].Def.Id} {share:0.00} / {plan.Biomes.Pool[b].Def.Id}");
+    return 0;
+}
+
 string? biomeMaps = args.FirstOrDefault(a => a.StartsWith("--biomes="))?[9..];
 if (biomeMaps != null)
 {

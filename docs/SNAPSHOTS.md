@@ -5,7 +5,9 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
 | **Build 9** (before biomes; Tom: "so far fantastic", 2026-10-05) | `f868ef5` | Thornwake-Rewrite-Preview-9 (v0.9.9) | also: New world → Terrain version "Build 9" in any later build (biomes off, terrain bit-exact) |
-| **Biomes v0** (first climate + 12-biome pass, before Noor's biome spec) | `4e45acf` | — (not built) | `git checkout 4e45acf`; idea in `docs/BIOMES_V0.md`; its 12 biomes stay in the code as `Biomes.Defaults` until replaced |
+| **Biomes phase 1** (14 data-driven biomes, Noor's architecture, before biomes shape terrain) | `5a35e9e` | — | `git checkout 5a35e9e` |
+| Backup before biome phase 1 (build 9 + biome v0 notes + plan) | `bdb55b3` | — | `git checkout bdb55b3` |
+| **Biomes v0** (first climate + 12-biome pass, before Noor's biome spec) | `4e45acf` | — (not built) | `git checkout 4e45acf`; idea in `docs/BIOMES_V0.md`; its 12-biome table was replaced by the data files in phase 1 |
 | **Preview 7** (Tom: "really happy with this state", 2026-10-05) | `6cf6d18` | Thornwake-Rewrite-Preview-7 (v0.9.6) | see below |
 | Build 5 (before natural banks / steeper shores) | `cdb2e31` | Thornwake-Rewrite-Preview-5 (v0.9.4) | also: New world → "Build 5 terrain" in any later build |
 

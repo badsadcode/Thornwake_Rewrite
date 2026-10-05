@@ -167,7 +167,7 @@ public sealed class BiomeMap
                 else if (v > fc) { c = b; fc = v; }
             }
             // Nothing fits (or sea): the nearest climate biome, weak at sea so coastal land decides the blend there.
-            if (fa <= 0) { a = b2 = c = NearestClimateBiome(temperature[k], moisture[k], pool, climateBiomes); fa = land[k] ? 1 : .03f; fb = fc = 0; }
+            if (fa <= 0) { a = b2 = c = NearestClimateBiome(k, temperature, moisture, elevation, slope, mountain, latitude, pool, climateBiomes); fa = land[k] ? 1 : .03f; fb = fc = 0; }
             double wa = fa * fa, wb = Math.Max(0, fb) * Math.Max(0, fb), wc = Math.Max(0, fc) * Math.Max(0, fc), sum = wa + wb + wc;
             _ids[k * 3] = (byte)a; _ids[k * 3 + 1] = (byte)b2; _ids[k * 3 + 2] = (byte)c;
             _w[k * 3] = (float)(wa / sum); _w[k * 3 + 1] = (float)(wb / sum); _w[k * 3 + 2] = (float)(wc / sum);
@@ -228,19 +228,29 @@ public sealed class BiomeMap
     private static double MemberLog(double v, double[]? range, double soft) => range == null ? 1
         : Member(Math.Log(Math.Max(1, v)), new[] { Math.Log(Math.Max(1, range[0])), Math.Log(Math.Max(1, range[1])) }, soft);
 
-    private static int NearestClimateBiome(double t, double p, IReadOnlyList<ResolvedBiome> pool, int[] climateBiomes)
+    /// <summary>
+    /// Where no biome fits: the climate biome whose preferences are missed by the least, every range counted in units
+    /// of its soft edge (so an Alpine biome never fills a cold lowland gap just because its temperature range fits).
+    /// </summary>
+    private static int NearestClimateBiome(int k, float[] t, float[] p, float[] elevation, float[] slope, float[] mountain,
+        float[] latitude, IReadOnlyList<ResolvedBiome> pool, int[] climateBiomes)
     {
+        static double Gap(double v, double[]? r, double soft) => r == null ? 0 : Math.Max(0, Math.Max(r[0] - v, v - r[1])) / soft;
         int best = climateBiomes.Length > 0 ? climateBiomes[0] : 0; double bestD = double.MaxValue;
         foreach (int b in climateBiomes)
         {
             var pl = pool[b].Def.Placement;
-            double dt = pl.Temperature == null ? 0 : Math.Max(0, Math.Max(pl.Temperature[0] - t, t - pl.Temperature[1]));
-            double lp = Math.Log(Math.Max(1, p));
-            double dp = pl.Moisture == null ? 0 : Math.Max(0, Math.Max(Math.Log(Math.Max(1, pl.Moisture[0])) - lp, lp - Math.Log(Math.Max(1, pl.Moisture[1])))) * 10;
-            if (dt + dp < bestD) { bestD = dt + dp; best = b; }
+            double lp = Math.Log(Math.Max(1, p[k]));
+            double[]? lr = pl.Moisture == null ? null : new[] { Math.Log(Math.Max(1, pl.Moisture[0])), Math.Log(Math.Max(1, pl.Moisture[1])) };
+            double g = Sq(Gap(t[k], pl.Temperature, 3)) + Sq(Gap(lp, lr, .25)) + Sq(Gap(elevation[k], pl.Elevation, 150))
+                + Sq(Gap(slope[k], pl.Slope, .03)) + Sq(Gap(mountain[k], pl.Mountain, .1)) + Sq(Gap(latitude[k], pl.Latitude, 4));
+            g -= .01 * Math.Log(Math.Max(1e-3, pl.Weight)); // ties: the more common biome
+            if (g < bestD) { bestD = g; best = b; }
         }
         return best;
     }
+
+    private static double Sq(double v) => v * v;
 
     private static int[] Top(float[][] fit, bool[] land, int n, int count)
     {

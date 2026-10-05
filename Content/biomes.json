@@ -70,7 +70,7 @@
     "Placement": { "Weight": 0.9, "Temperature": [4, 35], "Moisture": [900, 9000], "Elevation": [0, 200], "Slope": [0, 0.035],
       "River": 1, "Coast": 0, "RegionSize": [10, 120] },
     "Appearance": { "Ground": "SwampGround", "MapColor": "56664a" },
-    "Vegetation": { "Trees": { "WetlandTrees": 1 }, "TreeDensity": 0.7, "Grass": 1.1, "AquaticPlants": "Reeds" },
+    "Vegetation": { "Trees": { "WetlandTrees": 1 }, "TreeDensity": 1.0, "Grass": 1.1, "AquaticPlants": "Reeds" },
     "Terrain": { "Flatten": 0.6, "Roughness": 0.5 },
     "Water": { "Wetness": 0.8, "MarshAffinity": 1, "WaterTint": "4b5a3a" },
     "Atmosphere": { "Mist": 0.5 }
@@ -127,7 +127,7 @@
     "Placement": { "Weight": 1, "Mountain": [0.15, 1], "RegionSize": [15, 80], "Patch": { "Within": [], "Coverage": 0.07 },
       "ForbiddenNeighbours": ["arctic"] },
     "Appearance": { "Ground": "VolcanicGround", "RockExposure": 0.7, "Darkness": 0.3, "MapColor": "3a3030" },
-    "Vegetation": { "Trees": { "DeadTrees": 1, "ConiferTrees": 0.3 }, "TreeDensity": 0.08, "Grass": 0.2 },
+    "Vegetation": { "Trees": { "DeadTrees": 1, "ConiferTrees": 0.15 }, "TreeDensity": 0.05, "Grass": 0.1 },
     "Props": { "Rocks": 2, "Logs": 0.1 },
     "Terrain": { "Crags": 1.5, "Features": { "volcano": 1 } },
     "Atmosphere": { "Fog": 0.2, "AmbientTint": "b09080" },

@@ -58,6 +58,17 @@ internal static class ClimateTests
         T.Note("vast world: " + string.Join(", ", spread.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value * 100:0.0} %")));
         T.Check(spread.Count >= 10 && spread.Values.Max() < .45, "a big world has many biomes, none dominating");
         T.Check(spread.ContainsKey("ancient-forest") && spread.ContainsKey("volcanic"), "patch biomes appear");
+        // Biomes stay near their ranges even where no biome fits (the fallback weighs every preference).
+        int lowAlpine = 0, alpine = 0; double step = plan.Profile.WorldSize / 300;
+        for (int j = 0; j < 300; j++)
+            for (int i = 0; i < 300; i++)
+            {
+                double x = plan.Manifest.OriginX - plan.Profile.WorldSize / 2 + (i + .5) * step, z = plan.Manifest.OriginZ - plan.Profile.WorldSize / 2 + (j + .5) * step;
+                double land = plan.Macro.Sample(WorldPlan.LandChannel, x, z), h = plan.Macro.Sample(WorldPlan.HeightChannel, x, z);
+                if (land <= 0 || plan.Biomes.Pool[plan.Biomes.Sample(x, z).A].Def.Id != "alpine") continue;
+                alpine++; if (h < 900) lowAlpine++;
+            }
+        T.Check(alpine > 0 && lowAlpine < alpine * .03, $"alpine stays in the mountains ({lowAlpine} of {alpine} samples below 900 m)");
         var customPlan = new WorldPlan(plan.Manifest, style: plan.Style, biomes: withCustom);
         T.Check(Spread(customPlan.Biomes).ContainsKey("crystal-fields"), "a custom biome is generated");
         var warm = new BiomeMap(plan, new Climate(plan, plan.Style.Climate with { TemperatureOffset = 10 }), reg);

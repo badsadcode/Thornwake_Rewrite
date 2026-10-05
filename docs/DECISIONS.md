@@ -311,7 +311,19 @@ crests) in a cellular foam pattern; turquoise light through thin crests when loo
 chop normals growing with the sea state. Storm crests ~8 m; CPU height query 10 fixed-point iterations (< 2 mm).
 Next for SoT-level seas if needed: FFT spectrum on the GPU with a CPU readback for buoyancy, foam persistence buffer.
 
-## Planned — Biomes
-Tom: many biomes, each with its own terrain, plants and atmosphere. Plan: a biome map from climate (temperature from
-latitude/elevation, moisture from distance to sea and rain shadow) drives `TerrainStyle` per region (blended at
-borders), vegetation catalogues, ground materials, water colour and atmosphere presets.
+## D42 — Climate and data-driven biomes, phase 1 (2026-10-05)
+Tom asked for many biomes; Noor's spec (`docs/design-inbox/NOOR_BIOME_SPEC.md`) set the architecture; plan in
+`docs/BIOMES_PLAN.md`, my earlier idea in `docs/BIOMES_V0.md`. Climate: temperature = 28 − 0.0078·lat² − 6.5 °C/km
++ offset, latitude span grows with world size (6° … 70°); moisture carried inland by latitude-band winds with
+orographic rain and rain shadows. Biomes are data (`Content/biomes.json`, `Content/asset_sets.json`, plus
+`user://biomes/*.json`, `user://asset_sets/*.json`; same id replaces a built-in). Placement = weight × soft range
+memberships × coast/river affinity × region noise at the biome's own scale; patch biomes (Ancient forest, Blighted
+swamp, Volcanic) as seeded patches inside hosts; neighbour rules; the best three per cell blend (squared weights,
+warped bilinear sampling → organic borders). The world generator still owns geography; biomes don't change the
+terrain yet (phases 3–4). Terrain version "Build 9" and older turn biomes off (one classic biome = the build 9
+look, terrain bit-exact). F4 tints biomes in game; the HUD names the biome; "Show biomes" on the world preview.
+
+## Planned — Biomes, later phases
+Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
+fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
+World Site Editor pages: see `docs/BIOMES_PLAN.md`.

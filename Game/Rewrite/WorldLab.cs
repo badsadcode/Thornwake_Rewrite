@@ -158,29 +158,33 @@ public partial class WorldLab : Node3D
 
     private const string CustomTypes = "user://world_types";
 
-    /// <summary>World types the player saved (one JSON file each, editable by hand for deeper tweaks).</summary>
     /// <summary>Biome definitions and asset sets: built-in content plus the player's own files (user://biomes/*.json,
-    /// user://asset_sets/*.json — the format of Content/biomes.json; docs/BIOMES.md). A broken custom file is skipped.</summary>
+    /// user://asset_sets/*.json — the format of Content/biomes.json; docs/BIOMES.md). A broken custom file is skipped
+    /// on its own (the log names it); the others still load.</summary>
     private static void LoadBiomes()
     {
-        static List<string> Files(string folder)
+        static List<(string Name, string Json)> Files(string folder)
         {
-            var list = new List<string>();
+            var list = new List<(string, string)>();
             using var dir = DirAccess.Open(folder);
             if (dir == null) return list;
             foreach (var file in dir.GetFiles())
-                if (file.EndsWith(".json")) list.Add(Godot.FileAccess.GetFileAsString($"{folder}/{file}"));
+                if (file.EndsWith(".json")) list.Add((file, Godot.FileAccess.GetFileAsString($"{folder}/{file}")));
             return list;
         }
         string biomes = Godot.FileAccess.GetFileAsString("res://Content/biomes.json"), sets = Godot.FileAccess.GetFileAsString("res://Content/asset_sets.json");
-        try { BiomeRegistry.Current = BiomeRegistry.Parse(biomes, sets, Files("user://biomes"), Files("user://asset_sets")); }
-        catch (Exception error)
-        {
-            GD.PushWarning("Custom biomes skipped: " + error.Message);
-            BiomeRegistry.Current = BiomeRegistry.Parse(biomes, sets);
-        }
+        var goodSets = new List<string>();
+        var goodBiomes = new List<string>();
+        foreach (var (name, json) in Files("user://asset_sets"))
+            try { BiomeRegistry.Parse(biomes, sets, goodBiomes, goodSets.Append(json)); goodSets.Add(json); }
+            catch (Exception error) { GD.PushWarning($"Custom asset set file {name} skipped: {error.Message}"); }
+        foreach (var (name, json) in Files("user://biomes"))
+            try { BiomeRegistry.Parse(biomes, sets, goodBiomes.Append(json), goodSets); goodBiomes.Add(json); }
+            catch (Exception error) { GD.PushWarning($"Custom biome file {name} skipped: {error.Message}"); }
+        BiomeRegistry.Current = BiomeRegistry.Parse(biomes, sets, goodBiomes, goodSets);
     }
 
+    /// <summary>World types the player saved (one JSON file each, editable by hand for deeper tweaks).</summary>
     private static List<WorldRecipe> LoadCustomTypes()
     {
         var list = new List<WorldRecipe>();
