@@ -344,8 +344,10 @@ scattering on canopies and plants, configurable.
 * Ground fog (Tom: ground-level fog, mist in some areas): Godot height fog fogs any surface below a height by its
   depth below it alone, so the height is kept ~2 m under the player's ground (following slowly): valleys, rivers and
   lakes below fill with mist. Amount: dawn/dusk, misty biomes (Atmosphere.Mist, Fog), wet ground after rain, rain,
-  water nearby; burns off toward noon. Optional patches: a volumetric fog box around the player with a fog shader
-  (world-anchored noise, drifting, ground-hugging). Depth of field: far blur only (option).
+  water nearby; burns off toward noon. Mist wisps (both modes): soft billboard sheets on a world-anchored 16 m grid
+  around the player, hugging ground or water, denser in hollows, depth-faded where they meet the ground — they work on
+  any GPU. "+ mist patches" adds a volumetric fog box (fog shader, world-anchored noise); volumetric fog does not draw
+  in the cloud's software renderer, so that part is untested here. Depth of field: far blur only (option).
 * Cliffs (Tom liked the sharp sea cliffs, wanted them less stretched and dressed): the terrain shader blends two side
   projections on steep faces (strata, ledge seams, cracks); level-0 tiles find lips (a ≥ 1.8 m drop within 3 m next to
   flat ground) for hanging-grass and root cards (pixel textures) and cliff feet for scree boulders.

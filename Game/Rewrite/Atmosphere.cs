@@ -327,6 +327,9 @@ public partial class Atmosphere : Node3D
     /// <summary>Mist amount 0..1 now: dawn (and a little at dusk), misty biomes, wet ground after rain, water nearby.</summary>
     public float MistAmount => _mistAmount;
 
+    /// <summary>Colour of lit mist now: the haze colour, dimmed at night, warmed by a low sun.</summary>
+    public Color MistColour => (new Color("dde3e6") * new Color(_mood.X, _mood.Y, _mood.Z)).Lerp(Sun.LightColor, .25f) * Mathf.Clamp(_daylight * 1.05f, .1f, 1);
+
     private void UpdateMist(double delta, float hour, double originX, double originZ)
     {
         int mode = GameSettings.GroundFog.Index;
@@ -386,7 +389,7 @@ public partial class Atmosphere : Node3D
 
     private void UpdateMood(double delta)
     {
-        float strength = GameSettings.BiomeMoods.Index switch { 0 => 0, 1 => .5f, _ => 1 };
+        float strength = GameSettings.BiomeMoods.Index switch { 0 => 0, 1 => .6f, _ => 1.4f };
         var neutral = new Vector4(1, 1, 1, 0);
         var target = neutral.Lerp(_moodTarget, strength);
         _mood = _mood.Lerp(target, 1 - Mathf.Exp(-(float)delta / 3)); // ~3 s to settle when crossing into a biome

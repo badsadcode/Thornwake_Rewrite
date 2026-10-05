@@ -90,8 +90,9 @@ milestone M6), caves.
 * **Biome skies** (Settings → Sky, off by default): the sky and haze take on the biome's mood — dusty desert, humid
   jungle, ashen volcanic, gloomy blighted swamp, crisp alpine.
 * **Ground fog and mist** (Settings → Lighting and effects): mist pools in valleys, over rivers and lakes below you,
-  thickest at dawn, after rain and in misty biomes, and burns off toward midday. "Valleys + mist patches" adds
-  drifting wisps around you (volumetric).
+  thickest at dawn, after rain and in misty biomes, and burns off toward midday, with soft banks of mist drifting
+  low over the ground around you. "Valleys + mist patches" adds volumetric wisps (I could not see those in the cloud's
+  software renderer — please tell me if they show for you). The HUD shows the current mist amount.
 * **Depth of field** (option, off by default): the far distance softens like a camera lens.
 * **Cliffs**: steep faces show layered rock with ledges and cracks instead of stretched streaks; grass hangs over the
   lips, roots poke out under them near trees, and boulders gather at the feet.

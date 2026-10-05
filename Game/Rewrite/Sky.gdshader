@@ -121,7 +121,7 @@ vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float
 		float sun_trans = exp(-toward * 160.0 * 0.004);
 		float powder = 1.0 - exp(-d * 2.0);
 		float h = (p.y - VBOTTOM) / (VTOP - VBOTTOM);
-		vec3 lit = sun_light * sun_trans * phase * 4.5 * mix(1.0, powder, 0.5) + ambient_top * mix(0.3, 0.75, h);
+		vec3 lit = sun_light * sun_trans * phase * 7.0 * mix(1.0, powder, 0.5) + ambient_top * mix(0.3, 0.75, h);
 		float sigma = d * 0.003;
 		float a = exp(-sigma * step_len);
 		light += trans * (1.0 - a) * lit;
@@ -175,8 +175,8 @@ void sky() {
 					disc *= 1.0 - d;
 				}
 			}
-			// Low ragged clouds (900 m): greyer, faster, in front of the main deck.
-			if (layered) {
+			// Low ragged clouds (900 m): greyer, faster, in front of the main deck (layered mode; the volume has its own depth).
+			if (layered && quality == 1) {
 				float t = 900.0 / max(up, 0.015);
 				vec2 xz = cloud_layers.zw + dir.xz * t;
 				float d = low_density(xz, coverage, storm) * smoothstep(0.02, 0.1, up);
@@ -189,7 +189,7 @@ void sky() {
 			}
 		}
 		// Biome haze: a veil of the horizon colour (mist, dust, ash).
-		col = mix(col, horizon_color * mix(vec3(1.0), sky_mood.rgb, 0.8) * day, sky_mood.a * 0.45 * (1.0 - smoothstep(0.0, 0.6, up)));
+		col = mix(col, horizon_color * mix(vec3(1.0), sky_mood.rgb, 0.8) * day, sky_mood.a * 0.7 * (1.0 - smoothstep(0.0, 0.6, up)));
 		// Storm: a low grey overcast.
 		vec3 overcast = mix(vec3(0.42, 0.45, 0.48), vec3(0.3, 0.32, 0.35), smoothstep(0.0, 0.5, up)) * (0.35 + 0.65 * day);
 		col = mix(col, overcast, storm * 0.85);

@@ -24,6 +24,7 @@ public partial class WorldLab : Node3D
     private SpringArm3D _arm = null!;
     private Camera3D _camera = null!;
     private Atmosphere _atmosphere = null!;
+    private readonly MistField _mist = new() { Name = "Mist" };
     private LocalWaterView _water = null!;
     private Toolbox _tools = null!;
     private bool _rain;
@@ -80,6 +81,7 @@ public partial class WorldLab : Node3D
         GameSettings.Load();
         _atmosphere = new Atmosphere { Name = "Atmosphere" };
         AddChild(_atmosphere);
+        AddChild(_mist);
         _streamer = new WorldStreamer { Name = "Terrain" };
         AddChild(_streamer);
         _atmosphere.SetWater(_streamer.WaterMaterial);
@@ -391,6 +393,9 @@ public partial class WorldLab : Node3D
         UpdateCamera();
         var cam = _camera.GlobalPosition;
         _atmosphere.Update(delta, (float)_timeSlider.Value, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
+        if (GameSettings.GroundFog.Index > 0)
+            _mist.Update(_sampler, PlayerX, PlayerZ, _originX, _originZ, _atmosphere.MistAmount, (float)_sampler.Height(PlayerX, PlayerZ, 8), _atmosphere.MistColour);
+        else _mist.Visible = false;
         UpdateUnderwater(cam);
         _hudTimer -= delta;
         if (_hudTimer <= 0) { _hudTimer = .2; UpdateHud(); }
@@ -582,7 +587,7 @@ public partial class WorldLab : Node3D
         var (ba, bb, share) = biomes.Sample(PlayerX, PlayerZ);
         var (temperature, rain) = _sampler.Plan.Climate.At(PlayerX, PlayerZ, t.Height - _sampler.Plan.Profile.SeaLevel);
         where += $"\nBiome {biomes.Pool[ba].Def.Name}" + (bb != ba && share < .95 ? $" ({share * 100:0} %, → {biomes.Pool[bb].Def.Name})" : "") +
-            $" · {temperature:0} °C, {rain:0} mm/yr";
+            $" · {temperature:0} °C, {rain:0} mm/yr" + (_atmosphere.MistAmount > .02f ? $" · mist {_atmosphere.MistAmount:0.00}" : "");
         _atmosphere.SetBiomeMood(Mood(biomes.Pool[ba]) * (float)share + Mood(biomes.Pool[bb]) * (float)(1 - share));
         static float MistOf(ResolvedBiome b) => (float)Math.Clamp(b.Def.Atmosphere.Mist + .5 * b.Def.Atmosphere.Fog, 0, 1);
         float nearWater = t.Water != WaterKind.None ? 1 : _sampler.Plan.Hydrology.NearestRiver(PlayerX, PlayerZ, 300, out var near) ? 1 - (float)(near.Distance / 300) : 0;
