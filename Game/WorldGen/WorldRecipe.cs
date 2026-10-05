@@ -142,6 +142,54 @@ public sealed class WorldRecipe
                     L("Range") with { X = R(.75), Z = R(.48, .52), Angle = R(170, 190), Length = R(.5), Size = R(.8) },
                     L("Islands") with { X = R(.2, .25), Z = R(.4, .6), Angle = R(150, 210), Length = R(.15, .2), Size = R(.003, .005) }), mainland: true),
         });
+        // Natural types (D38): heightmap templates, land grown cell by cell (new types; the ones above are unchanged).
+        WorldProfile Natural(WorldProfile source, string id, string name, params string[] steps) => source with
+        {
+            Id = id, Name = name, Continents = 0, Islands = 0, IslandRadius = Math.Max(source.WorldSize * .0021, 4000), RangesPerContinent = 0,
+            ContinentRadius = Math.Max(source.ContinentRadius, source.WorldSize * .036), Heightmap = steps,
+        };
+        WorldRecipe N(string id, string name, string description, WorldProfile source, params string[] steps) =>
+            new("natural-" + id, "Natural · " + name, description, Natural(source, "natural-" + id, "Natural · " + name, steps));
+        list.AddRange(new[]
+        {
+            N("continents", "Balanced continents", "Two to four continents of different sizes with ragged coasts, bays, peninsulas and offshore islands.", balanced,
+                "Hill 1 60-75 18-32 30-70", "Hill 1 55-70 62-80 25-75", "Hill 1-2 35-50 35-65 15-85",
+                "Hill 6-9 18-30 10-90 10-90", "Pit 3-5 15-25 15-85 15-85",
+                "Range 4-6 25-40 15-85 15-85", "Trough 2-4 15-25 15-85 15-85",
+                "Hill 10-16 8-14 5-95 5-95", "Strait 2-3 vertical", "Mask 3", "Smooth 2"),
+            N("mainland", "Great mainland", "One huge landmass with deep bays, long peninsulas and a few islands.", P("continental"),
+                "Hill 1 85-95 40-60 40-60", "Hill 6-8 30-45 20-80 20-80", "Pit 3-4 12-20 25-75 25-75",
+                "Range 5-7 25-40 20-80 20-80", "Trough 2-3 15-22 25-75 25-75", "Hill 8-12 8-14 5-95 5-95",
+                "Mask 3", "Smooth 2"),
+            N("archipelago", "Archipelago", "Dozens of islands of every size, from small continents to rocks.", P("archipelago"),
+                "Add 13 all", "Range 4-5 30-45 15-85 15-85", "Hill 8-10 14-22 10-90 15-85", "Smooth 2",
+                "Trough 10-14 18-28 5-95 5-95", "Strait 2 vertical", "Strait 1-2 horizontal", "Mask 4", "Smooth 2"),
+            N("mountains", "Mountain kingdoms", "Continents crossed by many high mountain chains with deep valleys between.", P("mountainous"),
+                "Hill 1 60-70 20-40 30-70", "Hill 1 55-70 60-80 30-70", "Hill 3-5 25-35 15-85 15-85",
+                "Range 8-12 35-55 15-85 15-85", "Trough 4-6 15-25 15-85 15-85", "Hill 8-12 8-12 5-95 5-95", "Mask 3", "Smooth 2"),
+            N("many-continents", "Many small continents", "Seven to ten medium landmasses separated by seas and straits.", balanced,
+                "Hill 7-9 42-55 12-88 12-88", "Pit 4-6 12-18 15-85 15-85", "Range 4-6 20-30 10-90 10-90",
+                "Hill 10-15 8-12 5-95 5-95", "Trough 3-5 12-18 15-85 15-85", "Mask 4", "Smooth 2"),
+            N("islands-mainland", "Islands + mainland", "A large mainland ringed by islands and island chains.", balanced,
+                "Hill 1 70-85 30-60 35-65", "Hill 3-5 20-30 25-65 25-75", "Range 3-5 25-40 25-65 25-75",
+                "Hill 25-35 12-20 5-95 5-95", "Pit 4-6 15-20 20-80 20-80", "Mask 3", "Smooth 2"),
+            N("inland-sea", "Inland sea", "Lands around a great inner sea that opens to the ocean.", balanced,
+                "Hill 4-6 32-42 18-82 15-25", "Hill 4-6 32-42 18-82 75-85", "Hill 3-4 32-42 15-25 25-75", "Hill 3-4 32-42 75-85 25-75",
+                "Range 4-5 20-32 15-85 15-85", "Mask -2", "Mask 3", "Strait 1 horizontal", "Hill 5-8 10-16 35-65 35-65", "Smooth 2"),
+            N("shattered", "Shattered lands", "A broken continent: many large islands separated by winding straits.", balanced,
+                "Hill 1 90-99 40-60 40-60", "Hill 5-7 35-50 15-85 15-85", "Trough 12-16 20-30 15-85 15-85",
+                "Strait 2 vertical", "Strait 2 horizontal", "Pit 6-8 12-18 15-85 15-85", "Range 3-4 25-35 20-80 20-80",
+                "Mask 3", "Smooth 2"),
+            N("rift", "Rift continent", "A great continent split by rift valleys with long lakes, walled by mountains.", balanced,
+                "Hill 1 90-99 40-60 40-60", "Hill 6-8 30-40 20-80 20-80", "Trough 2-3 22-32 25-75 25-75",
+                "Range 3-4 35-45 25-75 25-75", "Pit 3-4 15-22 30-70 30-70", "Mask 3", "Smooth 2"),
+            N("twin-continents", "Twin continents", "Two large continents facing each other across an ocean dotted with islands.", balanced,
+                "Hill 1 75-85 20-30 35-65", "Hill 1 75-85 70-80 35-65", "Hill 3-4 25-35 10-40 15-85", "Hill 3-4 25-35 60-90 15-85",
+                "Range 2 30-45 15-35 25-75", "Range 2 30-45 65-85 25-75", "Hill 6-10 8-14 40-60 10-90", "Mask 3", "Smooth 2"),
+            N("peninsula", "Great peninsula", "A mainland with a long, mountainous peninsula reaching into the ocean.", balanced,
+                "Hill 1 80-90 72-80 35-65", "Hill 2-3 30-40 65-85 20-80", "Range 1 45-55 60-68 40-60 10-20 35-65",
+                "Range 1 25-35 55-65 40-60 15-25 35-65", "Hill 6-8 10-16 5-35 20-80", "Mask 3", "Smooth 2"),
+        });
         if (profiles.Any(p => p.Id == "vast-world"))
             list.Add(new("vast-world", "Vast continents (classic)", "The original 2,048 km 'Vast world' preset.", P("vast-world")));
         if (custom != null)
@@ -162,7 +210,7 @@ public sealed class WorldRecipe
 
         // Landmasses: counts follow coverage; radii keep the land share (count × radius² ∝ world area).
         // A landform template may build all land itself (no continents).
-        int minContinents = b.Landforms is { Length: > 0 } ? 0 : 1;
+        int minContinents = b.Landforms is { Length: > 0 } || b.Heightmap is { Length: > 0 } ? 0 : 1;
         int continents = c.Continents ?? (Mainland || b.Continents == 0 ? b.Continents : (int)Math.Round(b.Continents * Math.Pow(f, .8)));
         continents = Math.Clamp(continents, minContinents, MaxContinents);
         double radius = b.ContinentRadius * f * (continents > 0 && b.Continents > 0 ? Math.Sqrt(b.Continents / (double)continents) : 1) * c.ContinentSize;

@@ -105,7 +105,7 @@ if (types != null)
         var land = plan.Macro.Channel(WorldPlan.LandChannel);
         var ts = new TerrainSampler(plan);
         MapRender.Window(ts, Path.Combine(v[0], $"{recipe.Id}-{km}km-{seed}.png"), plan.Manifest.OriginX, plan.Manifest.OriginZ, plan.Profile.WorldSize, 512);
-        Console.WriteLine($"{recipe.Id}: land {land.Count(x => x > 0) * 100.0 / land.Length:0} %, {plan.LandformShapes} landform shapes, " +
+        Console.WriteLine($"{recipe.Id}: land {land.Count(x => x > 0) * 100.0 / land.Length:0} % (grid {plan.HeightmapLandShare * 100:0} %), {plan.LandformShapes} landform shapes, " +
             $"{plan.Hydrology.Reaches.Count} reaches, {plan.Hydrology.Lakes.Count} lakes, {sw.Elapsed.TotalSeconds:0.0} s");
     }
     return 0;

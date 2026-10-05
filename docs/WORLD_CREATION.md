@@ -152,6 +152,59 @@ Example — a custom world type file with a template (put it in `world_types`, o
 
 Next: a **world type editor** — the step list with sliders and the live preview map, instead of editing JSON.
 
+## Natural world types (heightmap templates, D38)
+
+Tom: the land shapes of most types were too round ("blobby"), Vast continents the best; Azgaar's are more
+interesting. The new **Natural · …** types build land the way Azgaar's generator does, in Thornwake's own code (the
+idea read from his open-source generator; no code or templates copied): a hex grid of 160 × 160 cells with heights
+0–100, sea level 20, shaped by a short script. A hill has no outline: its height spreads cell by cell, each
+neighbour getting the parent's height to the power 0.985, times a random 0.9–1.1, minus 0.35. The randomness
+compounds into ragged coasts, bays and peninsulas. Ranges and troughs follow wandering paths. The grid is then
+smoothed, warped and fed into the same large-scale layer as before, so rivers, lakes, erosion, coasts and the 3D
+terrain work exactly as on the other types. All the existing types are unchanged (tested by digest).
+
+Natural types: Balanced continents, Great mainland, Archipelago, Mountain kingdoms, Many small continents, Islands +
+mainland, Inland sea, Shattered lands, Rift continent, Twin continents, Great peninsula. They keep their shape at
+every size (land share tested at 64 km and 1024 km).
+
+### Step language
+
+One step per line in the type's `Profile.Heightmap` list. `a-b` is a range the seed picks from; x, y are percent
+of the world (x west→east, y north→south); a fractional count is a chance of one more (1.5 = one, and a second half
+the time).
+
+| Step | Values | Effect |
+| --- | --- | --- |
+| `Hill` | count height x y | raised land growing out from a start cell (height 20 above the sea floor = coast) |
+| `Pit` | count depth x y | sunk area (bays, inland seas, lakes); starts on land |
+| `Range` | count height x y [x2 y2] | mountain chain along a wandering path (toward x2,y2, else a random direction), with spurs |
+| `Trough` | count depth x y [x2 y2] | long valley or rift; deep ones split land |
+| `Strait` | width vertical\|horizontal | sea channel across the whole map |
+| `Mask` | fraction | fade land toward the edges (3 = gentle); negative fades toward the centre |
+| `Add` | value land\|all\|a-b | add to heights in a range (e.g. `Add 13 all` lifts the sea floor near the surface) |
+| `Multiply` | factor land\|all\|a-b | scale heights (land is scaled above sea level) |
+| `Smooth` | fraction | blend with neighbours (2 = half) |
+| `Invert` | probability x\|y\|both | mirror the map |
+
+Example (the Natural · Balanced continents script):
+
+```
+Hill 1 60-75 18-32 30-70        big continent in the west
+Hill 1 55-70 62-80 25-75        another in the east
+Hill 1-2 35-50 35-65 15-85      maybe a third in between
+Hill 6-9 18-30 10-90 10-90      lobes, peninsulas, large islands
+Pit 3-5 15-25 15-85 15-85       bays and inland seas
+Range 4-6 25-40 15-85 15-85     mountain chains
+Trough 2-4 15-25 15-85 15-85    valleys, gulfs
+Hill 10-16 8-14 5-95 5-95       small islands where they stack
+Strait 2-3 vertical             channels between the continents
+Mask 3                          keep the world's edge ocean
+Smooth 2
+```
+
+To make your own: save any natural type as a world type and edit its `Heightmap` lines in the JSON. A world type
+may combine a heightmap with `Landforms` steps and with placed continents.
+
 ## Later: biomes
 
 Many biomes are planned (see DECISIONS "Planned — Biomes"): climate from latitude, elevation, distance to the sea

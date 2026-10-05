@@ -24,6 +24,8 @@ public sealed class WorldPlan
     public double RasterMilliseconds { get; }
     /// <summary>Shapes placed by the world type's landform template (0 = none).</summary>
     public int LandformShapes { get; }
+    /// <summary>Land share of the heightmap template's grid (0 = no heightmap).</summary>
+    public double HeightmapLandShare { get; }
 
     /// <summary>Raster resolution: cells of at most ~750 m, between 512 and 2048 cells across.</summary>
     public static int RasterSizeFor(WorldProfile profile)
@@ -45,12 +47,39 @@ public sealed class WorldPlan
         var p = manifest.Profile;
         double ox = manifest.OriginX, oz = manifest.OriginZ;
         var forms = new Landforms(manifest);
+        var heights = p.Heightmap is { Length: > 0 } ? new Heightmap(p.Heightmap, Hashing.FeatureSeed(manifest.Seed, 3, manifest.ProfileDigest, "heightmap")) : null;
+        HeightmapLandShare = heights?.LandShare() ?? 0;
+        ulong warpSeed = Hashing.FeatureSeed(manifest.Seed, 3, manifest.ProfileDigest, "heightmap-warp");
         Func<double, double, double> ruggedAt = (lx, lz) => { layout.MountainWarp(lx, lz, out double wx, out double wz); return layout.RuggedBroad(wx, wz); };
         Macro.Fill((i, j, channels) =>
         {
             double x = Macro.CellX(i), z = Macro.CellZ(j), lx = x - ox, lz = z - oz;
             int k = j * size + i;
             double land = layout.LandInfluence(x, z);
+            if (heights != null)
+            {
+                // Natural shapes: the heightmap (sea level 20 of 100), its grid hidden by a domain warp and a fractal
+                // wiggle at scales between the grid cell and the raster cell.
+                double cellM = world / Heightmap.N;
+                double wx = Noise.Fbm(lx, lz, cellM * 6, 4, Macro.Cell * 2, warpSeed, .5) * cellM * 1.6;
+                double wz = Noise.Fbm(lx + 7331, lz - 4217, cellM * 6, 4, Macro.Cell * 2, warpSeed, .5) * cellM * 1.6;
+                double hm = heights.Sample((lx + wx) / world + .5, (lz + wz) / world + .5);
+                hm += Noise.Fbm(lx, lz, cellM * 4, 3, Macro.Cell * 3, warpSeed + 1, .5) * 2.5;
+                double hland = hm >= Heightmap.SeaLevel ? (hm - Heightmap.SeaLevel) / 22 : (hm - Heightmap.SeaLevel) / 16;
+                land = Math.Max(land, hland); // placed continents/islands (if any) add to the heightmap
+                double edgeH = (world * .5 - Math.Max(Math.Abs(lx), Math.Abs(lz))) / (world * .06);
+                land = Math.Min(land, edgeH - .3);
+                Relief(lx, lz, out double hh, out double hmnt);
+                double extraRelief = 0, hmMountain = DetMath.Smooth((hm - 55) / 32) * (.35 + .65 * ruggedAt(lx, lz));
+                forms.Apply(lx, lz, ref land, ref extraRelief, ref hmMountain, ruggedAt);
+                channels[LandChannel][k] = (float)land;
+                if (land < -.3) return;
+                double uplands = DetMath.Smooth((hm - 22) / 34) * p.HillHeight * 1.8;
+                double mountainShare = Math.Max(hmnt, hmMountain);
+                channels[HeightChannel][k] = (float)(hh + uplands + extraRelief + mountainShare * p.MountainHeight);
+                channels[MountainChannel][k] = (float)mountainShare;
+                return;
+            }
             if (!forms.Empty)
             {
                 Relief(lx, lz, out double baseHills, out double baseMountain);

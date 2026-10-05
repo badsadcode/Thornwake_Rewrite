@@ -10,6 +10,7 @@ internal static class RecipeTests
         T.Run("Recipes: land share survives 128 km and 4096 km", Coverage, filter);
         T.Run("Recipes: a saved world type round-trips through JSON", CustomType, filter);
         T.Run("Landforms: templates shape the world and stay valid", Templates, filter);
+        T.Run("Natural types: heightmap templates make land at every size, deterministic", Natural, filter);
     }
 
     private static IReadOnlyList<WorldRecipe> Recipes => WorldRecipe.Catalog(CoreTests.Profiles);
@@ -120,4 +121,32 @@ internal static class RecipeTests
     }
 
     private static double WorldShare(WorldPlan plan) => plan.Macro.Channel(WorldPlan.LandChannel).Count(v => v > 0) / (double)plan.Macro.Channel(WorldPlan.LandChannel).Length;
+
+    private static void Natural()
+    {
+        var natural = Recipes.Where(r => r.Id.StartsWith("natural-")).ToList();
+        T.Check(natural.Count >= 10, $"{natural.Count} natural types");
+        foreach (var r in natural)
+        {
+            var shares = new List<double>();
+            foreach (double km in new[] { 64.0, 1024 })
+            {
+                var plan = new WorldPlan(WorldManifest.Create(42, r.Resolve(new WorldChoices { SizeKm = km }), worldId: CoreTests.FixedWorldId));
+                shares.Add(plan.HeightmapLandShare);
+            }
+            T.Note($"{r.Id}: heightmap land {shares[0] * 100:0} % at 64 km, {shares[1] * 100:0} % at 1024 km");
+            T.Check(shares.All(v => v > .05 && v < .75), $"{r.Id}: a sensible amount of land");
+        }
+        var a = new Heightmap(natural[0].Base.Heightmap!, 7); var b = new Heightmap(natural[0].Base.Heightmap!, 7); var c = new Heightmap(natural[0].Base.Heightmap!, 8);
+        T.Check(a.Heights.SequenceEqual(b.Heights), "same seed, same heightmap");
+        T.Check(!a.Heights.SequenceEqual(c.Heights), "another seed, another heightmap");
+        foreach (var bad in new[] { "Volcano 1 2 3 4", "Hill 1 50", "Strait 3 diagonal", "Hill 1 50-200 10-90 10-90" })
+        {
+            bool rejected = false;
+            try { Heightmap.Validate(new[] { bad }); } catch (System.IO.InvalidDataException) { rejected = true; }
+            T.Check(rejected, $"rejects '{bad}'");
+        }
+        var saved = WorldRecipe.FromJson(WorldRecipe.Create("My natural", "", natural[0].Base, false, new Dictionary<string, double>()).ToJson());
+        T.Check(saved.Base.Heightmap!.SequenceEqual(natural[0].Base.Heightmap!), "heightmap steps survive saving a custom type");
+    }
 }

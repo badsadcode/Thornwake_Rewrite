@@ -272,6 +272,29 @@ edges are blurred and noise-thresholded instead of 0.5 m squares. Separately, a 
 darkens and glosses all terrain and draws non-simulated puddles in hollows, fading after the rain. Reservoirs (river
 and lake water) feed only edited cells, so they never leak into untouched banks.
 
+## D38 — Natural world types: heightmap templates (2026-10-05)
+Tom: land shapes too round; Vast continents best; Azgaar's more interesting — new versions, existing unchanged,
+adapted from how Azgaar does it. Read his heightmap generator (MIT, open source) for the method; wrote Thornwake's
+own: 160×160 hex grid, heights 0–100 (sea 20), steps Hill/Pit (breadth-first spread, child = parent^0.985 ×
+U(0.9,1.1) − 0.35: the subtraction gives a finite reach so many hills' tails do not add up to land everywhere),
+Range/Trough (greedy wandering paths, sideways spread h^0.86 − 1, downhill spurs), Strait, Mask, Add, Multiply,
+Smooth, Invert, fractional counts; a final smoothing pass (single-cell roughness read as mossy coasts). Sampled
+bilinearly with a domain warp and a light fractal at sub-grid scales into the macro land/relief/mountain channels
+(land = (h − 20)/22 above the sea, (h − 20)/16 below; uplands from h; mountains from h > 55 × ruggedness). Own
+templates for all world types (11 natural types), tuned by maps at 512 km over several seeds. `Profile.Heightmap`
+is omitted from the digest JSON when null, so every existing world is unchanged.
+
+## D39 — Estuaries and walkable banks (terrain revision 9) (2026-10-05)
+Tom: a step where rivers meet the sea/lakes; water walls by dug/spring cells. Found by a 1 m step probe at mouths:
+bulging banks squeezed the bank into cliffs (up to ~4× steeper), and per-segment along jumps drew streaks and ribs.
+Revision 9 (`TerrainStyle.Revision`; Terrain version "Build 8" keeps 8, bit-exact test): estuary over the last
+8 widths + 200 m before the coastline/lake (channel ×1.7 wider, bank ×3 wider and 60 % lower, footprint unchanged
+so spatial-index hits stay complete); bulges as shallow ledges, only slow widening and cuts shift the bank (fade
+grows with the shift); beach shift fades behind the bank; along blended between equally near segments with a
+tight cutoff (a wide one pulled in far meander loops at spatial-grid borders: square terraces); sea groove matches
+the estuary. Water: tile sheets skip squares at dug ground below the water; the simulation draws dug river cells
+and keeps undrawn river cells at the surface (no curtains); river cell levels are corner averages.
+
 ## Planned — Biomes
 Tom: many biomes, each with its own terrain, plants and atmosphere. Plan: a biome map from climate (temperature from
 latitude/elevation, moisture from distance to sea and rain shadow) drives `TerrainStyle` per region (blended at
