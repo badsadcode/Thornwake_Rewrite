@@ -160,3 +160,13 @@ Tom's notes (one screenshot at Mountain kingdoms 42, -59499 / 115353, and one at
 | Land shapes | 11 Natural types (heightmap templates), existing types identical (digest tests) |
 | Waves | 12 waves + swell, Jacobian whitecaps, crest glow, chop; a first step — FFT is the next level if needed |
 
+
+## Round 6 (build 10, 2026-10-05)
+* Biome mix right, looks good, performance good on Tom's PC; tree density stays (players can tune it).
+* Landform feature order: Tom leaves it to me (needle spires + boulder fields → dunes → canyons/mesas → volcanoes →
+  glacier valleys).
+* Placeholder art for missing plants: yes, pixel-art textures; reference: Valheim and the existing models/textures.
+* Biome skies: optionally a slightly different sky per biome (WoW-style mood); keep the current realistic sky as an
+  option.
+* Clouds: liked; layers moving at different speeds for wind and depth, as a setting (medium sky quality); later
+  try volumetric clouds with proper lighting and colours.
