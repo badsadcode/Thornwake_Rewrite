@@ -102,6 +102,13 @@ public partial class WorldLab : Node3D
         int index = Math.Max(0, _profiles.ToList().FindIndex(p => p.Id == preset));
         _profileList.Select(index);
         _gen.LoadPreset(_profiles[index]);
+        // --set=gen.<key>=<value> also sets world-generation parameters (after the preset has loaded its values).
+        foreach (string arg in OS.GetCmdlineUserArgs())
+            if (arg.StartsWith("--set=gen."))
+            {
+                var kv = arg[6..].Split('=');
+                if (_gen.All.FirstOrDefault(x => x.Key == kv[0]) is { } g) g.Value = double.Parse(kv[1], CultureInfo.InvariantCulture);
+            }
         _seedEdit.Text = seed.ToString(CultureInfo.InvariantCulture);
         if (_smokeDirectory == null) Input.MouseMode = Input.MouseModeEnum.Captured;
         Generate();
