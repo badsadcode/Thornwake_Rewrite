@@ -679,6 +679,7 @@ public sealed class Hydrology
         if (toSea && total >= 2)
         {
             // Continue straight out to sea: the detailed coastline can lie a few hundred metres beyond the raster's.
+            // (Lake inflows end at a lake cell's centre, already inside the lake: extending them crossed narrow lakes.)
             double ex = rx[^1] - rx[^2], ez = rz[^1] - rz[^2], el = Math.Sqrt(ex * ex + ez * ez);
             if (el > 0)
             {

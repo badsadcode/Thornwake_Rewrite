@@ -147,6 +147,14 @@ public sealed class TerrainSampler
                 raise = Math.Max(raise, delta);
                 if (inside > wetInside) { wetInside = inside; water = WaterKind.River; level = reaches[i].Surface; body = reaches[i].Reach; }
             }
+            // Inside a lake basin (ground below the lake surface) rivers carve but never raise banks: their levees
+            // ringed river mouths with dry land at the lake edge.
+            int basin = _style.BankVariation > 0 ? _hydrology.LakeNear(x, z) : -1; // off in the build-5 terrain
+            if (basin >= 0)
+            {
+                double below = _hydrology.Lakes[basin].Level - _p.SeaLevel - terrain;
+                raise *= DetMath.Smooth((-.05 - below) / .4); // none once the ground is under the lake, full 0.35 m above it
+            }
             // Inside a channel, another river's raised bank never lifts the bed above this water.
             height = wetInside > 0 ? Math.Min(terrain + carve, level - _p.SeaLevel - .05) : terrain + carve + raise;
         }
@@ -185,6 +193,25 @@ public sealed class TerrainSampler
     /// occasional bulges (with a shallow shelf, <paramref name="shelf"/> 0..1) or cuts into the bank. Faded out near
     /// the reach ends so junctions and mouths stay joined. The centreline itself stays smooth.
     /// </summary>
+    /// <summary>
+    /// Width (m) of a low sand/gravel/mud beach between the water and the rising bank on this side: present in
+    /// irregular patches (each bank on its own), up to ~60 % of the bank width, none near the reach ends.
+    /// </summary>
+    public double BeachWidth(in RiverHit r)
+    {
+        if (_style.BankVariation <= 0 || r.Side == 0 || r.Reach < 0) return 0;
+        var reach = _hydrology.Reaches[r.Reach];
+        double margin = r.Width * 2 + 25;
+        double ends = DetMath.Smooth(r.Along / margin) * DetMath.Smooth((reach.Length - r.Along) / margin);
+        if (ends <= 0) return 0;
+        ulong seed = _bankSeed ^ Hashing.Mix((ulong)r.Reach * 2 + (r.Side > 0 ? 1UL : 0UL) + 0xBEAC4UL);
+        double w = reach.Width[reach.Width.Length / 2];
+        double n = 2.5 * Noise.Gradient(r.Along / Math.Max(60, w * 6) + 2.3, 8.1, seed)
+            + .5 * 2.5 * Noise.Gradient(r.Along / Math.Max(15, w * 1.5) + .7, 3.3, seed + 1);
+        double amount = DetMath.Smooth((n + .1) / .9);
+        return amount * Hydrology.Bank(r.Width) * .6 * Math.Min(1, _style.BankVariation) * ends;
+    }
+
     public double WaterHalfWidth(in RiverHit r, out double shelf)
     {
         double half = r.Width * .5;
@@ -221,9 +248,10 @@ public sealed class TerrainSampler
         double carry = 1 - DetMath.Smooth((r0.Distance - nominal - Math.Max(shift, 0) - bankWidth) / (bankWidth * 1.5));
         var r = r0 with { Distance = Math.Max(0, r0.Distance - shift * carry) };
         double half = nominal;
+        double beach = BeachWidth(r0);
         if (spacing <= 2.5 || spacing > 40)
         {
-            double h = ChannelProfile(r, half, terrain, rise, out weight, out inside);
+            double h = ChannelProfile(r, half, terrain, rise, out weight, out inside, -1, beach);
             if (shelf > 0 && inside > 0 && shift > 0) h = Shelf(h, r0, nominal, nominal + shift, shelf);
             return h;
         }
@@ -233,9 +261,9 @@ public sealed class TerrainSampler
         // the spacing are drawn at least that wide so they stay continuous in the distance.
         half = Math.Max(half, spacing * .5);
         double band = spacing * 1.5, d = r.Distance, surface = r.Surface - _p.SeaLevel;
-        double outer = ChannelProfile(r, half, terrain, rise, out weight, out inside, half + band);
+        double outer = ChannelProfile(r, half, terrain, rise, out weight, out inside, half + band, beach);
         inside = (half - d) / half;
-        if (Math.Abs(d - half) >= band) return ChannelProfile(r, half, terrain, rise, out weight, out _);
+        if (Math.Abs(d - half) >= band) return ChannelProfile(r, half, terrain, rise, out weight, out _, -1, beach);
         double g = Math.Max(.05, (outer - surface) / band);
         if (d >= half) return surface + g * (d - half);
         double bed = ChannelProfile(r, half, terrain, rise, out _, out _);
@@ -251,11 +279,22 @@ public sealed class TerrainSampler
         return DetMath.Lerp(bed, Math.Max(bed, ledge), onShelf);
     }
 
-    private double ChannelProfile(in RiverHit r, double half, double terrain, double rise, out double weight, out double inside, double distance = -1)
+    private double ChannelProfile(in RiverHit r, double half, double terrain, double rise, out double weight, out double inside, double distance = -1,
+        double beach = 0)
     {
         double bank = Hydrology.Bank(r.Width), d = distance >= 0 ? distance : r.Distance, surface = r.Surface - _p.SeaLevel;
         double bankTop = surface + .6 + .15 * r.Depth;
-        double flood = Hydrology.Floodplain(r.Width, rise - bankTop);
+        double flood = Math.Min(Hydrology.Floodplain(r.Width, rise - bankTop), Hydrology.MaxFloodplain(r.Width) - beach);
+        // A beach: a low, gently sloping strip (to ~0.3 m above the water) before the bank rises; everything beyond
+        // the waterline moves outward by its width.
+        double lift = 0;
+        if (beach > 0 && d > half)
+        {
+            lift = .3 * DetMath.Smooth((d - half) / beach);
+            d = Math.Max(half, d - beach);
+            if (d == half) { weight = 1; inside = 0; return surface + lift; }
+            bankTop = Math.Max(bankTop, surface + lift + .05);
+        }
         weight = 1 - DetMath.Smooth((d - half - bank) / flood);
         inside = (half - d) / half;
         if (d < half) { double u = d / half; return surface - r.Depth * (1 - u * u); }
@@ -265,7 +304,8 @@ public sealed class TerrainSampler
         {
             double gentle = DetMath.Smooth((d - half) / bank), quick = DetMath.Smooth((d - half) / Math.Min(bank, 2.5));
             double high = DetMath.Clamp((Math.Min(terrain, bankTop) - surface) / (bankTop - surface), 0, 1);
-            return surface + (bankTop - surface) * DetMath.Lerp(gentle, quick, high);
+            double from = surface + lift;
+            return from + (bankTop - from) * DetMath.Lerp(gentle, quick, high);
         }
         // Where the ground is lower than the bank top, only a short levee is raised (long raised ramps from many
         // segments at different levels would stack into terraces along steep rivers).

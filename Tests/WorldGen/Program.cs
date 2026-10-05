@@ -80,6 +80,22 @@ if (line != null)
     return 0;
 }
 
+if (args.Contains("--lake-mouths"))
+{
+    foreach (var (id, seed) in new[] { ("balanced", 0), ("mountainous", 42) })
+    {
+        var ms = CoreTests.Sampler(id, seed);
+        foreach (var r in ms.Plan.Hydrology.Reaches.Where(r => r.EndLake >= 0).OrderByDescending(r => r.Catchment[^1]).Take(2))
+        {
+            var e = r.Points[^1];
+            string png = $"/tmp/claude-0/lake-mouth-{id}-{r.Id}.png";
+            MapRender.Window(ms, png, e.X, e.Z, 1500, 750);
+            Console.WriteLine($"{id} reach {r.Id} into lake {r.EndLake} at {e.X:0},{e.Z:0} width {r.Width[^1]:0} -> {png}");
+        }
+    }
+    return 0;
+}
+
 if (args.Contains("--bank-probe"))
 {
     var bs = CoreTests.Sampler("mountainous", 42);
