@@ -29,8 +29,19 @@ public static class GroundCover
         public readonly Vector3[] Vertices, Normals; public readonly double[] Forest; public readonly TerrainSample[] Samples;
         public readonly double Spacing, X0, Z0;
         public readonly int Side;
-        public Grid(Vector3[] vertices, Vector3[] normals, double[] forest, TerrainSample[] samples, double spacing, double x0, double z0, int side)
-        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; }
+        /// <summary>Per vertex 0.5 + depth below the nearest water surface / 2 m (0.5 = waterline), as in the tile colours.</summary>
+        public readonly float[] Shore;
+        public Grid(Vector3[] vertices, Vector3[] normals, double[] forest, TerrainSample[] samples, double spacing, double x0, double z0, int side, float[] shore)
+        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; }
+
+        /// <summary>Bilinear <see cref="Shore"/> at tile-local (x, z).</summary>
+        public float ShoreAt(double x, double z)
+        {
+            double gx = Math.Clamp(x / Spacing, 0, Side - 1.001), gz = Math.Clamp(z / Spacing, 0, Side - 1.001);
+            int i = (int)gx, j = (int)gz; float fx = (float)(gx - i), fz = (float)(gz - j);
+            int a = j * Side + i;
+            return Shore[a] * (1 - fx) * (1 - fz) + Shore[a + 1] * fx * (1 - fz) + Shore[a + Side] * (1 - fx) * fz + Shore[a + Side + 1] * fx * fz;
+        }
 
         /// <summary>Height, normal Y, forest and wetness at tile-local (x, z), matching the mesh triangles (a,b,c / b,d,c).</summary>
         public bool At(double x, double z, out float height, out float up, out float forest, out bool wet)
@@ -89,6 +100,31 @@ public static class GroundCover
             if (Unit(h, 1) > density * .9f) return;
             float scale = .7f + .8f * Unit(h, 2);
             result.Add(new Transform3D(new Basis(Vector3.Up, Unit(h, 3) * Mathf.Tau).Scaled(Vector3.One * scale), new Vector3((float)x, height - .02f, (float)z)));
+        });
+        return result;
+    }
+
+    /// <summary>
+    /// Reeds along river and lake banks (level 0): tall tufts in clumps from ~0.5 m above the waterline into ~0.3 m
+    /// deep water, densest at the waterline. Not on sea shores (beaches).
+    /// </summary>
+    public static List<Transform3D> Reeds(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1)
+    {
+        var result = new List<Transform3D>();
+        var g = grid;
+        Cells(key, .55 / Math.Sqrt(Math.Max(.2, amount)), seed ^ 0x2EEDUL, (x, z, h) =>
+        {
+            float shore = g.ShoreAt(x, z);
+            if (shore < .22f || shore > .66f) return;
+            if (!g.At(x, z, out float height, out float up, out _, out _) || up < .8f || height - sea < 1.2) return;
+            // Clumps: ~45 % of 5 m patches carry reeds.
+            ulong patch = Hashing.Lattice((long)Math.Floor((x + key.MinX) / 5), (long)Math.Floor((z + key.MinZ) / 5), seed ^ 0x9A7CUL);
+            if (Hashing.Unit(patch) > .45) return;
+            float closeness = 1 - Math.Abs(shore - .47f) / .22f;
+            if (Unit(h, 1) > closeness * .85f) return;
+            float tall = 2.1f + 1.3f * Unit(h, 2), wide = .55f + .35f * Unit(h, 4);
+            var basis = new Basis(Vector3.Up, Unit(h, 3) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 5) - .5f) * .25f);
+            result.Add(new Transform3D(basis.Scaled(new Vector3(wide, tall, wide)), new Vector3((float)x, height - .05f, (float)z)));
         });
         return result;
     }

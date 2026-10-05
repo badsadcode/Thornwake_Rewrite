@@ -235,6 +235,8 @@ public partial class WorldStreamer : Node3D
         GrassCommitted += data.Grass.Count; RocksCommitted += data.Rocks.Count; PropsCommitted += data.Props.Count; FarTreesCommitted += data.FarTrees.Count;
         if (data.Grass.Count > 0)
             root.AddChild(Multi(_grass, data.Grass.ToArray(), GeometryInstance3D.ShadowCastingSetting.Off, GameSettings.GrassDistance.F));
+        if (data.Reeds.Count > 0)
+            root.AddChild(Multi(_grass, data.Reeds.ToArray(), GeometryInstance3D.ShadowCastingSetting.Off, GameSettings.GrassDistance.F * 1.3f));
         foreach (var kind in data.Rocks.GroupBy(r => r.Kind))
             root.AddChild(Multi(RockMeshes.Get(kind.Key), kind.Select(r => r.Transform).ToArray(),
                 kind.Key == GroundCover.Stone ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,

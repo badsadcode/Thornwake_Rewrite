@@ -35,6 +35,9 @@ void fragment() {
 	vec3 sand = mix(vec3(0.800, 0.725, 0.520), vec3(0.700, 0.640, 0.470), n2);             // valley cbb984
 	c = mix(c, sand, smoothstep(0.3, 0.65, wet + (n2 - 0.5) * 0.25) * (1.0 - smoothstep(0.25, 0.5, slope)));
 	vec3 bed = mix(vec3(0.360, 0.340, 0.260), vec3(0.450, 0.420, 0.330), n2);              // gravel and silt under water
+	// Damp earth along river and lake banks: a darker strip from the waterline to ~0.4 m above it (not on beaches).
+	float damp = smoothstep(0.28, 0.48, COLOR.a + (n3 - 0.5) * 0.06) * (1.0 - submerged) * (1.0 - wet) * (1.0 - smoothstep(0.45, 0.7, slope));
+	c = mix(c, c * vec3(0.62, 0.6, 0.55) + vec3(0.03, 0.025, 0.015), damp);
 	c = mix(c, bed, submerged);
 	float snow = smoothstep(snow_line - 250.0 + (n1 - 0.5) * 600.0, snow_line + 150.0, h) * (1.0 - smoothstep(0.55, 0.8, slope));
 	c = mix(c, vec3(0.93, 0.94, 0.96), snow);
