@@ -86,7 +86,8 @@ if (cliffs != null)
         for (double x = cx - r; x < cx + r && found < 12; x += step)
         {
             double h = sampler.Height(x, z), lo = Math.Min(Math.Min(sampler.Height(x + 3, z), sampler.Height(x - 3, z)), Math.Min(sampler.Height(x, z + 3), sampler.Height(x, z - 3)));
-            if (h - lo > 4 && h > sampler.Plan.Profile.SeaLevel + 3 && h < sampler.Plan.Profile.SeaLevel + 40) { Console.WriteLine($"cliff at {x:0},{z:0}: top {h:0.0} m, drop {h - lo:0.0} m"); found++; }
+            if (v.Length > 8 && sampler.Plan.Biomes.Pool[sampler.Plan.Biomes.Sample(x, z).A].Def.Id != v[8]) continue;
+            if (h - lo > (v.Length > 7 ? double.Parse(v[7]) : 4) && h > sampler.Plan.Profile.SeaLevel + 3 && h < sampler.Plan.Profile.SeaLevel + (v.Length > 6 ? double.Parse(v[6]) : 40)) { Console.WriteLine($"cliff at {x:0},{z:0}: top {h:0.0} m, drop {h - lo:0.0} m"); found++; }
         }
     return 0;
 }
