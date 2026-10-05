@@ -170,3 +170,21 @@ Tom's notes (one screenshot at Mountain kingdoms 42, -59499 / 115353, and one at
   option.
 * Clouds: liked; layers moving at different speeds for wind and depth, as a setting (medium sky quality); later
   try volumetric clouds with proper lighting and colours.
+
+## Round 7 (build 11, 2026-10-05)
+* New clouds look amazing. Wants a resolution setting; god rays with the clouds (shining through gaps, rays in the clear).
+* Mist from above shows white streaks (fine from the ground).
+* Hanging grass/roots look weird and appear on ordinary slopes; visible lanes without trees along a grid.
+* Sun very blinding and always the same (but builds atmosphere — keep, tune).
+* Day/night cycle in settings: default 1 game day = 2 real hours, up to real time; realistic day/night proportion by
+  default, adjustable (percent or minutes of day and night). Night sky with stars, moon, optional planets.
+* Swamp: nothing but trees tells it is a swamp (no water, no land features).
+* Testing: world map, right-click to teleport onto the ground.
+* Trees swaying in the wind; simulated wind direction and strength (for sailing later).
+* Cliffs: place 3D rocks / rock walls on them; rocky shores; the layered cliff texture should be a seamless bitmap with
+  more irregular layers (current one does not read as rock).
+* Water tint per biome.
+* Biomes: option to pick which biomes and how many; a "game" placement (random organic smaller patches repeated over
+  the land, ignoring latitude) besides the current realistic one, which must be kept.
+* Boulders: small, big, really big. Collision with trees, bushes, logs, dead trees, boulders and rocks.
+* Save the whole project as it is now (backup point).
