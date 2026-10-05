@@ -31,3 +31,11 @@ I kept the current amounts so your existing worlds stay exactly the same. Option
 size ×* (1.6 ≈ double the land) when you want more; (b) add a "Land share" parameter that targets a percentage;
 (c) make the default types land-richer (changes every existing seed). Tell me which, or a target number.
 
+
+## Q6 — Biomes (build 10)
+* **Mix**: on the Vast world, temperate grassland/forest and taiga cover about half the land, the rare ones
+  (Ancient forest, Blighted swamp, Volcanic, Arctic) a few percent each. More variety, fewer, or fine?
+* **Which landform features first** (phase 3/4)? My proposed order: needle spires + boulder fields (local, quick
+  win), then dunes, then canyons/mesas in badlands, then volcanoes, then glacier valleys.
+* **Art**: palms, cacti, dead trees, reeds/swamp plants and vines don't exist yet; biomes use the nearest trees.
+  Should I make simple placeholder models, or wait for your art?

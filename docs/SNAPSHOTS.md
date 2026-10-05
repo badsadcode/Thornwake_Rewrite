@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 10** (biomes phase 1: 14 data-driven biomes, climate) | `HEAD of 2026-10-05 build 10` | Thornwake-Rewrite-Preview-10 (v0.9.10) | also: Terrain version "Build 9" turns biomes off |
 | **Build 9** (before biomes; Tom: "so far fantastic", 2026-10-05) | `f868ef5` | Thornwake-Rewrite-Preview-9 (v0.9.9) | also: New world → Terrain version "Build 9" in any later build (biomes off, terrain bit-exact) |
 | **Biomes phase 1** (14 data-driven biomes, Noor's architecture, before biomes shape terrain) | `5a35e9e` | — | `git checkout 5a35e9e` |
 | Backup before biome phase 1 (build 9 + biome v0 notes + plan) | `bdb55b3` | — | `git checkout bdb55b3` |
