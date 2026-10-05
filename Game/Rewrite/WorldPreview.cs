@@ -10,12 +10,14 @@ namespace Thornwake.Rewrite;
 /// </summary>
 public static class WorldPreview
 {
-    public static Image Render(WorldPlan plan, int pixels, bool biomes = false)
+    /// <summary>The whole world, or (with <paramref name="span"/>) a square of that size centred on (cx, cz).</summary>
+    public static Image Render(WorldPlan plan, int pixels, bool biomes = false, double cx = double.NaN, double cz = double.NaN, double span = 0)
     {
-        if (biomes) return RenderBiomes(plan, pixels);
+        if (biomes) return RenderBiomes(plan, pixels, cx, cz, span);
         var raster = plan.Macro;
         var p = plan.Profile;
-        double world = p.WorldSize, x0 = plan.Manifest.OriginX - world / 2, z0 = plan.Manifest.OriginZ - world / 2, step = world / pixels;
+        var (x0, z0, world) = Region(plan, cx, cz, span);
+        double step = world / pixels;
         var height = new float[pixels * pixels];
         var land = new float[pixels * pixels];
         System.Threading.Tasks.Parallel.For(0, pixels, j =>
@@ -68,6 +70,13 @@ public static class WorldPreview
         return Image.CreateFromData(pixels, pixels, false, Image.Format.Rgb8, data);
     }
 
+    /// <summary>Map window: west and north edges and side length (the whole world by default).</summary>
+    public static (double X0, double Z0, double Size) Region(WorldPlan plan, double cx, double cz, double span)
+    {
+        if (span <= 0 || double.IsNaN(cx)) { double w = plan.Profile.WorldSize; return (plan.Manifest.OriginX - w / 2, plan.Manifest.OriginZ - w / 2, w); }
+        return (cx - span / 2, cz - span / 2, span);
+    }
+
     private static void Line(byte[] data, int n, double ax, double az, double bx, double bz, double strength)
     {
         int steps = (int)Math.Ceiling(Math.Max(Math.Abs(bx - ax), Math.Abs(bz - az))) + 1;
@@ -84,11 +93,11 @@ public static class WorldPreview
     }
 
     /// <summary>Biome map (D42): each land pixel in its biome's map colour (blended at borders), with hill shading.</summary>
-    public static Image RenderBiomes(WorldPlan plan, int pixels)
+    public static Image RenderBiomes(WorldPlan plan, int pixels, double cx = double.NaN, double cz = double.NaN, double span = 0)
     {
-        var p = plan.Profile;
         var map = plan.Biomes;
-        double world = p.WorldSize, x0 = plan.Manifest.OriginX - world / 2, z0 = plan.Manifest.OriginZ - world / 2, step = world / pixels;
+        var (x0, z0, world) = Region(plan, cx, cz, span);
+        double step = world / pixels;
         var colors = new Color[map.Pool.Count];
         for (int b = 0; b < colors.Length; b++) colors[b] = new Color(map.Pool[b].Map.R, map.Pool[b].Map.G, map.Pool[b].Map.B);
         var height = new float[pixels * pixels];

@@ -109,7 +109,11 @@ public static class GameSettings
         "Godot's SSR for shiny opaque surfaces (rocks, wet ground). Mostly subtle."));
     public static readonly Setting Glow = Add(new("fx.glow", "Lighting and effects", "Glow (bloom)", 0, 1.5, .05, .6,
         "Bright sky, sun reflections and foam bleed softly into their surroundings.", "×"));
-    public static readonly Setting SunGlare = Add(new("fx.sun_glare", "Lighting and effects", "Sun glare", 0, 1.5, .05, .75,
+    public static readonly Setting SunStyle = Add(new("fx.sun_style", "Lighting and effects", "Sun", 0, 1, 1, 0,
+        "Classic: the bright sun of build 11. Natural: the disc changes with the time of day — softer white at noon, " +
+        "larger, orange and red near the horizon, with a wider warm glow at sunrise and sunset.",
+        options: new[] { "classic", "natural" }));
+    public static readonly Setting SunGlare = Add(new("fx.sun_glare", "Lighting and effects", "Sun glare", 0, 1.5, .05, 1,
         "Brightness of the sun disc and its halo in the sky (1 = build 11).", "×"));
     public static readonly Setting SunShafts = Add(new("fx.sun_shafts", "Lighting and effects", "Sun shafts", 0, 1.5, .05, .6,
         "Light rays from the sun through clouds, trees and over ridges (screen-space).", "×"));

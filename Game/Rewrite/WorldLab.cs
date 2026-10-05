@@ -25,6 +25,7 @@ public partial class WorldLab : Node3D
     private Camera3D _camera = null!;
     private Atmosphere _atmosphere = null!;
     private readonly MistField _mist = new() { Name = "Mist" };
+    private readonly WorldMap _map = new() { Name = "Map" };
     private LocalWaterView _water = null!;
     private Toolbox _tools = null!;
     private bool _rain;
@@ -60,7 +61,7 @@ public partial class WorldLab : Node3D
     private (double X, double Z)? _shotAt;
     private (float Yaw, float Pitch, float Zoom)? _shotView;
     /// <summary>Screenshot aid: a row of every placeholder plant in front of the camera (--gallery).</summary>
-    private bool _gallery;
+    private bool _gallery, _openMap;
     private float _shotHeight, _shotWait;
     private bool _shotRain;
     private float _shotDive;
@@ -122,6 +123,7 @@ public partial class WorldLab : Node3D
             if (arg == "--grid") { _gridShown = true; _streamer.ShowGrid(true); }
             if (arg == "--biome-tint") { _biomeTint = true; _streamer.ShowBiomes(true); }
             if (arg == "--gallery") _gallery = true;
+            if (arg == "--open-map") _openMap = true;
             if (arg.StartsWith("--hour=")) _timeSlider.Value = double.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--menu=")) { _menu.Visible = true; _menu.GetChild<TabContainer>(0).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); }
         }
@@ -621,6 +623,12 @@ public partial class WorldLab : Node3D
         if (e is not InputEventKey { Pressed: true, Echo: false } key) return;
         switch (key.Keycode)
         {
+            case Key.Escape when _map.Visible: _map.Visible = false; Input.MouseMode = Input.MouseModeEnum.Captured; _hud.Visible = _showHud; _help.Visible = true; break;
+            case Key.M when !_menu.Visible && _sampler != null:
+                if (_map.Visible) { _map.Visible = false; Input.MouseMode = Input.MouseModeEnum.Captured; _hud.Visible = _showHud; _help.Visible = true; }
+                else { _map.Open(_sampler.Plan, PlayerX, PlayerZ, _yaw); Input.MouseMode = Input.MouseModeEnum.Visible; _hud.Visible = false; _help.Visible = false; }
+                break;
+            case Key.B when _map.Visible: _map.ToggleBiomes(); break;
             case Key.Escape: ToggleMenu(!_menu.Visible); break;
             case Key.Tab: Input.MouseMode = Input.MouseMode == Input.MouseModeEnum.Captured ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured; break;
             case Key.F: if (!_menu.Visible) SetFly(!_fly); break;
@@ -684,13 +692,21 @@ public partial class WorldLab : Node3D
         _hud.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .8f));
         _hud.AddThemeConstantOverride("shadow_offset_x", 1); _hud.AddThemeConstantOverride("shadow_offset_y", 1);
         layer.AddChild(_hud);
+        layer.AddChild(_map);
+        _map.Teleport = (x, z) =>
+        {
+            Teleport(x, z);
+            Input.MouseMode = Input.MouseModeEnum.Captured;
+            _hud.Visible = _showHud; _help.Visible = true;
+            _status = $"Teleported to {x:0} , {z:0}.";
+        };
         _help = new Label
         {
             Text = "WASD move · Shift sprint · Space jump/swim up · C dive · mouse look (Tab frees cursor) · wheel zoom\n" +
                    "F fly (Space/C up/down, Shift faster, Ctrl ×6) · N noclip · Esc menu: teleport, new world, time of day\n" +
                    "Water: hold G pour where you look · J spring · H rain · K clear\n" +
                    "Tools: 1 hands · 2 shovel · 3 pickaxe · 4 hoe · 5 terraform (dev) — left/right mouse use\n" +
-                   "F1 hide help · F2 hide HUD · F3 tile grid · F4 biome colours · F12 screenshot (saved to the user data folder)",
+                   "M world map (right-click teleports) · F1 hide help · F2 hide HUD · F3 tile grid · F4 biome colours · F12 screenshot",
             AnchorTop = 1, AnchorBottom = 1, OffsetTop = -122, OffsetLeft = 14, OffsetRight = 900,
         };
         _help.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .8f));
@@ -821,6 +837,7 @@ public partial class WorldLab : Node3D
             {
                 if (_shotHeight > 0) { SetFly(true); _player.Position += Vector3.Up * _shotHeight; }
                 if (_gallery) Gallery();
+                if (_openMap) { _map.Open(_sampler!.Plan, PlayerX, PlayerZ, _yaw); _hud.Visible = false; _help.Visible = false; }
                 if (_shotDive > 0 && !double.IsNaN(WaterSurface(PlayerX, PlayerZ, out _)))
                 {
                     SetNoclip(true);

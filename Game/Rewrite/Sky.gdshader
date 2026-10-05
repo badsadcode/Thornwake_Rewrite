@@ -20,7 +20,8 @@ uniform sampler2D cloud_tex : filter_linear_mipmap, repeat_enable;
 uniform float cloud_period = 6000.0;
 uniform float cloud_height = 1600.0;
 uniform int quality = 1;
-uniform float sun_glare = 0.75; // disc and halo strength (setting)
+uniform float sun_glare = 1.0; // disc and halo strength (setting)
+uniform int sun_style = 0;     // 0 classic (build 11), 1 natural (colour, size and glow change with the sun's height)
 // xy: world position of the camera plus the wind drift, wrapped to the cloud period (m); z: coverage 0..1;
 // w: storm 0..1 (rain: grey, darker sky and clouds).
 global uniform vec4 cloud_state;
@@ -63,7 +64,13 @@ vec3 sky_colour(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu) {
 	float low = 1.0 - smoothstep(0.05, 0.45, sun_dir.y);
 	col = mix(col, col * vec3(1.25, 0.95, 0.75), low * smoothstep(0.35, 0.0, up) * (0.5 + 0.5 * max(mu, 0.0)));
 	col *= day;
-	col += (sun_col * pow(max(mu, 0.0), 10.0) * 0.18 + sun_col * pow(max(mu, 0.0), 300.0) * 0.6) * sun_glare;
+	if (sun_style == 0) col += (sun_col * pow(max(mu, 0.0), 10.0) * 0.18 + sun_col * pow(max(mu, 0.0), 300.0) * 0.6) * sun_glare;
+	else {
+		// Natural: a tight white halo high up; near the horizon a wide, warm glow (sunrise, sunset).
+		float lowsun = 1.0 - smoothstep(0.0, 0.35, sun_dir.y);
+		vec3 warm = mix(vec3(1.0, 0.95, 0.88), vec3(1.0, 0.55, 0.25), lowsun);
+		col += sun_col * warm * (pow(max(mu, 0.0), mix(400.0, 60.0, lowsun)) * 0.5 + pow(max(mu, 0.0), mix(18.0, 5.0, lowsun)) * mix(0.1, 0.32, lowsun)) * sun_glare;
+	}
 	col = mix(col, ground_color * day, smoothstep(0.0, -0.06, up));
 	return col;
 }
@@ -150,6 +157,13 @@ void sky() {
 	} else {
 		vec3 col = sky_colour(dir, sun_dir, sun_col, day, mu);
 		vec3 disc = sun_col * smoothstep(0.99955, 0.9998, mu) * 6.0 * sun_glare;
+		if (sun_style == 1) {
+			// Softer at noon (less blinding), larger and orange-red as it sinks toward the horizon.
+			float lowsun = 1.0 - smoothstep(0.0, 0.4, sun_dir.y);
+			float r0 = mix(0.99962, 0.99915, lowsun);
+			vec3 tint = mix(vec3(1.0, 0.98, 0.92), vec3(1.0, 0.45, 0.18), lowsun * lowsun);
+			disc = sun_col * tint * smoothstep(r0, r0 + 0.0002, mu) * mix(3.2, 0.95, lowsun) * sun_glare;
+		}
 		bool layered = quality >= 1 && !AT_CUBEMAP_PASS;
 		if (up > 0.0) {
 			// High cirrus (7 km): thin, bright, slow, on its own heading.

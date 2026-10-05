@@ -19,6 +19,7 @@ func _initialize() -> void:
 	tex.width = 256; tex.height = 256; tex.seamless = true; tex.noise = noise; tex.generate_mipmaps = true
 	mat.set_shader_parameter("cloud_tex", tex)
 	mat.set_shader_parameter("quality", int(args.get("quality", "1")))
+	mat.set_shader_parameter("sun_style", int(args.get("sun", "0")))
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = Sky.new()
