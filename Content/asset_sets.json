@@ -10,7 +10,7 @@
   { "Id": "PalmTrees", "Kind": "trees", "Items": { "Palm_A": 1, "Palm_B": 1 } },
   { "Id": "DesertPlants", "Kind": "trees", "Items": { "Cactus_A": 1, "Cactus_B": 1.5, "Shrub_Dry": 2.5 } },
   { "Id": "ScrubPlants", "Kind": "trees", "Items": { "Shrub_Dry": 3, "Dead_B": 0.4, "Sparse_A": 0.3 } },
-  { "Id": "BayouTrees", "Kind": "trees", "Items": { "Bald_Cypress_A": 2, "Bald_Cypress_B": 2, "Cypress_A": 0.5, "Willow_A": 0.3 } },
+  { "Id": "BayouTrees", "Kind": "trees", "Items": { "Bald_Cypress_A": 2, "Bald_Cypress_B": 2, "Willow_A": 0.25 } },
   { "Id": "FenTrees", "Kind": "trees", "Items": { "Spruce_B": 1, "Sparse_A": 1.2, "Pine_C": 0.5, "Birch_Green_C": 0.6 } },
   { "Id": "MarshSnags", "Kind": "trees", "Items": { "Dead_B": 2, "Dead_A": 0.7 } },
   { "Id": "AlpineTrees", "Kind": "trees", "Items": { "Pine_A": 1, "Pine_B": 1, "Spruce_B": 1, "Sparse_A": 0.3 } },
