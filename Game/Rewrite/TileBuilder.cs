@@ -57,6 +57,8 @@ public sealed class TileData
     public List<TreeInstance> Trees { get; init; } = new();
     public List<Transform3D> Grass { get; set; } = new();
     public List<Transform3D> Reeds { get; set; } = new();
+    /// <summary>Per terrain vertex: biome water tint (packed rgb, strength), copied onto the water sheet.</summary>
+    public Vector2[]? WaterTint { get; set; }
     /// <summary>Cliff dressing cards: kind 0 hanging grass, 1 roots (GroundCover.CliffDressing).</summary>
     public List<RockInstance> Drapes { get; set; } = new();
     public List<RockInstance> Rocks { get; set; } = new();
@@ -136,6 +138,7 @@ public static class TileBuilder
         var biome2 = new float[vertices.Length * 4];
         var biome3 = new float[vertices.Length * 4];
         var props = new float[Side * Side * 2]; // biome rock and bush/log multipliers (ground cover only, no skirts)
+        var waterTint = new Vector2[Side * Side]; // biome water tint, packed rgb (x) and strength (y), for the water sheet
         var climate = sampler.Plan.Climate;
         var biomes = sampler.Plan.Biomes;
         for (int j = 0; j < Side; j++)
@@ -171,6 +174,7 @@ public static class TileBuilder
                 Put(biome3, k, Mix(A.Rock, B.Rock, sa, sb, 1), A.Def.Water.Wetness * share + B.Def.Water.Wetness * (1 - share));
                 props[k * 2] = (float)(A.Def.Props.Rocks * share + B.Def.Props.Rocks * (1 - share));
                 props[k * 2 + 1] = (float)(A.Def.Props.Logs * share + B.Def.Props.Logs * (1 - share));
+                waterTint[k] = WaterTint(A, B, share);
             }
         // Skirts: a copy of each edge pushed down, so a coarser neighbour's edge never shows a gap.
         float drop = (float)(2 + spacing * 1.5);
@@ -217,7 +221,7 @@ public static class TileBuilder
         var data = new TileData
         {
             Key = key, Side = Side, Vertices = vertices, Normals = normals, Colors = colors, Uv = uv, Uv2 = uv2, Indices = indices.ToArray(),
-            Biome0 = biome0, Biome1 = biome1, Biome2 = biome2, Biome3 = biome3,
+            Biome0 = biome0, Biome1 = biome1, Biome2 = biome2, Biome3 = biome3, WaterTint = waterTint,
             CollisionFaces = key.Level == 0 ? Faces(vertices) : null,
             // Full trees on the nearest levels; beyond, tree cards, then the terrain shader's forest tint.
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
@@ -257,6 +261,20 @@ public static class TileBuilder
     /// neighbouring level, so the plane runs under the bank and the visible shoreline is the exact terrain
     /// intersection. Colour: R = depth / 20 m, G = kind (0 sea, .5 lake, 1 river).
     /// </summary>
+    /// <summary>The blended biome water tint at a vertex: rgb packed into one float (exact up to 2^24), strength 0..1.</summary>
+    private static Vector2 WaterTint(ResolvedBiome a, ResolvedBiome b, double share)
+    {
+        (float R, float G, float B, float S) Of(ResolvedBiome r) => r.Def.Water.WaterTint is { } hex ? (BiomeRegistry.Hex(hex).Item1, BiomeRegistry.Hex(hex).Item2, BiomeRegistry.Hex(hex).Item3, (float)r.Def.Water.WaterTintStrength) : (1f, 1f, 1f, 0f);
+        var (ar, ag, ab, asg) = Of(a); var (br, bg, bb, bs) = Of(b);
+        float sa = (float)share, sb = 1 - sa, strength = asg * sa + bs * sb;
+        if (strength <= 0) return Vector2.Zero;
+        // Colour from the tinted biomes only (an untinted neighbour fades the strength, not the colour).
+        float wa = asg * sa, wb = bs * sb, w = wa + wb;
+        float r = (ar * wa + br * wb) / w, g = (ag * wa + bg * wb) / w, bl = (ab * wa + bb * wb) / w;
+        int packed = (int)(r * 255) << 16 | (int)(g * 255) << 8 | (int)(bl * 255);
+        return new Vector2(packed, strength);
+    }
+
     private static void BuildWater(TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing, int n, bool simulated)
     {
         var wet = new bool[n * n];

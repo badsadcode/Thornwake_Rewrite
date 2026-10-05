@@ -136,6 +136,8 @@ public sealed record BiomeWater
     public double MarshAffinity { get; init; }
     /// <summary>Water tint (hex) for rivers and lakes in this biome; null = default.</summary>
     public string? WaterTint { get; init; }
+    /// <summary>How strongly <see cref="WaterTint"/> colours the water (0 … 1).</summary>
+    public double WaterTintStrength { get; init; } = .65;
 }
 
 public sealed record BiomeAtmosphere

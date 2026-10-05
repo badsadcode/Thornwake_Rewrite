@@ -228,6 +228,7 @@ public partial class Atmosphere : Node3D
         var sunDir = GameClock.Direction(Math.Max(elevation, -4), sky.SunAzimuth);
         Sun.Basis = Basis.LookingAt(-sunDir, Mathf.Abs(sunDir.Y) > .99f ? Vector3.Forward : Vector3.Up);
         _daylightHours = (float)sky.DaylightHours;
+        _sunElevation = elevation;
         UpdateNight(sky, elevation);
         _storm = Mathf.MoveToward(_storm, Raining ? 1 : 0, (float)delta / 8); // ~8 s to cloud over or clear
         OceanTime += delta;
@@ -324,7 +325,7 @@ public partial class Atmosphere : Node3D
     private static double Wrap(double v) => v - Math.Floor(v / CloudPeriod) * CloudPeriod;
     // ---- night: moonlight, stars (sky shader globals)
     private DirectionalLight3D? _moon;
-    private float _night, _daylightHours = 14;
+    private float _night, _daylightHours = 14, _sunElevation = 30;
 
     private void UpdateNight(SkyState sky, float sunElevation)
     {
@@ -437,7 +438,10 @@ public partial class Atmosphere : Node3D
         _mood = _mood.Lerp(target, 1 - Mathf.Exp(-(float)delta / 3)); // ~3 s to settle when crossing into a biome
         RenderingServer.GlobalShaderParameterSet("sky_mood", _mood);
         var tint = new Color(_mood.X, _mood.Y, _mood.Z);
-        Environment.FogLightColor = new Color("aebfc2") * tint;
+        // Fog takes the light of the hour: grey-blue by day, warm at a low sun, dim moonlit blue at night.
+        float light = Mathf.Clamp(_daylight * 1.1f, 0, 1);
+        var fog = new Color("aebfc2").Lerp(new Color("e0b090"), (1 - Mathf.Clamp(_sunElevation / 12, 0, 1)) * (1 - _night) * .5f);
+        Environment.FogLightColor = (fog * tint * light).Lerp(new Color("0b0f18"), _night * .9f);
         Environment.FogDensity *= 1 + 2.5f * _mood.W;
         Environment.FogEnabled |= _mood.W > .01f;
     }

@@ -40,6 +40,7 @@ varying float body;
 varying vec3 world_position;
 varying vec2 current; // river current (world xz, m/s)
 varying float plume;
+varying vec4 biome_tint; // biome water colour (rgb) and strength (a), from UV2
 varying vec3 wave_normal;
 varying float crest;
 varying float fold;     // surface compression at sharp crests (Gerstner Jacobian): where foam forms
@@ -94,6 +95,11 @@ void vertex() {
 	vertex_depth = COLOR.r * 20.0;
 	body = COLOR.g;
 	plume = COLOR.b;
+	{
+		float packed = UV2.x;
+		biome_tint = vec4(floor(packed / 65536.0), mod(floor(packed / 256.0), 256.0), mod(packed, 256.0), 0.0) / 255.0;
+		biome_tint.a = UV2.y;
+	}
 	current = UV;
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	float sea = 1.0 - step(0.25, body), lake = step(0.25, body) * (1.0 - step(0.75, body));
@@ -184,6 +190,9 @@ void fragment() {
 	// Near a mouth the river's greener, siltier water spreads into the sea or lake.
 	vec3 scatter = mix(sea * sea_scatter + lake * lake_scatter + river * river_scatter, river_scatter * vec3(1.15, 1.1, 0.9), plume * 0.85);
 	transmittance = mix(transmittance, exp(-absorption * path * 2.2), plume * 0.6);
+	// Biome water (swamps: brown-green and murky).
+	scatter = mix(scatter, biome_tint.rgb * 0.35, biome_tint.a);
+	transmittance = mix(transmittance, transmittance * transmittance * biome_tint.rgb, biome_tint.a * 0.8);
 	float murk = 1.0 - dot(transmittance, vec3(0.333));
 
 	// Screen-space reflection, sky as fallback.
