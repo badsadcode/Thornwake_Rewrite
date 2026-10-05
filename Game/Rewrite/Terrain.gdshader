@@ -44,16 +44,15 @@ void fragment() {
 	vec3 c = mix(grass, woods, smoothstep(0.15, 0.75, forest) * 0.85);
 	c = mix(c, vec3(0.470, 0.460, 0.350), smoothstep(1300.0, 2300.0, h) * 0.65 * min(1.0, biome_b.a)); // alpine meadow (where plants grow)
 	vec3 rock = mix(biome_d.rgb, biome_d.rgb * vec3(1.2, 1.18, 1.2), n2);                   // valley 77766a (biome rock)
-	// Steep faces: the ground UVs are top-down, so a vertical face would stretch them into streaks. Triplanar from the
-	// two side views (pattern sampled in each, colours blended by the face direction): strata, ledges, cracks.
-	float face = smoothstep(0.5, 0.78, slope);
-	if (face > 0.0) {
-		vec2 wn = pow(abs(world_normal.xz) + 1e-3, vec2(4.0));
-		wn /= wn.x + wn.y;
-		// Bitmap rock: 128 px over 8 m (crisp pixels like the trees), tinted with the biome's rock colour.
+	// All bare rock (cliffs, crags, rocky ground) uses the bitmap rock texture, projected from the two sides and from
+	// above by the surface direction (top-down UVs alone would stretch into streaks on steep faces).
+	{
+		vec3 wn = pow(abs(world_normal), vec3(4.0));
+		wn /= wn.x + wn.y + wn.z;
 		vec3 tx = texture(cliff_tex, vec2(p.y, -h) / 8.0).rgb, tz = texture(cliff_tex, vec2(p.x + 3.7, -h) / 8.0).rgb;
-		vec3 side = (tx * wn.x + tz * wn.y) / 0.55;
-		rock = mix(rock, biome_d.rgb * side * (0.9 + 0.2 * vnoise(vec2(p.x + p.y, h) * 0.05)), face);
+		vec3 ty = texture(cliff_tex, p / 8.0).rgb;
+		vec3 side = (tx * wn.x + tz * wn.z + ty * wn.y) / 0.55;
+		rock = biome_d.rgb * side * (0.9 + 0.2 * vnoise(vec2(p.x + p.y, h) * 0.05));
 	}
 	// Bare rock: on steep slopes everywhere, and on gentler ground in rocky biomes (patchy).
 	float exposure = biome_c.a * (0.25 + 0.75 * smoothstep(0.35, 0.75, n2 + (n1 - 0.5) * 0.4));

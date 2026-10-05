@@ -269,7 +269,8 @@ public partial class WorldStreamer : Node3D
         foreach (var kind in data.Rocks.GroupBy(r => r.Kind))
             root.AddChild(Multi(RockMeshes.Get(kind.Key), kind.Select(r => r.Transform).ToArray(),
                 kind.Key == GroundCover.Stone ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,
-                kind.Key == GroundCover.Stone ? 90 * GameSettings.ScatterDistance.F : kind.Key == GroundCover.Rock ? 400 * GameSettings.ScatterDistance.F : 0));
+                kind.Key == GroundCover.Stone ? 90 * GameSettings.ScatterDistance.F : kind.Key == GroundCover.Rock ? 400 * GameSettings.ScatterDistance.F : 0,
+                kind.Select(r => r.Tint.A > 0 ? r.Tint : Colors.White).ToArray()));
         foreach (var kind in data.Props.GroupBy(p => p.Kind))
         {
             var transforms = kind.Select(p => p.Transform).ToArray();
@@ -291,15 +292,16 @@ public partial class WorldStreamer : Node3D
         return root;
     }
 
-    private static MultiMeshInstance3D Multi(Mesh mesh, Transform3D[] transforms, GeometryInstance3D.ShadowCastingSetting shadows, float visibleTo)
+    private static MultiMeshInstance3D Multi(Mesh mesh, Transform3D[] transforms, GeometryInstance3D.ShadowCastingSetting shadows, float visibleTo, Color[]? colours = null)
     {
         // Visibility ranges are measured from the node's origin, and tile roots sit at sea level (possibly hundreds of
         // metres below the ground): place the node at the centre of its instances instead.
         var centre = Vector3.Zero;
         foreach (var t in transforms) centre += t.Origin;
         if (transforms.Length > 0) centre /= transforms.Length;
-        var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = mesh, InstanceCount = transforms.Length };
+        var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = colours != null, Mesh = mesh, InstanceCount = transforms.Length };
         for (int i = 0; i < transforms.Length; i++) multi.SetInstanceTransform(i, transforms[i].Translated(-centre));
+        if (colours != null) for (int i = 0; i < transforms.Length; i++) multi.SetInstanceColor(i, colours[i]);
         // Render layer 2: objects (tool previews project onto the terrain only, layer 1).
         var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows, Position = centre, Layers = 2 };
         if (visibleTo > 0) { node.VisibilityRangeEnd = visibleTo; node.VisibilityRangeEndMargin = 15; node.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self; }

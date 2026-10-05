@@ -10,12 +10,20 @@ namespace Thornwake.Rewrite;
 public static class RockMeshes
 {
     private static ArrayMesh[]? _meshes;
+    private static ShaderMaterial? _material;
+
+    private static ShaderMaterial CreateMaterial()
+    {
+        var m = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Rock.gdshader") };
+        m.SetShaderParameter("rock_tex", GD.Load<Texture2D>("res://Assets/Vegetation/Placeholder/T_Cliff_Rock_128.png"));
+        return m;
+    }
 
     /// <summary>Free the cached meshes (scene exit): static Godot resources outliving the engine crash on shutdown.</summary>
     public static void Release()
     {
         if (_meshes != null) foreach (var mesh in _meshes) mesh.Dispose();
-        _meshes = null;
+        _meshes = null; _material = null;
     }
 
     public static ArrayMesh Get(int kind)
@@ -82,7 +90,8 @@ public static class RockMeshes
             st.SetNormal(normal); st.AddVertex(v[a]); st.SetNormal(normal); st.AddVertex(v[c]); st.SetNormal(normal); st.AddVertex(v[b]);
         }
         var mesh = st.Commit();
-        mesh.SurfaceSetMaterial(0, new StandardMaterial3D { VertexColorUseAsAlbedo = true, VertexColorIsSrgb = true, Roughness = .92f });
+        _material ??= CreateMaterial();
+        mesh.SurfaceSetMaterial(0, _material);
         return mesh;
     }
 }

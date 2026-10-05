@@ -10,7 +10,8 @@ namespace Thornwake.Rewrite;
 public readonly record struct FarTree(Vector3 Position, float Height, Color Crown, bool Conifer);
 
 /// <summary>Ground details: rock kinds index into <see cref="GroundCover.RockKinds"/>.</summary>
-public readonly record struct RockInstance(int Kind, Transform3D Transform);
+/// <summary>A rock or prop instance; <paramref name="Tint"/> (rocks): the biome rock colour relative to the default stone (alpha 0 = none).</summary>
+public readonly record struct RockInstance(int Kind, Transform3D Transform, Color Tint = default);
 
 /// <summary>
 /// Cheap, deterministic scatter that reuses a tile's own sample grid (heights, normals, forest cover, water) instead
@@ -38,6 +39,16 @@ public static class GroundCover
 
         /// <summary>Per vertex biome data (rgb rock colour, a = wetness), as on the terrain mesh.</summary>
         public readonly float[]? Biome3;
+
+        /// <summary>Biome rock colour at tile-local (x, z) relative to the default stone (multiplier for rock meshes).</summary>
+        public Color RockTint(double x, double z)
+        {
+            if (Biome3 == null) return Colors.White;
+            int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
+            int k = (j * Side + i) * 4;
+            // Default biome rock 77766a ≈ (0.47, 0.46, 0.42); vertex stone colour carries that already.
+            return new Color(Biome3[k] / .467f, Biome3[k + 1] / .463f, Biome3[k + 2] / .416f, 1);
+        }
 
         /// <summary>Biome wetness (0 … 1; swamps ~0.8) at tile-local (x, z).</summary>
         public float Wetness(double x, double z)
@@ -237,7 +248,7 @@ public static class GroundCover
             // Random tilt, partly buried so rocks sit in the ground rather than on it.
             var basis = new Basis(Vector3.Up, Unit(h, 7) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 8) - .5f) * .6f);
             basis = basis.Scaled(new Vector3(size * (.8f + .5f * Unit(h, 9)), size * (.55f + .5f * Unit(h, 10)), size * (.8f + .5f * Unit(h, 11))));
-            result.Add(new RockInstance(kind, new Transform3D(basis, new Vector3((float)x, height - size * sink, (float)z))));
+            result.Add(new RockInstance(kind, new Transform3D(basis, new Vector3((float)x, height - size * sink, (float)z)), g.RockTint(x, z)));
         }
         if (key.Level == 0)
             Cells(key, 3.5, seed ^ 0x570EUL, (x, z, h) =>
@@ -271,7 +282,9 @@ public static class GroundCover
                 Place(Boulder, ox, oz, hh, 1f, 2.5f, .4f);
             }
         });
-        // Rock walls on cliff faces: big flat-faced slabs set into the face, hiding the stretched ground.
+        // Rock walls on cliff faces: big flat-faced slabs set into the face, hiding the stretched ground (nearest tiles
+        // only: coarser tiles' ground is too far from the real face to seat them).
+        if (key.Level == 0)
         Cells(key, 6.5, seed ^ 0xC1FFUL, (x, z, h) =>
         {
             if (!g.At(x, z, out float height, out float up, out _, out bool wet) || up > .55f || height - sea < -1) return;
@@ -287,7 +300,7 @@ public static class GroundCover
             var tilt = new Basis(along, (Unit(h, 5) - .5f) * .3f) * new Basis(outward, (Unit(h, 6) - .5f) * .25f);
             var basis = tilt * new Basis(along * wide, Vector3.Up * tall, outward * thick);
             var at = new Vector3((float)x, height - tall * .15f, (float)z) - outward * thick * .35f;
-            result.Add(new RockInstance(CliffSlab, new Transform3D(basis, at)));
+            result.Add(new RockInstance(CliffSlab, new Transform3D(basis, at), g.RockTint(x, z)));
         });
         // Huge boulders, rare, on fairly open ground.
         if (key.Level <= 2)
@@ -298,7 +311,7 @@ public static class GroundCover
                 float size = 5 + 7 * Unit(h, 2) * Unit(h, 3);
                 var basis = new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 5) - .5f) * .3f);
                 basis = basis.Scaled(new Vector3(size * (.9f + .4f * Unit(h, 6)), size * (.6f + .35f * Unit(h, 7)), size * (.9f + .4f * Unit(h, 8))));
-                result.Add(new RockInstance(BigBoulder, new Transform3D(basis, new Vector3((float)x, height - size * .25f, (float)z))));
+                result.Add(new RockInstance(BigBoulder, new Transform3D(basis, new Vector3((float)x, height - size * .25f, (float)z)), g.RockTint(x, z)));
             });
         // Rocky shores: in patches along the sea and lakes, blocky rocks at and just above the waterline.
         if (key.Level <= 1)
@@ -309,7 +322,7 @@ public static class GroundCover
                 float size = .8f + 2.6f * Unit(h, 2) * Unit(h, 2);
                 var basis = new Basis(Vector3.Up, Unit(h, 3) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 4) - .5f) * .5f);
                 basis = basis.Scaled(new Vector3(size * (.8f + .5f * Unit(h, 5)), size * (.5f + .4f * Unit(h, 6)), size * (.8f + .5f * Unit(h, 7))));
-                result.Add(new RockInstance(BigBoulder, new Transform3D(basis, new Vector3((float)x, height - size * .3f, (float)z))));
+                result.Add(new RockInstance(BigBoulder, new Transform3D(basis, new Vector3((float)x, height - size * .3f, (float)z)), g.RockTint(x, z)));
             });
         // Scree at the foot of cliffs: flat ground with a face rising a few metres right next to it.
         if (key.Level <= 1)
