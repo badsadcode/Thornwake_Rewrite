@@ -49,8 +49,10 @@ void fragment() {
 	{
 		vec3 wn = pow(abs(world_normal), vec3(4.0));
 		wn /= wn.x + wn.y + wn.z;
-		vec3 tx = texture(cliff_tex, vec2(p.y, -h) / 8.0).rgb, tz = texture(cliff_tex, vec2(p.x + 3.7, -h) / 8.0).rgb;
-		vec3 ty = texture(cliff_tex, p / 8.0).rgb;
+		// Strata wander up and down along the face (no straight bands repeating every tile).
+		float hs = h + (vnoise(vec2(p.x + p.y, 0.0) * 0.012) - 0.5) * 9.0 + (vnoise(vec2(p.x - p.y, 3.0) * 0.05) - 0.5) * 2.5;
+		vec3 tx = texture(cliff_tex, vec2(p.y, -hs) / 10.0).rgb, tz = texture(cliff_tex, vec2(p.x + 3.7, -hs) / 10.0).rgb;
+		vec3 ty = texture(cliff_tex, p / 10.0).rgb;
 		vec3 side = (tx * wn.x + tz * wn.z + ty * wn.y) / 0.55;
 		rock = biome_d.rgb * side * (0.9 + 0.2 * vnoise(vec2(p.x + p.y, h) * 0.05));
 	}

@@ -21,6 +21,7 @@ void fragment() {
 	vec3 ty = texture(rock_tex, mod(world_pos.xz, wrap) / 4.0).rgb;
 	vec3 tz = texture(rock_tex, mod(world_pos.xy, wrap) / vec2(4.0, -4.0)).rgb;
 	vec3 t = (tx * w.x + ty * w.y + tz * w.z) / 0.55;
-	ALBEDO = COLOR.rgb * t;
+	// Colours are sRGB like the terrain palette (which converts at the end too).
+	ALBEDO = pow(clamp(COLOR.rgb * t, 0.0, 1.0), vec3(2.2));
 	ROUGHNESS = 0.9;
 }
