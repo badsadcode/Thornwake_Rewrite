@@ -628,7 +628,7 @@ public partial class WorldLab : Node3D
         var wind = _atmosphere.Wind;
         where += $"\n{_clock.Describe()} · daylight {dayHours:0.0} h → {GameSettings.DayLength.Value * dayShare:0} real min day, " +
                  $"{GameSettings.DayLength.Value * (1 - dayShare):0} min night{(GameSettings.TimePaused.On ? " (time stopped)" : "")} · wind {wind.Speed:0} m/s from {wind.Compass()}";
-        _hud.Text = $"{_status}\n" +
+        _hud.Text = $"Alden Wayfarer · {_status}\n" +
             $"Position {PlayerX:0} , {PlayerZ:0}   ground {t.Height:0.0} m   {where}\n" +
             $"{mode}   FPS {Engine.GetFramesPerSecond():0}   tiles {_streamer.Resident} (+{_streamer.Missing} queued)   " +
             $"terrain triangles {_streamer.Triangles / 1000}k   tile build {_streamer.LastBuildMs:0.0} ms, commit {_streamer.LastCommitMs:0.0} ms";
@@ -703,7 +703,8 @@ public partial class WorldLab : Node3D
 
     private void BuildPlayer()
     {
-        _player = new CharacterBody3D { Name = "Player", CollisionLayer = 2, CollisionMask = 1, FloorSnapLength = .6f, FloorMaxAngle = Mathf.DegToRad(50) };
+        _player = new CharacterBody3D { Name = "AldenWayfarer", // the first explorer (docs/HALL_OF_FAME.md)
+             CollisionLayer = 2, CollisionMask = 1, FloorSnapLength = .6f, FloorMaxAngle = Mathf.DegToRad(50) };
         _player.AddChild(new CollisionShape3D { Position = Vector3.Up * .9f, Shape = new CapsuleShape3D { Radius = .3f, Height = 1.8f } });
         _avatar = Visuals.Person(new Color("526b61"));
         _player.AddChild(_avatar);

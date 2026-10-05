@@ -215,6 +215,41 @@ internal static class PlantTextures
             t.Save(Path.Combine(dir, "T_Vine_32.png"));
         }
 
+        // Cliff rock (128 px, tiles both ways; the terrain shader tints it with the biome's rock colour): strata of
+        // uneven thickness that wander, pinch out and are offset by small faults; ledges lit on top with a dark seam
+        // under them; blocky fractures and pits. Neutral grey around 0.6 so the tint sets the colour.
+        {
+            int W = 128;
+            var stone = new[] { (68, 66, 64), (92, 89, 86), (116, 113, 108), (140, 137, 131), (163, 160, 153), (186, 183, 176) };
+            var t = new Tex(W, W, false);
+            for (int y = 0; y < W; y++)
+                for (int x = 0; x < W; x++)
+                {
+                    double u = x / (double)W, v = y / (double)W;
+                    // Faults: every column block shifts the layers a little.
+                    int block = (int)Math.Floor(u * 5 + Fbm(u, v, 2, 4, 141) * 1.5);
+                    double shift = (Hash(((block % 5) + 5) % 5, 0, 142) - .5) * .06;
+                    // Layer coordinate: warped, with thickness varying along the face (12 layers per tile on average).
+                    double warp = (Fbm(u, v, 3, 2, 143) - .5) * .35 + (Fbm(u, v, 8, 4, 144) - .5) * .06;
+                    double layerCoord = (v + warp + shift) * 12;
+                    int layer = (int)Math.Floor(layerCoord);
+                    double f = layerCoord - layer;
+                    double thick = .35 + .65 * Hash(((layer % 12) + 12) % 12, 1, 145); // lighter/darker beds
+                    double tone = .3 + .45 * thick + .25 * (Fbm(u, v, 16, 8, 146) - .5);
+                    if (f < .12) tone += .22;                 // lit ledge top
+                    if (f > .84) tone -= .35 * (f - .84) / .16; // shadowed seam under the ledge
+                    // Some beds pinch out: blend into the layer above.
+                    if (Fbm(u, v, 4, 3, 147 + ((layer % 12) + 12) % 12) < .3 && f > .5) tone = tone * .5 + .3;
+                    // Blocky vertical fractures within each bed, and pits.
+                    double cx = u * 10 + Hash(((layer % 12) + 12) % 12, 2, 148) * 10;
+                    double edge = Math.Abs(cx - Math.Round(cx));
+                    if (edge < .05 && Hash(((layer % 12) + 12) % 12, (int)Math.Round(cx) % 10, 149) < .7) tone -= .3;
+                    if (Hash(x, y, 150) < .02) tone -= .2;
+                    t.Set(x, y, Ramp(stone, tone, x, y));
+                }
+            t.Save(Path.Combine(dir, "T_Cliff_Rock_128.png"));
+        }
+
         // Grass hanging over a cliff lip (v = 0 at the lip): a dense tuft band, then strands of different lengths.
         {
             var t = new Tex(64, 64, true);
