@@ -58,7 +58,7 @@ milestone M6), caves.
 * **Forests**: clearer forest and meadow patches; distant tree cards as dense as the real trees they replace.
 * Less memory for big worlds (Vast world ~200 MB instead of ~310 MB).
 
-## New since build 4 (in the next build)
+## New in build 5
 * **Digging**: hold **V** to dig and **B** to raise the ground where you look. Water follows: dig a channel from a
   pond and it drains into it. (Edits are not saved yet.)
 * **Banks**: reed clumps along rivers and lakes, a darker damp strip just above the waterline.
