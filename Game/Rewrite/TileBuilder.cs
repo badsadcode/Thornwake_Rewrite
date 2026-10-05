@@ -57,6 +57,8 @@ public sealed class TileData
     public List<TreeInstance> Trees { get; init; } = new();
     public List<Transform3D> Grass { get; set; } = new();
     public List<Transform3D> Reeds { get; set; } = new();
+    /// <summary>Cliff dressing cards: kind 0 hanging grass, 1 roots (GroundCover.CliffDressing).</summary>
+    public List<RockInstance> Drapes { get; set; } = new();
     public List<RockInstance> Rocks { get; set; } = new();
     public List<RockInstance> Props { get; set; } = new();
     public List<FarTree> FarTrees { get; set; } = new();
@@ -225,6 +227,7 @@ public static class TileBuilder
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
         if (key.Level == 0 && config.Grass > 0) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);
         if (key.Level == 0 && config.Grass > 0) data.Reeds = GroundCover.Reeds(key, grid, sea, coverSeed, config.Grass);
+        if (key.Level == 0 && config.Props > 0) data.Drapes = GroundCover.CliffDressing(key, grid, sea, coverSeed);
         if (key.Level <= 2 && config.Rocks > 0) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed, config.Rocks);
         if (key.Level <= 1 && config.Props > 0) data.Props = GroundCover.Props(key, grid, sea, coverSeed, config.Props);
         if (key.Level >= config.TreeLevels && key.Level <= config.FarTreeLevels)

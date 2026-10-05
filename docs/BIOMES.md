@@ -57,6 +57,10 @@ The best three biomes at each spot blend, so borders are soft and organic.
   [min, max]; `Grass` (0 bare … 1.5 lush).
 * `Props.Rocks`, `Props.Logs` — multipliers.
 
+### Biome skies (option "Biome skies" in Settings → Sky)
+`Atmosphere.SkyTint` (hex, multiplies the sky colours; near white, e.g. `f6e8cc` dusty desert) and
+`Atmosphere.Haze` (0 … 1: horizon veil and denser distance fog). Off by default (realistic sky).
+
 ### Defined now, used in later phases
 `Terrain` (Roughness, Flatten, Microterrain, Crags, Features such as `"dunes"`, `"spires"`, `"mesas"`,
 `"volcano"`), `Water` (Wetness, WaterTint …), `Atmosphere` (Fog, Mist, AmbientTint, Wind …), `Gameplay`

@@ -323,6 +323,27 @@ warped bilinear sampling → organic borders). The world generator still owns ge
 terrain yet (phases 3–4). Terrain version "Build 9" and older turn biomes off (one classic biome = the build 9
 look, terrain bit-exact). F4 tints biomes in game; the HUD names the biome; "Show biomes" on the world preview.
 
+## D43 — Placeholder plants, leaf translucency, layered and volumetric clouds, biome skies (2026-10-05)
+Tom (round 6): placeholder art for missing plants in pixel style (Valheim and the existing pack as reference);
+optional biome skies; cloud layers at different speeds as a setting, volumetric clouds to test later; subsurface
+scattering on canopies and plants, configurable.
+* Plants: no Blender in the cloud, so 10 species (2 palms, saguaro, barrel cacti, dead tree, snag, acacia, jungle
+  giant with buttresses and vines, swamp cypress with hanging moss, dry shrub) are built in code
+  (`PlaceholderPlants.cs`): low-poly tubes, lumpy crowns, folded fronds, cut-out cards; textures are generated
+  64 px pixel maps with 5-tone palettes and ordered dithering (`Tests/WorldGen --plant-textures`, PNGs in
+  `Assets/Vegetation/Placeholder`, replaceable). Fixed seeds per species; biomes reference them through asset sets
+  only, so real GLBs can replace them later without touching biome data. A test checks every tree-set name exists.
+* Translucency: Godot's BACKLIGHT (light transmitted to the far side of thin geometry) on the woodland canopy, the
+  placeholder foliage, grass and far tree cards, from one global `leaf_translucency` (setting 0–2, default 0.8).
+  The valley game shares Canopy.gdshader but never sets the global, so it stays 0 there (unchanged).
+* Clouds: setting Cloud quality — one layer (build 10), layered (default: cirrus at 7 km, slow, veered heading;
+  main deck at 1.6 km; ragged low clouds at 0.9 km, 1.9× faster), volumetric (experimental: the main deck
+  ray-marched as a 1.3–2.9 km slab, 40 steps + 4 light steps, Henyey-Greenstein silver lining, powder term,
+  quarter-resolution pass). Drift wraps where each layer's texture repeats exactly (integer texture scales after a
+  3-4-5 rotation), so no jumps; the main layer's detail scale 3.7 → 4 for the same reason.
+* Biome skies (option, default off = realistic): biomes set `Atmosphere.SkyTint` and `Haze`; the blend around the
+  player tints the sky, adds horizon haze and fog, easing over ~3 s; "subtle" applies half.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

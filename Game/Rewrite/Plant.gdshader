@@ -10,8 +10,12 @@ uniform vec4 tint : source_color = vec4(1.0);
 uniform float leaves = 0.0;  // 1: foliage (translucent)
 uniform float sway = 0.0;    // wind sway amplitude (m at weight 1)
 global uniform float leaf_translucency;
+global uniform vec4 sun_glow;
+global uniform vec3 sun_dir_world;
+varying vec3 world_position;
 
 void vertex() {
+	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	if (sway > 0.0) {
 		vec3 origin = MODEL_MATRIX[3].xyz;
 		float phase = origin.x * 0.31 + origin.z * 0.23;
@@ -31,4 +35,9 @@ void fragment() {
 	if (!FRONT_FACING) { NORMAL = -NORMAL; }
 	// Translucency: thin leaves pass a warm-green share of the light reaching their back side.
 	BACKLIGHT = pixel.rgb * vec3(0.9, 1.08, 0.55) * leaf_translucency * leaves;
+	{
+		vec3 view_ray = normalize(world_position - CAMERA_POSITION_WORLD);
+		float forward = pow(clamp(dot(view_ray, sun_dir_world), 0.0, 1.0), 5.0);
+		EMISSION += pixel.rgb * vec3(0.95, 1.1, 0.5) * sun_glow.rgb * forward * leaf_translucency * 0.32 * leaves;
+	}
 }

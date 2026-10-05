@@ -215,6 +215,48 @@ internal static class PlantTextures
             t.Save(Path.Combine(dir, "T_Vine_32.png"));
         }
 
+        // Grass hanging over a cliff lip (v = 0 at the lip): a dense tuft band, then strands of different lengths.
+        {
+            var t = new Tex(64, 64, true);
+            var green = new[] { (44, 62, 30), (62, 84, 38), (84, 106, 46), (108, 124, 56) };
+            for (int s = 0; s < 34; s++)
+            {
+                double x = s * 1.9 + Hash(s, 0, 101) * 1.5, len = 10 + 50 * Math.Pow(Hash(s, 1, 102), 1.6);
+                double curl = (Hash(s, 2, 103) - .5) * 6;
+                for (int y = 0; y < len && y < 64; y++)
+                {
+                    double k = y / len;
+                    int px = (int)Math.Round(x + curl * k * k + Math.Sin(y * .3 + s) * .6);
+                    var c = green[Math.Clamp((int)((1 - k) * 3.2 + Hash(px, y, 104) * 1.2 - .4), 0, 3)];
+                    t.Set(px, y, c); if (k < .35) t.Set(px + 1, y, green[1]);
+                }
+            }
+            for (int x = 0; x < 64; x++)
+                for (int y = 0; y < 5 + (int)(Hash(x, 0, 105) * 5); y++) t.Set(x, y, green[Math.Clamp((int)(Hash(x, y, 106) * 3) + (y < 2 ? 1 : 0), 0, 3)]);
+            t.Save(Path.Combine(dir, "T_Drape_Grass_64.png"));
+        }
+
+        // Roots poking out of a cliff edge (v = 0 at the top): a few thick roots wandering down, thinning, forking.
+        {
+            var t = new Tex(64, 64, true);
+            var root = new[] { (58, 44, 32), (82, 62, 44), (108, 84, 60) };
+            void Root(double x, double y, double dx, double width, int depth, int seed)
+            {
+                for (int s = 0; s < 60 && y < 63; s++)
+                {
+                    dx += (Hash(seed, s, 111) - .5) * .5; dx = Math.Clamp(dx, -.9, .9);
+                    x += dx; y += 1;
+                    int w = Math.Max(1, (int)Math.Round(width));
+                    for (int i = 0; i < w; i++) t.Set((int)Math.Round(x) + i, (int)y, root[i == 0 ? 2 : i == w - 1 ? 0 : 1]);
+                    width *= .975;
+                    if (depth < 2 && Hash(seed, s, 112) < .05) Root(x, y, dx + (Hash(seed, s, 113) < .5 ? -.7 : .7), width * .6, depth + 1, seed * 7 + s);
+                    if (width < .6 && Hash(seed, s, 114) < .08) return;
+                }
+            }
+            for (int r = 0; r < 6; r++) Root(6 + r * 10 + Hash(r, 0, 115) * 5, -1, (Hash(r, 1, 116) - .5) * .6, 3.2 + Hash(r, 2, 117) * 1.5, 0, r + 1);
+            t.Save(Path.Combine(dir, "T_Roots_64.png"));
+        }
+
         // Dry desert shrub: twiggy branches fanning up from the base, a few olive leaves at the ends.
         {
             var t = new Tex(64, 64, true);

@@ -72,6 +72,25 @@ if (mouths != null)
 string? plantTextures = args.FirstOrDefault(a => a.StartsWith("--plant-textures="))?[17..];
 if (plantTextures != null) { PlantTextures.Write(plantTextures); Console.WriteLine("plant textures written"); return 0; }
 
+// Cliff finder: --cliffs=<type>,<km>,<seed>,<x>,<z>,<radius> → spots where the ground drops ≥ 5 m within 3 m.
+string? cliffs = args.FirstOrDefault(a => a.StartsWith("--cliffs="))?[9..];
+if (cliffs != null)
+{
+    var v = cliffs.Split(',');
+    var recipe = WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == v[0]);
+    var sampler = new TerrainSampler(new WorldPlan(WorldManifest.Create(int.Parse(v[2]), recipe.Resolve(new WorldChoices { SizeKm = double.Parse(v[1]) }), worldId: CoreTests.FixedWorldId)));
+    double cx = v[3] == "c" ? sampler.Plan.Manifest.OriginX : double.Parse(v[3]), cz = v[4] == "c" ? sampler.Plan.Manifest.OriginZ : double.Parse(v[4]);
+    double r = double.Parse(v[5]), step = Math.Max(37, r / 300);
+    int found = 0;
+    for (double z = cz - r; z < cz + r && found < 12; z += step)
+        for (double x = cx - r; x < cx + r && found < 12; x += step)
+        {
+            double h = sampler.Height(x, z), lo = Math.Min(Math.Min(sampler.Height(x + 3, z), sampler.Height(x - 3, z)), Math.Min(sampler.Height(x, z + 3), sampler.Height(x, z - 3)));
+            if (h - lo > 4 && h > sampler.Plan.Profile.SeaLevel + 3 && h < sampler.Plan.Profile.SeaLevel + 40) { Console.WriteLine($"cliff at {x:0},{z:0}: top {h:0.0} m, drop {h - lo:0.0} m"); found++; }
+        }
+    return 0;
+}
+
 // Biome probe: --biome-probe=<type id>,<km>,<seed>,<x>,<z> → geography, climate and the blend at that point.
 string? biomeProbe = args.FirstOrDefault(a => a.StartsWith("--biome-probe="))?[14..];
 if (biomeProbe != null)

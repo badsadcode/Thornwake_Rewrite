@@ -8,6 +8,8 @@ uniform vec2 viewport_pixels = vec2(1280.0, 800.0);
 uniform float clear_radius = 52.0;
 // Leaf translucency (rewrite world setting; 0 in the valley game, which never sets it).
 global uniform float leaf_translucency;
+global uniform vec4 sun_glow;
+global uniform vec3 sun_dir_world;
 varying vec3 world_position;
 void vertex() {
     world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -20,6 +22,11 @@ void fragment() {
     ALPHA_SCISSOR_THRESHOLD = 0.5;
     if (!FRONT_FACING) { NORMAL = -NORMAL; }
     BACKLIGHT = pixel.rgb * vec3(0.9, 1.08, 0.55) * leaf_translucency;
+    {
+        vec3 view_ray = normalize(world_position - CAMERA_POSITION_WORLD);
+        float forward = pow(clamp(dot(view_ray, sun_dir_world), 0.0, 1.0), 5.0);
+        EMISSION += pixel.rgb * vec3(0.95, 1.1, 0.5) * sun_glow.rgb * forward * leaf_translucency * 0.32 * 1.0;
+    }
     vec3 toward_player = player_world - CAMERA_POSITION_WORLD;
     float player_distance = length(toward_player);
     float along_view = dot(world_position - CAMERA_POSITION_WORLD, normalize(toward_player));

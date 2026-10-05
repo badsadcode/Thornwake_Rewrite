@@ -307,6 +307,14 @@ public partial class WorldLab : Node3D
         _overlay.Text = "Loading terrain…";
     }
 
+    /// <summary>A biome's sky mood: tint (rgb) and haze (a) — neutral when the biome sets none.</summary>
+    private static Vector4 Mood(ResolvedBiome b)
+    {
+        var a = b.Def.Atmosphere;
+        var (r, g, bl) = a.SkyTint is { } hex ? BiomeRegistry.Hex(hex) : (1f, 1f, 1f);
+        return new Vector4(r, g, bl, (float)a.Haze);
+    }
+
     private void Gallery()
     {
         var parent = _player.GetParent();
@@ -575,6 +583,10 @@ public partial class WorldLab : Node3D
         var (temperature, rain) = _sampler.Plan.Climate.At(PlayerX, PlayerZ, t.Height - _sampler.Plan.Profile.SeaLevel);
         where += $"\nBiome {biomes.Pool[ba].Def.Name}" + (bb != ba && share < .95 ? $" ({share * 100:0} %, → {biomes.Pool[bb].Def.Name})" : "") +
             $" · {temperature:0} °C, {rain:0} mm/yr";
+        _atmosphere.SetBiomeMood(Mood(biomes.Pool[ba]) * (float)share + Mood(biomes.Pool[bb]) * (float)(1 - share));
+        static float MistOf(ResolvedBiome b) => (float)Math.Clamp(b.Def.Atmosphere.Mist + .5 * b.Def.Atmosphere.Fog, 0, 1);
+        float nearWater = t.Water != WaterKind.None ? 1 : _sampler.Plan.Hydrology.NearestRiver(PlayerX, PlayerZ, 300, out var near) ? 1 - (float)(near.Distance / 300) : 0;
+        _atmosphere.SetMist((float)t.Height, MistOf(biomes.Pool[ba]) * (float)share + MistOf(biomes.Pool[bb]) * (float)(1 - share), nearWater);
         string mode = _fly ? (_noclip ? "Fly + noclip" : "Fly") : _swimming ? "Swimming" : "Walk";
         _hud.Text = $"{_status}\n" +
             $"Position {PlayerX:0} , {PlayerZ:0}   ground {t.Height:0.0} m   {where}\n" +

@@ -5,6 +5,9 @@ shader_type spatial;
 render_mode skip_vertex_transform, cull_disabled, diffuse_burley, specular_disabled;
 
 global uniform float leaf_translucency;
+global uniform vec4 sun_glow;
+global uniform vec3 sun_dir_world;
+varying vec3 card_world;
 varying vec3 crown;
 varying float conifer;
 varying float seed;
@@ -29,6 +32,7 @@ void vertex() {
 	vec3 base = origin + vec3(0.0, height * 0.55, 0.0) * steep - up * (width * 0.5 * steep);
 	float size = mix(height, width, steep);
 	vec3 world = base + right * VERTEX.x * width + up * VERTEX.y * size;
+	card_world = world;
 	VERTEX = (VIEW_MATRIX * vec4(world, 1.0)).xyz;
 	// Lighting: mostly up, a little toward the camera, so cards read as rounded crowns.
 	NORMAL = normalize((VIEW_MATRIX * vec4(normalize(vec3(0.0, 1.0, 0.0) + normalize(to_camera) * 0.6), 0.0)).xyz);
@@ -66,5 +70,10 @@ void fragment() {
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
 	ALBEDO = colour;
 	BACKLIGHT = colour * vec3(0.9, 1.08, 0.55) * leaf_translucency * 0.6;
+	{
+		vec3 view_ray = normalize(card_world - CAMERA_POSITION_WORLD);
+		float forward = pow(clamp(dot(view_ray, sun_dir_world), 0.0, 1.0), 5.0);
+		EMISSION += colour * vec3(0.95, 1.1, 0.5) * sun_glow.rgb * forward * leaf_translucency * 0.32 * 0.6;
+	}
 	ROUGHNESS = 0.95;
 }

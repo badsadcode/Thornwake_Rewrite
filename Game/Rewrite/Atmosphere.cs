@@ -174,6 +174,8 @@ public partial class Atmosphere : Node3D
         e.TonemapExposure = .95f * GameSettings.Exposure.F;
         e.AdjustmentSaturation = GameSettings.Saturation.F;
         RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
+        RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
+        _sky.SetShaderParameter("quality", GameSettings.CloudQuality.Index);
         _shafts.SetShaderParameter("intensity", GameSettings.SunShafts.F);
         if (_shaftQuad != null) _shaftQuad.Visible = GameSettings.SunShafts.Value > 0;
         _shadow.Visible = GameSettings.CloudShadows.Value > 0 && GameSettings.Clouds.Value > 0;
@@ -188,7 +190,19 @@ public partial class Atmosphere : Node3D
             float scale = GameSettings.RenderScale.F;
             vp.Scaling3DMode = scale < .999f ? Viewport.Scaling3DModeEnum.Fsr : Viewport.Scaling3DModeEnum.Bilinear;
             vp.Scaling3DScale = scale;
-            if (vp.GetCamera3D() is { } camera) camera.Fov = GameSettings.Fov.F;
+            if (vp.GetCamera3D() is { } camera)
+            {
+                camera.Fov = GameSettings.Fov.F;
+                // Depth of field (option): far blur only, starting well beyond the character.
+                int dof = GameSettings.DepthOfField.Index;
+                var attributes = camera.Attributes as CameraAttributesPractical ?? new CameraAttributesPractical();
+                attributes.DofBlurNearEnabled = false;
+                attributes.DofBlurFarEnabled = dof > 0;
+                attributes.DofBlurFarDistance = dof == 1 ? 160 : 70;
+                attributes.DofBlurFarTransition = dof == 1 ? 300 : 140;
+                attributes.DofBlurAmount = dof == 1 ? .05f : .1f;
+                camera.Attributes = attributes;
+            }
         }
         DisplayServer.WindowSetVsyncMode(GameSettings.VSync.On ? DisplayServer.VSyncMode.Enabled : DisplayServer.VSyncMode.Disabled);
         Engine.MaxFps = (int)GameSettings.MaxFps.Value;
@@ -238,6 +252,20 @@ public partial class Atmosphere : Node3D
         _windX %= CloudPeriod; _windZ %= CloudPeriod;
         double cx = Wrap(cameraWorldX + _windX), cz = Wrap(cameraWorldZ + _windZ);
         RenderingServer.GlobalShaderParameterSet("cloud_state", new Vector4((float)cx, (float)cz, Coverage, _storm));
+        // Layers ride different winds: high cirrus slow on a veered heading, low clouds faster than the main deck.
+        _highX += delta * wind * .35 * .2; _highZ += delta * wind * .35 * .98;
+        _lowX += delta * wind * 1.9 * .85; _lowZ += delta * wind * 1.9 * .5;
+        // Wrap where each layer's pattern repeats exactly (see Sky.gdshader), keeping float precision with no jump.
+        double highPeriod = CloudPeriod * 25, lowPeriod = CloudPeriod * .45 * 40;
+        _highX %= highPeriod; _highZ %= highPeriod; _lowX %= lowPeriod; _lowZ %= lowPeriod;
+        RenderingServer.GlobalShaderParameterSet("cloud_layers", new Vector4(
+            (float)WrapTo(cameraWorldX + _highX, highPeriod), (float)WrapTo(cameraWorldZ + _highZ, highPeriod),
+            (float)WrapTo(cameraWorldX + _lowX, lowPeriod), (float)WrapTo(cameraWorldZ + _lowZ, lowPeriod)));
+        UpdateMood(delta);
+        UpdateMist(delta, hour, originX, originZ);
+        RenderingServer.GlobalShaderParameterSet("sun_dir_world", toSun);
+        var glowColour = Sun.LightColor * Sun.LightEnergy * Mathf.Clamp(toSun.Y * 6 + .2f, 0, 1);
+        RenderingServer.GlobalShaderParameterSet("sun_glow", new Vector4(glowColour.R, glowColour.G, glowColour.B, 0));
         _shafts.SetShaderParameter("sun_direction", toSun);
         _water?.SetShaderParameter("sun_direction", toSun);
         _water?.SetShaderParameter("sun_color", Sun.LightColor * Sun.LightEnergy);
@@ -281,6 +309,91 @@ public partial class Atmosphere : Node3D
     }
 
     private static double Wrap(double v) => v - Math.Floor(v / CloudPeriod) * CloudPeriod;
+    private static double WrapTo(double v, double period) => v - Math.Floor(v / period) * period;
+
+    // ---- ground fog and mist (option): height fog pooling below the player's ground, patches of volumetric wisps.
+    private float _mistGround = float.NaN, _mistGroundTarget, _mistBiome, _mistWater, _mistAmount;
+    private double _mistDriftX, _mistDriftZ;
+    private FogVolume? _mistVolume;
+    private ShaderMaterial? _mistMaterial;
+
+    /// <summary>From the player's surroundings: ground height (scene y), biome mist (0..1), water nearby (0..1).</summary>
+    public void SetMist(float groundY, float biomeMist, float nearWater)
+    {
+        _mistGroundTarget = groundY; _mistBiome = biomeMist; _mistWater = nearWater;
+        if (float.IsNaN(_mistGround)) _mistGround = groundY;
+    }
+
+    /// <summary>Mist amount 0..1 now: dawn (and a little at dusk), misty biomes, wet ground after rain, water nearby.</summary>
+    public float MistAmount => _mistAmount;
+
+    private void UpdateMist(double delta, float hour, double originX, double originZ)
+    {
+        int mode = GameSettings.GroundFog.Index;
+        float dawn = Mathf.Exp(-Mathf.Pow((hour - 6.5f) / 1.6f, 2)) + .45f * Mathf.Exp(-Mathf.Pow((hour - 20.5f) / 1.5f, 2));
+        float afterRain = _wetness * (1 - _storm);
+        float target = mode == 0 || float.IsNaN(_mistGround) ? 0
+            : Mathf.Clamp(.12f + .55f * dawn + .6f * _mistBiome + .4f * afterRain + .2f * _mistWater + .3f * _storm, 0, 1);
+        _mistAmount = Mathf.MoveToward(_mistAmount, target, (float)delta / 6);
+        if (float.IsNaN(_mistGround)) return;
+        // Follow the ground slowly, so walking down into a valley wades into its mist before it settles around you.
+        _mistGround = Mathf.Lerp(_mistGround, _mistGroundTarget, 1 - Mathf.Exp(-(float)delta / 8));
+        var e = Environment;
+        if (_mistAmount > .005f)
+        {
+            // Below this height everything takes fog by its height alone (Godot height fog): valleys, rivers, lakes.
+            e.FogEnabled = true;
+            e.FogHeight = _mistGround - 2;
+            e.FogHeightDensity = .045f * _mistAmount;
+        }
+        else e.FogHeightDensity = 0;
+        // Patches: a volumetric fog box around the player (volumetric fog on for it, no global density).
+        bool patches = mode == 2 && _mistAmount > .01f;
+        if (patches && _mistVolume == null)
+        {
+            _mistMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Mist.gdshader") };
+            _mistVolume = new FogVolume { Size = new Vector3(420, 70, 420), Material = _mistMaterial, Shape = RenderingServer.FogVolumeShape.Box };
+            AddChild(_mistVolume);
+        }
+        if (_mistVolume != null && _mistMaterial != null)
+        {
+            _mistVolume.Visible = patches;
+            if (patches)
+            {
+                var cam = GetViewport()?.GetCamera3D();
+                if (cam != null) _mistVolume.GlobalPosition = new Vector3(cam.GlobalPosition.X, _mistGround + 15, cam.GlobalPosition.Z);
+                double wind = 9 * GameSettings.CloudSpeed.Value * .08;
+                _mistDriftX += delta * wind * .8; _mistDriftZ += delta * wind * .6;
+                _mistDriftX %= 8192; _mistDriftZ %= 8192;
+                _mistMaterial.SetShaderParameter("amount", _mistAmount);
+                _mistMaterial.SetShaderParameter("ground", _mistGround);
+                _mistMaterial.SetShaderParameter("origin", new Vector2((float)(originX % 8192), (float)(originZ % 8192)));
+                _mistMaterial.SetShaderParameter("drift", new Vector2((float)_mistDriftX, (float)_mistDriftZ));
+            }
+            e.VolumetricFogEnabled = GameSettings.VolumetricFog.On || patches;
+            e.VolumetricFogDensity = GameSettings.VolumetricFog.On ? .0035f : 0;
+        }
+    }
+
+    // ---- biome moods (option): the sky, haze and fog drift toward the biome around the player over a few seconds.
+    private Vector4 _mood = new(1, 1, 1, 0), _moodTarget = new(1, 1, 1, 0);
+    private double _highX, _highZ, _lowX, _lowZ;
+
+    /// <summary>The biome blend around the player: sky tint (rgb) and haze (a), from the biome definitions.</summary>
+    public void SetBiomeMood(Vector4 target) => _moodTarget = target;
+
+    private void UpdateMood(double delta)
+    {
+        float strength = GameSettings.BiomeMoods.Index switch { 0 => 0, 1 => .5f, _ => 1 };
+        var neutral = new Vector4(1, 1, 1, 0);
+        var target = neutral.Lerp(_moodTarget, strength);
+        _mood = _mood.Lerp(target, 1 - Mathf.Exp(-(float)delta / 3)); // ~3 s to settle when crossing into a biome
+        RenderingServer.GlobalShaderParameterSet("sky_mood", _mood);
+        var tint = new Color(_mood.X, _mood.Y, _mood.Z);
+        Environment.FogLightColor = new Color("aebfc2") * tint;
+        Environment.FogDensity *= 1 + 2.5f * _mood.W;
+        Environment.FogEnabled |= _mood.W > .01f;
+    }
 
     private void RebuildShadowTexture(float coverage)
     {

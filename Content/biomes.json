@@ -24,7 +24,7 @@
     "Appearance": { "Ground": "AncientGround", "Darkness": 0.5, "MapColor": "2c4d2a" },
     "Vegetation": { "Trees": { "AncientTrees": 1 }, "TreeDensity": 1.9, "TreeSize": [1.2, 1.9], "Grass": 0.45, "Moss": 0.8 },
     "Props": { "Logs": 1.8 },
-    "Atmosphere": { "Mist": 0.4, "AmbientTint": "9ab090" },
+    "Atmosphere": { "SkyTint": "dde8d4", "Haze": 0.35, "Mist": 0.4, "AmbientTint": "9ab090" },
     "Gameplay": { "Monsters": ["forest-spirit"], "Poi": ["ancient-tree", "standing-stones"] }
   },
   {
@@ -35,7 +35,7 @@
     "Vegetation": { "Trees": { "ConiferTrees": 1, "AutumnTrees": 0.05, "BroadleafTrees": 0.08 }, "TreeDensity": 1.3, "Grass": 0.75 },
     "Props": { "Rocks": 1.5 },
     "Water": { "LakeAffinity": 0.6 },
-    "Atmosphere": { "Mist": 0.3 }
+    "Atmosphere": { "SkyTint": "e4ecf2", "Haze": 0.15, "Mist": 0.3 }
   },
   {
     "Id": "tundra", "Name": "Tundra", "Tags": ["cold", "open"],
@@ -44,7 +44,7 @@
     "Appearance": { "Ground": "TundraGround", "RockExposure": 0.35, "MapColor": "9aa08a" },
     "Vegetation": { "Trees": { "ConiferTrees": 1 }, "TreeDensity": 0.03, "Grass": 0.5 },
     "Props": { "Rocks": 1.6, "Logs": 0.2 },
-    "Atmosphere": { "Wind": "strong" }
+    "Atmosphere": { "SkyTint": "e8eef4", "Haze": 0.1, "Wind": "strong" }
   },
   {
     "Id": "arctic", "Name": "Arctic / Glacier", "Tags": ["cold", "ice"],
@@ -53,7 +53,7 @@
     "Appearance": { "Ground": "IceGround", "RockExposure": 0.2, "MapColor": "eef3f6" },
     "Vegetation": { "Trees": { "ConiferTrees": 1 }, "TreeDensity": 0, "Grass": 0 },
     "Props": { "Rocks": 0.6, "Logs": 0 },
-    "Atmosphere": { "Wind": "strong", "Fog": 0.2 }
+    "Atmosphere": { "SkyTint": "eef4ff", "Haze": 0.2, "Wind": "strong", "Fog": 0.2 }
   },
   {
     "Id": "alpine", "Name": "Alpine", "Tags": ["mountain", "cold"],
@@ -62,7 +62,8 @@
     "Appearance": { "Ground": "AlpineGround", "RockExposure": 0.55, "MapColor": "a49a86" },
     "Vegetation": { "Trees": { "AlpineTrees": 1 }, "TreeDensity": 0.25, "Grass": 0.85 },
     "Props": { "Rocks": 1.8 },
-    "Terrain": { "Crags": 1.3 }
+    "Terrain": { "Crags": 1.3 },
+    "Atmosphere": { "SkyTint": "e8f0ff", "Haze": 0 }
   },
   {
     "Id": "swamp", "Name": "Swamp", "Tags": ["wet", "lowland"],
@@ -73,7 +74,7 @@
     "Vegetation": { "Trees": { "WetlandTrees": 1 }, "TreeDensity": 1.0, "Grass": 1.1, "AquaticPlants": "Reeds" },
     "Terrain": { "Flatten": 0.6, "Roughness": 0.5 },
     "Water": { "Wetness": 0.8, "MarshAffinity": 1, "WaterTint": "4b5a3a" },
-    "Atmosphere": { "Mist": 0.5 }
+    "Atmosphere": { "SkyTint": "dfe2cc", "Haze": 0.35, "Mist": 0.5 }
   },
   {
     "Id": "blighted-swamp", "Name": "Blighted Swamp", "Tags": ["wet", "fantasy", "corrupted"],
@@ -83,7 +84,7 @@
     "Vegetation": { "Trees": { "DeadTrees": 1, "WetlandTrees": 0.2 }, "TreeDensity": 0.6, "Grass": 0.35, "DeadVegetation": 1 },
     "Terrain": { "Flatten": 0.6, "Roughness": 0.5 },
     "Water": { "Wetness": 0.9, "MarshAffinity": 1, "WaterTint": "3f4a30" },
-    "Atmosphere": { "Fog": 0.6, "AmbientTint": "8a8098" },
+    "Atmosphere": { "SkyTint": "c8c0d0", "Haze": 0.6, "Fog": 0.6, "AmbientTint": "8a8098" },
     "Gameplay": { "Monsters": ["swamp-horror"], "Poi": ["sunken-ruin"], "SettlementAffinity": 0.1 }
   },
   {
@@ -93,7 +94,8 @@
     "Appearance": { "Ground": "JungleGround", "MapColor": "2f8a3a" },
     "Vegetation": { "Trees": { "JungleTrees": 1 }, "TreeDensity": 2.0, "TreeSize": [0.8, 1.25], "Grass": 1.3, "Vines": "Vines" },
     "Terrain": { "Roughness": 1.25, "Microterrain": 1.4 },
-    "Water": { "Wetness": 0.4 }
+    "Water": { "Wetness": 0.4 },
+    "Atmosphere": { "SkyTint": "e2f0dc", "Haze": 0.4 }
   },
   {
     "Id": "desert", "Name": "Desert", "Tags": ["hot", "dry", "open"],
@@ -102,7 +104,8 @@
     "Appearance": { "Ground": "DesertGround", "RockExposure": 0.15, "MapColor": "e6cf8f" },
     "Vegetation": { "Trees": { "DesertPlants": 1, "PalmTrees": 0.04 }, "TreeDensity": 0.05, "TreeSize": [0.8, 1.3], "Grass": 0.1 },
     "Props": { "Rocks": 1.3, "Logs": 0.1 },
-    "Terrain": { "Roughness": 0.7, "Features": { "dunes": 1 } }
+    "Terrain": { "Roughness": 0.7, "Features": { "dunes": 1 } },
+    "Atmosphere": { "SkyTint": "f6e8cc", "Haze": 0.3 }
   },
   {
     "Id": "badlands", "Name": "Badlands / Barrens", "Tags": ["dry", "rock"],
@@ -111,7 +114,8 @@
     "Appearance": { "Ground": "BadlandsGround", "RockExposure": 0.6, "MapColor": "c27a4e" },
     "Vegetation": { "Trees": { "ScrubPlants": 1, "DesertPlants": 0.15 }, "TreeDensity": 0.07, "Grass": 0.25 },
     "Props": { "Rocks": 1.8, "Logs": 0.2 },
-    "Terrain": { "Crags": 1.4, "Features": { "mesas": 1, "canyons": 1 } }
+    "Terrain": { "Crags": 1.4, "Features": { "mesas": 1, "canyons": 1 } },
+    "Atmosphere": { "SkyTint": "f4dcc4", "Haze": 0.25 }
   },
   {
     "Id": "savanna", "Name": "Savanna", "Tags": ["hot", "dry", "open"],
@@ -119,7 +123,8 @@
     "Placement": { "Temperature": [18, 40], "Moisture": [400, 1500], "RegionSize": [60, 500] },
     "Appearance": { "Ground": "SavannaGround", "MapColor": "cdb55c" },
     "Vegetation": { "Trees": { "SavannaTrees": 1 }, "TreeDensity": 0.18, "Grass": 1.3 },
-    "Terrain": { "Roughness": 0.8 }
+    "Terrain": { "Roughness": 0.8 },
+    "Atmosphere": { "SkyTint": "f8ecd0", "Haze": 0.2 }
   },
   {
     "Id": "volcanic", "Name": "Volcanic", "Tags": ["fire", "rock", "hostile"],
@@ -130,7 +135,7 @@
     "Vegetation": { "Trees": { "DeadTrees": 1, "ConiferTrees": 0.1 }, "TreeDensity": 0.015, "Grass": 0.1 },
     "Props": { "Rocks": 2, "Logs": 0.1 },
     "Terrain": { "Crags": 1.5, "Features": { "volcano": 1 } },
-    "Atmosphere": { "Fog": 0.2, "AmbientTint": "b09080" },
+    "Atmosphere": { "SkyTint": "e0c8b8", "Haze": 0.55, "Fog": 0.2, "AmbientTint": "b09080" },
     "Gameplay": { "Resources": ["obsidian", "sulphur"], "Poi": ["lava-cave"] }
   }
 ]

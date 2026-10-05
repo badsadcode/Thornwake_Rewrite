@@ -60,6 +60,18 @@ public static class PlaceholderPlants
         return new List<(Mesh, Transform3D)> { (b.Commit(), Transform3D.Identity) };
     }
 
+    private static readonly Dictionary<int, Mesh> Drapes = new();
+
+    /// <summary>Cliff dressing card (kind 0 hanging grass, 1 roots): hangs from local origin (the lip) down the face;
+    /// local +Z points out from the cliff, 1 unit = 1 m (instances scale it).</summary>
+    public static Mesh Drape(int kind)
+    {
+        if (Drapes.TryGetValue(kind, out var mesh)) return mesh;
+        var b = new Builder(1);
+        b.Drape(kind == 0 ? "T_Drape_Grass_64" : "T_Roots_64", kind == 0, kind == 0 ? .06f : .015f);
+        return Drapes[kind] = b.Commit();
+    }
+
     // ---------------------------------------------------------------- species
 
     private static void Palm(Builder b, int seed, float height, float lean, int fronds)
@@ -406,6 +418,26 @@ public static class PlaceholderPlants
             int a = s.Add(bottom - halfRight, n, new Vector2(0, 1), 0), b = s.Add(bottom + halfRight, n, new Vector2(1, 1), 0);
             int c = s.Add(bottom - halfRight + up, n, new Vector2(0, 0), 1), d = s.Add(bottom + halfRight + up, n, new Vector2(1, 0), 1);
             s.I.AddRange(new[] { a, c, b, b, c, d });
+        }
+
+        /// <summary>A curved card over a cliff lip: starts a little back on the top, bulges out, hangs ~2 m down.</summary>
+        public void Drape(string texture, bool leaves, float sway)
+        {
+            var s = S(texture, leaves, sway);
+            var profile = new[] { (0f, -.25f, .02f), (.22f, .25f, -.12f), (.55f, .3f, -.75f), (1f, .14f, -2.1f) }; // (v, z out, y)
+            int baseIndex = s.V.Count;
+            foreach (var (v, z, y) in profile)
+                for (int k = 0; k <= 2; k++)
+                {
+                    float x = (k - 1) * .9f;
+                    s.Add(new Vector3(x, y, z + (k == 1 ? .05f : 0)), Vector3.Back, new Vector2(k / 2f, v), v);
+                }
+            for (int i = 0; i < profile.Length - 1; i++)
+                for (int k = 0; k < 2; k++)
+                {
+                    int a = baseIndex + i * 3 + k, b = a + 1, c = a + 3, d = c + 1;
+                    s.I.AddRange(new[] { a, c, b, b, c, d });
+                }
         }
 
         /// <summary>Two crossed hanging cards (moss, vines) from <paramref name="top"/>; v = 0 at the top.</summary>

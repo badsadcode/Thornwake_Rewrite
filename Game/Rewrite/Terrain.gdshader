@@ -43,6 +43,24 @@ void fragment() {
 	vec3 c = mix(grass, woods, smoothstep(0.15, 0.75, forest) * 0.85);
 	c = mix(c, vec3(0.470, 0.460, 0.350), smoothstep(1300.0, 2300.0, h) * 0.65 * min(1.0, biome_b.a)); // alpine meadow (where plants grow)
 	vec3 rock = mix(biome_d.rgb, biome_d.rgb * vec3(1.2, 1.18, 1.2), n2);                   // valley 77766a (biome rock)
+	// Steep faces: the ground UVs are top-down, so a vertical face would stretch them into streaks. Project from the
+	// side instead (blend of the two side views by the face direction): layered strata, ledges and vertical cracks.
+	float face = smoothstep(0.45, 0.75, slope);
+	if (face > 0.0) {
+		vec2 wn = abs(world_normal.xz) + 1e-3;
+		wn /= wn.x + wn.y;
+		float across = p.y * wn.x + p.x * wn.y; // horizontal coordinate along the face
+		float warp = vnoise(vec2(across * 0.08, h * 0.05)) * 3.0;
+		float strata = fract(h * 0.42 + warp);
+		float band = vnoise(vec2(across * 0.35, floor(h * 0.42 + warp) * 3.1));
+		float crack = smoothstep(0.86, 0.95, vnoise(vec2(across * 1.3, h * 0.12)));
+		vec3 side = biome_d.rgb * (0.82 + 0.3 * band);
+		side *= 1.0 - 0.22 * smoothstep(0.82, 0.98, strata);        // dark seam under each ledge
+		side *= 1.0 + 0.12 * (1.0 - smoothstep(0.0, 0.12, strata)); // lit ledge top
+		side *= 1.0 - 0.35 * crack;
+		side *= 0.9 + 0.2 * vnoise(vec2(across, h) * 2.1);
+		rock = mix(rock, side, face);
+	}
 	// Bare rock: on steep slopes everywhere, and on gentler ground in rocky biomes (patchy).
 	float exposure = biome_c.a * (0.25 + 0.75 * smoothstep(0.35, 0.75, n2 + (n1 - 0.5) * 0.4));
 	c = mix(c, rock, smoothstep(0.30, 0.52, slope + (n2 - 0.5) * 0.10 + mountain * 0.06 + exposure * 0.32));

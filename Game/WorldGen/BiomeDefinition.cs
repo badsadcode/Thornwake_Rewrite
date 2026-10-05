@@ -140,6 +140,10 @@ public sealed record BiomeWater
 
 public sealed record BiomeAtmosphere
 {
+    /// <summary>Biome skies option: multiplies the sky colours (hex rrggbb, null = the realistic sky).</summary>
+    public string? SkyTint { get; init; }
+    /// <summary>Biome skies option: extra haze toward the horizon and denser distance fog (0 … 1).</summary>
+    public double Haze { get; init; }
     public double Fog { get; init; }
     public double Mist { get; init; }
     public string? AmbientTint { get; init; }

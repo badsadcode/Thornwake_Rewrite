@@ -165,6 +165,7 @@ public static class GroundCover
     public static List<RockInstance> Rocks(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1)
     {
         float a = (float)amount;
+        float a0() => Math.Min(1, a);
         var result = new List<RockInstance>();
         var g = grid;
         void Place(int kind, double x, double z, ulong h, float baseSize, float sizeRange, float sink)
@@ -209,7 +210,71 @@ public static class GroundCover
                 Place(Boulder, ox, oz, hh, 1f, 2.5f, .4f);
             }
         });
+        // Scree at the foot of cliffs: flat ground with a face rising a few metres right next to it.
+        if (key.Level <= 1)
+            Cells(key, 5, seed ^ 0x5C2EEUL, (x, z, h) =>
+            {
+                if (!g.At(x, z, out float height, out float up, out _, out bool wet) || wet || up < .75f || height - sea < -.2) return;
+                for (int d = 0; d < 8; d++)
+                {
+                    float a = d * Mathf.Pi / 4, dx = Mathf.Cos(a), dz = Mathf.Sin(a);
+                    if (!g.At(x + dx * 3.5, z + dz * 3.5, out float above, out _, out _, out _) || above - height < 2.8f) continue;
+                    if (Unit(h, 1) > .7f * a0()) return;
+                    int count = 1 + (int)(Unit(h, 2) * 3);
+                    for (int i = 0; i < count; i++)
+                    {
+                        ulong hh = Hashing.Mix(h + (ulong)(i + 3) * 0x51EDUL);
+                        double bx = x + dx * (.8 + Unit(hh, 1) * 1.2) + (Unit(hh, 2) - .5f) * 3, bz = z + dz * (.8 + Unit(hh, 1) * 1.2) + (Unit(hh, 3) - .5f) * 3;
+                        Place(i == 0 ? Boulder : Rock, bx, bz, hh, i == 0 ? .9f : .5f, i == 0 ? 1.6f : 1f, .35f);
+                    }
+                    return;
+                }
+            });
         return result;
+    }
+
+    /// <summary>
+    /// Cliff dressing (level 0): where flat ground ends at a drop of a few metres (sea cliffs, river bluffs, crags),
+    /// grass hangs over the lip (kind 0, where plants grow) and roots poke out of the face under it (kind 1, near trees),
+    /// breaking up the stretched-looking vertical faces.
+    /// </summary>
+    public static List<RockInstance> CliffDressing(TileKey key, in Grid grid, double sea, ulong seed)
+    {
+        var result = new List<RockInstance>();
+        var g = grid;
+        Cells(key, 1.7, seed ^ 0xC11FUL, (x, z, h) =>
+        {
+            if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .72f || height - sea < .5) return;
+            if (!Drop(g, x, z, height, out float ox, out float oz, out float depth)) return;
+            float plants = g.Plants(x, z);
+            bool roots = Unit(h, 1) < .25f + .5f * forest;
+            if (!roots && Unit(h, 2) > plants * 1.1f) return;
+            // Hang just over the edge, facing out; longer over taller faces.
+            float length = Math.Clamp(depth / 2.6f, .45f, 1.3f) * (.75f + .5f * Unit(h, 3));
+            float width = .8f + .5f * Unit(h, 4);
+            var outward = new Vector3(ox, 0, oz);
+            var right = Vector3.Up.Cross(outward).Normalized();
+            var basis = new Basis(right * width, Vector3.Up * length, outward * (.8f + .4f * Unit(h, 5)));
+            var lip = new Vector3((float)x, height + .04f, (float)z) + outward * (.35f + .3f * Unit(h, 6));
+            if (roots) lip += Vector3.Down * (.15f + .3f * Unit(h, 7));
+            result.Add(new RockInstance(roots ? 1 : 0, new Transform3D(basis, lip)));
+        });
+        return result;
+    }
+
+    /// <summary>A steep drop next to (x, z): the outward direction and how deep it goes within ~3 m.</summary>
+    private static bool Drop(in Grid g, double x, double z, float height, out float ox, out float oz, out float depth)
+    {
+        ox = oz = depth = 0;
+        for (int d = 0; d < 8; d++)
+        {
+            float a = d * Mathf.Pi / 4, dx = Mathf.Cos(a), dz = Mathf.Sin(a);
+            if (!g.At(x + dx * 1.6, z + dz * 1.6, out float near, out _, out _, out _) || !g.At(x + dx * 3.2, z + dz * 3.2, out float far, out _, out _, out _)) continue;
+            float drop = height - far;
+            // Steep right at the edge (≥ ~50° within 1.6 m) and a real face (≥ 1.8 m within 3.2 m).
+            if (height - near > .9f && drop > 1.8f && drop > depth) { depth = drop; ox = dx; oz = dz; }
+        }
+        return depth > 0;
     }
 
     /// <summary>

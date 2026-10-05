@@ -117,6 +117,13 @@ public static class GameSettings
         "Aerial perspective: how quickly distant land fades into the sky colour.", "×"));
     public static readonly Setting Exposure = Add(new("fx.exposure", "Lighting and effects", "Brightness", .5, 1.6, .05, 1,
         "Camera exposure.", "×"));
+    public static readonly Setting GroundFog = Add(new("fx.ground_fog", "Lighting and effects", "Ground fog and mist", 0, 2, 1, 1,
+        "Mist pooling in valleys, over rivers and lakes below you — thickest at dawn, after rain and in misty biomes (swamps, " +
+        "old forests, taiga). With patches: drifting ground-hugging wisps around you (volumetric).",
+        options: new[] { "off", "valleys", "valleys + mist patches" }));
+    public static readonly Setting DepthOfField = Add(new("fx.dof", "Lighting and effects", "Depth of field", 0, 2, 1, 0,
+        "Blurs the far distance a little, like a camera lens (the character and nearby ground stay sharp).",
+        options: new[] { "off", "subtle", "strong" }));
     public static readonly Setting LeafTranslucency = Add(new("fx.leaf_translucency", "Lighting and effects", "Leaf translucency", 0, 2, .05, .8,
         "Subsurface scattering on leaves and plants: sunlight glows through canopies, grass and fronds seen against the sun (0 = off).", "×"));
     public static readonly Setting Saturation = Add(new("fx.saturation", "Lighting and effects", "Colour saturation", .5, 1.5, .05, 1.05,
@@ -129,6 +136,12 @@ public static class GameSettings
         "How dark the shadows of clouds drifting over the land are.", "×"));
     public static readonly Setting SeaState = Add(new("sky.sea_state", "Sky", "Sea state", 0, 1, .05, .25,
         "Waves on the sea and lakes: 0 calm, 0.3 moderate, 0.6 rough, 1 storm. Rain makes the sea rougher."));
+    public static readonly Setting CloudQuality = Add(new("sky.cloud_quality", "Sky", "Cloud quality", 0, 2, 1, 1,
+        "One layer; layered (high cirrus, the main clouds and low fast clouds, each with its own wind); volumetric (experimental, " +
+        "lit 3D clouds — heavier on the GPU).", options: new[] { "one layer", "layered", "volumetric (experimental)" }));
+    public static readonly Setting BiomeMoods = Add(new("sky.biome_moods", "Sky", "Biome skies", 0, 2, 1, 0,
+        "Each biome tints the sky and haze a little (jungle humid, desert dusty, volcanic ashen, blighted swamp gloomy). " +
+        "Off keeps the realistic sky everywhere.", options: new[] { "off (realistic)", "subtle", "strong" }));
     public static readonly Setting CloudSpeed = Add(new("sky.cloud_speed", "Sky", "Wind speed", 0, 4, .1, 1,
         "How fast clouds (and their shadows) drift.", "×"));
 

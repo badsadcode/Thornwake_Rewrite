@@ -136,6 +136,8 @@ public sealed class BiomeRegistry
         foreach (var t in b.Vegetation.Trees.Keys)
             if (!sets.TryGetValue(t, out var ts) || ts.Kind != "trees") throw new InvalidDataException($"{where}: unknown tree set '{t}'.");
         if (!IsHex(b.Appearance.MapColor)) throw new InvalidDataException($"{where}: bad map colour.");
+        if (b.Atmosphere.SkyTint != null && !IsHex(b.Atmosphere.SkyTint)) throw new InvalidDataException($"{where}: bad sky tint.");
+        if (!(b.Atmosphere.Haze >= 0 && b.Atmosphere.Haze <= 1)) throw new InvalidDataException($"{where}: Haze must be 0 … 1.");
         if (b.Vegetation.TreeSize is not { Length: 2 } ts2 || ts2[0] <= 0 || ts2[1] < ts2[0]) throw new InvalidDataException($"{where}: TreeSize must be [min, max].");
     }
 
