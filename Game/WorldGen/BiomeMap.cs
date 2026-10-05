@@ -32,6 +32,12 @@ public sealed class BiomeMap
         var pool = registry.Pool;
         int count = pool.Count;
         if (count > 255) throw new InvalidOperationException("At most 255 biomes in a pool.");
+        var settings = climate.Settings;
+        var excluded = new bool[count];
+        if (settings.ExcludedBiomes is { Length: > 0 } ex)
+            for (int b = 0; b < count; b++) excluded[b] = ex.Contains(pool[b].Def.Id);
+        if (excluded.All(e => e)) Array.Clear(excluded); // never an empty world
+        bool patchwork = settings.BiomePlacement == 1;
         _grid = climate.Raster;
         int n = _n = _grid.Size;
         double cell = _grid.Cell;
@@ -67,7 +73,8 @@ public sealed class BiomeMap
 
         // ---- fitness per biome
         var fit = new float[count][];
-        var climateBiomes = Enumerable.Range(0, count).Where(b => pool[b].Def.Placement.Patch == null).ToArray();
+        var climateBiomes = Enumerable.Range(0, count).Where(b => pool[b].Def.Placement.Patch == null && !excluded[b]).ToArray();
+        if (climateBiomes.Length == 0) climateBiomes = Enumerable.Range(0, count).Where(b => !excluded[b]).ToArray();
         Parallel.For(0, count, b =>
         {
             var p = pool[b].Def.Placement;
@@ -93,7 +100,10 @@ public sealed class BiomeMap
         });
 
         // ---- patch biomes: take over their hosts inside noise patches covering the requested share
-        foreach (int b in Enumerable.Range(0, count).Where(b => pool[b].Def.Placement.Patch != null))
+        if (patchwork) Patchwork(fit, land, elevation, mountain, pool, excluded, settings.PatchSize > 0 ? settings.PatchSize * 1000 : 12000, n);
+        for (int b = 0; b < count; b++) if (excluded[b]) Array.Clear(fit[b]);
+        if (!patchwork)
+        foreach (int b in Enumerable.Range(0, count).Where(b => pool[b].Def.Placement.Patch != null && !excluded[b]))
         {
             var p = pool[b].Def.Placement;
             var hosts = p.Patch!.Within.Length == 0 ? climateBiomes
@@ -129,7 +139,7 @@ public sealed class BiomeMap
         var top = Top(fit, land, n, count);
         var presence = new float[count][];
         int radius = Math.Max(1, (int)Math.Round(8000 / cell));
-        bool any = pool.Any(r => r.Def.Placement.ForbiddenNeighbours.Length + r.Def.Placement.PreferNeighbours.Length > 0);
+        bool any = !patchwork && pool.Any(r => r.Def.Placement.ForbiddenNeighbours.Length + r.Def.Placement.PreferNeighbours.Length > 0);
         if (any)
         {
             for (int b = 0; b < count; b++)
@@ -227,6 +237,61 @@ public sealed class BiomeMap
 
     private static double MemberLog(double v, double[]? range, double soft) => range == null ? 1
         : Member(Math.Log(Math.Max(1, v)), new[] { Math.Log(Math.Max(1, range[0])), Math.Log(Math.Max(1, range[1])) }, soft);
+
+    /// <summary>
+    /// Game layout (patchwork): jittered region centres every <paramref name="size"/> metres, each region a random biome
+    /// (weighted by the biome's Weight), borders warped by noise and blended with the neighbouring region. Biomes that
+    /// require mountains or height go to mountain regions, the others to the lowlands.
+    /// </summary>
+    private void Patchwork(float[][] fit, bool[] land, float[] elevation, float[] mountain, IReadOnlyList<ResolvedBiome> pool, bool[] excluded, double size, int n)
+    {
+        int count = pool.Count;
+        bool Upland(BiomePlacement p) => (p.Elevation is { } e && e[0] >= 800) || (p.Mountain is { } m && m[0] >= .25);
+        int[] high = Enumerable.Range(0, count).Where(b => !excluded[b] && Upland(pool[b].Def.Placement)).ToArray();
+        int[] low = Enumerable.Range(0, count).Where(b => !excluded[b] && !Upland(pool[b].Def.Placement)).ToArray();
+        if (low.Length == 0) low = high; if (high.Length == 0) high = low;
+        foreach (var f in fit) Array.Clear(f);
+        // Rare (patch) biomes stay rare: weight × 3 × their coverage share.
+        double W(int b) => Math.Max(.05, pool[b].Def.Placement.Weight) * (pool[b].Def.Placement.Patch is { } p ? Math.Min(1, p.Coverage * 3) : 1);
+        int Pick(int[] from, ulong h)
+        {
+            double total = from.Sum(W), u = Hashing.Unit(h) * total;
+            foreach (int b in from) { u -= W(b); if (u <= 0) return b; }
+            return from[^1];
+        }
+        ulong seed = _seed ^ 0x9A7C4E11UL;
+        System.Threading.Tasks.Parallel.For(0, n, j =>
+        {
+            for (int i = 0; i < n; i++)
+            {
+                int k = j * n + i;
+                if (!land[k]) continue;
+                double x = _grid.CellX(i), z = _grid.CellZ(j);
+                // Organic borders: warp the lookup by noise at the patch scale.
+                double wx = x + Noise.Fbm(x, z, size * .8, 3, size * .1, seed + 1, .5) * size * .45;
+                double wz = z + Noise.Fbm(x + 777, z - 333, size * .8, 3, size * .1, seed + 2, .5) * size * .45;
+                long cx = (long)Math.Floor(wx / size), cz = (long)Math.Floor(wz / size);
+                double best = double.MaxValue, second = double.MaxValue; int bestB = 0, secondB = 0;
+                for (long dz = -1; dz <= 1; dz++)
+                    for (long dx = -1; dx <= 1; dx++)
+                    {
+                        ulong h = Hashing.Lattice(cx + dx, cz + dz, seed);
+                        double px = (cx + dx + .15 + .7 * Hashing.Unit(h)) * size, pz = (cz + dz + .15 + .7 * Hashing.Unit(Hashing.Mix(h))) * size;
+                        double d = (px - wx) * (px - wx) + (pz - wz) * (pz - wz);
+                        // The region's own ground decides upland or lowland.
+                        bool up = mountain[k] > .3f || elevation[k] > 1300;
+                        int b = Pick(up ? high : low, Hashing.Mix(h + 99));
+                        if (d < best) { second = best; secondB = bestB; best = d; bestB = b; }
+                        else if (d < second) { second = d; secondB = b; }
+                    }
+                // Blend across ~15 % of a patch at borders.
+                double edge = (Math.Sqrt(second) - Math.Sqrt(best)) / (size * .15);
+                float wBest = (float)(.5 + .5 * Math.Min(1, edge));
+                fit[bestB][k] += wBest;
+                fit[secondB][k] += 1 - wBest;
+            }
+        });
+    }
 
     /// <summary>
     /// Where no biome fits: the climate biome whose preferences are missed by the least, every range counted in units

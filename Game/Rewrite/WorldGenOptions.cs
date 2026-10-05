@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Thornwake.WorldGen;
 
 namespace Thornwake.Rewrite;
@@ -72,9 +73,29 @@ public sealed class WorldGenOptions
             "Degrees of latitude from south to north edge (left end = auto: more range for bigger worlds).", "°") { AutoAt = 0 });
         Warmth = Add(new("gen.warmth", C, "Warmer / colder", -15, 15, .5, 0, "Added to every temperature.", "°C"));
         Wetness = Add(new("gen.wetness", C, "Wetter / drier", .2, 3, .05, 1, "Multiplier on rain and snow (deserts and steppe ↔ forests and rainforest).", "×"));
+        BiomePlacement = Add(new("gen.biome_placement", C, "Biome layout", 0, 1, 1, 0,
+            "Realistic: biomes follow latitude, temperature and rain (the default). Patchwork: a game layout — organic patches " +
+            "of random biomes repeated all over the land, ignoring the climate (mountain biomes stay on mountains).",
+            options: new[] { "realistic", "patchwork" }));
+        PatchSize = Add(new("gen.patch_size", C, "Patch size", 2, 60, 1, 12, "Patchwork layout: typical size of a biome patch.", "km"));
+        // One toggle per built-in biome (custom biomes from the user folder are always included).
+        const string B = "Biomes in this world";
+        foreach (var (id, name) in BuiltInBiomes())
+            _biomeToggles.Add((id, Add(new("gen.biome." + id, B, name, 0, 1, 1, 1, $"Include {name} in this world."))));
     }
 
-    public readonly Setting Latitude, LatitudeSpan, Warmth, Wetness;
+    public readonly Setting Latitude, LatitudeSpan, Warmth, Wetness, BiomePlacement, PatchSize;
+    private readonly List<(string Id, Setting Toggle)> _biomeToggles = new();
+
+    private static IEnumerable<(string, string)> BuiltInBiomes()
+    {
+        string json;
+        try { json = Godot.FileAccess.GetFileAsString("res://Content/biomes.json"); } catch { yield break; }
+        if (string.IsNullOrEmpty(json)) yield break;
+        using var doc = System.Text.Json.JsonDocument.Parse(json, new System.Text.Json.JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = System.Text.Json.JsonCommentHandling.Skip });
+        foreach (var b in doc.RootElement.EnumerateArray())
+            if (b.TryGetProperty("Id", out var id) && b.TryGetProperty("Name", out var name)) yield return (id.GetString()!, name.GetString()!);
+    }
 
     /// <summary>Select a world type: its native size, every shape parameter on Auto, multipliers reset.</summary>
     public void LoadRecipe(WorldRecipe recipe)
@@ -155,6 +176,8 @@ public sealed class WorldGenOptions
             {
                 CentreLatitude = Latitude.Value, LatitudeSpan = LatitudeSpan.Value <= 0 ? -1 : LatitudeSpan.Value,
                 TemperatureOffset = Warmth.Value, Moisture = Wetness.Value, Biomes = Classic.Index == 0,
+                BiomePlacement = BiomePlacement.Index, PatchSize = BiomePlacement.Index == 1 ? PatchSize.Value : 0,
+                ExcludedBiomes = _biomeToggles.Where(t => !t.Toggle.On).Select(t => t.Id).ToArray() is { Length: > 0 } ex ? ex : null,
             },
         };
         return (profile, style);

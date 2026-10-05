@@ -76,6 +76,24 @@ internal static class ClimateTests
                 alpine++; if (h < 900) lowAlpine++;
             }
         T.Check(alpine > 0 && lowAlpine < alpine * .03, $"alpine stays in the mountains ({lowAlpine} of {alpine} samples below 900 m)");
+        // Patchwork layout (round 7): many biomes everywhere, regardless of latitude; excluded biomes never appear;
+        // the default layout leaves the profile digest (world identity) unchanged.
+        var patchStyle = plan.Style with { Climate = plan.Style.Climate with { BiomePlacement = 1, PatchSize = 40, ExcludedBiomes = new[] { "desert" } } };
+        string defaultJson = System.Text.Json.JsonSerializer.Serialize(new ClimateSettings());
+        T.Check(!defaultJson.Contains("BiomePlacement") && !defaultJson.Contains("Excluded"), "default biome layout leaves saved worlds unchanged (no new JSON fields)");
+        var patch = new WorldPlan(plan.Manifest, style: patchStyle);
+        var patchSpread = Spread(patch.Biomes);
+        T.Note("patchwork: " + string.Join(", ", patchSpread.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value * 100:0.0} %")));
+        T.Check(!patchSpread.ContainsKey("desert") && patchSpread.Count >= 10 && patchSpread.Values.Max() < .3, "patchwork: many biomes, none dominating, excluded one absent");
+        // Jungle (hot) appears in the cold north half too.
+        int northJungle = 0; double north = patch.Manifest.OriginZ - patch.Profile.WorldSize * .35;
+        for (int i = 0; i < 200; i++)
+        {
+            double x = patch.Manifest.OriginX + (i - 100) * patch.Profile.WorldSize / 220;
+            for (double z = north - 80000; z <= north + 80000; z += 20000)
+                if (patch.Macro.Sample(WorldPlan.LandChannel, x, z) > 0 && patch.Biomes.Pool[patch.Biomes.Sample(x, z).A].Def.Id == "jungle") northJungle++;
+        }
+        T.Check(northJungle > 0, $"patchwork ignores latitude (jungle samples in the far north: {northJungle})");
         var customPlan = new WorldPlan(plan.Manifest, style: plan.Style, biomes: withCustom);
         T.Check(Spread(customPlan.Biomes).ContainsKey("crystal-fields"), "a custom biome is generated");
         var warm = new BiomeMap(plan, new Climate(plan, plan.Style.Climate with { TemperatureOffset = 10 }), reg);

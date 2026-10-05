@@ -19,6 +19,19 @@ public sealed record ClimateSettings
     public double Moisture { get; init; } = 1;
     /// <summary>Biomes on; off = the classic single temperate look of build 9 and earlier (Terrain version option).</summary>
     public bool Biomes { get; init; } = true;
+    /// <summary>
+    /// How biomes are laid out: 0 realistic (climate, latitude, rain; the default), 1 patchwork — a game layout of
+    /// organic patches of random biomes repeated over the land, ignoring latitude and climate (mountain biomes still
+    /// keep to the mountains). Left out of the saved profile at its default, so existing worlds keep their identity.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int BiomePlacement { get; init; }
+    /// <summary>Patchwork: typical patch size (km); ≤ 0 = auto (12 km).</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public double PatchSize { get; init; }
+    /// <summary>Biome ids left out of this world (null/empty = all biomes of the pool).</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string[]? ExcludedBiomes { get; init; }
 
     public double Span(double worldSize) => LatitudeSpan > 0 ? LatitudeSpan : Math.Clamp(6 + 64 * Math.Sqrt(worldSize / 4096000), 6, 70);
 }
