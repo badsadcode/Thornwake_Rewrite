@@ -172,7 +172,24 @@ public sealed class TerrainSampler
         else height = Math.Max(baseHeight + detail, floor); // generated land never dips below the sea
 
         double lakePlume = 0;
-        if (water == WaterKind.None)
+        if (water == WaterKind.None && _style.Revision >= 10)
+        {
+            // Revision 10: the lake fills every point below its surface within ~1 cell of its cells (round reach);
+            // between 1 and 1.6 cells the ground rises to a low shore just above the water, so no dry ground below
+            // the surface is left where the reach ends (build 11: lakes cut off along straight cell lines).
+            int lake = _hydrology.LakeDistance(x, z, out double cells);
+            if (lake >= 0 && cells < 1.6)
+            {
+                double surface = _hydrology.Lakes[lake].Level - _p.SeaLevel;
+                if (cells > 1) height = Math.Max(height, height + (surface + .4 - height) * DetMath.Smooth((cells - 1) / .6));
+                if (height < surface)
+                {
+                    water = WaterKind.Lake; level = _hydrology.Lakes[lake].Level; body = lake;
+                    if (_style.MouthBlend > 0) height = MouthChannel(x, z, height, lake, out lakePlume);
+                }
+            }
+        }
+        else if (water == WaterKind.None)
         {
             int lake = _hydrology.LakeNear(x, z);
             if (lake >= 0 && _p.SeaLevel + height < _hydrology.Lakes[lake].Level)

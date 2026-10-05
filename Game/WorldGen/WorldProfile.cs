@@ -134,8 +134,9 @@ public sealed record TerrainStyle
     public double PropAmount { get; init; } = 1;
 
     /// <summary>Terrain revision for changes without their own knob: 8 = as in build 8; 9 = estuaries at mouths and
-    /// banks that stay walkable where they bulge (round 5).</summary>
-    public int Revision { get; init; } = 9;
+    /// banks that stay walkable where they bulge (round 5); 10 = lakes reach round and close with a shore instead of
+    /// ending on straight cell lines (round 7).</summary>
+    public int Revision { get; init; } = 10;
 
     /// <summary>Climate of the world (latitudes, warmer/colder, wetter/drier): drives biomes (D42).</summary>
     public ClimateSettings Climate { get; init; } = new();

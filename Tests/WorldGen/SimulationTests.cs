@@ -6,6 +6,7 @@ internal static class SimulationTests
 {
     public static void Register(string? filter)
     {
+        T.Run("Lakes: no dry ground below the surface at the lake's edge (revision 10)", LakeEdges, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
         T.Run("Water: generated rivers absorb it", Sinks, filter);
@@ -440,5 +441,41 @@ internal static class SimulationTests
         T.Note($"poured 8 m³ beside a {reach.Width[reach.Points.Length / 2]:0} m river: {w.Absorbed:0.0} m³ reached water bodies, " +
             $"{w.Volume():0.0} m³ still on land, {w.Spilled:0.0} m³ left the window");
         T.Check(w.Absorbed + w.Spilled > 1, "runoff drains away from the bank");
+    }
+
+    /// <summary>
+    /// Tom (build 11): lakes cut off along straight lines. Around every lake, ground within its reach that lies below
+    /// the surface must be lake (revision 10); the old 3×3-cell rule left such ground dry (straight dry walls).
+    /// </summary>
+    private static void LakeEdges()
+    {
+        int dryOld = 0, dryNew = 0, samples = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("vast-world", 7319), ("archipelago", 42) })
+        {
+            var s10 = CoreTests.Sampler(id, seed);
+            var s9 = new TerrainSampler(new WorldPlan(s10.Plan.Manifest, style: s10.Plan.Style with { Revision = 9 }));
+            var hy = s10.Plan.Hydrology;
+            double cell = s10.Plan.Macro.Cell;
+            for (int l = 0; l < Math.Min(hy.Lakes.Count, 12); l++)
+            {
+                var lake = hy.Lakes[l];
+                // A ring of probes from the lake's centre outward to 3 cells past its cells.
+                for (int a = 0; a < 48; a++)
+                {
+                    double ang = a * Math.Tau / 48;
+                    for (double r = 0; r < 40 * cell; r += cell * .25)
+                    {
+                        double x = lake.Center.X + Math.Cos(ang) * r, z = lake.Center.Z + Math.Sin(ang) * r;
+                        if (hy.LakeDistance(x, z, out double d) != l || d > 1.8) continue;
+                        samples++;
+                        var t9 = s9.Sample(x, z, 4); var t10 = s10.Sample(x, z, 4);
+                        if (t9.Water == WaterKind.None && t9.Height < lake.Level - .05 && !(t9.Water == WaterKind.River)) dryOld++;
+                        if (t10.Water == WaterKind.None && t10.Height < lake.Level - .05 && d < 1.6) dryNew++;
+                    }
+                }
+            }
+        }
+        T.Note($"{samples} probes near lake edges: dry ground below the surface — revision 9: {dryOld}, revision 10: {dryNew}");
+        T.Check(samples > 500 && dryNew == 0, "no dry ground below a lake's surface within its reach");
     }
 }

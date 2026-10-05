@@ -815,6 +815,31 @@ public sealed class Hydrology
         return best;
     }
 
+    /// <summary>
+    /// Nearest lake cell to (x, z) within two cells: the lake and the distance (in cells) from the point to that cell's
+    /// square (0 inside it). Revision 10 shorelines use it instead of <see cref="LakeNear"/>'s 3×3 square, so a lake's
+    /// reach is round and follows the terrain rather than ending on straight cell lines.
+    /// </summary>
+    public int LakeDistance(double x, double z, out double cells)
+    {
+        double gx = (x - _raster.MinX) / _raster.Cell, gz = (z - _raster.MinZ) / _raster.Cell;
+        int i = (int)Math.Floor(gx), j = (int)Math.Floor(gz);
+        int best = -1; double bestD = double.MaxValue;
+        for (int b = -2; b <= 2; b++)
+            for (int a = -2; a <= 2; a++)
+            {
+                int ii = i + a, jj = j + b;
+                if (ii < 0 || jj < 0 || ii >= _raster.Size || jj >= _raster.Size) continue;
+                int id = LakeCell[jj * _raster.Size + ii];
+                if (id < 0) continue;
+                double dx = Math.Max(0, Math.Max(ii - gx, gx - (ii + 1))), dz = Math.Max(0, Math.Max(jj - gz, gz - (jj + 1)));
+                double d = Math.Sqrt(dx * dx + dz * dz);
+                if (d < bestD) { bestD = d; best = id; }
+            }
+        cells = bestD;
+        return best;
+    }
+
     /// <summary>Nearest river within <paramref name="radius"/> metres (influence of banks/floodplain), if any.</summary>
     public bool NearestRiver(double x, double z, double radius, out RiverHit hit) => _index.Nearest(x, z, radius, out hit, out _);
 
