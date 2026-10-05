@@ -295,6 +295,22 @@ tight cutoff (a wide one pulled in far meander loops at spatial-grid borders: sq
 the estuary. Water: tile sheets skip squares at dug ground below the water; the simulation draws dug river cells
 and keeps undrawn river cells at the surface (no curtains); river cell levels are corner averages.
 
+## D40 — Small worlds keep real-size landforms (2026-10-05)
+Tom: small worlds look smooth and blobby, big ones detailed. Recipes scaled mountain width with (radius ratio)^0.7,
+height down to 35 %, broad hills with size^0.6: at 32 km, 2 km-wide cones and 1.5 km round hill bumps. Scale
+revision 9 (`WorldChoices.ScaleRevision`; Terrain version "Build 8" keeps 8): width ^0.35, height ≥ 70 %, hill
+wavelength ^0.3 (≥ min(4 km, 10 % of the world)), hill height ≥ 70 %. A small world is a region of a big one, not a
+shrunken copy. (Erosion already works in grid cells, so it was not the cause.)
+
+## D41 — Seas: 12 waves, swell, crest foam and glow (2026-10-05)
+Tom: waves too artificial; Sea of Thieves as the reference (shape, shader, storm foam). Gerstner kept (gameplay
+must query the same surface): 10 wind-sea waves (ratio 0.72, spread around the wind, more aligned in storms) + 2
+swells from other directions (tiny when calm, ~2.4 m in storms); per-wave choppiness q = chop/(k·A·N) so crests
+sharpen without folding (chop 0.45 → 0.95). Shader: whitecaps from the Gerstner Jacobian (surface compression at
+crests) in a cellular foam pattern; turquoise light through thin crests when looking toward the sun; mid-scale
+chop normals growing with the sea state. Storm crests ~8 m; CPU height query 10 fixed-point iterations (< 2 mm).
+Next for SoT-level seas if needed: FFT spectrum on the GPU with a CPU readback for buoyancy, foam persistence buffer.
+
 ## Planned — Biomes
 Tom: many biomes, each with its own terrain, plants and atmosphere. Plan: a biome map from climate (temperature from
 latitude/elevation, moisture from distance to sea and rain shadow) drives `TerrainStyle` per region (blended at

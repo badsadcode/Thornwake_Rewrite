@@ -238,6 +238,8 @@ public partial class Atmosphere : Node3D
         double cx = Wrap(cameraWorldX + _windX), cz = Wrap(cameraWorldZ + _windZ);
         RenderingServer.GlobalShaderParameterSet("cloud_state", new Vector4((float)cx, (float)cz, Coverage, _storm));
         _shafts.SetShaderParameter("sun_direction", toSun);
+        _water?.SetShaderParameter("sun_direction", toSun);
+        _water?.SetShaderParameter("sun_color", Sun.LightColor * Sun.LightEnergy);
         _shafts.SetShaderParameter("sun_color", Sun.LightColor);
 
         // Shadow decal: ground point g is shaded by the cloud at g + toSun.xz · H / toSun.y. With the texture laid as
@@ -261,7 +263,7 @@ public partial class Atmosphere : Node3D
         {
             var (dx, dz, k, a) = Waves.Waves[i];
             w.Add(new Vector4((float)dx, (float)dz, (float)k, (float)a));
-            q[i] = (float)(Waves.Choppiness / (k * Waves.WaveHeight * OceanWaves.Count + 1e-9));
+            q[i] = (float)Waves.Q[i];
         }
         _water.SetShaderParameter("waves", w);
         _water.SetShaderParameter("wave_q", q);

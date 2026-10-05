@@ -23,11 +23,14 @@ uniform float refraction : hint_range(0.0, 0.1) = 0.03;
 uniform float caustic_strength : hint_range(0.0, 2.0) = 0.8;
 uniform float reflection_strength : hint_range(0.0, 1.0) = 0.9;
 uniform int ssr_steps : hint_range(0, 64) = 32; // 0 = sky reflection only (settings: water reflections)
-uniform vec4 waves[6];          // dir.x, dir.z, k, amplitude (OceanWaves.Waves)
-uniform float wave_q[6];        // Gerstner choppiness per wave
+uniform vec4 waves[12];         // dir.x, dir.z, k, amplitude (OceanWaves.Waves)
+uniform float wave_q[12];       // Gerstner choppiness per wave (OceanWaves.Q)
 uniform float wave_height = 0.3; // sum of amplitudes
 uniform float sea_state = 0.25;
-const float wave_phase[6] = { 0.0, 1.7, 4.1, 2.6, 5.3, 0.9 }; // OceanWaves.Phase
+uniform vec3 sun_direction = vec3(0.0, 1.0, 0.0); // world, toward the sun
+uniform vec3 sun_color : source_color = vec3(1.0);
+uniform vec3 crest_glow : source_color = vec3(0.10, 0.55, 0.50); // light through thin wave crests
+const float wave_phase[12] = { 0.0, 1.7, 4.1, 2.6, 5.3, 0.9, 3.3, 5.9, 1.1, 4.6, 2.2, 0.4 }; // OceanWaves.Phase
 global uniform float ocean_time;
 uniform vec3 sky_horizon : source_color = vec3(0.70, 0.76, 0.78);
 uniform vec3 sky_zenith : source_color = vec3(0.32, 0.47, 0.62);
@@ -39,6 +42,8 @@ varying vec2 current; // river current (world xz, m/s)
 varying float plume;
 varying vec3 wave_normal;
 varying float crest;
+varying float fold;     // surface compression at sharp crests (Gerstner Jacobian): where foam forms
+varying float wave_lift; // displacement height (m)
 
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 vec2 hash2(vec2 p) { return vec2(hash(p), hash(p + 17.31)); }
@@ -94,15 +99,16 @@ void vertex() {
 	float sea = 1.0 - step(0.25, body), lake = step(0.25, body) * (1.0 - step(0.75, body));
 	vec3 offset = vec3(0.0);
 	vec3 n = vec3(0.0, 1.0, 0.0);
-	crest = 0.0;
+	crest = 0.0; fold = 0.0; wave_lift = 0.0;
 	if (sea + lake > 0.0) {
+		float jxx = 0.0, jzz = 0.0, jxz = 0.0;
 		// Coarse distant tiles cannot carry short waves: fade waves shorter than a few vertex spacings.
 		float spacing = max(1.0, length(world_position - CAMERA_POSITION_WORLD) / 40.0);
-		for (int i = 0; i < 6; i++) {
+		for (int i = 0; i < 12; i++) {
 			float k = waves[i].z;
 			float lambda = 6.2831853 / k;
 			float depth_factor = smoothstep(0.0, 1.0, vertex_depth / (lambda * 0.12 + 0.3));
-			float amp = waves[i].w * depth_factor * (sea > 0.5 ? 1.0 : (i >= 3 ? 0.45 : 0.05)) * smoothstep(4.0 * spacing, 8.0 * spacing, lambda);
+			float amp = waves[i].w * depth_factor * (sea > 0.5 ? 1.0 : (i >= 10 ? 0.0 : i >= 4 ? 0.45 : 0.05)) * smoothstep(4.0 * spacing, 8.0 * spacing, lambda);
 			if (amp <= 0.0) continue;
 			vec2 d = waves[i].xy;
 			float theta = k * dot(d, world_position.xz) - sqrt(9.81 * k) * ocean_time + wave_phase[i];
@@ -110,8 +116,12 @@ void vertex() {
 			offset += vec3(wave_q[i] * amp * d.x * c, amp * sn, wave_q[i] * amp * d.y * c);
 			n.x -= d.x * k * amp * c; n.z -= d.y * k * amp * c; n.y -= wave_q[i] * k * amp * sn;
 			crest += amp * sn;
+			float qa = wave_q[i] * k * amp * sn;
+			jxx += qa * d.x * d.x; jzz += qa * d.y * d.y; jxz += qa * d.x * d.y;
 		}
 		crest /= max(wave_height, 0.01);
+		fold = 1.0 - ((1.0 - jxx) * (1.0 - jzz) - jxz * jxz); // 0 flat … 1 where the surface folds
+		wave_lift = offset.y;
 		// Swash: near the shore the sea runs up and down the beach every ~9 s (the water mesh reaches under the beach).
 		float swash = sea * (1.0 - smoothstep(0.0, 2.5, vertex_depth));
 		float run = 0.5 + 0.5 * sin(ocean_time * 0.7 + sin(world_position.x * 0.013) * 2.0 + cos(world_position.z * 0.011) * 2.0);
@@ -134,6 +144,16 @@ void fragment() {
 		? vec2(flow_ripples(p + vec2(e, 0.0), current, TIME) - h, flow_ripples(p + vec2(0.0, e), current, TIME) - h) / e * amp * (1.0 + 0.4 * min(length(current), 2.5))
 		: vec2(ripples(p + vec2(e, 0.0), TIME, speed) - h, ripples(p + vec2(0.0, e), TIME, speed) - h) / e * amp;
 	// Waves: the Gerstner normal from the vertex stage, ripples on top.
+	// Chop: mid-scale wind waves on the swell (grows with the sea state; breaks up the regular Gerstner pattern).
+	if (sea + lake > 0.5) {
+		float chop_amp = (0.04 + 0.25 * sea_state) * (sea > 0.5 ? 1.0 : 0.4) / (1.0 + length(VERTEX) / 300.0);
+		vec2 wind = vec2(0.8, 0.6);
+		vec2 q1 = p * 0.11 + wind * TIME * 0.35, q2 = p * 0.23 - wind.yx * TIME * 0.5;
+		float c0 = noise(q1) + 0.5 * noise(q2);
+		float cx = noise(q1 + vec2(0.05, 0.0)) + 0.5 * noise(q2 + vec2(0.1, 0.0));
+		float cz = noise(q1 + vec2(0.0, 0.05)) + 0.5 * noise(q2 + vec2(0.0, 0.1));
+		slope += vec2(cx - c0, cz - c0) / 0.45 * chop_amp;
+	}
 	vec3 n_world = normalize(vec3(wave_normal.x / max(wave_normal.y, 0.2) - slope.x, 1.0, wave_normal.z / max(wave_normal.y, 0.2) - slope.y));
 	vec3 n_view = normalize((VIEW_MATRIX * vec4(n_world, 0.0)).xyz);
 	NORMAL = n_view;
@@ -198,7 +218,12 @@ void fragment() {
 		float shallows = smoothstep(0.1, 0.3, depth_below) * (1.0 - smoothstep(0.6, 1.0 + 1.8 * sea_state, depth_below));
 		float broken = smoothstep(0.35, 0.7, noise(p * 0.35 + vec2(TIME * 0.15, 0.0)));
 		foam = max(foam, smoothstep(0.92, 0.99, band) * shallows * (0.35 + 0.4 * sea_state) * broken);
-		foam = max(foam, smoothstep(0.55, 0.95, crest) * smoothstep(0.3, 0.8, sea_state) * smoothstep(0.45, 0.8, noise(p * 0.4 + TIME * 0.2)) * 0.8);
+		// Whitecaps where the surface is compressed at sharp crests (rough seas), in a foamy cell pattern that
+		// thins out behind the crest.
+		float cells = caustic_layer(p * 0.35 + TIME * 0.05, TIME * 0.3) * 0.5 + noise(p * 0.8 - TIME * 0.3) * 0.5;
+		float whitecap = smoothstep(0.35 - 0.15 * sea_state, 0.75, fold) * smoothstep(0.15, 0.6, sea_state);
+		foam = max(foam, whitecap * smoothstep(0.25, 0.65, cells + whitecap * 0.3) * 0.9);
+		foam = max(foam, smoothstep(0.6, 0.95, crest) * smoothstep(0.45, 0.9, sea_state) * smoothstep(0.55, 0.85, noise(p * 0.4 + TIME * 0.2)) * 0.5);
 	}
 	// Fast water: foam streaks drifting downstream show which way it flows (same two-phase advection).
 	float fs = length(current);
@@ -217,8 +242,14 @@ void fragment() {
 	vec3 ray_world = normalize((INV_VIEW_MATRIX * vec4(ray, 0.0)).xyz);
 	vec3 sky = mix(sky_horizon, sky_zenith, smoothstep(0.0, 0.6, ray_world.y));
 	vec3 reflected = mix(sky, hit.rgb, hit.a) * reflection_strength;
+	// Light through thin crests: looking toward the sun, the upper part of waves glows turquoise.
+	vec3 eye_world = normalize(CAMERA_POSITION_WORLD - world_position);
+	vec3 sun_flat = normalize(vec3(sun_direction.x, 0.0, sun_direction.z) + 1e-4);
+	float back_lit = pow(clamp(dot(-eye_world, sun_flat), 0.0, 1.0), 2.0) * clamp(sun_direction.y * 3.0, 0.0, 1.0);
+	float thin = smoothstep(0.1, 0.9, crest) * (sea + lake * 0.3) * min(1.0, wave_height * 0.8);
+	vec3 glow = crest_glow * sun_color * (back_lit * 1.2 + 0.25) * thin;
 	ALBEDO = mix(scatter * murk * (1.0 - fresnel), foam_color, foam);
-	EMISSION = (transmitted * (1.0 - fresnel) + reflected * fresnel) * (1.0 - foam);
+	EMISSION = (transmitted * (1.0 - fresnel) + reflected * fresnel + glow * (1.0 - fresnel)) * (1.0 - foam);
 	SPECULAR = 0.3 * (1.0 - foam);
 	ROUGHNESS = mix(0.03, 0.6, foam);
 	METALLIC = 0.0;

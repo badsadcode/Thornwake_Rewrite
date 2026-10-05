@@ -139,3 +139,24 @@ Tom's notes (one screenshot at Mountain kingdoms 42, -59499 / 115353, and one at
 | Creation screen | Done: type, seed, size, Auto parameters, preview map, plan reused on Generate |
 | Templates / own types | Done: step list (hills, raise, lower, basin, range, trough, strait, islands, mask); 5 template types; Save as world type |
 | Land share | Presets 13–19 % land, kept for identical worlds; question Q5 |
+
+## Round 5 (build 8, 2026-10-05)
+* Digging the river shore causes water issues (slab above the river; walls of water — the latter seen in a
+  generated river with springs). → D39 water part
+* River joining a lake/ocean still has a step. → D39 (estuaries, walkable bulges, no ribs)
+* Need an underwater effect, see the surface from below, dive to the bottom without noclip. → diving, underwater pass
+* Small worlds: mountains/terrain smooth and blobby; big worlds detailed. → D40
+* Land shapes blobby/round; Vast continents best; Azgaar's more interesting; don't change existing types, make new
+  versions adapted from how Azgaar does it. → D38 natural types
+* Ocean waves cool but artificial; Sea of Thieves shape, shader, storm foam. → D41
+
+### Status (build 9)
+| Item | Status |
+|---|---|
+| Dig/spring water | Tile sheets skip dug ground below water; sim draws dug river cells; undrawn river cells stay at the surface. Test: 33 dug cells, all show water, none above the river |
+| Mouth step | Estuary (wider, gentle banks), bulges as ledges, no ribs; steps at mouths < 1 m per m in a probe (were up to 1.5 + 6 m terraces) |
+| Under water | C dives, Space up; underwater fog, Snell's window, mirror surface; per water body colour |
+| Small worlds | Real-size mountains (4.3 km wide at 32 km instead of 2) and hills |
+| Land shapes | 11 Natural types (heightmap templates), existing types identical (digest tests) |
+| Waves | 12 waves + swell, Jacobian whitecaps, crest glow, chop; a first step — FFT is the next level if needed |
+

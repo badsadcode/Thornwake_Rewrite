@@ -78,6 +78,24 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 9
+* **Diving and under water**: while swimming, **C** (or Q) dives, **Space** swims up, swimming forward under water
+  follows where you look, and you drift up slowly when idle. Under water the view turns blue-green with distance,
+  darker the deeper you are; looking up you see the sky through a rippling window, and the surface mirrors the deep
+  water around it.
+* **River mouths**: the river widens into an estuary with low, gentle banks before it meets the sea or a lake; the
+  channel continues into the sea bed with the same shape. Banks no longer turn into cliffs where they bulge (the
+  saw-tooth walls), and the ribs running down valley sides beside rivers are gone.
+* **Water by digs and springs**: no more walls of water around a hole dug in a river bed or bank, or around springs
+  placed in a river; dug ground below the river fills and shows one surface.
+* **Natural world types** (New world → *Natural · …*): eleven new types whose land is grown cell by cell like in
+  Azgaar's generator (own code): ragged coasts, bays, peninsulas, inner seas, island chains. Your existing types
+  are unchanged. Scripts are editable (docs/WORLD_CREATION.md).
+* **Small worlds**: mountains and hills keep close to their real size instead of shrinking into smooth blobs.
+* **Seas**: 12 waves plus a long swell from another direction, sharper storm crests with whitecaps where they
+  break, turquoise light through thin crests against the sun, finer chop.
+* **Going back**: New world → Terrain version → *Build 8* generates terrain and world scaling exactly as in build 8.
+
 ## New in build 8
 * **Ocean waves**: real waves on the sea and lakes, from calm to storm (Esc → Settings → Sky → Sea state; rain makes
   the sea rougher). You swim on them. They are built so boats can ride them later.

@@ -10,14 +10,17 @@ namespace Thornwake.WorldGen;
 /// </summary>
 public sealed class OceanWaves
 {
-    public const int Count = 6;
+    public const int Count = 12;
     private const double G = 9.81;
-    private static readonly double[] Lengths = { 1, .62, .41, .29, .21, .15 };
-    private static readonly double[] Angles = { 0, .45, -.55, .9, -.85, .3 };
-    private static readonly double[] Phases = { 0, 1.7, 4.1, 2.6, 5.3, .9 };
+    // Ten wind-sea waves (wavelength ratio 0.72, so ~1/20 of the longest at the end) spread around the wind, and two
+    // long swells from other directions (a sea is never only the local wind: D41).
+    private static readonly double[] Spread = { 0, .35, -.4, .7, -.75, .2, -.25, 1.0, -1.1, .55, .5, -.3 };
+    private static readonly double[] Phases = { 0, 1.7, 4.1, 2.6, 5.3, .9, 3.3, 5.9, 1.1, 4.6, 2.2, .4 };
 
     /// <summary>Per wave: direction x, direction z, wavenumber k, amplitude (m).</summary>
     public readonly (double Dx, double Dz, double K, double A)[] Waves = new (double, double, double, double)[Count];
+    /// <summary>Gerstner horizontal factor per wave (sharper crests in storms; Σ q·k·A stays below 1: no folds).</summary>
+    public readonly double[] Q = new double[Count];
     /// <summary>Horizontal choppiness of the Gerstner waves (sharper crests in storms).</summary>
     public double Choppiness { get; private set; }
     public double SeaState { get; private set; }
@@ -29,18 +32,31 @@ public sealed class OceanWaves
     public void Configure(double seaState, double windAngle)
     {
         SeaState = Math.Clamp(seaState, 0, 1);
-        double longest = 8 + 72 * Math.Pow(SeaState, 1.3);     // 8 m ripples … 80 m storm swell
-        double steepness = .006 + .028 * SeaState;              // amplitude / wavelength
-        Choppiness = .35 + .55 * SeaState;
+        double longest = 8 + 64 * Math.Pow(SeaState, 1.3);     // 8 m ripples … 72 m storm seas
+        double steepness = .008 + .026 * SeaState;              // amplitude / wavelength
+        double aligned = 1.2 - .5 * SeaState;                   // storms line the waves up with the wind
+        Choppiness = .45 + .5 * SeaState;
         double total = 0;
         for (int i = 0; i < Count; i++)
         {
-            double lambda = longest * Lengths[i], a = windAngle + Angles[i];
-            double amplitude = lambda * steepness * (i == 0 ? 1 : .75);
+            double lambda, amplitude, a;
+            if (i < 10)
+            {
+                lambda = longest * Math.Pow(.72, i);
+                amplitude = lambda * steepness * (i == 0 ? 1 : .62);
+                a = windAngle + Spread[i] * aligned;
+            }
+            else
+            {
+                lambda = 90 + 110 * SeaState + (i - 10) * 37; // swell
+                amplitude = lambda * (.0008 + .011 * SeaState) * (i == 10 ? 1 : .6);
+                a = windAngle + Spread[i];
+            }
             Waves[i] = (Math.Cos(a), Math.Sin(a), 2 * Math.PI / lambda, amplitude);
             total += amplitude;
         }
         WaveHeight = total;
+        for (int i = 0; i < Count; i++) Q[i] = Choppiness / (Waves[i].K * Waves[i].A * Count + 1e-9);
     }
 
     /// <summary>Amplitude factor of wave <paramref name="i"/> in water of the given depth; lakes keep only short waves.</summary>
@@ -48,7 +64,7 @@ public sealed class OceanWaves
     {
         double lambda = 2 * Math.PI / Waves[i].K;
         double shallow = DetMath.Smooth(depth / (lambda * .12 + .3));
-        return lake ? shallow * (i >= 3 ? .45 : .05) : shallow;
+        return lake ? shallow * (i >= 10 ? 0 : i >= 4 ? .45 : .05) : shallow; // lakes: no swell, short waves only
     }
 
     /// <summary>Displacement (dx, dy, dz) of the water particle whose rest position is (x, z) at time t.</summary>
@@ -61,7 +77,7 @@ public sealed class OceanWaves
             double amp = a * Factor(i, depth, lake);
             if (amp <= 0) continue;
             double theta = k * (wx * x + wz * z) - Math.Sqrt(G * k) * t + Phases[i];
-            double q = Choppiness / (k * WaveHeight * Count + 1e-9);
+            double q = Q[i];
             double c = Math.Cos(theta);
             dx += q * amp * wx * c; dz += q * amp * wz * c; dy += amp * Math.Sin(theta);
         }
@@ -72,7 +88,7 @@ public sealed class OceanWaves
     public double Height(double x, double z, double t, double depth = 1000, bool lake = false)
     {
         double px = x, pz = z;
-        for (int iteration = 0; iteration < 3; iteration++)
+        for (int iteration = 0; iteration < 10; iteration++)
         {
             var d = Displacement(px, pz, t, depth, lake);
             px = x - d.X; pz = z - d.Z;
