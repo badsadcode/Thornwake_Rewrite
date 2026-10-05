@@ -34,7 +34,8 @@ void fragment() {
 	vec3 ray = normalize((INV_VIEW_MATRIX * vec4(normalize(view.xyz), 0.0)).xyz);
 	float to_surface = ray.y > 1e-4 ? surface_depth / ray.y : 1e6;
 
-	vec3 deep = water_color * daylight * exp(-absorption * (surface_depth + 4.0)); // colour of the water itself
+	// Colour of the water itself: darker and bluer with depth, but never black (light scatters down from above).
+	vec3 deep = water_color * daylight * (exp(-absorption * 0.2 * (surface_depth + 4.0)) * 0.85 + 0.15 * vec3(0.2, 0.45, 0.8) * exp(-surface_depth * 0.01));
 	vec3 c;
 	float dist;
 	if (to_surface < scene_dist) {
