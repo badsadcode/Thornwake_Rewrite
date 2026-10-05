@@ -119,3 +119,23 @@ Tom's notes (one screenshot at Mountain kingdoms 42, -59499 / 115353, and one at
 * Ocean waves: important — boats like Valheim / Sea of Thieves; calm, storm and other variants. → D33
 * Many biomes planned (terrain, plants, atmosphere per biome). → planned
 * Keep this state to come back to. → `docs/SNAPSHOTS.md` (Preview 7 = `6cf6d18`), Terrain version option, tests
+
+## Rain and world creation (after build 7, 2026-10-05)
+* Rain water vanishes instantly when rain stops; ponds should stay, but rain must not flood the world. → D37
+* Cosmetic (non-simulated) puddles too. → D37 (`rain_wetness`)
+* Wet soil looks squarey. → soft noise-thresholded wet edges (D37)
+* World creation like Azgaar's (inspiration, no code): world type → parameters (Auto) → size 32–4096 km → seed →
+  2D preview → generate; size independent of geography; counts follow coverage. → D35, docs/WORLD_CREATION.md
+* Heightmap templates as the general direction of world types, and a way to make new types and tweak them deeper.
+  → D36: landform templates, five template types, saved custom types as JSON
+* Custom biomes later, documented, with an editor. → planned (WORLD_CREATION.md "Later: biomes")
+
+### Status (build 8)
+| Item | Status |
+|---|---|
+| Rain water persists | Soil saturates, then water stands; slow drain + evaporation; puddle 2.3 of 3 m³ left after 10 min (tested) |
+| Cosmetic puddles | Ground darkens and glosses in rain; puddles in flat spots; dry over minutes |
+| Squarey wet soil | Blurred, noise-edged wetness |
+| Creation screen | Done: type, seed, size, Auto parameters, preview map, plan reused on Generate |
+| Templates / own types | Done: step list (hills, raise, lower, basin, range, trough, strait, islands, mask); 5 template types; Save as world type |
+| Land share | Presets 13–19 % land, kept for identical worlds; question Q5 |
