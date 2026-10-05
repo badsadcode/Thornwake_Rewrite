@@ -148,8 +148,24 @@ public static class GameSettings
     public static readonly Setting BiomeMoods = Add(new("sky.biome_moods", "Sky", "Biome skies", 0, 2, 1, 0,
         "Each biome tints the sky and haze a little (jungle humid, desert dusty, volcanic ashen, blighted swamp gloomy). " +
         "Off keeps the realistic sky everywhere.", options: new[] { "off (realistic)", "subtle", "strong" }));
-    public static readonly Setting CloudSpeed = Add(new("sky.cloud_speed", "Sky", "Wind speed", 0, 4, .1, 1,
-        "How fast clouds (and their shadows) drift.", "×"));
+    public static readonly Setting CloudSpeed = Add(new("sky.cloud_speed", "Sky", "Wind strength", 0, 4, .1, 1,
+        "Strength of the simulated wind (it veers and gusts by itself, storms blow harder): clouds, waves, grass and trees.", "×"));
+
+    public static readonly Setting Stars = Add(new("sky.stars", "Sky", "Night sky", 0, 2, .05, 1,
+        "Brightness of the stars, the Milky Way and the moon at night (0 = none).", "×"));
+    public static readonly Setting Planets = Add(new("sky.planets", "Sky", "Planets", 0, 1, 1, 1,
+        "A few bright wandering planets among the stars."));
+
+    // ---- time (live)
+    public static readonly Setting DayLength = Add(new("time.day_length", "Time", "Day length", 10, 1440, 10, 120,
+        "Real minutes for one full in-game day (24 h). 120 = two hours; 1440 = real time.", "min"));
+    public static readonly Setting DaylightShare = Add(new("time.daylight", "Time", "Daylight share", 0, 90, 5, 0,
+        "Share of the day with the sun up. Auto: realistic, from the latitude where you are and the season. " +
+        "Otherwise a percentage (e.g. 70 = long days, short nights).", "%") { AutoAt = 0 });
+    public static readonly Setting Season = Add(new("time.season", "Time", "Season", 0, 3, 1, 1,
+        "Sets how high the sun climbs and (with Auto daylight) how long days are.", options: new[] { "spring", "summer", "autumn", "winter" }));
+    public static readonly Setting TimePaused = Add(new("time.paused", "Time", "Stop time", 0, 1, 1, 0,
+        "Freeze the time of day (the Esc menu slider still sets it)."));
 
     // ---- simulation (live)
     public static readonly Setting WaterSimulation = Add(new("sim.water", "Simulation", "Local water simulation", 0, 1, 1, 1,

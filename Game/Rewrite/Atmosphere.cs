@@ -41,7 +41,9 @@ public partial class Atmosphere : Node3D
     public OceanWaves Waves { get; } = new();
     /// <summary>Wave clock (s), shared with the shader through the global uniform <c>ocean_time</c>.</summary>
     public double OceanTime { get; private set; }
-    private double _wavesState = -1;
+    private double _wavesState = -1, _wavesAngle = Math.Atan2(.6, .8);
+    /// <summary>The simulated wind (direction, speed, gusts).</summary>
+    public Wind Wind { get; } = new();
     private float _wetness, _puddles; // cosmetic rain wetness of the ground and puddles (0..1)
     private ShaderMaterial? _water;
 
@@ -218,10 +220,15 @@ public partial class Atmosphere : Node3D
     /// <summary>Sets the cosmetic rain wetness and puddles directly (screenshots and tests).</summary>
     public void SetWetness(float wetness, float puddles) { _wetness = wetness; _puddles = puddles; }
 
-    public void Update(double delta, float hour, double cameraWorldX, double cameraWorldZ, double originX, double originZ, Vector3 cameraLocal)
+    public void Update(double delta, SkyState sky, double cameraWorldX, double cameraWorldZ, double originX, double originZ, Vector3 cameraLocal)
     {
-        float elevation = Mathf.Sin((hour - 6) / 12 * Mathf.Pi) * 62;
-        Sun.RotationDegrees = new Vector3(-Mathf.Max(elevation, -5), -35 + (hour - 12) * 12, 0);
+        float hour = (float)sky.Hour;
+        float elevation = (float)sky.SunElevation;
+        // The sun from the clock's astronomy (kept a little above the horizon for the light; night is the moon's).
+        var sunDir = GameClock.Direction(Math.Max(elevation, -4), sky.SunAzimuth);
+        Sun.Basis = Basis.LookingAt(-sunDir, Mathf.Abs(sunDir.Y) > .99f ? Vector3.Forward : Vector3.Up);
+        _daylightHours = (float)sky.DaylightHours;
+        UpdateNight(sky, elevation);
         _storm = Mathf.MoveToward(_storm, Raining ? 1 : 0, (float)delta / 8); // ~8 s to cloud over or clear
         OceanTime += delta;
         // Wet look: the ground darkens within ~30 s of rain and dries over ~6 min; puddles fill over ~2 min, last ~15 min.
@@ -231,7 +238,8 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("rain_wetness", new Vector2(_wetness, _puddles));
         RenderingServer.GlobalShaderParameterSet("ocean_time", (float)(OceanTime % 100000));
         double seaState = Math.Clamp(GameSettings.SeaState.Value + _storm * .45, 0, 1);
-        if (Math.Abs(seaState - _wavesState) > .01) UpdateWaves(seaState);
+        double windAngle = Math.Atan2(Wind.Direction.Y, Wind.Direction.X);
+        if (Math.Abs(seaState - _wavesState) > .01 || Math.Abs(Mathf.AngleDifference((float)windAngle, (float)_wavesAngle)) > .14) { _wavesAngle = windAngle; UpdateWaves(seaState); }
         Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, _storm);
         _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, _storm);
         Environment.FogDensity = .00009f * GameSettings.Haze.F * Mathf.Lerp(1, 4, _storm);
@@ -249,14 +257,17 @@ public partial class Atmosphere : Node3D
         Sun.LightColor = new Color("fff3df").Lerp(new Color("ffc58a"), warm * .8f);
         var toSun = Sun.GlobalTransform.Basis.Z.Normalized(); // a directional light shines along -Z
 
-        double wind = 9 * GameSettings.CloudSpeed.Value; // m/s
-        _windX += delta * wind * .8; _windZ += delta * wind * .6;
+        Wind.Update(delta, sky.Day * 24 + sky.Hour, _storm, 77);
+        double wind = Wind.Speed * 1.5; // m/s at cloud height
+        _windX += delta * wind * Wind.Direction.X; _windZ += delta * wind * Wind.Direction.Y;
         _windX %= CloudPeriod; _windZ %= CloudPeriod;
         double cx = Wrap(cameraWorldX + _windX), cz = Wrap(cameraWorldZ + _windZ);
         RenderingServer.GlobalShaderParameterSet("cloud_state", new Vector4((float)cx, (float)cz, Coverage, _storm));
         // Layers ride different winds: high cirrus slow on a veered heading, low clouds faster than the main deck.
-        _highX += delta * wind * .35 * .2; _highZ += delta * wind * .35 * .98;
-        _lowX += delta * wind * 1.9 * .85; _lowZ += delta * wind * 1.9 * .5;
+        // High winds veer ~50° from the surface wind; low clouds race along it.
+        var high = Wind.Direction.Rotated(.9f);
+        _highX += delta * wind * .35 * high.X; _highZ += delta * wind * .35 * high.Y;
+        _lowX += delta * wind * 1.9 * Wind.Direction.X; _lowZ += delta * wind * 1.9 * Wind.Direction.Y;
         // Wrap where each layer's pattern repeats exactly (see Sky.gdshader), keeping float precision with no jump.
         double highPeriod = CloudPeriod * 25, lowPeriod = CloudPeriod * .45 * 40;
         _highX %= highPeriod; _highZ %= highPeriod; _lowX %= lowPeriod; _lowZ %= lowPeriod;
@@ -286,7 +297,7 @@ public partial class Atmosphere : Node3D
     private void UpdateWaves(double seaState)
     {
         _wavesState = seaState;
-        Waves.Configure(seaState, Math.Atan2(.6, .8)); // same wind as the clouds
+        Waves.Configure(seaState, _wavesAngle); // waves run with the wind
         if (_water == null) return;
         var w = new Godot.Collections.Array<Vector4>();
         var q = new float[OceanWaves.Count];
@@ -311,6 +322,33 @@ public partial class Atmosphere : Node3D
     }
 
     private static double Wrap(double v) => v - Math.Floor(v / CloudPeriod) * CloudPeriod;
+    // ---- night: moonlight, stars (sky shader globals)
+    private DirectionalLight3D? _moon;
+    private float _night, _daylightHours = 14;
+
+    private void UpdateNight(SkyState sky, float sunElevation)
+    {
+        _moon ??= CreateMoon();
+        var moonDir = GameClock.Direction(sky.MoonElevation, sky.MoonAzimuth);
+        // Illuminated fraction 0 (new) … 1 (full).
+        float lit = (float)(.5 - .5 * Math.Cos(sky.MoonPhase * Math.Tau));
+        _night = 1 - Mathf.SmoothStep(-10, 4, sunElevation);
+        float moonUp = Mathf.SmoothStep(-2, 8, (float)sky.MoonElevation);
+        _moon.Basis = Basis.LookingAt(-moonDir, Mathf.Abs(moonDir.Y) > .99f ? Vector3.Forward : Vector3.Up);
+        _moon.LightEnergy = .14f * lit * moonUp * _night * Mathf.Lerp(1, .25f, _storm);
+        _moon.Visible = _moon.LightEnergy > .002f;
+        RenderingServer.GlobalShaderParameterSet("night_sky", new Vector4(moonDir.X, moonDir.Y, moonDir.Z, (float)sky.MoonPhase));
+        RenderingServer.GlobalShaderParameterSet("star_rotation", sky.Stars);
+        RenderingServer.GlobalShaderParameterSet("sky_extra", new Vector4((float)(sky.Day + sky.Hour / 24), GameSettings.Planets.F, GameSettings.Stars.F, lit));
+    }
+
+    private DirectionalLight3D CreateMoon()
+    {
+        var moon = new DirectionalLight3D { LightColor = new Color("aebfe8"), ShadowEnabled = false, SkyMode = DirectionalLight3D.SkyModeEnum.LightOnly };
+        AddChild(moon);
+        return moon;
+    }
+
     private static double WrapTo(double v, double period) => v - Math.Floor(v / period) * period;
 
     // ---- ground fog and mist (option): height fog pooling below the player's ground, patches of volumetric wisps.
@@ -335,10 +373,12 @@ public partial class Atmosphere : Node3D
     private void UpdateMist(double delta, float hour, double originX, double originZ)
     {
         int mode = GameSettings.GroundFog.Index;
-        float dawn = Mathf.Exp(-Mathf.Pow((hour - 6.5f) / 1.6f, 2)) + .45f * Mathf.Exp(-Mathf.Pow((hour - 20.5f) / 1.5f, 2));
+        // Dawn mist peaks just after sunrise, a little at dusk (sunrise/sunset from the clock's daylight hours).
+        float sunrise = 12 - _daylightHours / 2, sunset = 12 + _daylightHours / 2;
+        float dawn = Mathf.Exp(-Mathf.Pow((hour - sunrise - .6f) / 1.6f, 2)) + .45f * Mathf.Exp(-Mathf.Pow((hour - sunset - 1) / 1.5f, 2));
         float afterRain = _wetness * (1 - _storm);
         // Mist burns off as the sun climbs: around midday only misty biomes, rain and wet ground keep some.
-        float noon = Mathf.Exp(-Mathf.Pow((hour - 13f) / 3.2f, 2));
+        float noon = Mathf.Exp(-Mathf.Pow((hour - 13f) / (_daylightHours / 4f), 2));
         float target = mode == 0 || float.IsNaN(_mistGround) ? 0
             : Mathf.Clamp((.7f * dawn + .5f * _mistBiome + .1f * _mistWater) * (1 - .65f * noon) + .35f * afterRain + .3f * _storm, 0, 1);
         _mistAmount = Mathf.MoveToward(_mistAmount, target, (float)delta / 6);
@@ -369,8 +409,8 @@ public partial class Atmosphere : Node3D
             {
                 var cam = GetViewport()?.GetCamera3D();
                 if (cam != null) _mistVolume.GlobalPosition = new Vector3(cam.GlobalPosition.X, _mistGround + 15, cam.GlobalPosition.Z);
-                double wind = 9 * GameSettings.CloudSpeed.Value * .08;
-                _mistDriftX += delta * wind * .8; _mistDriftZ += delta * wind * .6;
+                double drift = Wind.Speed * .08;
+                _mistDriftX += delta * drift * Wind.Direction.X; _mistDriftZ += delta * drift * Wind.Direction.Y;
                 _mistDriftX %= 8192; _mistDriftZ %= 8192;
                 _mistMaterial.SetShaderParameter("amount", _mistAmount);
                 _mistMaterial.SetShaderParameter("ground", _mistGround);

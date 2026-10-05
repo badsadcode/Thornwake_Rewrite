@@ -37,6 +37,11 @@ func _initialize() -> void:
 	var L: PackedStringArray = str(args.get("layers", "300,400,500,600")).split(",")
 	RenderingServer.global_shader_parameter_set("cloud_layers", Vector4(float(L[0]), float(L[1]), float(L[2]), float(L[3])))
 	RenderingServer.global_shader_parameter_set("sky_mood", Vector4(1, 1, 1, 0))
+	var md := Vector3(0.3, 0.35, -0.88).normalized()
+	cam.look_at_from_position(Vector3.ZERO, md * 10.0 if args.has("look_moon") else Vector3(0, 3, -10), Vector3.UP) if args.has("look_moon") else null
+	RenderingServer.global_shader_parameter_set("night_sky", Vector4(md.x, md.y, md.z, 0.5))
+	RenderingServer.global_shader_parameter_set("star_rotation", Basis(Vector3.RIGHT, 0.6))
+	RenderingServer.global_shader_parameter_set("sky_extra", Vector4(10, 1, 1, 1))
 
 func _process(_delta: float) -> bool:
 	_frames += 1

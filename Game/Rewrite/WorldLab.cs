@@ -37,6 +37,8 @@ public partial class WorldLab : Node3D
     private ItemList _landmarkList = null!;
     private CheckButton _flyToggle = null!, _noclipToggle = null!;
     private HSlider _timeSlider = null!;
+    private readonly GameClock _clock = new();
+    private double? _pendingHour;
 
     private IReadOnlyList<WorldProfile> _profiles = Array.Empty<WorldProfile>();
     private IReadOnlyList<WorldRecipe> _recipes = Array.Empty<WorldRecipe>();
@@ -124,7 +126,7 @@ public partial class WorldLab : Node3D
             if (arg == "--biome-tint") { _biomeTint = true; _streamer.ShowBiomes(true); }
             if (arg == "--gallery") _gallery = true;
             if (arg == "--open-map") _openMap = true;
-            if (arg.StartsWith("--hour=")) _timeSlider.Value = double.Parse(arg[7..], CultureInfo.InvariantCulture);
+            if (arg.StartsWith("--hour=")) _pendingHour = double.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--menu=")) { _menu.Visible = true; _menu.GetChild<TabContainer>(0).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); }
         }
         int index = Math.Max(0, _recipes.ToList().FindIndex(r => r.Id == preset));
@@ -394,7 +396,11 @@ public partial class WorldLab : Node3D
         if (_overlay.Visible && _generation == null && _streamer.Missing < 20) _overlay.Visible = false;
         UpdateCamera();
         var cam = _camera.GlobalPosition;
-        _atmosphere.Update(delta, (float)_timeSlider.Value, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
+        double latitude = _sampler.Plan.Climate.Latitude(PlayerZ);
+        if (_pendingHour is { } setHour) { _clock.SetHour(setHour, latitude); _pendingHour = null; }
+        var sky = _clock.Advance(delta, latitude, run: _shotPath == null);
+        if (!_timeSlider.HasFocus()) _timeSlider.SetValueNoSignal(sky.Hour);
+        _atmosphere.Update(delta, sky, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
         if (GameSettings.GroundFog.Index > 0)
             _mist.Update(_sampler, PlayerX, PlayerZ, _originX, _originZ, _atmosphere.MistAmount, (float)_sampler.Height(PlayerX, PlayerZ, 8), _atmosphere.MistColour);
         else _mist.Visible = false;
@@ -595,6 +601,10 @@ public partial class WorldLab : Node3D
         float nearWater = t.Water != WaterKind.None ? 1 : _sampler.Plan.Hydrology.NearestRiver(PlayerX, PlayerZ, 300, out var near) ? 1 - (float)(near.Distance / 300) : 0;
         _atmosphere.SetMist((float)t.Height, MistOf(biomes.Pool[ba]) * (float)share + MistOf(biomes.Pool[bb]) * (float)(1 - share), nearWater);
         string mode = _fly ? (_noclip ? "Fly + noclip" : "Fly") : _swimming ? "Swimming" : "Walk";
+        var (dayHours, dayShare) = GameClock.Daylight(_sampler.Plan.Climate.Latitude(PlayerZ));
+        var wind = _atmosphere.Wind;
+        where += $"\n{_clock.Describe()} · daylight {dayHours:0.0} h → {GameSettings.DayLength.Value * dayShare:0} real min day, " +
+                 $"{GameSettings.DayLength.Value * (1 - dayShare):0} min night{(GameSettings.TimePaused.On ? " (time stopped)" : "")} · wind {wind.Speed:0} m/s from {wind.Compass()}";
         _hud.Text = $"{_status}\n" +
             $"Position {PlayerX:0} , {PlayerZ:0}   ground {t.Height:0.0} m   {where}\n" +
             $"{mode}   FPS {Engine.GetFramesPerSecond():0}   tiles {_streamer.Resident} (+{_streamer.Missing} queued)   " +
@@ -742,7 +752,8 @@ public partial class WorldLab : Node3D
         toggles.AddChild(_flyToggle); toggles.AddChild(_noclipToggle);
         box.AddChild(toggles);
         box.AddChild(new Label { Text = "Time of day" });
-        _timeSlider = new HSlider { MinValue = 5, MaxValue = 20, Step = .1, Value = 10.5 };
+        _timeSlider = new HSlider { MinValue = 0, MaxValue = 24, Step = .05, Value = 10.5 };
+        _timeSlider.ValueChanged += v => _pendingHour = v;
         box.AddChild(_timeSlider);
         box.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill });
         var back = new Button { Text = "Back to launcher" };

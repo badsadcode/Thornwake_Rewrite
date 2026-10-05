@@ -7,15 +7,18 @@ global uniform float leaf_translucency;
 global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
 varying vec3 world_position;
-uniform float breeze = 1.0;
+global uniform vec4 wind; // x, z: direction; y: strength (0 calm … 1 fresh … 2.5 storm); w: gust
 
 void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
 	float w = clamp(VERTEX.y / 0.5, 0.0, 1.0);
 	w *= w;
 	float phase = origin.x * 0.21 + origin.z * 0.17;
-	VERTEX.x += sin(TIME * 1.7 + phase) * 0.05 * breeze * w;
-	VERTEX.z += sin(TIME * 1.3 + phase * 1.3) * 0.035 * breeze * w;
+	// Lean with the wind (more in gusts) plus a flutter; travelling gust waves across the field.
+	float wave = sin(dot(origin.xz, wind.xz) * 0.15 - TIME * (1.5 + wind.y)) * 0.5 + 0.5;
+	float lean = (0.02 + 0.07 * wind.y) * (0.6 + 0.4 * wind.w) * (0.5 + 0.5 * wave);
+	VERTEX.x += (wind.x * lean + sin(TIME * 1.7 + phase) * 0.02 * (0.3 + wind.y)) * w;
+	VERTEX.z += (wind.z * lean + sin(TIME * 1.3 + phase * 1.3) * 0.015 * (0.3 + wind.y)) * w;
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 

@@ -29,6 +29,11 @@ global uniform vec4 cloud_state;
 global uniform vec4 cloud_layers;
 // Biome mood: rgb multiplies the sky colours, a = extra haze toward the horizon colour (0 = realistic sky).
 global uniform vec4 sky_mood;
+// Night: moon direction (xyz) and phase (w: 0 new … 0.5 full); star field rotation; x = days, y = planets on,
+// z = star brightness, w = moon illuminated fraction.
+global uniform vec4 night_sky;
+global uniform mat3 star_rotation;
+global uniform vec4 sky_extra;
 
 float cloud_density(vec2 xz, float coverage) {
 	vec2 uv = xz / cloud_period;
@@ -57,6 +62,73 @@ float low_density(vec2 xz, float coverage, float storm) {
 	return smoothstep(edge, edge + 0.16, n) * 0.85 * step(0.05, coverage);
 }
 
+float nhash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+
+// Stars (twinkling), a faint Milky Way, planets and the moon with its phase; faded in as the sun sets.
+vec3 night_sky_colour(vec3 dir, vec3 sun_dir, float night) {
+	if (night <= 0.001 || dir.y < -0.05) return vec3(0.0);
+	vec3 sd = star_rotation * dir;
+	vec3 col = vec3(0.0);
+	float strength = sky_extra.z;
+	// Stars on a cube-face grid of the celestial sphere (even density everywhere): one candidate per cell, few lit.
+	vec3 a = abs(sd);
+	vec2 fuv; float face;
+	if (a.x >= a.y && a.x >= a.z) { fuv = sd.yz / a.x; face = sign(sd.x); }
+	else if (a.y >= a.z) { fuv = sd.xz / a.y; face = 2.0 + sign(sd.y); }
+	else { fuv = sd.xy / a.z; face = 4.0 + sign(sd.z); }
+	float theta = atan(sd.z, sd.x), phi = asin(clamp(sd.y, -1.0, 1.0));
+	for (int layer = 0; layer < 2; layer++) {
+		float scale = layer == 0 ? 90.0 : 230.0;
+		vec2 g = fuv * scale;
+		vec2 cell = floor(g);
+		vec2 key = cell + face * 1013.0 + float(layer) * 91.7;
+		float h = nhash(key);
+		if (h > (layer == 0 ? 0.955 : 0.92)) {
+			vec2 c = cell + 0.25 + 0.5 * vec2(nhash(key + 3.1), nhash(key + 7.3));
+			float d = length(g - c);
+			float size = layer == 0 ? 0.3 : 0.24;
+			float b = smoothstep(size, 0.0, d) * pow(fract(h * 37.0), layer == 0 ? 2.0 : 4.0) * (layer == 0 ? 2.2 : 0.9);
+			b *= 0.75 + 0.25 * sin(TIME * (2.0 + 5.0 * nhash(key)) + h * 40.0); // twinkle
+			vec3 tint = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.85, 0.7), nhash(key + 11.0));
+			col += tint * b;
+		}
+	}
+	// Milky Way: a soft band around a great circle, broken by dust.
+	float band = exp(-pow(dot(sd, normalize(vec3(0.2, 0.55, 0.81))), 2.0) * 22.0);
+	float dust = nhash(floor(vec2(theta, phi) * 60.0)) * 0.4 + 0.6;
+	col += vec3(0.55, 0.6, 0.75) * band * dust * 0.06;
+	// Planets on the ecliptic (tilted 23.4°), each wandering at its own pace.
+	if (sky_extra.y > 0.5) {
+		for (int i = 0; i < 4; i++) {
+			float fi = float(i);
+			float lon = fi * 1.7 + sky_extra.x * (0.035 / (1.0 + fi * 1.3)) + 0.6;
+			vec3 p = normalize(vec3(cos(lon), sin(lon) * 0.397, sin(lon) * 0.918));
+			vec3 pd = transpose(star_rotation) * p;
+			float d = acos(clamp(dot(dir, pd), -1.0, 1.0));
+			vec3 tint = i == 0 ? vec3(1.0, 0.98, 0.9) : i == 1 ? vec3(1.0, 0.6, 0.45) : i == 2 ? vec3(1.0, 0.92, 0.75) : vec3(0.85, 0.9, 1.0);
+			col += tint * smoothstep(0.0022, 0.0006, d) * (i == 0 ? 3.0 : 1.6);
+		}
+	}
+	col *= strength * smoothstep(-0.02, 0.12, dir.y); // thick air at the horizon hides the faint stars
+	// Moon: a lit sphere (phase from the sun's direction), a soft glow around it.
+	vec3 md = night_sky.xyz;
+	float mc = dot(dir, md);
+	float rad = 0.02; // a bit larger than life, as in most games
+	float r = sqrt(max(0.0, 2.0 * (1.0 - mc))) / rad;
+	if (r < 1.0) {
+		vec3 right = normalize(cross(md, vec3(0.0, 1.0, 0.0) + vec3(1e-4)));
+		vec3 up = cross(right, md);
+		vec2 q = vec2(dot(dir - md, right), dot(dir - md, up)) / rad;
+		// The visible hemisphere faces us; it is lit where it faces the (far away) sun: full when opposite the sun.
+		vec3 n = normalize(right * q.x + up * q.y - md * sqrt(max(0.0, 1.0 - dot(q, q))));
+		float light = clamp(dot(n, sun_dir) * 1.5, 0.0, 1.0);
+		float maria = 0.8 + 0.2 * nhash(floor(q * 4.0 + 9.0));
+		col = mix(col, vec3(0.92, 0.93, 0.98) * (0.035 + 1.6 * light * maria), smoothstep(1.0, 0.92, r));
+	}
+	col += vec3(0.5, 0.58, 0.75) * pow(max(mc, 0.0), 400.0) * 0.45 * sky_extra.w * strength;
+	return col * night;
+}
+
 vec3 sky_colour(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu) {
 	float up = dir.y;
 	vec3 zenith = zenith_color * sky_mood.rgb, horizon = horizon_color * mix(vec3(1.0), sky_mood.rgb, 0.7);
@@ -80,6 +152,10 @@ vec4 layer(vec3 dir, vec2 origin, float h, float d, vec3 sun_dir, vec3 sun_col, 
 	float lit = clamp(1.0 - toward * 0.65, 0.0, 1.0);
 	vec3 shade = mix(vec3(0.46, 0.5, 0.56), vec3(1.0, 0.99, 0.97), lit);
 	vec3 cloud = shade * (0.25 + 0.85 * day) * mix(vec3(1.0), LIGHT0_COLOR, 0.5) * bright;
+	// Night: clouds go dark, faintly lit by the moon (brighter toward it).
+	float night = 1.0 - smoothstep(-0.16, 0.04, sun_dir.y);
+	vec3 moonlit = vec3(0.07, 0.08, 0.11) * (0.4 + 0.6 * sky_extra.w) * (1.0 + 2.0 * pow(max(dot(dir, night_sky.xyz), 0.0), 8.0));
+	cloud = mix(cloud, moonlit * shade, night);
 	cloud += sun_col * pow(max(mu, 0.0), 6.0) * (1.0 - d) * 0.8;
 	return vec4(cloud, d);
 }
@@ -156,6 +232,8 @@ void sky() {
 		if (quality == 2) { vec4 v = volumetric(dir, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
 	} else {
 		vec3 col = sky_colour(dir, sun_dir, sun_col, day, mu);
+		float night = 1.0 - smoothstep(-0.16, 0.04, sun_dir.y);
+		if (!AT_CUBEMAP_PASS) col += night_sky_colour(dir, sun_dir, night);
 		vec3 disc = sun_col * smoothstep(0.99955, 0.9998, mu) * 6.0 * sun_glare;
 		if (sun_style == 1) {
 			// Softer at noon (less blinding), larger and orange-red as it sinks toward the horizon.

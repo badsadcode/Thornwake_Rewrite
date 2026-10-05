@@ -10,9 +10,22 @@ uniform float clear_radius = 52.0;
 global uniform float leaf_translucency;
 global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
+// Wind (rewrite world; zero in the valley game, which never sets it): crowns sway, more toward the top.
+global uniform vec4 wind;
 varying vec3 world_position;
 void vertex() {
-    world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    vec3 base = MODEL_MATRIX[3].xyz;
+    vec3 wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    if (wind.y > 0.0) {
+        float h = clamp((wp.y - base.y) / 14.0, 0.0, 1.0);
+        float phase = base.x * 0.13 + base.z * 0.17;
+        float sway = h * h * (0.08 + 0.22 * wind.y) * (0.7 + 0.3 * wind.w);
+        vec3 offset = vec3(wind.x, 0.0, wind.z) * sway * (0.65 + 0.35 * sin(TIME * (0.9 + 0.3 * wind.y) + phase));
+        offset += vec3(sin(TIME * 2.1 + phase + wp.y), 0.0, cos(TIME * 1.7 + phase)) * 0.03 * h * (0.3 + wind.y);
+        VERTEX += (inverse(mat3(MODEL_MATRIX)) * offset);
+        wp += offset;
+    }
+    world_position = wp;
 }
 void fragment() {
     vec4 pixel = texture(pixel_map, UV) * tint;

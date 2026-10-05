@@ -62,3 +62,19 @@ sun_dir_world={
 "type": "vec3",
 "value": Vector3(0, 1, 0)
 }
+night_sky={
+"type": "vec4",
+"value": Vector4(0, -1, 0, 0.5)
+}
+star_rotation={
+"type": "mat3",
+"value": Basis(1, 0, 0, 0, 1, 0, 0, 0, 1)
+}
+sky_extra={
+"type": "vec4",
+"value": Vector4(0, 1, 1, 1)
+}
+wind={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}

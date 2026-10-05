@@ -12,6 +12,7 @@ uniform float sway = 0.0;    // wind sway amplitude (m at weight 1)
 global uniform float leaf_translucency;
 global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
+global uniform vec4 wind;
 varying vec3 world_position;
 
 void vertex() {
@@ -20,8 +21,12 @@ void vertex() {
 		vec3 origin = MODEL_MATRIX[3].xyz;
 		float phase = origin.x * 0.31 + origin.z * 0.23;
 		float w = COLOR.r * COLOR.r;
-		VERTEX.x += sin(TIME * 1.1 + phase) * sway * w;
-		VERTEX.z += sin(TIME * 0.83 + phase * 1.7) * sway * 0.6 * w;
+		float strength = 0.35 + wind.y * (0.7 + 0.5 * wind.w);
+		// In the instance's own frame: turn the world wind into local axes.
+		vec3 local_wind = normalize((inverse(mat3(MODEL_MATRIX)) * vec3(wind.x, 0.0, wind.z)) + vec3(1e-4));
+		VERTEX += local_wind * sway * strength * w * (0.6 + 0.4 * sin(TIME * 1.1 + phase));
+		VERTEX.x += sin(TIME * 1.9 + phase) * sway * 0.3 * strength * w;
+		VERTEX.z += sin(TIME * 1.5 + phase * 1.7) * sway * 0.2 * strength * w;
 		VERTEX.y += sin(TIME * 2.3 + phase + VERTEX.x) * sway * 0.15 * w;
 	}
 }
