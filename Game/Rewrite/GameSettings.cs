@@ -77,20 +77,12 @@ public static class GameSettings
     private static Setting Add(Setting s) { All.Add(s); return s; }
     private static readonly string[] OffLowMediumHigh = { "off", "low", "medium", "high" };
 
-    // ---- detail (tiles rebuild)
+    // ---- detail (tiles rebuild). Only decoration here: trees, rocks and logs are world objects, set per world
+    // (New world tab), never switched by a graphics option.
     public static readonly Setting GrassDensity = Add(new("detail.grass_density", "Detail", "Grass density", 0, 3, .05, 1,
         "Grass tufts per square metre (1 = default; 0 = no grass).", "×", rebuild: true));
     public static readonly Setting GrassDistance = Add(new("detail.grass_distance", "Detail", "Grass distance", 40, 150, 5, 120,
         "How far away grass is drawn.", "m", rebuild: true));
-    public static readonly Setting ForestCover = Add(new("detail.forest_cover", "Detail", "Forest cover", 0, 2, .05, 1.15,
-        "How much of the land is forest (patch size); 0 = open land.", "×", rebuild: true));
-    public static readonly Setting ForestDensity = Add(new("detail.forest_density", "Detail", "Forest density", .2, 1.6, .05, 1.2,
-        "Trees per area inside forests.", "×", rebuild: true));
-    public static readonly Setting RockDensity = Add(new("detail.rocks", "Detail", "Stones, rocks and boulders", 0, 2, .05, 1,
-        "Amount of stones, rocks, boulders and outcrops.", "×", rebuild: true));
-    public static readonly Setting PropDensity = Add(new("detail.props", "Detail", "Bushes, stumps and logs", 0, 2, .05, 1,
-        "Amount of bushes, berry bushes, stumps and fallen logs.", "×", rebuild: true));
-
     // ---- view distance (tiles rebuild)
     public static readonly Setting TerrainDistance = Add(new("view.terrain", "View distance", "Terrain", 0, 2, 1, 1,
         "How far the terrain reaches before the horizon fog.", options: new[] { "~10 km", "~20 km", "~40 km" }, rebuild: true));

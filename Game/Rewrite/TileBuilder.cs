@@ -17,14 +17,19 @@ public readonly record struct TileKey(int Level, long X, long Z)
 public readonly record struct TreeInstance(int Species, Transform3D Transform);
 
 /// <summary>
-/// Player detail settings captured when a tile build is scheduled (worker threads never read live settings, so a
-/// tile is built consistently even if a slider moves meanwhile).
+/// What a tile build places and draws, captured when the build is scheduled (worker threads never read live
+/// settings). Forest, rocks and props come from the world itself (TerrainStyle, fixed at generation: trees, rocks and
+/// logs are world objects, not decoration); grass and the draw distances come from the player's settings.
 /// </summary>
 public readonly record struct DetailConfig(double Grass, double ForestCover, double ForestDensity, double Rocks, double Props,
     int TreeLevels, int FarTreeLevels)
 {
-    public static DetailConfig Current => new(GameSettings.GrassDensity.Value, GameSettings.ForestCover.Value, GameSettings.ForestDensity.Value,
-        GameSettings.RockDensity.Value, GameSettings.PropDensity.Value, 2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index);
+    public static DetailConfig For(TerrainSampler sampler)
+    {
+        var style = sampler.Plan.Style;
+        return new(GameSettings.GrassDensity.Value, style.ForestCover, style.ForestDensity, style.RockAmount, style.PropAmount,
+            2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index);
+    }
 }
 
 /// <summary>CPU-side tile data, built on a worker thread; engine resources are created on the main thread.</summary>

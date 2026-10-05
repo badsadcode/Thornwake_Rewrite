@@ -42,7 +42,7 @@ public partial class WorldStreamer : Node3D
     private readonly Dictionary<TileKey, Node3D> _tiles = new();
     private readonly Dictionary<TileKey, long> _tileTriangles = new();
     private readonly Dictionary<TileKey, long> _tileRevision = new();
-    private DetailConfig _config = DetailConfig.Current;
+    private DetailConfig _config;
     private readonly HashSet<TileKey> _desired = new();
     private readonly Dictionary<TileKey, (Task<TileData> Task, long Revision)> _jobs = new();
     private readonly HashSet<TileKey> _failed = new();
@@ -84,7 +84,7 @@ public partial class WorldStreamer : Node3D
         _revision++;
         foreach (var node in _tiles.Values) { RemoveChild(node); node.QueueFree(); }
         _tiles.Clear(); _tileTriangles.Clear(); _tileRevision.Clear(); _failed.Clear(); _desired.Clear();
-        _config = DetailConfig.Current; Levels = 7 + GameSettings.TerrainDistance.Index;
+        _config = DetailConfig.For(sampler); Levels = 7 + GameSettings.TerrainDistance.Index;
         _sampler = sampler; _originX = originX; _originZ = originZ; Triangles = 0; Built = 0; MaxCommitMs = 0;
     }
 
@@ -95,7 +95,7 @@ public partial class WorldStreamer : Node3D
     public void Refresh()
     {
         _revision++;
-        _config = DetailConfig.Current;
+        if (_sampler != null) _config = DetailConfig.For(_sampler);
         Levels = 7 + GameSettings.TerrainDistance.Index;
         _failed.Clear();
     }

@@ -114,6 +114,16 @@ public sealed record TerrainStyle
     /// <summary>Rivers with at least this catchment (km²) form a delta on flat coasts.</summary>
     public double DeltaMinCatchmentKm2 { get; init; } = 1500;
 
+    // ---- vegetation and objects (world data: what exists in the world, not a graphics option)
+    /// <summary>How much of the land is forest (patch size) relative to the default; 0 = open land.</summary>
+    public double ForestCover { get; init; } = 1.15;
+    /// <summary>Trees per area inside forests relative to the default.</summary>
+    public double ForestDensity { get; init; } = 1.2;
+    /// <summary>Amount of stones, rocks, boulders and outcrops.</summary>
+    public double RockAmount { get; init; } = 1;
+    /// <summary>Amount of bushes, berry bushes, stumps and fallen logs.</summary>
+    public double PropAmount { get; init; } = 1;
+
     /// <summary>Steepness of the shore (sea floor and beach) relative to ~3.5 %; 0 = the macro ramp only (build 5).</summary>
     public double ShoreSlope { get; init; } = 1;
     /// <summary>River bank irregularity (left and right banks vary independently: broad widening and narrowing, small

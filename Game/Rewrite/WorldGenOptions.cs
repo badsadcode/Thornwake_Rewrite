@@ -20,6 +20,8 @@ public sealed class WorldGenOptions
     public readonly Setting Hills, Plains, Rock, CoastDetail, Erosion, Shores;
     // ---- water
     public readonly Setting Rivers, RiverWidth, Meanders, Wander, WidthVariation, Banks, Lakes, Deltas;
+    // ---- vegetation and objects
+    public readonly Setting ForestCover, ForestDensity, Rocks, Props;
 
     public WorldGenOptions()
     {
@@ -48,6 +50,11 @@ public sealed class WorldGenOptions
         Wander = Add(new("gen.wander", W, "Wandering", 0, 3, .05, 1, "Large bends and swings across the valley floor.", "×"));
         WidthVariation = Add(new("gen.width_variation", W, "Width variety", 0, 3, .05, 1, "Pools, narrows and broad stretches along each river.", "×"));
         Banks = Add(new("gen.banks", W, "Bank irregularity", 0, 3, .05, 1, "Uneven shorelines: each bank widens, narrows and wobbles on its own, with bulges, shallow shelves and cuts.", "×"));
+        const string V = "Forests and objects";
+        ForestCover = Add(new("gen.forest_cover", V, "Forest cover", 0, 2, .05, 1.15, "How much of the land is forest (patch size); 0 = open land.", "×"));
+        ForestDensity = Add(new("gen.forest_density", V, "Forest density", .2, 1.6, .05, 1.2, "Trees per area inside forests.", "×"));
+        Rocks = Add(new("gen.rocks", V, "Stones, rocks and boulders", 0, 2, .05, 1, "Amount of stones, rocks, boulders and outcrops.", "×"));
+        Props = Add(new("gen.props", V, "Bushes, stumps and logs", 0, 2, .05, 1, "Amount of bushes, berry bushes, stumps and fallen logs.", "×"));
         Lakes = Add(new("gen.lakes", W, "Lakes", 0, 4, .05, 1, "Share of land that may be lake (largest basins first).", "×"));
         Deltas = Add(new("gen.deltas", W, "Deltas", 0, 4, .05, 1, "How readily large rivers split into deltas on flat coasts (0 = none).", "×"));
     }
@@ -61,6 +68,7 @@ public sealed class WorldGenOptions
         var style = TerrainStyle.For(p);
         Set(Plains, 1 - style.PlainsRoughness);
         Set(Classic, 0);
+        Set(ForestCover, 1.15); Set(ForestDensity, 1.2); Set(Rocks, 1); Set(Props, 1);
         foreach (var s in new[] { Hills, Rock, CoastDetail, Erosion, Shores, Rivers, RiverWidth, Meanders, Wander, WidthVariation, Banks, Lakes, Deltas }) Set(s, 1);
     }
 
@@ -105,6 +113,7 @@ public sealed class WorldGenOptions
             WidthVariation = WidthVariation.Value,
             BankVariation = Classic.On ? 0 : Banks.Value,
             ShoreSlope = Classic.On ? 0 : Shores.Value,
+            ForestCover = ForestCover.Value, ForestDensity = ForestDensity.Value, RockAmount = Rocks.Value, PropAmount = Props.Value,
             LakeShare = b.LakeShare * Lakes.Value,
             DeltaMinCatchmentKm2 = Deltas.Value <= 0 ? double.PositiveInfinity : b.DeltaMinCatchmentKm2 / Deltas.Value,
         };

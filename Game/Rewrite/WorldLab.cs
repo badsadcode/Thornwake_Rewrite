@@ -147,13 +147,13 @@ public partial class WorldLab : Node3D
                 var v = arg[12..].Split(',');
                 double qx = double.Parse(v[0], CultureInfo.InvariantCulture), qz = double.Parse(v[1], CultureInfo.InvariantCulture);
                 var key = new TileKey(0, (long)Math.Floor(qx / TileBuilder.BaseTile), (long)Math.Floor(qz / TileBuilder.BaseTile));
-                var data = TileBuilder.Build(_sampler, key, DetailConfig.Current);
+                var data = TileBuilder.Build(_sampler, key, DetailConfig.For(_sampler));
                 double meanForest = 0; for (int k = 0; k < data.Side * data.Side; k++) meanForest += data.Colors[k].R;
                 GD.Print($"TILE {key} water {(data.Water is { } w ? w.Indices.Length / 3 : -1)} triangles, trees {data.Trees.Count}, mean forest {meanForest / (data.Side * data.Side):0.00}, cards {data.FarTrees.Count}");
                 foreach (int level in new[] { 1, 2, 3 })
                 {
                     var k2 = new TileKey(level, (long)Math.Floor(qx / (TileBuilder.BaseTile * (1 << level))), (long)Math.Floor(qz / (TileBuilder.BaseTile * (1 << level))));
-                    var d2 = TileBuilder.Build(_sampler, k2, DetailConfig.Current);
+                    var d2 = TileBuilder.Build(_sampler, k2, DetailConfig.For(_sampler));
                     double mf = 0; for (int k = 0; k < d2.Side * d2.Side; k++) mf += d2.Colors[k].R;
                     GD.Print($"TILE {k2} trees {d2.Trees.Count}, mean forest {mf / (d2.Side * d2.Side):0.00}, cards {d2.FarTrees.Count}");
                 }

@@ -189,3 +189,11 @@ With the macro ramp alone, the sea stayed ankle-deep for hundreds of metres and 
 part too large, waves stretched). The sampler estimates the distance to the detailed coastline (land influence over
 its gradient) and applies a beach profile: the sea floor deepens at ~3.5 % toward ~25 m, the land rises at ~2.5 %
 toward ~3.5 m; beyond, the macro shape. Parameter `ShoreSlope` (New world → Shore steepness; 0 = build 5).
+
+## D29 — Trees, rocks and logs are world objects, not graphics options (2026-10-05)
+Tom: trees (and logs, rocks, other objects) will matter for gameplay, so what exists must not depend on a graphics
+setting. Forest cover and density, rocks and props moved from Settings to the world's parameters (`TerrainStyle`,
+New world → Forests and objects), fixed at generation. Settings keep only draw distances (detailed trees, tree cards,
+small objects) and decorative grass. Every object already has a stable identity: its kind plus the world-aligned cell
+it was placed on (deterministic from seed and parameters). Harvesting, felling or planting (M9) will store changes
+per chunk against those identities, the same way terrain edits overlay the generated ground.
