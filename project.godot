@@ -38,3 +38,7 @@ ocean_time={
 "type": "float",
 "value": 0.0
 }
+rain_wetness={
+"type": "vec2",
+"value": Vector2(0, 0)
+}

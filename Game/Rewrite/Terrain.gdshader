@@ -7,6 +7,8 @@ render_mode diffuse_burley;
 
 uniform float snow_line = 2700.0;
 uniform bool show_grid = false;
+// x: surface wetness (rain darkens and glosses the ground), y: cosmetic puddles in flat hollows (Atmosphere.cs).
+global uniform vec2 rain_wetness;
 varying vec3 world_normal;
 
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
@@ -74,6 +76,14 @@ void fragment() {
 		vec2 g = abs(fract(p / 64.0) - 0.5);
 		if (max(g.x, g.y) > 0.495) c = vec3(0.1, 0.8, 0.8);
 	}
-	ALBEDO = pow(c, vec3(2.2));
-	ROUGHNESS = mix(0.95, 0.55, snow);
+	// Rain: the whole world gets darker and glossier, and small puddles shine in flat spots (purely visual; real
+	// standing water is the local simulation's).
+	float wetness = rain_wetness.x * (1.0 - snow);
+	float flat_ground = 1.0 - smoothstep(0.03, 0.1, slope);
+	float puddle_noise = vnoise(p * 0.21) * 0.65 + vnoise(p * 0.93 + 7.1) * 0.35;
+	float puddle = smoothstep(0.64, 0.7, puddle_noise) * flat_ground * rain_wetness.y * (1.0 - submerged) * (1.0 - snow) * (1.0 - 0.6 * forest);
+	c *= mix(1.0, 0.7, wetness);
+	ALBEDO = mix(pow(c, vec3(2.2)), vec3(0.025, 0.03, 0.035), puddle * 0.85);
+	ROUGHNESS = mix(mix(mix(0.95, 0.55, snow), 0.45, wetness * 0.7), 0.04, puddle);
+	SPECULAR = mix(0.5, 0.9, puddle);
 }

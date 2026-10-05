@@ -24,6 +24,8 @@ public sealed class Setting
     public string Unit { get; }
     /// <summary>Changing it needs the terrain tiles rebuilt (scatter density, view distances).</summary>
     public bool Rebuild { get; }
+    /// <summary>Value shown as "auto" (the world recipe decides).</summary>
+    public double? AutoAt { get; init; }
     public bool IsToggle => Options == null && Min == 0 && Max == 1 && Step == 1;
     private double _value;
 
@@ -55,6 +57,7 @@ public sealed class Setting
 
     public string Display()
     {
+        if (AutoAt is { } auto && Math.Abs(_value - auto) < 1e-9) return "auto";
         if (Options != null) return Options[Math.Clamp(Index, 0, Options.Length - 1)];
         if (IsToggle) return On ? "on" : "off";
         string number = Step >= 1 ? _value.ToString("0", CultureInfo.InvariantCulture)

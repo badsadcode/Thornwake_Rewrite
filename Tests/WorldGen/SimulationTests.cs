@@ -107,14 +107,29 @@ internal static class SimulationTests
 
     private static void Soak()
     {
+        // A 3 m³ puddle in a shallow hollow: some soaks into the dry soil at first, then the soil is saturated and the
+        // puddle lasts (only slow evaporation and seepage).
         var w = new LocalWater(Ground((x, z) => 50 + .002 * (x * x + z * z)));
         w.Follow(0, 0);
         w.Add(0, 0, 3);
         for (int i = 0; i < 60 * 600; i++) w.Step(1 / 60f);
         Balance(w, "soak");
-        // A 6 cm deep, ~100 m² puddle loses ~1 mm a minute over its whole area.
-        T.Check(w.Soaked > .6 && w.Volume() < 2.4, $"puddle soaks away ({w.Soaked:0.00} m³ soaked in ten minutes, {w.Volume():0.00} m³ left)");
-        T.Check(w.WetnessAt(0, 0) > 0, "ground still wet where the puddle was");
+        T.Note($"after 10 minutes: {w.Volume():0.00} m³ left, {w.Soaked:0.00} m³ soaked in");
+        T.Check(w.Soaked > .1 && w.Volume() > 1.5, "dry soil soaks some water, then the puddle lasts");
+        T.Check(w.WetnessAt(0, 0) > 0, "ground wet where the puddle is");
+        // A dug pond filled by 5 minutes of rain still holds most of its water 20 minutes after the rain.
+        var p = new LocalWater(Ground((x, z) => 50 - 1.5 * Math.Max(0, 1 - (x * x + z * z) / 64.0)));
+        p.Follow(0, 0);
+        p.RainRate = 6e-5f;
+        for (int i = 0; i < 60 * 300; i++) p.Step(1 / 60f);
+        p.RainRate = 0;
+        double inPond() { double v = 0; for (double x = -8; x <= 8; x += .5) for (double z = -8; z <= 8; z += .5) v += p.DepthAt(x, z) * .25; return v; }
+        double filled = inPond();
+        for (int i = 0; i < 60 * 1200; i++) p.Step(1 / 60f);
+        double later = inPond();
+        T.Note($"pond: {filled:0.00} m³ after the rain, {later:0.00} m³ 20 minutes later");
+        T.Check(filled > .3 && later > filled * .6, "a rain-filled pond lasts after the rain");
+        Balance(p, "pond");
     }
 
     private static void Edits()

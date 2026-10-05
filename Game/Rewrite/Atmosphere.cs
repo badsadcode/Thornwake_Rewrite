@@ -40,6 +40,7 @@ public partial class Atmosphere : Node3D
     /// <summary>Wave clock (s), shared with the shader through the global uniform <c>ocean_time</c>.</summary>
     public double OceanTime { get; private set; }
     private double _wavesState = -1;
+    private float _wetness, _puddles; // cosmetic rain wetness of the ground and puddles (0..1)
     private ShaderMaterial? _water;
 
     public override void _Ready()
@@ -175,6 +176,11 @@ public partial class Atmosphere : Node3D
         Sun.RotationDegrees = new Vector3(-Mathf.Max(elevation, -5), -35 + (hour - 12) * 12, 0);
         _storm = Mathf.MoveToward(_storm, Raining ? 1 : 0, (float)delta / 8); // ~8 s to cloud over or clear
         OceanTime += delta;
+        // Wet look: the ground darkens within ~30 s of rain and dries over ~6 min; puddles fill over ~2 min, last ~15 min.
+        float dt = (float)delta;
+        _wetness = Raining ? Mathf.Min(1, _wetness + dt / 30) : Mathf.Max(0, _wetness - dt / 360);
+        _puddles = Raining ? Mathf.Min(1, _puddles + dt / 120) : Mathf.Max(0, _puddles - dt / 900);
+        RenderingServer.GlobalShaderParameterSet("rain_wetness", new Vector2(_wetness, _puddles));
         RenderingServer.GlobalShaderParameterSet("ocean_time", (float)(OceanTime % 100000));
         double seaState = Math.Clamp(GameSettings.SeaState.Value + _storm * .45, 0, 1);
         if (Math.Abs(seaState - _wavesState) > .01) UpdateWaves(seaState);

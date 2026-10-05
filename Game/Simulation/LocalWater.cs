@@ -6,7 +6,7 @@ namespace Thornwake.Hydraulics;
 
 /// <summary>Ground for one simulation chunk: floor height per cell (absolute metres) and whether the cell lies in a
 /// generated water body (river, lake, sea), which absorbs any simulated water that reaches it.</summary>
-public readonly record struct ChunkGround(float[] Floor, bool[] Sink, float[]? Level = null);
+public readonly record struct ChunkGround(float[] Floor, bool[] Sink, float[]? Level = null, bool[]? Edited = null);
 
 /// <summary>
 /// Local shallow-water simulation around the player (milestone M6), ported from GangTheGAME's WaterField
@@ -38,10 +38,14 @@ public sealed class LocalWater
     // water also flows *out* of them into lower ground next to them (a channel dug from a river fills).
     private float[] _level = new float[Side * Side];
     private bool[] _feeds = new bool[Side * Side];
+    // Ground the player dug: the only place a river/lake/sea feeds water out to (generated banks are consistent by
+    // construction; at 0.5 m they can still dip a hair below the water and would leak).
+    private bool[] _edited = new bool[Side * Side];
     private int _feedMinX, _feedMaxX = -1, _feedMinZ, _feedMaxZ = -1;
     private float[] _shown = new float[Side * Side];
     // Ground that held water stays dark for a few minutes (1 = wet now, fades to 0), as in GangTheGAME.
     private float[] _wet = new float[Side * Side], _wetShown = new float[Side * Side];
+    private float[] _soil = new float[Side * Side]; // water held in the soil (m), up to SoilCapacity
     private const float WetThreshold = .01f, DryingPerSecond = 1f / 150f;
     private float _dryClock;
     private readonly Dictionary<(long, long), float[]> _dormant = new();
@@ -60,8 +64,17 @@ public sealed class LocalWater
     public double Soaked { get; private set; }
     /// <summary>Water that rivers, lakes and the sea fed into lower ground beside them (m³).</summary>
     public double Drawn { get; private set; }
-    /// <summary>Infiltration into the soil (m/s of depth): puddles slowly sink away, leaving wet ground.</summary>
-    public float Infiltration { get; set; } = 1.7e-5f; // ~1 mm a minute
+    /// <summary>
+    /// Infiltration into dry soil (m/s of depth). Soil fills up: the rate falls with saturation (up to
+    /// <see cref="SoilCapacity"/> metres of water per cell) to <see cref="MinInfiltration"/>, so after rain puddles
+    /// and ponds last; saturated soil drains slowly again while no water stands on it.
+    /// </summary>
+    public float Infiltration { get; set; } = 1.7e-5f; // ~1 mm a minute into dry soil
+    public float MinInfiltration { get; set; } = 1.5e-7f; // ~0.5 mm an hour into saturated soil
+    public float SoilCapacity { get; set; } = .03f;
+    public float SoilDrain { get; set; } = 1.2e-5f;      // saturation drains ~3 cm in ~40 min
+    /// <summary>Evaporation from standing water (m/s): ponds dry over game days, never instantly.</summary>
+    public float Evaporation { get; set; } = 8e-8f;      // ~0.3 mm an hour
     /// <summary>Rain over the whole window (m/s of water depth; 0 = dry).</summary>
     public float RainRate { get; set; }
     public sealed class Source { public double X, Z; public float Rate; }
@@ -90,6 +103,7 @@ public sealed class LocalWater
         var floor = new float[ChunkCells * ChunkCells];
         var sink = new bool[ChunkCells * ChunkCells];
         var surface = new float[ChunkCells * ChunkCells];
+        var edited = new bool[ChunkCells * ChunkCells];
         for (int cz = 0; cz < ChunkCells; cz++)
             for (int cx = 0; cx < ChunkCells; cx++)
             {
@@ -104,8 +118,9 @@ public sealed class LocalWater
                 double l = Max(level[a], level[b], level[c], level[d]);
                 sink[cz * ChunkCells + cx] = !double.IsNaN(l) && h < l;
                 surface[cz * ChunkCells + cx] = double.IsNaN(l) ? float.NaN : (float)l;
+                edited[cz * ChunkCells + cx] = sampler.Edits.Delta(x0 + (cx + .5) * Cell, z0 + (cz + .5) * Cell) < -.02;
             }
-        return new ChunkGround(floor, sink, surface);
+        return new ChunkGround(floor, sink, surface, edited);
 
         static double Max(params double[] v)
         {
@@ -127,9 +142,9 @@ public sealed class LocalWater
 
     private void MoveTo(long ox, long oz)
     {
-        var floor = new float[Side * Side]; var depth = new float[Side * Side]; var sink = new bool[Side * Side]; var level = new float[Side * Side];
+        var floor = new float[Side * Side]; var depth = new float[Side * Side]; var sink = new bool[Side * Side]; var level = new float[Side * Side]; var edited = new bool[Side * Side];
         var left = new float[Side * Side]; var right = new float[Side * Side]; var up = new float[Side * Side]; var down = new float[Side * Side];
-        var shown = new float[Side * Side]; var wet = new float[Side * Side]; var wetShown = new float[Side * Side];
+        var shown = new float[Side * Side]; var wet = new float[Side * Side]; var wetShown = new float[Side * Side]; var soil = new float[Side * Side];
         // Chunks leaving the window go dormant (if wet).
         if (_placed)
             for (int wz = 0; wz < WindowChunks; wz++)
@@ -164,8 +179,8 @@ public sealed class LocalWater
                         if (kept)
                         {
                             int o = Index((int)px * ChunkCells + i, (int)pz * ChunkCells + j);
-                            floor[n] = _floor[o]; depth[n] = _depth[o]; sink[n] = _sink[o]; shown[n] = _shown[o]; level[n] = _level[o];
-                            wet[n] = _wet[o]; wetShown[n] = _wetShown[o];
+                            floor[n] = _floor[o]; depth[n] = _depth[o]; sink[n] = _sink[o]; shown[n] = _shown[o]; level[n] = _level[o]; edited[n] = _edited[o];
+                            wet[n] = _wet[o]; wetShown[n] = _wetShown[o]; soil[n] = _soil[o];
                             left[n] = _left[o]; right[n] = _right[o]; up[n] = _up[o]; down[n] = _down[o];
                         }
                         else
@@ -173,13 +188,15 @@ public sealed class LocalWater
                             floor[n] = ground!.Value.Floor[j * ChunkCells + i];
                             sink[n] = ground.Value.Sink[j * ChunkCells + i];
                             level[n] = ground.Value.Level?[j * ChunkCells + i] ?? float.NaN;
+                            edited[n] = ground.Value.Edited?[j * ChunkCells + i] ?? true;
                             depth[n] = resumed?[j * ChunkCells + i] ?? 0;
                             wet[n] = depth[n] > WetThreshold ? 1 : 0;
+                            soil[n] = depth[n] > 0 ? SoilCapacity : 0;
                         }
                     }
                 if (!kept && resumed != null) _dirty.Add((gx, gz));
             }
-        _floor = floor; _depth = depth; _sink = sink; _level = level; _shown = shown; _wet = wet; _wetShown = wetShown; _left = left; _right = right; _up = up; _down = down;
+        _floor = floor; _depth = depth; _sink = sink; _level = level; _edited = edited; _shown = shown; _wet = wet; _wetShown = wetShown; _soil = soil; _left = left; _right = right; _up = up; _down = down;
         OriginChunkX = ox; OriginChunkZ = oz; _placed = true;
         RecomputeBounds();
         RecomputeFeeders();
@@ -235,6 +252,7 @@ public sealed class LocalWater
                         _floor[n] = ground.Floor[j * ChunkCells + i];
                         _sink[n] = ground.Sink[j * ChunkCells + i];
                         _level[n] = ground.Level?[j * ChunkCells + i] ?? float.NaN;
+                        _edited[n] = ground.Edited?[j * ChunkCells + i] ?? true;
                         if (_depth[n] > Dry) Grow(bx + i, bz + j);
                     }
                 _dirty.Add((gx, gz));
@@ -256,8 +274,8 @@ public sealed class LocalWater
                 if (_sink[i] && !float.IsNaN(_level[i]))
                 {
                     float top = _level[i] - .005f;
-                    feeds = x > 0 && !_sink[i - 1] && _floor[i - 1] < top || x < Side - 1 && !_sink[i + 1] && _floor[i + 1] < top
-                        || z > 0 && !_sink[i - Side] && _floor[i - Side] < top || z < Side - 1 && !_sink[i + Side] && _floor[i + Side] < top;
+                    bool Opens(int n) => !_sink[n] && _edited[n] && _floor[n] < top;
+                    feeds = x > 0 && Opens(i - 1) || x < Side - 1 && Opens(i + 1) || z > 0 && Opens(i - Side) || z < Side - 1 && Opens(i + Side);
                 }
                 _feeds[i] = feeds;
                 if (feeds) { _feedMinX = Math.Min(_feedMinX, x); _feedMaxX = Math.Max(_feedMaxX, x); _feedMinZ = Math.Min(_feedMinZ, z); _feedMaxZ = Math.Max(_feedMaxZ, z); }
@@ -285,7 +303,7 @@ public sealed class LocalWater
 
     public void Clear()
     {
-        Array.Clear(_depth); Array.Clear(_wet); Array.Clear(_left); Array.Clear(_right); Array.Clear(_up); Array.Clear(_down);
+        Array.Clear(_depth); Array.Clear(_wet); Array.Clear(_soil); Array.Clear(_left); Array.Clear(_right); Array.Clear(_up); Array.Clear(_down);
         foreach (var key in _dormant.Keys) _dirty.Add(key);
         _dormant.Clear(); Sources.Clear(); RainRate = 0;
         for (int wz = 0; wz < WindowChunks; wz++) for (int wx = 0; wx < WindowChunks; wx++) _dirty.Add((OriginChunkX + wx, OriginChunkZ + wz));
@@ -336,6 +354,7 @@ public sealed class LocalWater
                         float surface = float.IsNaN(_level[n]) ? _floor[n] : Math.Max(_level[n], _floor[n]);
                         return Math.Max(0, current * FluxDamping + pipe * (h - surface));
                     }
+                    if (reservoir && !_edited[n]) return 0; // rivers only feed dug ground
                     return Math.Max(0, current * FluxDamping + pipe * (h - _floor[n] - _depth[n]));
                 }
                 float l = Flow(_left[i], x - 1, z), r = Flow(_right[i], x + 1, z), u = Flow(_up[i], x, z - 1), w = Flow(_down[i], x, z + 1);
@@ -362,7 +381,14 @@ public sealed class LocalWater
                     continue;
                 }
                 float d = Math.Max(0, _depth[i] + (inflow - outflow) * dt / area);
-                if (d > 0) { float soak = Math.Min(d, Infiltration * dt); d -= soak; Soaked += soak * area; }
+                if (d > 0)
+                {
+                    float free = Math.Max(0, 1 - _soil[i] / SoilCapacity);
+                    float soak = Math.Min(d, (Infiltration * free * free + MinInfiltration) * dt);
+                    _soil[i] = Math.Min(SoilCapacity, _soil[i] + soak);
+                    soak += Math.Min(d - soak, Evaporation * dt); // evaporation, counted with what soaked away
+                    d -= soak; Soaked += soak * area;
+                }
                 _depth[i] = d;
                 if (d > Dry) { nx0 = Math.Min(nx0, x); nx1 = Math.Max(nx1, x); nz0 = Math.Min(nz0, z); nz1 = Math.Max(nz1, z); }
                 if (Math.Abs(d - _shown[i]) > RenderTolerance) { _shown[i] = d; _dirty.Add((OriginChunkX + x / ChunkCells, OriginChunkZ + z / ChunkCells)); }
@@ -385,6 +411,8 @@ public sealed class LocalWater
                 for (int x = 0; x < Side; x++)
                 {
                     int i = Index(x, z);
+                    if (_depth[i] > Dry) continue;
+                    if (_soil[i] > 0) _soil[i] = Math.Max(0, _soil[i] - SoilDrain * (dry / DryingPerSecond));
                     if (_wet[i] <= 0 || _depth[i] > WetThreshold) continue;
                     _wet[i] = Math.Max(0, _wet[i] - dry);
                     MarkWet(x, z, i);
@@ -447,7 +475,13 @@ public sealed class LocalWater
             for (int i = 0; i < n; i++)
             {
                 int x = Math.Min(bx + i, Side - 1), z = Math.Min(bz + j, Side - 1), k = j * n + i, c = Index(x, z);
-                floor[k] = _floor[c]; depth[k] = _depth[c]; wet[k] = _wetShown[c];
+                floor[k] = _floor[c]; depth[k] = _depth[c];
+                // Wet ground: 3×3 average, so the darkened patch has soft edges rather than 0.5 m squares.
+                float ws = 0;
+                for (int b = -1; b <= 1; b++)
+                    for (int a = -1; a <= 1; a++)
+                        ws += _wetShown[Index(Math.Clamp(x + a, 0, Side - 1), Math.Clamp(z + b, 0, Side - 1))];
+                wet[k] = ws / 9;
                 // A river/lake cell next to simulated water (a dug channel) is drawn at its surface too, so the two
                 // sheets join without a gap.
                 if (_sink[c] && !float.IsNaN(_level[c]) && NearSimWater(x, z)) depth[k] = Math.Max(0, _level[c] - _floor[c]);
