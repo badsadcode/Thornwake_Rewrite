@@ -12,6 +12,9 @@ global uniform vec2 rain_wetness;
 varying vec3 world_normal;
 varying vec4 biome_a; // biome grass colour, snow cover (D42)
 varying vec4 biome_b; // biome dry-ground colour, plant cover
+varying vec4 biome_c; // biome map colour (debug view), rock exposure
+varying vec4 biome_d; // biome rock colour, wetness
+uniform float biome_debug = 0.0; // 1: tint the ground with the biome map colours (F4)
 
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float vnoise(vec2 p) {
@@ -21,7 +24,7 @@ float vnoise(vec2 p) {
 
 void vertex() {
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
-	biome_a = CUSTOM0; biome_b = CUSTOM1;
+	biome_a = CUSTOM0; biome_b = CUSTOM1; biome_c = CUSTOM2; biome_d = CUSTOM3;
 }
 
 void fragment() {
@@ -39,8 +42,12 @@ void fragment() {
 	vec3 woods = biome_a.rgb * vec3(0.70, 0.71, 0.69);                                     // forest floor / far canopy
 	vec3 c = mix(grass, woods, smoothstep(0.15, 0.75, forest) * 0.85);
 	c = mix(c, vec3(0.470, 0.460, 0.350), smoothstep(1300.0, 2300.0, h) * 0.65);           // alpine meadow
-	vec3 rock = mix(vec3(0.467, 0.463, 0.416), vec3(0.560, 0.545, 0.500), n2);             // valley 77766a
-	c = mix(c, rock, smoothstep(0.30, 0.52, slope + (n2 - 0.5) * 0.10 + mountain * 0.06));
+	vec3 rock = mix(biome_d.rgb, biome_d.rgb * vec3(1.2, 1.18, 1.2), n2);                   // valley 77766a (biome rock)
+	// Bare rock: on steep slopes everywhere, and on gentler ground in rocky biomes (patchy).
+	float exposure = biome_c.a * (0.25 + 0.75 * smoothstep(0.35, 0.75, n2 + (n1 - 0.5) * 0.4));
+	c = mix(c, rock, smoothstep(0.30, 0.52, slope + (n2 - 0.5) * 0.10 + mountain * 0.06 + exposure * 0.32));
+	// Wet biomes (swamps): darker, muddier ground.
+	c = mix(c, c * vec3(0.72, 0.7, 0.62), biome_d.a * smoothstep(0.3, 0.7, n2 + 0.2));
 	vec3 sand = mix(vec3(0.800, 0.725, 0.520), vec3(0.700, 0.640, 0.470), n2);             // valley cbb984
 	c = mix(c, sand, smoothstep(0.3, 0.65, wet + (n2 - 0.5) * 0.25) * (1.0 - smoothstep(0.25, 0.5, slope)));
 	vec3 bed = mix(vec3(0.360, 0.340, 0.260), vec3(0.450, 0.420, 0.330), n2);              // gravel and silt under water
@@ -82,6 +89,7 @@ void fragment() {
 		detail = mix(detail, vec3(0.92 + 0.12 * speck), max(snow, wet)); // calmer on snow and sand
 		c *= mix(vec3(1.0), detail, near);
 	}
+	c = mix(c, biome_c.rgb, biome_debug * 0.85);
 	if (show_grid) {
 		vec2 g = abs(fract(p / 64.0) - 0.5);
 		if (max(g.x, g.y) > 0.495) c = vec3(0.1, 0.8, 0.8);

@@ -44,9 +44,12 @@ public sealed class TileData
     public required Vector2[] Uv { get; init; }
     public required Vector2[] Uv2 { get; init; }
     public required int[] Indices { get; init; }
-    /// <summary>Per vertex biome ground colours (D42): grass rgb + snow, dry rgb + plant cover (CUSTOM0/1).</summary>
+    /// <summary>Per vertex biome data (D42), CUSTOM0..3: grass rgb + snow; dry rgb + plant cover; map colour rgb
+    /// (debug view) + rock exposure; rock rgb + wetness.</summary>
     public required float[] Biome0 { get; init; }
     public required float[] Biome1 { get; init; }
+    public required float[] Biome2 { get; init; }
+    public required float[] Biome3 { get; init; }
     /// <summary>Water surface mesh (null when the tile is dry).</summary>
     public (Vector3[] Vertices, Color[] Colors, Vector2[] Flow, int[] Indices)? Water { get; set; }
     /// <summary>Triangle soup for a ConcavePolygonShape3D (level 0 only).</summary>
@@ -73,8 +76,13 @@ public static class TileBuilder
     /// <summary>Cells across a tile: the nearest level is twice as fine (1 m vertices: smoother shorelines, small creeks).</summary>
     public static int CellsFor(int level) => level == 0 ? 64 : Cells;
 
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Color> HexCache = new();
-    private static Color Hex(string hex) => HexCache.GetOrAdd(hex, h => new Color("#" + h));
+    private static (float R, float G, float B) Mix((float R, float G, float B) a, (float R, float G, float B) b, float sa, float sb, float scale) =>
+        ((a.R * sa + b.R * sb) * scale, (a.G * sa + b.G * sb) * scale, (a.B * sa + b.B * sb) * scale);
+
+    private static void Put(float[] target, int k, (float R, float G, float B) c, double a)
+    {
+        target[k * 4] = c.R; target[k * 4 + 1] = c.G; target[k * 4 + 2] = c.B; target[k * 4 + 3] = (float)a;
+    }
     public static TileData Build(TerrainSampler sampler, TileKey key, DetailConfig config)
     {
         int Cells = CellsFor(key.Level), Side = Cells + 1;
@@ -123,7 +131,10 @@ public static class TileBuilder
         var uv2 = new Vector2[vertices.Length];
         var biome0 = new float[vertices.Length * 4];
         var biome1 = new float[vertices.Length * 4];
+        var biome2 = new float[vertices.Length * 4];
+        var biome3 = new float[vertices.Length * 4];
         var climate = sampler.Plan.Climate;
+        var biomes = sampler.Plan.Biomes;
         for (int j = 0; j < Side; j++)
             for (int i = 0; i < Side; i++)
             {
@@ -143,14 +154,18 @@ public static class TileBuilder
                 double edited = Math.Abs(sampler.Edits.Delta(x0 + i * spacing, z0 + j * spacing));
                 uv2[k] = new Vector2((float)(h - sea), (float)Math.Min(1, edited * 2));
                 // Biome colours, blended between the two best-fitting biomes; snow from the biome and the cold.
-                var (ba, bb, share, temperature, _) = climate.BiomeAt(x0 + i * spacing, z0 + j * spacing, h - sea);
-                Biome A = climate.Biomes[ba], B = climate.Biomes[bb];
-                var grass = Hex(A.Grass).Lerp(Hex(B.Grass), (float)(1 - share));
-                var dry = Hex(A.Dry).Lerp(Hex(B.Dry), (float)(1 - share));
-                double snow = climate.Snow(A, B, share, temperature, h - sea);
-                double plants = A.Grassland * share + B.Grassland * (1 - share);
-                biome0[k * 4] = grass.R; biome0[k * 4 + 1] = grass.G; biome0[k * 4 + 2] = grass.B; biome0[k * 4 + 3] = (float)snow;
-                biome1[k * 4] = dry.R; biome1[k * 4 + 1] = dry.G; biome1[k * 4 + 2] = dry.B; biome1[k * 4 + 3] = (float)Math.Min(1, plants);
+                double wx = x0 + i * spacing, wz = z0 + j * spacing;
+                var (ba, bb, share) = biomes.Sample(wx, wz);
+                ResolvedBiome A = biomes.Pool[ba], B = biomes.Pool[bb];
+                float sa = (float)share, sb = 1 - sa;
+                float dark = (float)(1 - .35 * (A.Def.Appearance.Darkness * share + B.Def.Appearance.Darkness * (1 - share)));
+                double temperature = climate.At(wx, wz, h - sea).Temperature;
+                double snow = climate.Snow(A.Snow * share + B.Snow * (1 - share), temperature, h - sea);
+                double plants = A.Def.Vegetation.Grass * share + B.Def.Vegetation.Grass * (1 - share);
+                Put(biome0, k, Mix(A.Grass, B.Grass, sa, sb, dark), snow);
+                Put(biome1, k, Mix(A.Dry, B.Dry, sa, sb, dark), Math.Min(1, plants));
+                Put(biome2, k, Mix(A.Map, B.Map, sa, sb, 1), A.Def.Appearance.RockExposure * share + B.Def.Appearance.RockExposure * (1 - share));
+                Put(biome3, k, Mix(A.Rock, B.Rock, sa, sb, 1), A.Def.Water.Wetness * share + B.Def.Water.Wetness * (1 - share));
             }
         // Skirts: a copy of each edge pushed down, so a coarser neighbour's edge never shows a gap.
         float drop = (float)(2 + spacing * 1.5);
@@ -167,7 +182,11 @@ public static class TileBuilder
             int k = Side * Side + e, src = edge[e];
             vertices[k] = vertices[src] - new Vector3(0, drop, 0);
             normals[k] = normals[src]; colors[k] = colors[src]; uv[k] = uv[src]; uv2[k] = uv2[src];
-            for (int c = 0; c < 4; c++) { biome0[k * 4 + c] = biome0[src * 4 + c]; biome1[k * 4 + c] = biome1[src * 4 + c]; }
+            for (int c = 0; c < 4; c++)
+            {
+                biome0[k * 4 + c] = biome0[src * 4 + c]; biome1[k * 4 + c] = biome1[src * 4 + c];
+                biome2[k * 4 + c] = biome2[src * 4 + c]; biome3[k * 4 + c] = biome3[src * 4 + c];
+            }
         }
         var indices = new List<int>(Cells * Cells * 6 + skirt * 6);
         for (int j = 0; j < Cells; j++)
@@ -193,7 +212,7 @@ public static class TileBuilder
         var data = new TileData
         {
             Key = key, Side = Side, Vertices = vertices, Normals = normals, Colors = colors, Uv = uv, Uv2 = uv2, Indices = indices.ToArray(),
-            Biome0 = biome0, Biome1 = biome1,
+            Biome0 = biome0, Biome1 = biome1, Biome2 = biome2, Biome3 = biome3,
             CollisionFaces = key.Level == 0 ? Faces(vertices) : null,
             // Full trees on the nearest levels; beyond, tree cards, then the terrain shader's forest tint.
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),

@@ -35,18 +35,11 @@ public sealed class Climate
     public const int TemperatureChannel = 0, PrecipitationChannel = 1;
     public MacroRaster Raster { get; }
     public ClimateSettings Settings { get; }
-    public IReadOnlyList<Biome> Biomes { get; }
     private readonly double _north, _south, _world, _originZ, _originX;
-    private readonly ulong _seed;
-    private readonly double[] _logLow, _logHigh;
 
-    public Climate(WorldPlan plan, ClimateSettings? settings = null, IReadOnlyList<Biome>? biomes = null)
+    public Climate(WorldPlan plan, ClimateSettings? settings = null)
     {
         Settings = settings ?? new ClimateSettings();
-        Biomes = !Settings.Biomes ? new[] { WorldGen.Biomes.Classic } : biomes ?? WorldGen.Biomes.Defaults;
-        _logLow = Biomes.Select(b => Math.Log(Math.Max(1, b.Precipitation[0]))).ToArray();
-        _logHigh = Biomes.Select(b => Math.Log(Math.Max(1, b.Precipitation[1]))).ToArray();
-        _seed = Hashing.FeatureSeed(plan.Manifest.Seed, 5, plan.Manifest.ProfileDigest, "climate");
         var macro = plan.Macro;
         var p = plan.Profile;
         _world = p.WorldSize; _originZ = plan.Manifest.OriginZ; _originX = plan.Manifest.OriginX;
@@ -117,35 +110,10 @@ public sealed class Climate
         return (SeaLevelTemperature(Latitude(z)) + Settings.TemperatureOffset - .0065 * Math.Max(0, elevation), p);
     }
 
-    /// <summary>Snow cover 0..1 from the biome and the cold; without biomes the classic fixed snow line (~2.7 km).</summary>
-    public double Snow(Biome a, Biome b, double share, double temperature, double elevation) => Settings.Biomes
-        ? Math.Max(a.Snow * share + b.Snow * (1 - share), DetMath.Smooth((-4 - temperature) / 5))
+    /// <summary>Snow cover 0..1 from the ground set and the cold; without biomes the classic fixed snow line (~2.7 km).</summary>
+    public double Snow(double groundSnow, double temperature, double elevation) => Settings.Biomes
+        ? Math.Max(groundSnow, DetMath.Smooth((-4 - temperature) / 5))
         : DetMath.Smooth((elevation - 2450) / 400);
-
-    /// <summary>
-    /// The two best-fitting biomes at a point (and the first one's share, for blending), with regional jitter so
-    /// borders wander instead of following the smooth climate lines: ±1.5 °C and ±30 % rain over 6–40 km.
-    /// </summary>
-    public (int A, int B, double ShareA, double Temperature, double Precipitation) BiomeAt(double x, double z, double elevation)
-    {
-        var (t, p) = At(x, z, elevation);
-        if (!Settings.Biomes) return (0, 0, 1, t, p);
-        double lx = x - _originX, lz = z - _originZ;
-        t += Noise.Fbm(lx, lz, 40000, 3, 3000, _seed, .5) * 3;
-        p *= Math.Exp(Noise.Fbm(lx, lz, 30000, 3, 3000, _seed + 1, .5) * .6);
-        double lp = Math.Log(Math.Max(1, p));
-        int a = 0, b = 0; double fa = -1, fb = -1;
-        for (int i = 0; i < Biomes.Count; i++)
-        {
-            var bi = Biomes[i];
-            double f = DetMath.Smooth((t - bi.Temperature[0]) / 2.5 + .5) * DetMath.Smooth((bi.Temperature[1] - t) / 2.5 + .5)
-                * DetMath.Smooth((lp - _logLow[i]) / .2 + .5) * DetMath.Smooth((_logHigh[i] - lp) / .2 + .5);
-            if (f > fa) { b = a; fb = fa; a = i; fa = f; }
-            else if (f > fb) { b = i; fb = f; }
-        }
-        fb = Math.Max(fb, 0); fa = Math.Max(fa, 1e-9);
-        return (a, b, fa / (fa + fb), t, p);
-    }
 
     private static void Blur(float[] a, int n, int r)
     {

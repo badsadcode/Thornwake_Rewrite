@@ -43,6 +43,7 @@ public partial class WorldLab : Node3D
     private WorldPlan? _previewPlan;
     private TextureRect _previewImage = null!;
     private CheckButton _biomeView = null!;
+    private bool _biomeTint;
     private Label _previewInfo = null!, _typeInfo = null!;
     private TerrainSampler? _sampler;
     private Task<TerrainSampler>? _generation;
@@ -69,6 +70,7 @@ public partial class WorldLab : Node3D
     public override void _Ready()
     {
         _profiles = WorldProfile.ParseCatalog(Godot.FileAccess.GetFileAsString("res://Content/world_profiles.json"));
+        LoadBiomes();
         _recipes = WorldRecipe.Catalog(_profiles, LoadCustomTypes());
         // The water shader reads the screen and depth textures; with MSAA those reads produce lines along the water
         // mesh's triangle edges (Tom's playtest) and wrong refraction. This scene uses FXAA or TAA instead (the valley
@@ -114,6 +116,7 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--tool=")) _tools.Select(int.Parse(arg[7..], CultureInfo.InvariantCulture));
             if (arg == "--grid") { _gridShown = true; _streamer.ShowGrid(true); }
+            if (arg == "--biome-tint") { _biomeTint = true; _streamer.ShowBiomes(true); }
             if (arg.StartsWith("--hour=")) _timeSlider.Value = double.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--menu=")) { _menu.Visible = true; _menu.GetChild<TabContainer>(0).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); }
         }
@@ -156,6 +159,28 @@ public partial class WorldLab : Node3D
     private const string CustomTypes = "user://world_types";
 
     /// <summary>World types the player saved (one JSON file each, editable by hand for deeper tweaks).</summary>
+    /// <summary>Biome definitions and asset sets: built-in content plus the player's own files (user://biomes/*.json,
+    /// user://asset_sets/*.json — the format of Content/biomes.json; docs/BIOMES.md). A broken custom file is skipped.</summary>
+    private static void LoadBiomes()
+    {
+        static List<string> Files(string folder)
+        {
+            var list = new List<string>();
+            using var dir = DirAccess.Open(folder);
+            if (dir == null) return list;
+            foreach (var file in dir.GetFiles())
+                if (file.EndsWith(".json")) list.Add(Godot.FileAccess.GetFileAsString($"{folder}/{file}"));
+            return list;
+        }
+        string biomes = Godot.FileAccess.GetFileAsString("res://Content/biomes.json"), sets = Godot.FileAccess.GetFileAsString("res://Content/asset_sets.json");
+        try { BiomeRegistry.Current = BiomeRegistry.Parse(biomes, sets, Files("user://biomes"), Files("user://asset_sets")); }
+        catch (Exception error)
+        {
+            GD.PushWarning("Custom biomes skipped: " + error.Message);
+            BiomeRegistry.Current = BiomeRegistry.Parse(biomes, sets);
+        }
+    }
+
     private static List<WorldRecipe> LoadCustomTypes()
     {
         var list = new List<WorldRecipe>();
@@ -522,6 +547,12 @@ public partial class WorldLab : Node3D
         };
         if (_sampler.Plan.Hydrology.NearestRiver(PlayerX, PlayerZ, 400, out var river) && t.Water == WaterKind.None)
             where += $" · river {river.Distance:0} m away ({river.Width:0} m wide)";
+        // Biome (and the one it blends into), with the local climate.
+        var biomes = _sampler.Plan.Biomes;
+        var (ba, bb, share) = biomes.Sample(PlayerX, PlayerZ);
+        var (temperature, rain) = _sampler.Plan.Climate.At(PlayerX, PlayerZ, t.Height - _sampler.Plan.Profile.SeaLevel);
+        where += $"\nBiome {biomes.Pool[ba].Def.Name}" + (bb != ba && share < .95 ? $" ({share * 100:0} %, → {biomes.Pool[bb].Def.Name})" : "") +
+            $" · {temperature:0} °C, {rain:0} mm/yr";
         string mode = _fly ? (_noclip ? "Fly + noclip" : "Fly") : _swimming ? "Swimming" : "Walk";
         _hud.Text = $"{_status}\n" +
             $"Position {PlayerX:0} , {PlayerZ:0}   ground {t.Height:0.0} m   {where}\n" +
@@ -558,6 +589,7 @@ public partial class WorldLab : Node3D
             case Key.F1: _help.Visible = !_help.Visible; break;
             case Key.F2: _showHud = !_showHud; _hud.Visible = _showHud; break;
             case Key.F3: _gridShown = !_gridShown; _streamer.ShowGrid(_gridShown); break;
+            case Key.F4: _biomeTint = !_biomeTint; _streamer.ShowBiomes(_biomeTint); break;
             case Key.J: if (!_menu.Visible) ToggleSpring(); break;
             case >= Key.Key1 and <= Key.Key5: if (!_menu.Visible && _tools.Select((int)(key.Keycode - Key.Key1))) _status = _tools.Status; break;
             case Key.T or Key.Y or Key.Bracketleft or Key.Bracketright or Key.Minus or Key.Equal: if (!_menu.Visible) _tools.DevKey(key.Keycode); break;
@@ -619,7 +651,7 @@ public partial class WorldLab : Node3D
                    "F fly (Space/C up/down, Shift faster, Ctrl ×6) · N noclip · Esc menu: teleport, new world, time of day\n" +
                    "Water: hold G pour where you look · J spring · H rain · K clear\n" +
                    "Tools: 1 hands · 2 shovel · 3 pickaxe · 4 hoe · 5 terraform (dev) — left/right mouse use\n" +
-                   "F1 hide help · F2 hide HUD · F3 tile grid · F12 screenshot (saved to the user data folder)",
+                   "F1 hide help · F2 hide HUD · F3 tile grid · F4 biome colours · F12 screenshot (saved to the user data folder)",
             AnchorTop = 1, AnchorBottom = 1, OffsetTop = -122, OffsetLeft = 14, OffsetRight = 900,
         };
         _help.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .8f));

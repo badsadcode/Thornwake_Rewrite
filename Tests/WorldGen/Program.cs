@@ -80,9 +80,9 @@ if (biomeMaps != null)
     Console.WriteLine($"climate {sw.ElapsedMilliseconds} ms, raster {climate.Raster.Size}², latitudes {climate.Latitude(plan.Manifest.OriginZ - plan.Profile.WorldSize / 2):0}° … {climate.Latitude(plan.Manifest.OriginZ + plan.Profile.WorldSize / 2):0}°");
     Directory.CreateDirectory(v[0]);
     int px = 512; double world = plan.Profile.WorldSize, step = world / px;
-    var biomes = Biomes.Defaults;
-    var counts = new int[biomes.Length]; int landCount = 0;
-    var best = new (double Share, double X, double Z)[biomes.Length];
+    var map = plan.Biomes;
+    var counts = new int[map.Pool.Count]; int landCount = 0;
+    var best = new (double Share, double X, double Z)[map.Pool.Count];
     var tImg = new byte[px * px * 3]; var pImg = new byte[px * px * 3]; var bImg = new byte[px * px * 3];
     for (int j = 0; j < px; j++)
         for (int i = 0; i < px; i++)
@@ -95,16 +95,16 @@ if (biomeMaps != null)
             double tn = Math.Clamp((t + 20) / 50, 0, 1), pn = Math.Clamp(Math.Log10(Math.Max(1, p)) / 3.6, 0, 1);
             tImg[k] = (byte)(255 * tn); tImg[k + 1] = (byte)(80 + 100 * (1 - Math.Abs(tn - .5) * 2)); tImg[k + 2] = (byte)(255 * (1 - tn));
             pImg[k] = (byte)(220 * (1 - pn)); pImg[k + 1] = (byte)(200 * (1 - pn) + 40); pImg[k + 2] = (byte)(120 + 135 * pn);
-            var (ba, bb, share, _, _) = climate.BiomeAt(x, z, h);
+            var (ba, bb, share) = map.Sample(x, z);
             counts[ba]++; landCount++;
             if (share > best[ba].Share && (i * 7 + j * 13) % 5 == 0) best[ba] = (share, x, z);
-            int Hex(string c, int o) => Convert.ToInt32(c.Substring(o, 2), 16);
-            for (int c = 0; c < 3; c++) bImg[k + c] = (byte)(Hex(biomes[ba].Map, c * 2) * share + Hex(biomes[bb].Map, c * 2) * (1 - share));
+            var ca = map.Pool[ba].Map; var cb = map.Pool[bb].Map;
+            bImg[k] = (byte)(255 * (ca.R * share + cb.R * (1 - share))); bImg[k + 1] = (byte)(255 * (ca.G * share + cb.G * (1 - share))); bImg[k + 2] = (byte)(255 * (ca.B * share + cb.B * (1 - share)));
         }
     Png.Write(Path.Combine(v[0], $"{v[1]}-{v[2]}-temperature.png"), px, px, tImg);
     Png.Write(Path.Combine(v[0], $"{v[1]}-{v[2]}-precipitation.png"), px, px, pImg);
     Png.Write(Path.Combine(v[0], $"{v[1]}-{v[2]}-biomes.png"), px, px, bImg);
-    for (int b = 0; b < biomes.Length; b++) if (counts[b] > 0) Console.WriteLine($"  {biomes[b].Name}: {counts[b] * 100.0 / landCount:0.0} %  e.g. at {best[b].X:0},{best[b].Z:0}");
+    for (int b = 0; b < map.Pool.Count; b++) if (counts[b] > 0) Console.WriteLine($"  {map.Pool[b].Def.Name}: {counts[b] * 100.0 / landCount:0.0} %  e.g. at {best[b].X:0},{best[b].Z:0}");
     return 0;
 }
 

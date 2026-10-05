@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Thornwake.WorldGen;
 using Noise = Thornwake.WorldGen.Noise;
@@ -26,13 +27,15 @@ public static class Vegetation
     private static readonly int[] Autumn = { 11, 15, 16 };
     private static readonly int[] Needles = { 0, 1, 2, 3, 4, 3, 4 };
 
-    /// <summary>The biome blend at a point (D42): the two best-fitting biomes and the first one's share.</summary>
-    public static (Biome A, Biome B, double Share) BiomeOf(TerrainSampler sampler, double x, double z, double elevation)
+    /// <summary>The biome blend at a point (D42): the two strongest biomes and the first one's share.</summary>
+    public static (ResolvedBiome A, ResolvedBiome B, double Share) BiomeOf(TerrainSampler sampler, double x, double z)
     {
-        var climate = sampler.Plan.Climate;
-        var (a, b, share, _, _) = climate.BiomeAt(x, z, elevation);
-        return (climate.Biomes[a], climate.Biomes[b], share);
+        var map = sampler.Plan.Biomes;
+        var (a, b, share) = map.Sample(x, z);
+        return (map.Pool[a], map.Pool[b], share);
     }
+
+    private static readonly Dictionary<string, int> SpeciesIndex = Species.Select((s, i) => (s, i)).ToDictionary(p => p.s, p => p.i);
 
     /// <summary>0..1 forest cover: broad patches of woodland and meadow, thinning toward the tree line; the biome
     /// sets how much forest there is (none in deserts and on ice, little in steppe and tundra, dense in rainforest).</summary>
@@ -41,7 +44,7 @@ public static class Vegetation
         if (t.Water != WaterKind.None || coverSetting <= 0) return 0;
         double elevation = t.Height - sampler.Plan.Profile.SeaLevel;
         if (elevation < 2.5) return 0;
-        if (biomeForest < 0) { var (ba, bb, share) = BiomeOf(sampler, x, z, elevation); biomeForest = ba.Forest * share + bb.Forest * (1 - share); }
+        if (biomeForest < 0) { var (ba, bb, share) = BiomeOf(sampler, x, z); biomeForest = ba.Def.Vegetation.TreeDensity * share + bb.Def.Vegetation.TreeDensity * (1 - share); }
         if (biomeForest <= .001) return 0;
         // Denser biomes grow bigger forests; sparse ones (steppe, savanna, tundra) only scattered trees.
         double sparse = Math.Min(1, biomeForest);
@@ -81,23 +84,22 @@ public static class Vegetation
                 double elevation = t.Height - sea;
                 ulong pick = Hashing.Mix(h + 99);
                 int species;
+                ResolvedBiome? biomeHere = null;
                 if (sampler.Plan.Hydrology.NearestRiver(x, z, 0, out var river) && river.Distance < river.Width * .5 + 18 && (pick & 3) != 0) species = 13;
                 else
                 {
-                    // The biome's tree mix (conifers / green / autumn broadleaf), more conifers higher up.
-                    var (ba, bb, share) = BiomeOf(sampler, x, z, elevation);
-                    var biome = Hashing.Unit(Hashing.Mix(pick + 7)) < share ? ba : bb;
-                    int[] list;
-                    if (biome.Conifers < 0) list = elevation < 550 ? Broadleaf : elevation < 1250 ? Mixed : Conifer; // classic (biomes off)
-                    else
+                    // A tree from the biome's tree sets (classic look: species by elevation as in build 9).
+                    var (ba, bb, share) = BiomeOf(sampler, x, z);
+                    biomeHere = Hashing.Unit(Hashing.Mix(pick + 7)) < share ? ba : bb;
+                    if (biomeHere.Classic)
                     {
-                        double conifers = Math.Min(1, biome.Conifers + DetMath.Smooth((elevation - 900) / 700) * .5);
-                        double r = Hashing.Unit(Hashing.Mix(pick + 3));
-                        list = r < conifers ? Needles : r < conifers + (1 - conifers) * biome.Autumn ? Autumn : Green;
+                        var list = elevation < 550 ? Broadleaf : elevation < 1250 ? Mixed : Conifer;
+                        species = list[(int)(pick % (ulong)list.Length)];
                     }
-                    species = list[(int)(pick % (ulong)list.Length)];
+                    else species = SpeciesIndex.GetValueOrDefault(biomeHere.PickTree(Hashing.Unit(Hashing.Mix(pick + 3))), 0);
                 }
-                float scale = (float)(.8 + .45 * Hashing.Unit(Hashing.Mix(pick)));
+                var sizes = biomeHere?.Def.Vegetation.TreeSize ?? new[] { .8, 1.25 };
+                float scale = (float)(sizes[0] + (sizes[1] - sizes[0]) * Hashing.Unit(Hashing.Mix(pick)));
                 float yaw = (float)(Hashing.Unit(Hashing.Mix(pick + 1)) * Math.PI * 2);
                 var basis = new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale);
                 trees.Add(new TreeInstance(species, new Transform3D(basis, new Vector3((float)(x - x0), (float)t.Height - .1f, (float)(z - z0)))));

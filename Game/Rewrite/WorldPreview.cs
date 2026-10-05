@@ -87,10 +87,10 @@ public static class WorldPreview
     public static Image RenderBiomes(WorldPlan plan, int pixels)
     {
         var p = plan.Profile;
-        var climate = plan.Climate;
+        var map = plan.Biomes;
         double world = p.WorldSize, x0 = plan.Manifest.OriginX - world / 2, z0 = plan.Manifest.OriginZ - world / 2, step = world / pixels;
-        var colors = new Color[climate.Biomes.Count];
-        for (int b = 0; b < colors.Length; b++) colors[b] = new Color("#" + climate.Biomes[b].Map);
+        var colors = new Color[map.Pool.Count];
+        for (int b = 0; b < colors.Length; b++) colors[b] = new Color(map.Pool[b].Map.R, map.Pool[b].Map.G, map.Pool[b].Map.B);
         var height = new float[pixels * pixels];
         var data = new byte[pixels * pixels * 3];
         System.Threading.Tasks.Parallel.For(0, pixels, j =>
@@ -104,7 +104,7 @@ public static class WorldPreview
                 Color c;
                 if (l <= 0) c = new Color(.36f, .58f, .7f).Lerp(new Color(.1f, .22f, .38f), Mathf.Clamp(-(float)l / .5f, 0, 1));
                 else if (plan.Hydrology.LakeAt(x, z) >= 0) c = new Color(.3f, .5f, .62f);
-                else { var (a, b, share, _, _) = climate.BiomeAt(x, z, h); c = colors[b].Lerp(colors[a], (float)share); }
+                else { var (a, b, share) = map.Sample(x, z); c = colors[b].Lerp(colors[a], (float)share); }
                 data[k * 3] = (byte)(c.R * 255); data[k * 3 + 1] = (byte)(c.G * 255); data[k * 3 + 2] = (byte)(c.B * 255);
             }
         });

@@ -32,37 +32,48 @@ internal static class ClimateTests
         T.Check(again.Raster.Channel(Thornwake.WorldGen.Climate.PrecipitationChannel).AsSpan().SequenceEqual(c.Raster.Channel(Thornwake.WorldGen.Climate.PrecipitationChannel)), "deterministic");
     }
 
-    private static Dictionary<string, double> Spread(WorldPlan plan, Climate c)
+    /// <summary>Share of the world's land where each biome is strongest.</summary>
+    private static Dictionary<string, double> Spread(BiomeMap map)
     {
-        var counts = new Dictionary<string, double>(); int land = 0;
-        double world = plan.Profile.WorldSize, step = world / 160;
-        for (int j = 0; j < 160; j++)
-            for (int i = 0; i < 160; i++)
-            {
-                double x = plan.Manifest.OriginX - world / 2 + (i + .5) * step, z = plan.Manifest.OriginZ - world / 2 + (j + .5) * step;
-                plan.Macro.Sample(x, z, WorldPlan.LandChannel, WorldPlan.HeightChannel, WorldPlan.MountainChannel, out double l, out double h, out _);
-                if (l <= 0) continue;
-                var id = c.Biomes[c.BiomeAt(x, z, h).A].Id;
-                counts[id] = counts.GetValueOrDefault(id) + 1; land++;
-            }
-        foreach (var k in counts.Keys.ToList()) counts[k] /= land;
-        return counts;
+        var c = map.Coverage();
+        return map.Pool.Where(b => c[b.Index] > 0).ToDictionary(b => b.Def.Id, b => c[b.Index]);
     }
 
     private static void Biomes()
     {
-        foreach (var b in Thornwake.WorldGen.Biomes.Defaults) Thornwake.WorldGen.Biomes.Validate(b);
-        T.Check(Thornwake.WorldGen.Biomes.Defaults.Select(b => b.Id).Distinct().Count() == Thornwake.WorldGen.Biomes.Defaults.Length, "unique biome ids");
-        var json = System.Text.Json.JsonSerializer.Serialize(Thornwake.WorldGen.Biomes.Defaults);
-        T.Check(Thornwake.WorldGen.Biomes.Parse(json).Count == Thornwake.WorldGen.Biomes.Defaults.Length, "biomes round-trip through JSON (custom biome format)");
+        var reg = BiomeRegistry.Current!;
+        T.Check(reg.Pool.Count == 14 && reg.All.Select(b => b.Id).Distinct().Count() == reg.All.Count, $"{reg.Pool.Count} built-in biomes in the pool, unique ids");
+        // A custom biome (World Site Editor format) joins the pool without code changes; one out of the pool does not.
+        string root = CoreTests.FindRepoRoot();
+        string biomes = File.ReadAllText(Path.Combine(root, "Content/biomes.json")), sets = File.ReadAllText(Path.Combine(root, "Content/asset_sets.json"));
+        var custom = """{ "Id": "crystal-fields", "Name": "Crystal Fields", "Placement": { "Temperature": [0, 20], "Weight": 3 }, "Appearance": { "Ground": "MeadowGround", "MapColor": "a0e0ff" } }""";
+        var hidden = """{ "Id": "hidden", "Name": "Hidden", "InPool": false }""";
+        var withCustom = BiomeRegistry.Parse(biomes, sets, new[] { custom, hidden });
+        T.Check(withCustom.Pool.Any(b => b.Def.Id == "crystal-fields") && withCustom.Pool.All(b => b.Def.Id != "hidden") && withCustom.All.Any(b => b.Id == "hidden"), "custom biomes join the pool (or stay out of it)");
+        bool rejected = false;
+        try { BiomeRegistry.Parse(biomes, sets, new[] { """{ "Id": "bad", "Name": "Bad", "Appearance": { "Ground": "NoSuchSet" } }""" }); } catch (InvalidDataException) { rejected = true; }
+        T.Check(rejected, "a biome naming an unknown asset set is rejected");
         var plan = CoreTests.Sampler("vast-world", 7319).Plan;
-        var spread = Spread(plan, plan.Climate);
-        T.Note("vast world: " + string.Join(", ", spread.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value * 100:0} %")));
-        T.Check(spread.Count >= 8 && spread.Values.Max() < .5, "a big world has many biomes, none dominating");
-        var warm = new Climate(plan, plan.Style.Climate with { TemperatureOffset = 10 });
-        var dry = new Climate(plan, plan.Style.Climate with { Moisture = .3 });
-        var sw = Spread(plan, warm); var sd = Spread(plan, dry);
-        T.Check(sw.GetValueOrDefault("tundra") + sw.GetValueOrDefault("ice") < spread.GetValueOrDefault("tundra") + spread.GetValueOrDefault("ice"), "warmer: less tundra and ice");
-        T.Check(sd.GetValueOrDefault("desert") + sd.GetValueOrDefault("cold-desert") + sd.GetValueOrDefault("steppe") > spread.GetValueOrDefault("desert") + spread.GetValueOrDefault("cold-desert") + spread.GetValueOrDefault("steppe"), "drier: more desert and steppe");
+        var spread = Spread(plan.Biomes);
+        T.Note("vast world: " + string.Join(", ", spread.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value * 100:0.0} %")));
+        T.Check(spread.Count >= 10 && spread.Values.Max() < .45, "a big world has many biomes, none dominating");
+        T.Check(spread.ContainsKey("ancient-forest") && spread.ContainsKey("volcanic"), "patch biomes appear");
+        var customPlan = new WorldPlan(plan.Manifest, style: plan.Style, biomes: withCustom);
+        T.Check(Spread(customPlan.Biomes).ContainsKey("crystal-fields"), "a custom biome is generated");
+        var warm = new BiomeMap(plan, new Climate(plan, plan.Style.Climate with { TemperatureOffset = 10 }), reg);
+        var dry = new BiomeMap(plan, new Climate(plan, plan.Style.Climate with { Moisture = .3 }), reg);
+        var sw = Spread(warm); var sd = Spread(dry);
+        double Cold(Dictionary<string, double> s) => s.GetValueOrDefault("tundra") + s.GetValueOrDefault("arctic") + s.GetValueOrDefault("taiga");
+        double Dry(Dictionary<string, double> s) => s.GetValueOrDefault("desert") + s.GetValueOrDefault("badlands") + s.GetValueOrDefault("savanna") + s.GetValueOrDefault("temperate-grassland");
+        T.Check(Cold(sw) < Cold(spread), "warmer: less taiga, tundra and ice");
+        T.Check(Dry(sd) > Dry(spread), "drier: more desert, badlands, savanna and grassland");
+        var again = new BiomeMap(plan, plan.Climate, reg);
+        bool same = true;
+        for (int k = 0; k < 2000 && same; k++)
+        {
+            double x = plan.Manifest.OriginX + (k * 7919 % 1000 - 500) * 1500.0, z = plan.Manifest.OriginZ + (k * 104729 % 1000 - 500) * 1500.0;
+            same = again.Sample(x, z) == plan.Biomes.Sample(x, z);
+        }
+        T.Check(same, "deterministic");
     }
 }

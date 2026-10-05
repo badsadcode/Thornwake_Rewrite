@@ -21,6 +21,8 @@ public sealed class WorldPlan
     public Hydrology Hydrology { get; }
     /// <summary>Temperature, precipitation and biomes (D42).</summary>
     public Climate Climate { get; }
+    /// <summary>Biome regions (D42).</summary>
+    public BiomeMap Biomes { get; }
     public double BuildMilliseconds { get; }
     /// <summary>Time spent on the layout raster alone (before erosion/hydrology).</summary>
     public double RasterMilliseconds { get; }
@@ -36,7 +38,7 @@ public sealed class WorldPlan
         return Math.Clamp(size, 512, 2048);
     }
 
-    public WorldPlan(WorldManifest manifest, int? rasterSize = null, TerrainStyle? style = null)
+    public WorldPlan(WorldManifest manifest, int? rasterSize = null, TerrainStyle? style = null, BiomeRegistry? biomes = null)
     {
         var timer = Stopwatch.StartNew();
         Manifest = manifest;
@@ -139,6 +141,7 @@ public sealed class WorldPlan
         for (int k = 0; k < height.Length; k++) heightRaster[k] = (float)height[k];
         Hydrology.RefineSurfaces(Style);
         Climate = new Climate(this, Style.Climate);
+        Biomes = new BiomeMap(this, Climate, Style.Climate.Biomes ? biomes ?? BiomeRegistry.Current ?? BiomeRegistry.ClassicOnly : BiomeRegistry.ClassicOnly);
         BuildMilliseconds = timer.Elapsed.TotalMilliseconds;
     }
 }

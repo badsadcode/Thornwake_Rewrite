@@ -11,6 +11,12 @@ internal static class CoreTests
     private static readonly Dictionary<(string, int), TerrainSampler> Cache = new();
     public const string FixedWorldId = "0123456789abcdef0123456789abcdef";
 
+    static CoreTests()
+    {
+        string root = FindRepoRoot();
+        BiomeRegistry.Current = BiomeRegistry.Parse(File.ReadAllText(Path.Combine(root, "Content/biomes.json")), File.ReadAllText(Path.Combine(root, "Content/asset_sets.json")));
+    }
+
     public static TerrainSampler Sampler(string profile, int seed)
     {
         lock (Cache)

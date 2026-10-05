@@ -78,6 +78,7 @@ public partial class WorldStreamer : Node3D
     public ShaderMaterial WaterMaterial => _water;
 
     public void ShowGrid(bool show) => _terrain.SetShaderParameter("show_grid", show);
+    public void ShowBiomes(bool show) => _terrain.SetShaderParameter("biome_debug", show ? 1f : 0f);
 
     public void Configure(TerrainSampler sampler, double originX, double originZ)
     {
@@ -217,10 +218,13 @@ public partial class WorldStreamer : Node3D
             arrays[(int)Mesh.ArrayType.TexUV2] = data.Uv2;
             arrays[(int)Mesh.ArrayType.Custom0] = data.Biome0;
             arrays[(int)Mesh.ArrayType.Custom1] = data.Biome1;
+            arrays[(int)Mesh.ArrayType.Custom2] = data.Biome2;
+            arrays[(int)Mesh.ArrayType.Custom3] = data.Biome3;
             arrays[(int)Mesh.ArrayType.Index] = data.Indices;
             var mesh = new ArrayMesh();
             const int rgbaFloat = (int)Mesh.ArrayCustomFormat.RgbaFloat;
-            var format = (Mesh.ArrayFormat)(((long)rgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift) | ((long)rgbaFloat << (int)Mesh.ArrayFormat.FormatCustom1Shift));
+            var format = (Mesh.ArrayFormat)(((long)rgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift) | ((long)rgbaFloat << (int)Mesh.ArrayFormat.FormatCustom1Shift)
+                | ((long)rgbaFloat << (int)Mesh.ArrayFormat.FormatCustom2Shift) | ((long)rgbaFloat << (int)Mesh.ArrayFormat.FormatCustom3Shift));
             mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays, null, null, format);
             root.AddChild(new MeshInstance3D
             {
