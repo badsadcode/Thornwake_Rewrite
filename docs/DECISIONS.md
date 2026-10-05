@@ -215,3 +215,33 @@ horizon); caves will be a separate volumetric layer only where needed: a signed-
 deterministically per region, more in karst/mountain areas) and player carving, meshed with dual contouring /
 marching cubes near the player, with openings cut into the height field where a cave meets the surface. The same
 `TerrainSculpt` tool interface will carve it (the directional dig becomes a true tunnel there).
+
+## D32 — River mouths blend into sea and lake beds (2026-10-05)
+Tom: a hard step where rivers enter the sea or a lake. Two causes: raised banks (levees) continued along estuaries,
+standing as dykes between river and sea; and the channel bed ended abruptly against a shallower sea/lake floor.
+Now (style `MouthBlend`, New world → Terrain version "Preview 7" restores the old shape): levees fade out over the
+river's last stretch; the channel continues as a groove into the sea floor (fading over the ~880 m continuation) or
+the lake bed; samples near a mouth carry a `Plume` value so the water shader tints the sea/lake with the river's
+greener, siltier water.
+
+## D33 — Ocean waves shared by shader and gameplay (2026-10-05)
+Boats are planned (Valheim / Sea of Thieves level), so waves must be queryable. `OceanWaves` (engine-free) defines
+6 Gerstner waves from a sea state 0..1 (calm ripples of a few cm … storm swell of ~80 m wavelength and ~5 m crests)
+and the wind direction; the water shader evaluates the same waves from the same uniforms and the same clock (global
+`ocean_time`). `Height(x, z, t)` inverts the horizontal Gerstner motion (tested to < 1 mm). Waves shrink in water
+shallower than ~12 % of their wavelength; lakes carry only the short waves; coarse distant tiles drop waves shorter
+than a few vertex spacings. Sea state: Settings → Sky, plus up to +0.45 while it rains. Swimming follows the waves.
+Shore: the sea's water mesh reaches ~14 m under the beach and rises and falls every ~9 s (swash), with foam at the
+moving waterline and breaker bands rolling in over the shallows; whitecaps on crests in rough seas.
+Next for boats: a buoyancy helper sampling `Height` at hull points; wave-aware sea floor (deeper water offshore
+already from D28); later spectral waves (FFT) if Gerstner sums look too regular at sea.
+
+## D34 — Digging by a river: one water surface (2026-10-05)
+The river's tile water sheet was stretched over dug ground next to it while the local simulation drew the dug water
+at its own level: overlapping sheets with gaps. Dug vertices are now left to the simulation, and the simulation also
+draws river/lake cells next to its water at their surface, so the two meet.
+
+## Planned — Biomes
+Tom: many biomes, each with its own terrain, plants and atmosphere. Plan: a biome map from climate (temperature from
+latitude/elevation, moisture from distance to sea and rain shadow) drives `TerrainStyle` per region (blended at
+borders), vegetation catalogues, ground materials, water colour and atmosphere presets.

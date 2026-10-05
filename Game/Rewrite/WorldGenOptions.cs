@@ -26,8 +26,9 @@ public sealed class WorldGenOptions
     public WorldGenOptions()
     {
         const string S = "World shape", T = "Terrain", W = "Rivers and lakes";
-        Classic = Add(new("gen.classic", S, "Build 5 terrain (for comparison)", 0, 1, 1, 0,
-            "Generate rivers and shores exactly as in build 5 (no bank variation, gentle shores), to compare or go back."));
+        Classic = Add(new("gen.version", S, "Terrain version", 0, 2, 1, 0,
+            "Generate the terrain as in an earlier build, to compare or go back: Preview 7 (before smooth river mouths), Build 5 (before natural banks and steeper shores).",
+            options: new[] { "current", "Preview 7", "Build 5" }));
         Size = Add(new("gen.size", S, "World size", .5, 2, .05, 1, "Scales the whole world: continents, islands, hills and mountain ranges.", "×"));
         Continents = Add(new("gen.continents", S, "Continents", 1, 8, 1, 4, "Number of large landmasses."));
         Islands = Add(new("gen.islands", S, "Islands", 0, 128, 1, 40, "Number of small islands."));
@@ -111,8 +112,9 @@ public sealed class WorldGenOptions
             MeanderStrength = Meanders.Value,
             WanderStrength = Wander.Value,
             WidthVariation = WidthVariation.Value,
-            BankVariation = Classic.On ? 0 : Banks.Value,
-            ShoreSlope = Classic.On ? 0 : Shores.Value,
+            BankVariation = Classic.Index == 2 ? 0 : Banks.Value,
+            ShoreSlope = Classic.Index == 2 ? 0 : Shores.Value,
+            MouthBlend = Classic.Index >= 1 ? 0 : 1,
             ForestCover = ForestCover.Value, ForestDensity = ForestDensity.Value, RockAmount = Rocks.Value, PropAmount = Props.Value,
             LakeShare = b.LakeShare * Lakes.Value,
             DeltaMinCatchmentKm2 = Deltas.Value <= 0 ? double.PositiveInfinity : b.DeltaMinCatchmentKm2 / Deltas.Value,

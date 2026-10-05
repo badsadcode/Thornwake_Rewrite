@@ -416,6 +416,19 @@ public sealed class LocalWater
         return s > MaxSpeed ? (vx / s * MaxSpeed, vz / s * MaxSpeed) : (vx, vz);
     }
 
+    private bool NearSimWater(int x, int z)
+    {
+        for (int b = -2; b <= 2; b++)
+            for (int a = -2; a <= 2; a++)
+            {
+                int nx = x + a, nz = z + b;
+                if (nx < 0 || nz < 0 || nx >= Side || nz >= Side) continue;
+                int n = Index(nx, nz);
+                if (!_sink[n] && _depth[n] > .008f) return true;
+            }
+        return false;
+    }
+
     /// <summary>Chunks (world chunk coordinates) whose visible water changed since the last call.</summary>
     public List<(long X, long Z)> TakeDirty() { var list = new List<(long, long)>(_dirty); _dirty.Clear(); return list; }
 
@@ -435,6 +448,9 @@ public sealed class LocalWater
             {
                 int x = Math.Min(bx + i, Side - 1), z = Math.Min(bz + j, Side - 1), k = j * n + i, c = Index(x, z);
                 floor[k] = _floor[c]; depth[k] = _depth[c]; wet[k] = _wetShown[c];
+                // A river/lake cell next to simulated water (a dug channel) is drawn at its surface too, so the two
+                // sheets join without a gap.
+                if (_sink[c] && !float.IsNaN(_level[c]) && NearSimWater(x, z)) depth[k] = Math.Max(0, _level[c] - _floor[c]);
                 (vx[k], vz[k]) = Velocity(x, z);
             }
         return true;

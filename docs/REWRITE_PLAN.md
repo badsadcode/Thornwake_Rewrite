@@ -342,6 +342,10 @@ as a New-world option with a bit-exact test (D25), intermittent exit crash fixed
 **After build 6:** river beaches and no levees in lakes; digging tools (D30: shovel, pickaxe, hoe, dev terraform
 with preview); caves planned as a volumetric layer (D31), including generated natural cave systems (Tom: important).
 
-**Next:** Tom's feedback and asset batches first. Then M10 caves (volumetric layer, generated cave systems, carving
+**Round 4 → build 8:** Preview 7 snapshot recorded (docs/SNAPSHOTS.md); smooth river mouths with plume (D32);
+ocean waves with sea states shared with gameplay, swash and breakers (D33); dug river banks without water gaps
+(D34). Biomes noted as a planned milestone.
+
+**Next:** Tom's feedback and asset batches first. Then boats groundwork (buoyancy on `OceanWaves`), M10 caves (volumetric layer, generated cave systems, carving
 with the same tools), saving terrain edits, M9 gameplay (felling/harvesting world objects). Then: M6 second step (optional local
 river simulation once terrain edits exist; splashes; sound), M3 gully detail, M8 next steps (save edits, soil/rock material layers, tools).

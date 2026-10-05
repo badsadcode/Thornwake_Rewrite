@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using Thornwake.WorldGen;
 
 namespace Thornwake.Rewrite;
 
@@ -34,6 +35,11 @@ public partial class Atmosphere : Node3D
     /// <summary>Rain on (the water simulation's rain): the sky clouds over, light dims, haze thickens, rain falls.</summary>
     public bool Raining { get; set; }
     private float _storm; // 0 fair … 1 full storm, eased
+    /// <summary>The waves the water shader draws (same parameters and clock), for swimming and boats.</summary>
+    public OceanWaves Waves { get; } = new();
+    /// <summary>Wave clock (s), shared with the shader through the global uniform <c>ocean_time</c>.</summary>
+    public double OceanTime { get; private set; }
+    private double _wavesState = -1;
     private ShaderMaterial? _water;
 
     public override void _Ready()
@@ -113,7 +119,7 @@ public partial class Atmosphere : Node3D
     }
 
     /// <summary>The terrain water material: reflection quality follows the settings.</summary>
-    public void SetWater(ShaderMaterial water) { _water = water; ApplyAll(); }
+    public void SetWater(ShaderMaterial water) { _water = water; _wavesState = -1; ApplyAll(); }
 
     private void OnSetting(Setting s) => ApplyAll();
 
@@ -168,6 +174,10 @@ public partial class Atmosphere : Node3D
         float elevation = Mathf.Sin((hour - 6) / 12 * Mathf.Pi) * 62;
         Sun.RotationDegrees = new Vector3(-Mathf.Max(elevation, -5), -35 + (hour - 12) * 12, 0);
         _storm = Mathf.MoveToward(_storm, Raining ? 1 : 0, (float)delta / 8); // ~8 s to cloud over or clear
+        OceanTime += delta;
+        RenderingServer.GlobalShaderParameterSet("ocean_time", (float)(OceanTime % 100000));
+        double seaState = Math.Clamp(GameSettings.SeaState.Value + _storm * .45, 0, 1);
+        if (Math.Abs(seaState - _wavesState) > .01) UpdateWaves(seaState);
         Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, _storm);
         Environment.FogDensity = .00009f * GameSettings.Haze.F * Mathf.Lerp(1, 4, _storm);
         Environment.FogEnabled = GameSettings.Haze.Value > 0 || _storm > 0;
@@ -200,6 +210,25 @@ public partial class Atmosphere : Node3D
         double dx = c0x + CloudPeriod * Math.Round((cameraLocal.X - c0x) / CloudPeriod);
         double dz = c0z + CloudPeriod * Math.Round((cameraLocal.Z - c0z) / CloudPeriod);
         _shadow.Position = new Vector3((float)dx, cameraLocal.Y, (float)dz);
+    }
+
+    private void UpdateWaves(double seaState)
+    {
+        _wavesState = seaState;
+        Waves.Configure(seaState, Math.Atan2(.6, .8)); // same wind as the clouds
+        if (_water == null) return;
+        var w = new Godot.Collections.Array<Vector4>();
+        var q = new float[OceanWaves.Count];
+        for (int i = 0; i < OceanWaves.Count; i++)
+        {
+            var (dx, dz, k, a) = Waves.Waves[i];
+            w.Add(new Vector4((float)dx, (float)dz, (float)k, (float)a));
+            q[i] = (float)(Waves.Choppiness / (k * Waves.WaveHeight * OceanWaves.Count + 1e-9));
+        }
+        _water.SetShaderParameter("waves", w);
+        _water.SetShaderParameter("wave_q", q);
+        _water.SetShaderParameter("wave_height", (float)Waves.WaveHeight);
+        _water.SetShaderParameter("sea_state", (float)seaState);
     }
 
     /// <summary>Cloud cover in effect: the setting, closing in toward overcast while it rains.</summary>

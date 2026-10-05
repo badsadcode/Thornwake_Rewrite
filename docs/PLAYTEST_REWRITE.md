@@ -78,6 +78,15 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 8
+* **Ocean waves**: real waves on the sea and lakes, from calm to storm (Esc → Settings → Sky → Sea state; rain makes
+  the sea rougher). You swim on them. They are built so boats can ride them later.
+* **Beach waves**: the sea runs up and down the beach, with foam at the waterline and breakers rolling in.
+* **River mouths**: no more step or dyke where a river enters the sea or a lake; the riverbed runs smoothly into
+  the sea/lake floor, and the river's greener water spreads into the bay.
+* **Digging by rivers**: no more gaps between river water and water in a dug channel.
+* **Going back**: New world → Terrain version: current / Preview 7 / Build 5.
+
 ## New in build 7
 * **Digging tools** (1–5, left/right mouse): **shovel** digs soil and fills from a soil bag (1.5 m³, weak on rock),
   **pickaxe** breaks ground and rock in the direction you aim, **hoe** levels to the aimed height and smooths,

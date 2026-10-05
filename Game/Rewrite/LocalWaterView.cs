@@ -97,7 +97,7 @@ public partial class LocalWaterView : Node3D
                 normals[k] = Vector3.Up;
                 // Fast sheets read as rivers, still pools as lakes.
                 float speed = MathF.Sqrt(_vx[k] * _vx[k] + _vz[k] * _vz[k]);
-                colors[k] = new Color(Math.Clamp(_depth[k] / 20, 0, 1), speed > .25f ? 1 : .5f, 0, 1);
+                colors[k] = new Color(Math.Clamp(_depth[k] / 20, 0, 1), 1, 0, 1); // drawn as river water: no lake waves on puddles
                 flow[k] = new Vector2(_vx[k], _vz[k]);
             }
         if (!any) { Keep(); return; }

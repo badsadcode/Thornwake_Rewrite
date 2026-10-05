@@ -220,13 +220,41 @@ public static class TileBuilder
         if (!any) return;
         var vertices = new Vector3[n * n];
         var colors = new Color[n * n];
+        // Ground the player dug (below its generated height) is left to the local water simulation: the river's
+        // sheet must not be stretched over it (that drew gaps and overlapping sheets in dug river banks).
+        var dug = new bool[n * n];
+        for (int k = 0; k < n * n; k++) dug[k] = !wet[k] && data.Uv2[k].Y > .15f;
+        // The sea's sheet also reaches ~14 m under the beach, so the swash can run up and down it.
+        var under = new int[n * n];
+        Array.Fill(under, int.MaxValue);
+        var front = new List<int>();
+        for (int k = 0; k < n * n; k++) if (wet[k] && samples[k].Water == WaterKind.Ocean) { under[k] = 0; front.Add(k); }
+        int reach = Math.Max(1, (int)Math.Ceiling(14 / spacing));
+        for (int step = 1; step <= reach && front.Count > 0; step++)
+        {
+            var next = new List<int>();
+            foreach (int k in front)
+            {
+                int i = k % n, j = k / n;
+                for (int b = -1; b <= 1; b++)
+                    for (int a = -1; a <= 1; a++)
+                    {
+                        int x = i + a, z = j + b;
+                        if (x < 0 || z < 0 || x >= n || z >= n) continue;
+                        int m = z * n + x;
+                        if (wet[m] || dug[m] || under[m] <= step) continue;
+                        under[m] = step; next.Add(m);
+                    }
+            }
+            front = next;
+        }
         for (int j = 0; j < n; j++)
             for (int i = 0; i < n; i++)
             {
                 int k = j * n + i;
-                double level = double.NaN, kind = 0;
-                if (wet[k]) { level = samples[k].WaterLevel; kind = Kind(samples[k].Water); }
-                else
+                double level = double.NaN, kind = 0, plume = 0;
+                if (wet[k]) { level = samples[k].WaterLevel; kind = Kind(samples[k].Water); plume = samples[k].Plume; }
+                else if (!dug[k])
                 {
                     // Average of the wet neighbours (the maximum lifted the sheet over the downstream bank of steep
                     // creeks, where the upstream neighbour is higher).
@@ -238,23 +266,33 @@ public static class TileBuilder
                             if (x < 0 || z < 0 || x >= n || z >= n || !wet[z * n + x]) continue;
                             sum += samples[z * n + x].WaterLevel; count++;
                             kind = Math.Max(kind, Kind(samples[z * n + x].Water));
+                            plume = Math.Max(plume, samples[z * n + x].Plume);
                         }
-                    level = count > 0 ? sum / count : data.Vertices[k].Y - 1; // unused vertex: keep it under ground
+                    if (count > 0) level = sum / count;
+                    else if (under[k] != int.MaxValue) level = SeaLevel(samples);
                 }
+                if (double.IsNaN(level)) level = data.Vertices[k].Y - 1; // unused vertex: keep it under ground
                 double ground = heights[(j + 1) * s2 + i + 1];
                 vertices[k] = new Vector3(i * (float)spacing, (float)level, j * (float)spacing);
-                colors[k] = new Color((float)DetMath.Clamp((level - ground) / 20, 0, 1), (float)kind, 0, 1);
+                colors[k] = new Color((float)DetMath.Clamp((level - ground) / 20, 0, 1), (float)kind, (float)plume, 1);
             }
         var indices = new List<int>();
+        bool Covered(int k) => wet[k] || under[k] != int.MaxValue;
         for (int j = 0; j < n - 1; j++)
             for (int i = 0; i < n - 1; i++)
             {
                 int a = j * n + i, b = a + 1, c = a + n, d = c + 1;
-                if (!(wet[a] || wet[b] || wet[c] || wet[d])) continue;
+                if (!(Covered(a) || Covered(b) || Covered(c) || Covered(d))) continue;
                 indices.Add(a); indices.Add(b); indices.Add(c);
                 indices.Add(b); indices.Add(d); indices.Add(c);
             }
         data.Water = (vertices, colors, Flow(samples, vertices, wet, spacing, n), indices.ToArray());
+    }
+
+    private static double SeaLevel(TerrainSample[] samples)
+    {
+        foreach (var t in samples) if (t.Water == WaterKind.Ocean) return t.WaterLevel;
+        return 0;
     }
 
     /// <summary>

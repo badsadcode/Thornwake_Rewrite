@@ -11,7 +11,8 @@ public readonly record struct TerrainSample(
     double Detail,       // metres of walking-scale relief included in Height
     WaterKind Water,     // water body covering this point (None if dry)
     double WaterLevel,   // absolute surface elevation of that water (NaN if dry)
-    int WaterBody);      // lake id or river reach id (-1 for sea / none)
+    int WaterBody,       // lake id or river reach id (-1 for sea / none)
+    double Plume = 0);   // 0..1 river water mixing into a lake or the sea near a mouth (shading)
 
 /// <summary>
 /// The terrain authority for generated (unedited) ground: a pure, thread-safe function of world position.
@@ -72,8 +73,10 @@ public sealed class TerrainSampler
         {
             double depth = _p.OceanDepth * DetMath.Smooth(-land / .6);
             if (shore > 0 && coastDistance < 1e7) depth = Math.Max(depth, 25 * (1 - DetMath.Exp(-coastDistance * .035 * shore / 25)));
-            double seabed = _p.SeaLevel - depth + Edits.Delta(x, z);
-            return seabed < _p.SeaLevel ? new(seabed, land, 0, 0, WaterKind.Ocean, _p.SeaLevel, -1)
+            double seabed = _p.SeaLevel - depth, plume = 0;
+            if (_style.MouthBlend > 0) seabed = MouthChannel(x, z, seabed, -1, out plume);
+            seabed += Edits.Delta(x, z);
+            return seabed < _p.SeaLevel ? new(seabed, land, 0, 0, WaterKind.Ocean, _p.SeaLevel, -1, plume)
                 : new(seabed, land, 0, 0, WaterKind.None, double.NaN, -1);
         }
 
@@ -143,6 +146,7 @@ public sealed class TerrainSampler
             for (int i = 0; i < count; i++)
             {
                 double delta = Profile(reaches[i], terrain, rise, minWavelength * .5, out _, out double inside) - terrain;
+                if (delta > 0 && _style.MouthBlend > 0) delta *= LeveeFactor(reaches[i]);
                 carve = Math.Min(carve, delta);
                 raise = Math.Max(raise, delta);
                 if (inside > wetInside) { wetInside = inside; water = WaterKind.River; level = reaches[i].Surface; body = reaches[i].Reach; }
@@ -160,11 +164,15 @@ public sealed class TerrainSampler
         }
         else height = Math.Max(baseHeight + detail, floor); // generated land never dips below the sea
 
+        double lakePlume = 0;
         if (water == WaterKind.None)
         {
             int lake = _hydrology.LakeNear(x, z);
             if (lake >= 0 && _p.SeaLevel + height < _hydrology.Lakes[lake].Level)
-            { water = WaterKind.Lake; level = _hydrology.Lakes[lake].Level; body = lake; }
+            {
+                water = WaterKind.Lake; level = _hydrology.Lakes[lake].Level; body = lake;
+                if (_style.MouthBlend > 0) height = MouthChannel(x, z, height, lake, out lakePlume);
+            }
         }
         double edit = Edits.Delta(x, z);
         if (edit != 0)
@@ -174,7 +182,49 @@ public sealed class TerrainSampler
             // simulation does that).
             if (water != WaterKind.None && _p.SeaLevel + height >= level - .02) { water = WaterKind.None; level = double.NaN; body = -1; }
         }
-        return new(_p.SeaLevel + height, land, mountainShare, detail, water, level, body);
+        return new(_p.SeaLevel + height, land, mountainShare, detail, water, level, body, lakePlume);
+    }
+
+    /// <summary>
+    /// Raised banks fade out over a river's last stretch into the sea (the estuary, incl. the part continuing out to
+    /// sea) or a lake: levees there stood as dykes between river and sea, with a hard step at the mouth.
+    /// </summary>
+    private double LeveeFactor(in RiverHit r)
+    {
+        var reach = _hydrology.Reaches[r.Reach];
+        if (!reach.EndsInSea && reach.EndLake < 0) return 1;
+        double stretch = (reach.EndsInSea ? 880 : 0) + r.Width * 6 + 80;
+        return DetMath.Smooth((reach.Length - r.Along - stretch * .6) / (stretch * .4));
+    }
+
+    /// <summary>
+    /// Where rivers flow into the sea or a lake (<paramref name="lake"/> −1 = sea): the channel continues as a
+    /// shallowing groove into the bed, so the river bed meets the sea/lake floor smoothly; and how much river water
+    /// colours the water there (<paramref name="plume"/>).
+    /// </summary>
+    private double MouthChannel(double x, double z, double bed, int lake, out double plume)
+    {
+        plume = 0;
+        Span<RiverHit> hits = stackalloc RiverHit[16];
+        int n = _hydrology.NearbyRivers(x, z, hits);
+        double result = bed;
+        for (int i = 0; i < n; i++)
+        {
+            var r = hits[i];
+            var reach = _hydrology.Reaches[r.Reach];
+            if (lake < 0 ? !reach.EndsInSea : reach.EndLake != lake) continue;
+            double half = r.Width * .5, bank = Hydrology.Bank(r.Width), surface = r.Surface - _p.SeaLevel;
+            // Groove depth fades over the last stretch (sea mouths continue ~880 m out to sea).
+            double tail = lake < 0 ? 880 : r.Width * 3 + 60;
+            double fade = DetMath.Smooth((reach.Length - r.Along) / tail);
+            double edge = surface - .3 * r.Depth * fade;
+            double groove = r.Distance < half
+                ? surface - r.Depth * fade * (1 - (r.Distance / half) * (r.Distance / half) * .7)
+                : edge + (bed - edge) * DetMath.Smooth((r.Distance - half) / bank);
+            result = Math.Min(result, Math.Max(groove, bed - 50));
+            plume = Math.Max(plume, (1 - DetMath.Smooth((r.Distance - half) / (r.Width * 1.5 + 60))) * (.4 + .6 * fade));
+        }
+        return result;
     }
 
     // Walking-scale detail fades over a wide corridor around a river (valley floors are smoother than hillsides).

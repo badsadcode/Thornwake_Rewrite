@@ -18,6 +18,7 @@ internal static class SimulationTests
         T.Run("Edits: a channel dug from a river fills from it", RiverFed, filter);
         T.Run("Edits: real river and lake feed dug ground", RealRiverFed, filter);
         T.Run("Tools: strength, hardness, budget, flatten, directional cut", Tools, filter);
+        T.Run("Waves: heights match the displaced surface; sea states; shallows", Waves, filter);
     }
 
     private static Func<long, long, ChunkGround> Ground(Func<double, double, double> height, Func<double, double, bool>? sink = null) => (cx, cz) =>
@@ -267,6 +268,31 @@ internal static class SimulationTests
         double before = s.Height(sx + 2, sz);
         TerrainSculpt.Apply(s, BrushMode.Dig, BrushShape.Directional, 1, 5, (sx, s.Height(sx, sz) + .5, sz), (1.0, 0.0, 0.0));
         T.Check(s.Height(sx + 2, sz) < before - .5, "a horizontal directional dig cuts into the slope ahead");
+    }
+
+    private static void Waves()
+    {
+        foreach (double state in new[] { 0.0, .3, 1.0 })
+        {
+            var w = new OceanWaves(state);
+            var rng = new Random(2);
+            double worst = 0, peak = 0;
+            for (int i = 0; i < 2000; i++)
+            {
+                double x = (rng.NextDouble() - .5) * 1e5, z = (rng.NextDouble() - .5) * 1e5, t = rng.NextDouble() * 1000;
+                // A particle displaced from (x, z) ends at (x + dx, z + dz) with height dy: Height there must equal dy.
+                var d = w.Displacement(x, z, t);
+                worst = Math.Max(worst, Math.Abs(w.Height(x + d.X, z + d.Z, t) - d.Y));
+                peak = Math.Max(peak, d.Y);
+            }
+            T.Note($"sea state {state:0.0}: wave crests up to {peak:0.00} m, height query error {worst * 1000:0.0} mm");
+            T.Check(worst < .02, "Height() inverts the Gerstner motion");
+            if (state == 0) T.Check(peak < .4, "calm sea is calm");
+            if (state == 1) T.Check(peak > 2.5, "storm waves are big");
+        }
+        var storm = new OceanWaves(1);
+        T.Check(Math.Abs(storm.Height(10, 20, 5, .5)) < .1 * storm.WaveHeight, "waves die out in shallow water");
+        T.Check(Math.Abs(storm.Height(10, 20, 5, 1000, lake: true)) < .4 * storm.WaveHeight, "lakes carry only small waves");
     }
 
     private static void Cost()

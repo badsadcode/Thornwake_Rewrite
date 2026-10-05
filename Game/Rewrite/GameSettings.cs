@@ -122,6 +122,8 @@ public static class GameSettings
         "Share of the sky covered by clouds (0 = clear)."));
     public static readonly Setting CloudShadows = Add(new("sky.cloud_shadows", "Sky", "Cloud shadows", 0, 1, .05, .55,
         "How dark the shadows of clouds drifting over the land are.", "×"));
+    public static readonly Setting SeaState = Add(new("sky.sea_state", "Sky", "Sea state", 0, 1, .05, .25,
+        "Waves on the sea and lakes: 0 calm, 0.3 moderate, 0.6 rough, 1 storm. Rain makes the sea rougher."));
     public static readonly Setting CloudSpeed = Add(new("sky.cloud_speed", "Sky", "Wind speed", 0, 4, .1, 1,
         "How fast clouds (and their shadows) drift.", "×"));
 

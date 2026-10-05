@@ -2,9 +2,12 @@
 // texture, depth-based absorption from the depth buffer, animated caustics on the submerged ground, screen-space
 // reflections with sky fallback, shoreline/contact foam), adapted for clear natural water at world scale:
 //  - colour/absorption per body (COLOR.g: 0 sea, 0.5 lake, 1 river) instead of silty flood water;
-//  - a gentle multi-direction swell on the open sea, calm lakes, faster ripples on rivers;
-//  - no simulation wave map yet (that arrives with the local shallow-water simulation, milestone M6).
-// COLOR.r = water depth / 20 m at the vertex (from the terrain sampler).
+//  - Gerstner waves on sea and lakes from the sea state (OceanWaves.cs evaluates the same waves on the CPU for
+//    boats and swimming; same parameters, same clock `ocean_time`), shrinking in shallow water;
+//  - swash: the sea runs up and down the beach; breakers: foam bands rolling in over the shallows;
+//  - river water colouring the sea or lake near a mouth (plume).
+// COLOR.r = water depth / 20 m at the vertex (from the terrain sampler), COLOR.g = kind (0 sea, .5 lake, 1 river),
+// COLOR.b = river plume 0..1. UV = river current (m/s).
 shader_type spatial;
 render_mode blend_mix, cull_back, depth_draw_never;
 
@@ -20,7 +23,12 @@ uniform float refraction : hint_range(0.0, 0.1) = 0.03;
 uniform float caustic_strength : hint_range(0.0, 2.0) = 0.8;
 uniform float reflection_strength : hint_range(0.0, 1.0) = 0.9;
 uniform int ssr_steps : hint_range(0, 64) = 32; // 0 = sky reflection only (settings: water reflections)
-uniform float swell_height = 0.35;
+uniform vec4 waves[6];          // dir.x, dir.z, k, amplitude (OceanWaves.Waves)
+uniform float wave_q[6];        // Gerstner choppiness per wave
+uniform float wave_height = 0.3; // sum of amplitudes
+uniform float sea_state = 0.25;
+const float wave_phase[6] = { 0.0, 1.7, 4.1, 2.6, 5.3, 0.9 }; // OceanWaves.Phase
+global uniform float ocean_time;
 uniform vec3 sky_horizon : source_color = vec3(0.70, 0.76, 0.78);
 uniform vec3 sky_zenith : source_color = vec3(0.32, 0.47, 0.62);
 
@@ -28,6 +36,9 @@ varying float vertex_depth;
 varying float body;
 varying vec3 world_position;
 varying vec2 current; // river current (world xz, m/s)
+varying float plume;
+varying vec3 wave_normal;
+varying float crest;
 
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 vec2 hash2(vec2 p) { return vec2(hash(p), hash(p + 17.31)); }
@@ -74,19 +85,40 @@ float flow_ripples(vec2 q, vec2 f, float t) {
 	float rb = ripples(b, t, 0.0) + ripples(b - dir * tap, t, 0.0);
 	return (ra * w0 + rb * (1.0 - w0)) * 0.5;
 }
-// Sum of a few directional sine waves (open sea only).
-float swell(vec2 p, float t) {
-	return sin(dot(p, vec2(0.021, 0.013)) + t * 0.55) * 0.5 + sin(dot(p, vec2(-0.016, 0.027)) + t * 0.71) * 0.3
-		+ sin(dot(p, vec2(0.043, -0.031)) + t * 1.1) * 0.2;
-}
-
 void vertex() {
 	vertex_depth = COLOR.r * 20.0;
 	body = COLOR.g;
+	plume = COLOR.b;
 	current = UV;
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	float open_sea = (1.0 - step(0.25, body)) * smoothstep(1.0, 8.0, vertex_depth);
-	VERTEX.y += swell(world_position.xz, TIME) * swell_height * open_sea;
+	float sea = 1.0 - step(0.25, body), lake = step(0.25, body) * (1.0 - step(0.75, body));
+	vec3 offset = vec3(0.0);
+	vec3 n = vec3(0.0, 1.0, 0.0);
+	crest = 0.0;
+	if (sea + lake > 0.0) {
+		// Coarse distant tiles cannot carry short waves: fade waves shorter than a few vertex spacings.
+		float spacing = max(1.0, length(world_position - CAMERA_POSITION_WORLD) / 40.0);
+		for (int i = 0; i < 6; i++) {
+			float k = waves[i].z;
+			float lambda = 6.2831853 / k;
+			float depth_factor = smoothstep(0.0, 1.0, vertex_depth / (lambda * 0.12 + 0.3));
+			float amp = waves[i].w * depth_factor * (sea > 0.5 ? 1.0 : (i >= 3 ? 0.45 : 0.05)) * smoothstep(4.0 * spacing, 8.0 * spacing, lambda);
+			if (amp <= 0.0) continue;
+			vec2 d = waves[i].xy;
+			float theta = k * dot(d, world_position.xz) - sqrt(9.81 * k) * ocean_time + wave_phase[i];
+			float c = cos(theta), sn = sin(theta);
+			offset += vec3(wave_q[i] * amp * d.x * c, amp * sn, wave_q[i] * amp * d.y * c);
+			n.x -= d.x * k * amp * c; n.z -= d.y * k * amp * c; n.y -= wave_q[i] * k * amp * sn;
+			crest += amp * sn;
+		}
+		crest /= max(wave_height, 0.01);
+		// Swash: near the shore the sea runs up and down the beach every ~9 s (the water mesh reaches under the beach).
+		float swash = sea * (1.0 - smoothstep(0.0, 2.5, vertex_depth));
+		float run = 0.5 + 0.5 * sin(ocean_time * 0.7 + sin(world_position.x * 0.013) * 2.0 + cos(world_position.z * 0.011) * 2.0);
+		offset.y += swash * (0.18 + 0.6 * sea_state) * (run * run - 0.3);
+	}
+	VERTEX += offset;
+	wave_normal = normalize(n);
 }
 
 void fragment() {
@@ -101,10 +133,8 @@ void fragment() {
 	vec2 slope = flowing
 		? vec2(flow_ripples(p + vec2(e, 0.0), current, TIME) - h, flow_ripples(p + vec2(0.0, e), current, TIME) - h) / e * amp * (1.0 + 0.4 * min(length(current), 2.5))
 		: vec2(ripples(p + vec2(e, 0.0), TIME, speed) - h, ripples(p + vec2(0.0, e), TIME, speed) - h) / e * amp;
-	// Swell slope on the open sea.
-	float open_sea = sea * smoothstep(1.0, 8.0, vertex_depth);
-	slope += vec2(swell(p + vec2(0.5, 0.0), TIME) - swell(p - vec2(0.5, 0.0), TIME), swell(p + vec2(0.0, 0.5), TIME) - swell(p - vec2(0.0, 0.5), TIME)) * swell_height * open_sea;
-	vec3 n_world = normalize(vec3(-slope.x, 1.0, -slope.y));
+	// Waves: the Gerstner normal from the vertex stage, ripples on top.
+	vec3 n_world = normalize(vec3(wave_normal.x / max(wave_normal.y, 0.2) - slope.x, 1.0, wave_normal.z / max(wave_normal.y, 0.2) - slope.y));
 	vec3 n_view = normalize((VIEW_MATRIX * vec4(n_world, 0.0)).xyz);
 	NORMAL = n_view;
 	vec3 to_eye = normalize(-VERTEX);
@@ -131,7 +161,9 @@ void fragment() {
 	float caustic = caustics(bottom_world.xz * 0.6, TIME * 1.3) * smoothstep(0.0, 0.1, depth_below) * exp(-depth_below * 0.35);
 	ground += caustic * caustic_strength * 0.3 * vec3(1.0, 0.97, 0.85) * (0.4 + ground);
 	vec3 transmittance = exp(-absorption * path * mix(1.0, 2.2, river));
-	vec3 scatter = sea * sea_scatter + lake * lake_scatter + river * river_scatter;
+	// Near a mouth the river's greener, siltier water spreads into the sea or lake.
+	vec3 scatter = mix(sea * sea_scatter + lake * lake_scatter + river * river_scatter, river_scatter * vec3(1.15, 1.1, 0.9), plume * 0.85);
+	transmittance = mix(transmittance, exp(-absorption * path * 2.2), plume * 0.6);
 	float murk = 1.0 - dot(transmittance, vec3(0.333));
 
 	// Screen-space reflection, sky as fallback.
@@ -160,6 +192,14 @@ void fragment() {
 	float bubbles = 0.55 + 0.45 * noise(p * 1.5 + TIME * 0.4);
 	float contact = 1.0 - smoothstep(0.0, mix(0.03, 0.12, sea), contact_depth);
 	float foam = clamp(contact * mix(0.3, 0.6, sea) * smoothstep(0.5, 0.8, bubbles), 0.0, 1.0);
+	// Breakers: foam bands rolling in over the shallows (sea), stronger in rough weather; whitecaps on crests.
+	if (sea > 0.5) {
+		float band = sin(depth_below * 3.0 + TIME * 1.3 + noise(p * 0.05) * 4.0);
+		float shallows = smoothstep(0.1, 0.3, depth_below) * (1.0 - smoothstep(0.6, 1.0 + 1.8 * sea_state, depth_below));
+		float broken = smoothstep(0.35, 0.7, noise(p * 0.35 + vec2(TIME * 0.15, 0.0)));
+		foam = max(foam, smoothstep(0.92, 0.99, band) * shallows * (0.35 + 0.4 * sea_state) * broken);
+		foam = max(foam, smoothstep(0.55, 0.95, crest) * smoothstep(0.3, 0.8, sea_state) * smoothstep(0.45, 0.8, noise(p * 0.4 + TIME * 0.2)) * 0.8);
+	}
 	// Fast water: foam streaks drifting downstream show which way it flows (same two-phase advection).
 	float fs = length(current);
 	if (fs > 0.6) {

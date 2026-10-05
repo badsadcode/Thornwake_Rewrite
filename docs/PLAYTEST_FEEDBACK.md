@@ -111,3 +111,11 @@ Tom's notes (one screenshot at Mountain kingdoms 42, -59499 / 115353, and one at
 | Sea shores | Beach profile: sea a few metres deep within ~150 m, 20 m within ~1 km; narrower beach band |
 | Trees not an option | Forest/rock/prop amounts are New-world parameters; Settings keep draw distances |
 | Backup | Build 5 = commit `cdb2e31`; New world → "Build 5 terrain" reproduces it bit for bit (tested) |
+
+## Round 4 (build 7, 2026-10-05)
+* Digging near a river (in the bed) leaves gaps in the water. → D34
+* Hard step where rivers enter lakes/oceans; should join the bed smoothly; shader should show the mixing. → D32
+* Waves washing back and forth on the beach. → D33 (swash, breakers)
+* Ocean waves: important — boats like Valheim / Sea of Thieves; calm, storm and other variants. → D33
+* Many biomes planned (terrain, plants, atmosphere per biome). → planned
+* Keep this state to come back to. → `docs/SNAPSHOTS.md` (Preview 7 = `6cf6d18`), Terrain version option, tests

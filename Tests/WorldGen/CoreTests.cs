@@ -37,6 +37,7 @@ internal static class CoreTests
         T.Run("Coastline has sub-raster detail", CoastDetail, filter);
         T.Run("Frozen terrain fingerprints" + (record ? " (recording)" : ""), () => Fingerprints(record), filter);
         T.Run("Build 5 terrain still reproducible (classic option)", () => Fingerprints(false, "terrain-build5.json", classic: true), filter);
+        T.Run("Preview 7 terrain still reproducible", () => Fingerprints(false, "terrain-preview7.json", preview7: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -282,7 +283,7 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
         string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
@@ -292,7 +293,9 @@ internal static class CoreTests
             {
                 var s = Sampler(profile.Id, seed);
                 // Build 5 (commit cdb2e31) generation: no bank variation, macro-only shores.
-                if (classic) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { BankVariation = 0, ShoreSlope = 0 }));
+                if (classic) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { BankVariation = 0, ShoreSlope = 0, MouthBlend = 0 }));
+                // Preview 7 (commit 6cf6d18): before river mouths blended into sea and lake beds.
+                if (preview7) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { MouthBlend = 0 }));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];

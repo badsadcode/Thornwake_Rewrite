@@ -270,6 +270,9 @@ public partial class WorldLab : Node3D
         double level = water.Water != WaterKind.None ? water.WaterLevel : double.NaN;
         float simulated = _water.Sim?.SurfaceAt(PlayerX, PlayerZ) ?? float.NaN;
         if (!float.IsNaN(simulated) && (double.IsNaN(level) || simulated > level)) level = simulated;
+        // Swim on the waves (the same waves the water shader draws).
+        if (water.Water is WaterKind.Ocean or WaterKind.Lake && !double.IsNaN(level))
+            level += _atmosphere.Waves.Height(PlayerX, PlayerZ, _atmosphere.OceanTime, level - water.Height, water.Water == WaterKind.Lake);
         _swimming = !_fly && !double.IsNaN(level) && level - feet > 1.25;
 
         if (_fly)

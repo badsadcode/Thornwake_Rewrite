@@ -124,6 +124,10 @@ public sealed record TerrainStyle
     /// <summary>Amount of bushes, berry bushes, stumps and fallen logs.</summary>
     public double PropAmount { get; init; } = 1;
 
+    /// <summary>River mouths blend into sea and lake beds (groove continues into the bed, no levees in the
+    /// estuary). 0 = as in preview 7.</summary>
+    public double MouthBlend { get; init; } = 1;
+
     /// <summary>Steepness of the shore (sea floor and beach) relative to ~3.5 %; 0 = the macro ramp only (build 5).</summary>
     public double ShoreSlope { get; init; } = 1;
     /// <summary>River bank irregularity (left and right banks vary independently: broad widening and narrowing, small
