@@ -98,6 +98,11 @@ milestone M6), caves.
 * **Collision**: you bump into tree trunks, dead trees, cacti, stumps, logs, bushes, rocks and boulders.
 * **Cliffs and rock**: a pixel rock texture (uneven layers, faults, cracks) on all bare rock; big blocky rock slabs set
   into cliff faces; huge boulders here and there; rocky stretches of shore; rocks take their biome's rock colour.
+* **Rock looks per biome**: layered (temperate), granite blocks (alpine, taiga, tundra), basalt columns (volcanic),
+  banded sandstone (desert, badlands, savanna), mossy rock (ancient forest, jungle, swamps), icy rock (arctic); they
+  blend where biomes meet, and boulders take their biome's look. Snow no longer covers steep rock faces.
+* **Lakes no longer end in straight dry walls** (your build 11 screenshot): the water fills the whole basin and closes
+  with a low shore.
 * **Swamps** look like swamps: murky pools in the flat wet ground, mud around them, reeds along their edges.
 * **Water colour per biome**: murky swamps, turquoise glacial and alpine lakes, dark taiga water, brown badlands rivers.
 * **Biome layout** (New world → Climate and biomes): *realistic* (default) or *patchwork* — organic patches of random

@@ -57,6 +57,10 @@ The best three biomes at each spot blend, so borders are soft and organic.
   [min, max]; `Grass` (0 bare … 1.5 lush).
 * `Props.Rocks`, `Props.Logs` — multipliers.
 
+### Rock look
+Ground sets name `RockTexture`: `layered`, `granite`, `basalt`, `sandstone`, `mossy` or `icy` (default layered). It is
+used on cliffs, crags, rocky ground and boulders, tinted with the set's `Rock` colour.
+
 ### Water
 `Water.WaterTint` (hex) and `Water.WaterTintStrength` (0 … 1, default 0.65) colour rivers, lakes and swamp pools in the
 biome. `Water.Wetness` ≥ ~0.5 makes permanent swamp pools with mud and reeds in flat ground.

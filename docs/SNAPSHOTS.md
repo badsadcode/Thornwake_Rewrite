@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 12** (round 7: time, weather, wind, night sky, rock looks, map, collision, lake fix) | `aab8f0c` | Thornwake-Rewrite-Preview-12 (v0.9.12) | Terrain version "Build 9" for the old terrain; weather off, sun classic for the build 11 look |
 | **Backup before round 7** (Tom: "I like what we have now, we should save that") — same as build 11 | `0963d58` | Thornwake-Rewrite-Preview-11 | `git checkout 0963d58`; realistic biome placement stays the default in later builds |
 | **Build 11** (placeholder plants, leaf translucency, layered/volumetric clouds, biome skies, mist, DoF, cliff dressing) | `0963d58` | Thornwake-Rewrite-Preview-11 (v0.9.11) | settings: Cloud quality "one layer", Biome skies off, Ground fog off, Leaf translucency 0 give the build 10 look |
 | **Build 10** (biomes phase 1: 14 data-driven biomes, climate) | `562cf6a` | Thornwake-Rewrite-Preview-10 (v0.9.10) | also: Terrain version "Build 9" turns biomes off |
