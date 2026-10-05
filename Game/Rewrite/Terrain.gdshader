@@ -12,9 +12,11 @@ global uniform vec2 rain_wetness;
 varying vec3 world_normal;
 varying vec4 biome_a; // biome grass colour, snow cover (D42)
 varying vec4 biome_b; // biome dry-ground colour, plant cover
-varying vec4 biome_c; // biome map colour (debug view), rock exposure
+varying vec4 biome_c; // r: packed map colour, g: rock looks (lo + 8 hi), b: weight of hi, a: rock exposure
+varying flat vec2 rock_pair; // rock looks lo, hi (flat: indices must not interpolate)
+varying flat float map_packed;
 varying vec4 biome_d; // biome rock colour, wetness
-uniform sampler2D cliff_tex : source_color, filter_nearest_mipmap, repeat_enable; // tileable pixel rock (cliff faces)
+uniform sampler2DArray rock_tex : source_color, filter_nearest_mipmap, repeat_enable; // rock looks (RockTextures order)
 uniform float biome_debug = 0.0; // 1: tint the ground with the biome map colours (F4)
 
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
@@ -26,6 +28,8 @@ float vnoise(vec2 p) {
 void vertex() {
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	biome_a = CUSTOM0; biome_b = CUSTOM1; biome_c = CUSTOM2; biome_d = CUSTOM3;
+	rock_pair = vec2(mod(CUSTOM2.g, 8.0), floor(CUSTOM2.g / 8.0 + 0.01));
+	map_packed = CUSTOM2.r;
 }
 
 void fragment() {
@@ -51,9 +55,14 @@ void fragment() {
 		wn /= wn.x + wn.y + wn.z;
 		// Strata wander up and down along the face (no straight bands repeating every tile).
 		float hs = h + (vnoise(vec2(p.x + p.y, 0.0) * 0.012) - 0.5) * 9.0 + (vnoise(vec2(p.x - p.y, 3.0) * 0.05) - 0.5) * 2.5;
-		vec3 tx = texture(cliff_tex, vec2(p.y, -hs) / 10.0).rgb, tz = texture(cliff_tex, vec2(p.x + 3.7, -hs) / 10.0).rgb;
-		vec3 ty = texture(cliff_tex, p / 10.0).rgb;
-		vec3 side = (tx * wn.x + tz * wn.z + ty * wn.y) / 0.55;
+		vec2 ux = vec2(p.y, -hs) / 10.0, uz = vec2(p.x + 3.7, -hs) / 10.0, uy = p / 10.0;
+		vec3 lo = texture(rock_tex, vec3(ux, rock_pair.x)).rgb * wn.x + texture(rock_tex, vec3(uz, rock_pair.x)).rgb * wn.z + texture(rock_tex, vec3(uy, rock_pair.x)).rgb * wn.y;
+		vec3 side = lo;
+		if (rock_pair.y != rock_pair.x && biome_c.b > 0.01) {
+			vec3 hi = texture(rock_tex, vec3(ux, rock_pair.y)).rgb * wn.x + texture(rock_tex, vec3(uz, rock_pair.y)).rgb * wn.z + texture(rock_tex, vec3(uy, rock_pair.y)).rgb * wn.y;
+			side = mix(lo, hi, smoothstep(0.3, 0.7, biome_c.b + (vnoise(p * 0.3) - 0.5) * 0.3));
+		}
+		side /= 0.5;
 		rock = biome_d.rgb * side * (0.9 + 0.2 * vnoise(vec2(p.x + p.y, h) * 0.05));
 	}
 	// Bare rock: on steep slopes everywhere, and on gentler ground in rocky biomes (patchy).
@@ -102,7 +111,8 @@ void fragment() {
 		detail = mix(detail, vec3(0.92 + 0.12 * speck), max(snow, wet)); // calmer on snow and sand
 		c *= mix(vec3(1.0), detail, near);
 	}
-	c = mix(c, biome_c.rgb, biome_debug * 0.85);
+	vec3 map_colour = vec3(floor(map_packed / 65536.0), mod(floor(map_packed / 256.0), 256.0), mod(map_packed, 256.0)) / 255.0;
+	c = mix(c, map_colour, biome_debug * 0.85);
 	if (show_grid) {
 		vec2 g = abs(fract(p / 64.0) - 0.5);
 		if (max(g.x, g.y) > 0.495) c = vec3(0.1, 0.8, 0.8);

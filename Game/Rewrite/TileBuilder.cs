@@ -137,7 +137,7 @@ public static class TileBuilder
         var biome1 = new float[vertices.Length * 4];
         var biome2 = new float[vertices.Length * 4];
         var biome3 = new float[vertices.Length * 4];
-        var props = new float[Side * Side * 2]; // biome rock and bush/log multipliers (ground cover only, no skirts)
+        var props = new float[Side * Side * 3]; // biome rock and bush/log multipliers, rock look (ground cover only, no skirts)
         var waterTint = new Vector2[Side * Side]; // biome water tint, packed rgb (x) and strength (y), for the water sheet
         var climate = sampler.Plan.Climate;
         var biomes = sampler.Plan.Biomes;
@@ -173,10 +173,19 @@ public static class TileBuilder
                 double plants = A.Def.Vegetation.Grass * share + B.Def.Vegetation.Grass * (1 - share);
                 Put(biome0, k, Mix(A.Grass, B.Grass, sa, sb, dark), snow);
                 Put(biome1, k, Mix(A.Dry, B.Dry, sa, sb, dark), Math.Min(1, plants));
-                Put(biome2, k, Mix(A.Map, B.Map, sa, sb, 1), Math.Max(A.Def.Appearance.RockExposure * share + B.Def.Appearance.RockExposure * (1 - share), rocky * 1.6));
+                // CUSTOM2: r = map colour packed (debug view), g = the two rock looks (lo + 8·hi), b = weight of hi,
+                // a = rock exposure. Looks are ordered so neighbouring vertices across a border agree on the pair.
+                var mapColour = Mix(A.Map, B.Map, sa, sb, 1);
+                int rlo = Math.Min(A.RockTexture, B.RockTexture), rhi = Math.Max(A.RockTexture, B.RockTexture);
+                float whi = rlo == rhi ? 0 : A.RockTexture == rhi ? sa : sb;
+                biome2[k * 4] = (int)(Math.Clamp(mapColour.R, 0, 1) * 255) << 16 | (int)(Math.Clamp(mapColour.G, 0, 1) * 255) << 8 | (int)(Math.Clamp(mapColour.B, 0, 1) * 255);
+                biome2[k * 4 + 1] = rlo + 8 * rhi;
+                biome2[k * 4 + 2] = whi;
+                biome2[k * 4 + 3] = (float)Math.Max(A.Def.Appearance.RockExposure * share + B.Def.Appearance.RockExposure * (1 - share), rocky * 1.6);
                 Put(biome3, k, Mix(A.Rock, B.Rock, sa, sb, 1), A.Def.Water.Wetness * share + B.Def.Water.Wetness * (1 - share));
-                props[k * 2] = (float)(A.Def.Props.Rocks * share + B.Def.Props.Rocks * (1 - share));
-                props[k * 2 + 1] = (float)(A.Def.Props.Logs * share + B.Def.Props.Logs * (1 - share));
+                props[k * 3] = (float)(A.Def.Props.Rocks * share + B.Def.Props.Rocks * (1 - share));
+                props[k * 3 + 1] = (float)(A.Def.Props.Logs * share + B.Def.Props.Logs * (1 - share));
+                props[k * 3 + 2] = share >= .5 ? A.RockTexture : B.RockTexture;
                 waterTint[k] = WaterTint(A, B, share);
             }
         // Skirts: a copy of each edge pushed down, so a coarser neighbour's edge never shows a gap.

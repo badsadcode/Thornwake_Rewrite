@@ -47,7 +47,9 @@ public static class GroundCover
             int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
             int k = (j * Side + i) * 4;
             // Default biome rock 77766a ≈ (0.47, 0.46, 0.42); vertex stone colour carries that already.
-            return new Color(Biome3[k] / .467f, Biome3[k + 1] / .463f, Biome3[k + 2] / .416f, 1);
+            // Alpha carries the rock look (index + 1) / 8 for Rock.gdshader.
+            float look = PropScale == null ? 0 : PropScale[(j * Side + i) * 3 + 2];
+            return new Color(Biome3[k] / .467f, Biome3[k + 1] / .463f, Biome3[k + 2] / .416f, (look + 1) / 8f);
         }
 
         /// <summary>Biome wetness (0 … 1; swamps ~0.8) at tile-local (x, z).</summary>
@@ -72,12 +74,12 @@ public static class GroundCover
         /// <summary>Per vertex biome prop multipliers (rocks, bushes/logs).</summary>
         public readonly float[]? PropScale;
 
-        /// <summary>Biome multiplier for rocks (kind 0) or bushes, stumps and logs (kind 1) at tile-local (x, z).</summary>
+        /// <summary>Biome multiplier for rocks (kind 0) or bushes, stumps and logs (kind 1) at tile-local (x, z) (kind 2: rock look).</summary>
         public float Props(double x, double z, int kind)
         {
             if (PropScale == null) return 1;
             int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
-            return PropScale[(j * Side + i) * 2 + kind];
+            return PropScale[(j * Side + i) * 3 + kind];
         }
 
         /// <summary>Bilinear <see cref="Shore"/> at tile-local (x, z).</summary>

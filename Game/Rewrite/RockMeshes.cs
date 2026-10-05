@@ -15,7 +15,7 @@ public static class RockMeshes
     private static ShaderMaterial CreateMaterial()
     {
         var m = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Rock.gdshader") };
-        m.SetShaderParameter("rock_tex", GD.Load<Texture2D>("res://Assets/Vegetation/Placeholder/T_Cliff_Rock_128.png"));
+        m.SetShaderParameter("rock_tex", RockTextureArray.Get());
         return m;
     }
 

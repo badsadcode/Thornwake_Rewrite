@@ -184,4 +184,15 @@ public sealed record AssetSet
     public string? Rock { get; init; }
     /// <summary>Ground snow cover 0..1 (ice and glacier sets).</summary>
     public double Snow { get; init; }
+    /// <summary>Look of bare rock (ground sets): one of <see cref="RockTextures.Names"/>; null = layered.</summary>
+    public string? RockTexture { get; init; }
+}
+
+/// <summary>The rock looks the game draws on bare rock and boulders (pixel textures in Assets/Vegetation/Placeholder,
+/// in this order; the order is the texture-array layer).</summary>
+public static class RockTextures
+{
+    public static readonly string[] Names = { "layered", "granite", "basalt", "sandstone", "mossy", "icy" };
+    public static readonly string[] Files = { "T_Cliff_Rock_128", "T_Rock_Granite_128", "T_Rock_Basalt_128", "T_Rock_Sandstone_128", "T_Rock_Mossy_128", "T_Rock_Icy_128" };
+    public static int Index(string? name) => name == null ? 0 : Math.Max(0, Array.IndexOf(Names, name));
 }

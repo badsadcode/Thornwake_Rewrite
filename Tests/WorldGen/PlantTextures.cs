@@ -250,6 +250,8 @@ internal static class PlantTextures
             t.Save(Path.Combine(dir, "T_Cliff_Rock_128.png"));
         }
 
+        RockSet(dir);
+
         // Grass hanging over a cliff lip (v = 0 at the lip): a dense tuft band, then strands of different lengths.
         {
             var t = new Tex(64, 64, true);
@@ -311,6 +313,117 @@ internal static class PlantTextures
             }
             for (int r = 0; r < 4; r++) Branch(32 + (r - 1.5) * 3, 63, (r - 1.5) * .42, 20 + 4 * Hash(r, 0, 96), 0, r + 1);
             t.Save(Path.Combine(dir, "T_Shrub_Dry_64.png"));
+        }
+    }
+
+    /// <summary>
+    /// More rock looks (128 px, tile both ways, neutral so the biome rock colour tints them; Tom, round 7): granite
+    /// blocks, basalt columns, banded sandstone, mossy rock, icy rock. Same pixel style as the layered cliff rock.
+    /// </summary>
+    private static void RockSet(string dir)
+    {
+        const int W = 128;
+        var stone = new[] { (68, 66, 64), (92, 89, 86), (116, 113, 108), (140, 137, 131), (163, 160, 153), (186, 183, 176) };
+        int Wrap(int v, int m) => ((v % m) + m) % m;
+
+        // Tileable jittered-cell distances (Worley) on a grid of cx × cy cells, with optional stretch.
+        (double D1, double D2, int Id) Cells(double u, double v, int cx, int cy, int seed)
+        {
+            double gx = u * cx, gy = v * cy, d1 = 9, d2 = 9; int id = 0;
+            int ix = (int)Math.Floor(gx), iy = (int)Math.Floor(gy);
+            for (int j = -1; j <= 1; j++)
+                for (int i = -1; i <= 1; i++)
+                {
+                    int ci = Wrap(ix + i, cx), cj = Wrap(iy + j, cy);
+                    double px = ix + i + .15 + .7 * Hash(ci, cj, seed), py = iy + j + .15 + .7 * Hash(ci, cj, seed + 1);
+                    double d = Math.Sqrt((gx - px) * (gx - px) + (gy - py) * (gy - py));
+                    if (d < d1) { d2 = d1; d1 = d; id = cj * cx + ci; } else if (d < d2) d2 = d;
+                }
+            return (d1, d2, id);
+        }
+
+        // Granite: a few big blocks with irregular, partly open joints, sheeting cracks, coarse speckle.
+        Fill(W, W, (x, y, u, v) =>
+        {
+            double wu = u + (Fbm(u, v, 4, 4, 205) - .5) * .12, wv = v + (Fbm(u, v, 4, 4, 206) - .5) * .12;
+            var (d1, d2, id) = Cells(((wu % 1) + 1) % 1, ((wv % 1) + 1) % 1, 3, 3, 201);
+            double tone = .42 + .3 * Hash(id, 0, 202) + .25 * (Fbm(u, v, 8, 8, 203) - .5) + .12 * (Fbm(u, v, 32, 32, 207) - .5);
+            tone -= .2 * d1 * d1;
+            // Joints: open in places, closed (just a shade) elsewhere.
+            double open = Fbm(u, v, 3, 3, 208);
+            if (d2 - d1 < .05 && open > .4) tone -= .45;
+            else if (d2 - d1 < .09) tone -= .12;
+            // Sheeting: faint curved cracks parallel to the surface.
+            double sheet = (v * 7 + Fbm(u, v, 2, 2, 209) * 2.5) % 1;
+            if (sheet < .03 && Fbm(u, v, 6, 6, 210) > .5) tone -= .25;
+            double speck = Hash(x, y, 204);
+            if (speck > .92) tone += .22; else if (speck < .06) tone -= .18;
+            return Ramp(stone, tone, x, y);
+        }).Save(Path.Combine(dir, "T_Rock_Granite_128.png"));
+
+        // Basalt: vertical columns of uneven width (1D, tiles both ways), dark joints, lit faces, cross-fractures.
+        {
+            var edges = new List<double> { 0 };
+            for (int c = 1; c < 9; c++) edges.Add((c + (Hash(c, 0, 216) - .5) * .6) / 9.0);
+            edges.Add(1);
+            Fill(W, W, (x, y, u, v) =>
+            {
+                double wu = u + (Fbm(u, v, 1, 2, 217) - .5) * .02;
+                wu = ((wu % 1) + 1) % 1;
+                int c = 0; while (c < edges.Count - 2 && wu >= edges[c + 1]) c++;
+                double a = edges[c], b = edges[c + 1], f = (wu - a) / (b - a);
+                double tone = .32 + .2 * Hash(c % 9, 0, 212) + .12 * (Fbm(u, v, 8, 8, 213) - .5);
+                tone += .2 * Math.Sin(f * Math.PI) - .08;                  // rounded faces
+                if (f < .07 || f > .93) tone -= .35;                       // joints
+                double cross = ((v * 5 + Hash(c % 9, 1, 214) * 5) % 1 + 1) % 1;
+                if (cross < .035 && Hash(c % 9, (int)Math.Floor(v * 5 + Hash(c % 9, 1, 214) * 5), 215) < .7) tone -= .3;
+                return Ramp(stone, tone * .9, x, y);
+            }).Save(Path.Combine(dir, "T_Rock_Basalt_128.png"));
+        }
+
+        // Sandstone: soft wavy cross-bedded bands, eroded smooth, few cracks.
+        Fill(W, W, (x, y, u, v) =>
+        {
+            double warp = (Fbm(u, v, 2, 2, 221) - .5) * .5 + Math.Sin(u * Math.PI * 2 * 2 + Fbm(u, v, 4, 4, 222) * 3) * .03;
+            double bands = (v + warp) * 16;
+            double f = bands - Math.Floor(bands);
+            double tone = .5 + .22 * Math.Sin(bands * .9 + Hash(Wrap((int)Math.Floor(bands), 16), 0, 223) * 6) + .12 * (Fbm(u, v, 16, 8, 224) - .5);
+            if (f < .08) tone -= .12;
+            if (Fbm(u, v, 6, 6, 225) < .22) tone -= .18;                 // wind-eroded hollows
+            return Ramp(stone, tone, x, y);
+        }).Save(Path.Combine(dir, "T_Rock_Sandstone_128.png"));
+
+        // Mossy rock: grey blocky rock with green moss on the tops and in patches, lichen dots.
+        {
+            var moss = new[] { (46, 70, 36), (64, 92, 44), (86, 112, 54) };
+            Fill(W, W, (x, y, u, v) =>
+            {
+                var (d1, d2, id) = Cells(u, v, 6, 5, 231);
+                double tone = .4 + .2 * Hash(id, 0, 232) + .2 * (Fbm(u, v, 8, 8, 233) - .5) - .2 * d1 * d1;
+                bool joint = d2 - d1 < .08;
+                if (joint) tone -= .4;
+                double m = Fbm(u, v, 5, 5, 234) + .25 * (1 - v % .2 / .2) * 0; // patches
+                if (!joint && m > .56) return Ramp(moss, (m - .56) * 4 + .2 * (Hash(x, y, 235) - .5), x, y);
+                if (Hash(x, y, 236) > .975) return (150, 152, 110); // lichen
+                return Ramp(stone, tone, x, y);
+            }).Save(Path.Combine(dir, "T_Rock_Mossy_128.png"));
+        }
+
+        // Icy rock: dark rock with broad frost streaks running down and snow lodged on ledges.
+        {
+            var ice = new[] { (150, 170, 182), (190, 208, 218), (228, 238, 244) };
+            Fill(W, W, (x, y, u, v) =>
+            {
+                double layer = (v + (Fbm(u, v, 3, 2, 241) - .5) * .3) * 7;
+                double f = layer - Math.Floor(layer);
+                double tone = .3 + .25 * (Fbm(u, v, 8, 8, 242) - .5) + .15 * Hash(Wrap((int)Math.Floor(layer), 7), 0, 243);
+                if (f > .84) tone -= .25;
+                double streak = Fbm(u, v, 12, 2, 244) * .7 + Fbm(u, v, 24, 4, 247) * .3;   // tall streaks
+                double ledge = f < .16 ? (1 - f / .16) * Fbm(u, v, 16, 4, 245) : 0;
+                if (ledge > .3) return Ramp(ice, .6 + .4 * ledge + .15 * (Hash(x, y, 246) - .5), x, y);
+                if (streak > .58) return Ramp(ice, (streak - .58) * 2.5 + .1 * (Hash(x, y, 248) - .5), x, y);
+                return Ramp(stone, tone, x, y);
+            }).Save(Path.Combine(dir, "T_Rock_Icy_128.png"));
         }
     }
 }

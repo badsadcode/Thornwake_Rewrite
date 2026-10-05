@@ -21,6 +21,8 @@ public sealed class ResolvedBiome
     public required double Snow { get; init; }
     /// <summary>Tree assets (names) with cumulative weights for picking.</summary>
     public required (string Asset, double Cumulative)[] Trees { get; init; }
+    /// <summary>Rock look index (<see cref="RockTextures.Names"/>).</summary>
+    public int RockTexture { get; init; }
     /// <summary>The classic look of build 9 and earlier (biomes off): trees follow elevation as before.</summary>
     public bool Classic { get; init; }
 
@@ -86,7 +88,7 @@ public sealed class BiomeRegistry
                 Def = b, Index = pool.Count,
                 Grass = Hex(ground.Grass ?? "566b3f"), Dry = Hex(ground.Dry ?? "7b8059"), Soil = Hex(ground.Soil ?? "5c4a35"),
                 ForestFloor = Hex(ground.ForestFloor ?? "3c4b2b"), Rock = Hex(ground.Rock ?? "77766a"), Map = Hex(b.Appearance.MapColor),
-                Snow = ground.Snow, Trees = trees.ToArray(), Classic = classic,
+                Snow = ground.Snow, Trees = trees.ToArray(), Classic = classic, RockTexture = RockTextures.Index(ground.RockTexture),
             });
         }
         if (pool.Count == 0) throw new InvalidDataException("No biome is in the generation pool.");
@@ -119,6 +121,8 @@ public sealed class BiomeRegistry
         if (string.IsNullOrWhiteSpace(s.Id)) throw new InvalidDataException("Asset set without an id.");
         foreach (var c in new[] { s.Grass, s.Dry, s.Soil, s.ForestFloor, s.Rock })
             if (c != null && !IsHex(c)) throw new InvalidDataException($"Asset set '{s.Id}': bad colour '{c}'.");
+        if (s.RockTexture != null && !RockTextures.Names.Contains(s.RockTexture))
+            throw new InvalidDataException($"Asset set '{s.Id}': unknown rock texture '{s.RockTexture}' (use {string.Join(", ", RockTextures.Names)}).");
     }
 
     private static void Validate(BiomeDefinition b, Dictionary<string, AssetSet> sets)

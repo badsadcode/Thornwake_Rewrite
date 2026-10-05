@@ -55,7 +55,7 @@ public partial class WorldStreamer : Node3D
     public override void _Ready()
     {
         _terrain = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Terrain.gdshader") };
-        _terrain.SetShaderParameter("cliff_tex", GD.Load<Texture2D>("res://Assets/Vegetation/Placeholder/T_Cliff_Rock_128.png"));
+        _terrain.SetShaderParameter("rock_tex", RockTextureArray.Get());
         _water = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Water.gdshader") };
         _trees = new TreeCatalog();
         _farTree = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/FarTree.gdshader") };
