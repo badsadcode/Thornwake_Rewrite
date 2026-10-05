@@ -91,3 +91,23 @@ Tom's notes (one screenshot at Mountain kingdoms 42, -59499 / 115353, and one at
 | Post-processing | Clouds, cloud shadows matching the clouds, sun shafts, glow, SSAO, SSIL, SSR, volumetric fog, haze, exposure, saturation, water reflection quality, AA mode, render scale (FSR), FOV, V-Sync, FPS limit |
 | Upstream water vanishing | The water faded where the bed behind it (seen up a rising river) was higher than the surface point: depth now never below the sight line's drop through the water |
 | Flow direction | Ripples move downstream and streak along the current; foam streaks on fast water |
+
+## Round 3 (build 5, 2026-10-05)
+* Smoother rivers liked, but they look too clean (a Bézier curve with a fixed width). Keep the course smooth; vary
+  the banks: broad width changes, smaller shoreline wobble, left and right independent; occasional bulges, cuts,
+  shallow shelves, muddy/sandy patches, reed pockets, irregular edges. Nothing extreme.
+* Digging next to a river (and a lake): water does not flow in.
+* Sea shores: the shallow part is very large at this scale; waves look stretched. Love the scale.
+* Performance fine (office PC; playable with fewer trees).
+* Trees must not be a graphics option: generated trees stay (unless gameplay changes them); same for logs, rocks
+  and other objects. They are not decoration.
+* Keep the current generation as a backup to go back to.
+
+### Round 3 — status (build 6)
+| Item | Status |
+|---|---|
+| Too-clean rivers | Each bank varies on its own (slow ±30 % width, wobble, bulges with shallow shelves, cuts); course unchanged; mud/sand/gravel patches; reed pockets (build 5) |
+| Digging by rivers/lakes | Generated water now feeds lower dug ground (tested on a real river and lake) |
+| Sea shores | Beach profile: sea a few metres deep within ~150 m, 20 m within ~1 km; narrower beach band |
+| Trees not an option | Forest/rock/prop amounts are New-world parameters; Settings keep draw distances |
+| Backup | Build 5 = commit `cdb2e31`; New world → "Build 5 terrain" reproduces it bit for bit (tested) |

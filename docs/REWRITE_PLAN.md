@@ -334,5 +334,10 @@ channel. Also reeds and damp earth along river and lake banks.
 Then rain weather (overcast sky, dim light, haze, falling rain when H rain is on), bare soil on edited ground,
 and a rejected gully experiment (D24). **Build 5 (v0.9.4)** sent with everything above; 28 tests pass.
 
-**Next:** Tom's build-5 feedback and asset batches first when they arrive. Then: M6 second step (optional local
+**Round 3 (Tom's build-5 playtest) → build 6 (v0.9.5):** natural river banks (D26), rivers/lakes/sea feed dug
+ground (D27), steeper shores (D28), trees/rocks/logs as world data (D29), build-5 generation kept reproducible
+as a New-world option with a bit-exact test (D25), intermittent exit crash fixed (static resource caches).
+31 tests pass. Feedback log: `docs/PLAYTEST_FEEDBACK.md` round 3.
+
+**Next:** Tom's build-6 feedback and asset batches first when they arrive. Then: M6 second step (optional local
 river simulation once terrain edits exist; splashes; sound), M3 gully detail, M8 next steps (save edits, soil/rock material layers, tools).
