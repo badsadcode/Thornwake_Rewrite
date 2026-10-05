@@ -354,6 +354,35 @@ scattering on canopies and plants, configurable.
 * Biome skies (option, default off = realistic): biomes set `Atmosphere.SkyTint` and `Haze`; the blend around the
   player tints the sky, adds horizon haze and fog, easing over ~3 s; "subtle" applies half.
 
+## D44 — Round 7: time, sky, weather, wind, cliffs, collision, map, biome layouts (2026-10-05)
+* Fixes: trees in cells straddling a tile's far edge were dropped (tree-free lanes along every tile border); cliff
+  dressing only where a real cliff starts (face ≥ 60°, ≥ 1.2 steeper than the top, ≥ 3.5 m drop), irregular; mist
+  wisps fade when seen from above; god rays only from very bright sky so clouds cut them; Sun setting classic (build
+  11) / natural (colour, size and glow follow the sun's height), Sun glare multiplier.
+* Collision for trunks (per species radius), dead trees, cacti, stumps, logs, bushes, rocks and boulders on level-0
+  tiles (static shapes on the tile body).
+* World map (M): terrain/biome view, wheel zoom at the cursor, drag, right-click teleports onto the ground.
+* GameClock: day length setting (default 120 real minutes per game day, up to real time); daylight share realistic
+  from latitude (the player's) and season, or a custom %; day and night run at different speeds to fit the real
+  minutes. Sun and moon positions from spherical astronomy (declination from the season, 29.5-day moon); stars on
+  a cube-face grid, Milky Way band, planets on the ecliptic, moon with phase and moonlight; fog dims at night.
+* Wind: direction veers over game hours, speed gusts over seconds and rises in storms; drives clouds (high layer
+  veered), waves (heading follows), mist, grass, plants and woodland canopy sway (global `wind`; 0 in the valley game).
+* Weather: fronts over game hours (two noise scales), rain when a front exceeds a threshold set by the local annual
+  rainfall (deserts rarely, rainforests often), heavier above it; storms → lightning flashes; snow when below ~1 °C or
+  on snowy ground; settles over real seconds to minutes; Weather on/off and Rain frequency settings; H forces rain.
+* Water tint per biome (Water.WaterTint/WaterTintStrength), carried on the water sheet's UV2.
+* Cliffs: tileable 128 px pixel rock texture (irregular faulted strata, pinch-outs, fractures), projected from three
+  sides on all bare rock, strata wandering along faces; blocky flat-faced rock slabs set into cliff faces (nearest
+  tiles), huge boulders, rocky shore patches (rocks + bare rock instead of sand); rocks use the texture tinted with
+  the biome rock colour (MultiMesh colours).
+* Swamps: permanent murky pools in flat wet ground (terrain shader noise) with mud rims; reeds placed along the same
+  pool edges (C# replica of the shader's hash), no grass in pools.
+* Biome layout: realistic (default, unchanged) or patchwork (jittered regions at a patch size, random biomes by
+  weight, rare ones stay rare, upland biomes on mountains, warped and blended borders); per-biome toggles. New
+  ClimateSettings fields are omitted from JSON at their defaults (saved worlds and types unchanged).
+* Cloud resolution setting (256/512/1024 with finer octaves). Volumetric clouds now render (half-res pass).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

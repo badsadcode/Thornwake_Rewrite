@@ -57,6 +57,15 @@ The best three biomes at each spot blend, so borders are soft and organic.
   [min, max]; `Grass` (0 bare … 1.5 lush).
 * `Props.Rocks`, `Props.Logs` — multipliers.
 
+### Water
+`Water.WaterTint` (hex) and `Water.WaterTintStrength` (0 … 1, default 0.65) colour rivers, lakes and swamp pools in the
+biome. `Water.Wetness` ≥ ~0.5 makes permanent swamp pools with mud and reeds in flat ground.
+
+### Layout per world
+New world → *Biome layout*: realistic (climate) or patchwork (random organic patches, *Patch size*); *Biomes in this
+world* toggles leave built-in biomes out. In patchwork, biomes with a high `Elevation` minimum or `Mountain` range go to
+mountains, patch biomes keep their rarity (their `Patch.Coverage`).
+
 ### Biome skies (option "Biome skies" in Settings → Sky)
 `Atmosphere.SkyTint` (hex, multiplies the sky colours; near white, e.g. `f6e8cc` dusty desert) and
 `Atmosphere.Haze` (0 … 1: horizon veil and denser distance fog). Off by default (realistic sky).

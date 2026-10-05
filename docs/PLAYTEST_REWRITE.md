@@ -78,6 +78,32 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 12 — time, weather, wind, night sky, cliffs (round 7)
+* **Fixes**: no more tree-free lanes in a grid pattern; hanging grass and roots only on real cliff edges; ground mist no
+  longer shows white streaks from above; god rays break through gaps in the clouds.
+* **Sun** (Settings → Lighting and effects): *classic* (the build 11 sun) or *natural* (softer at noon, larger and orange
+  at sunrise/sunset); *Sun glare* sets how bright the disc and halo are.
+* **Day and night** (Settings → Time): *Day length* in real minutes (default 120; up to 1440 = real time); *Daylight share*
+  auto = realistic for where you are and the *Season*, or a percentage for longer days/nights; *Stop time*. The HUD shows
+  the day, time, daylight hours and the real minutes of day and night.
+* **Night sky**: stars that twinkle and turn with the night, the Milky Way, the moon with its phases and moonlight,
+  planets (Settings → Sky: Night sky, Planets).
+* **Weather** (Settings → Simulation): fronts pass every several game hours; rain is rare in deserts and frequent in wet
+  climates, sometimes heavy, sometimes a thunderstorm with lightning; it snows where it is freezing or the ground is
+  snowy. *Rain frequency* changes how often. H still starts/stops rain by hand.
+* **Wind**: veers and gusts by itself, stronger in storms; clouds, waves, mist, grass, plants and trees move with it
+  (trees sway). HUD: wind speed and where it comes from. *Wind strength* in Settings → Sky.
+* **Clouds**: *Cloud resolution* 256/512/1024; volumetric clouds work now (experimental).
+* **World map**: press **M** — terrain or biomes (B), wheel zoom, drag, **right-click to teleport** there.
+* **Collision**: you bump into tree trunks, dead trees, cacti, stumps, logs, bushes, rocks and boulders.
+* **Cliffs and rock**: a pixel rock texture (uneven layers, faults, cracks) on all bare rock; big blocky rock slabs set
+  into cliff faces; huge boulders here and there; rocky stretches of shore; rocks take their biome's rock colour.
+* **Swamps** look like swamps: murky pools in the flat wet ground, mud around them, reeds along their edges.
+* **Water colour per biome**: murky swamps, turquoise glacial and alpine lakes, dark taiga water, brown badlands rivers.
+* **Biome layout** (New world → Climate and biomes): *realistic* (default) or *patchwork* — organic patches of random
+  biomes all over the land, with a *Patch size*; "Biomes in this world" toggles pick which biomes appear.
+* **Alden Wayfarer**, the first explorer, now carries his name (Hall of Fame: `docs/HALL_OF_FAME.md`).
+
 ## New in build 11 — plants, skies, fog, cliffs
 * **Placeholder plants** for the biomes that had none (pixel textures in the woodland style, built in code):
   palms, saguaro and barrel cacti, dead trees and snags, acacia (savanna), jungle giants with buttress roots and
