@@ -42,6 +42,7 @@ public partial class WorldLab : Node3D
     private string _previewKey = "", _pendingKey = "";
     private WorldPlan? _previewPlan;
     private TextureRect _previewImage = null!;
+    private CheckButton _biomeView = null!;
     private Label _previewInfo = null!, _typeInfo = null!;
     private TerrainSampler? _sampler;
     private Task<TerrainSampler>? _generation;
@@ -127,7 +128,8 @@ public partial class WorldLab : Node3D
                 if (_gen.All.FirstOrDefault(x => x.Key == kv[0]) is { } g) g.Value = double.Parse(kv[1], CultureInfo.InvariantCulture);
             }
         _seedEdit.Text = seed.ToString(CultureInfo.InvariantCulture);
-        if (OS.GetCmdlineUserArgs().Contains("--preview")) StartPreview();
+        if (OS.GetCmdlineUserArgs().Contains("--preview-biomes")) _biomeView.ButtonPressed = true;
+        if (OS.GetCmdlineUserArgs().Contains("--preview") || OS.GetCmdlineUserArgs().Contains("--preview-biomes")) StartPreview();
         if (_smokeDirectory == null) Input.MouseMode = Input.MouseModeEnum.Captured;
         Generate();
     }
@@ -221,7 +223,7 @@ public partial class WorldLab : Node3D
         if (task.IsFaulted) { _previewInfo.Text = "Map failed: " + task.Exception?.GetBaseException().Message; return; }
         var plan = task.Result;
         _previewPlan = plan; _previewKey = _pendingKey;
-        _previewImage.Texture = ImageTexture.CreateFromImage(WorldPreview.Render(plan, 512));
+        _previewImage.Texture = ImageTexture.CreateFromImage(WorldPreview.Render(plan, 512, _biomeView.ButtonPressed));
         var p = plan.Profile;
         _previewInfo.Text = $"{p.WorldSize / 1000:0} km × {p.WorldSize / 1000:0} km · " +
             (plan.LandformShapes > 0 ? $"landform template ({plan.LandformShapes} shapes)" + (p.Continents > 0 ? $" + {p.Continents} continent(s)" : "") : $"{p.Continents} continent(s)") +
@@ -688,9 +690,13 @@ public partial class WorldLab : Node3D
         _previewImage = new TextureRect { CustomMinimumSize = new Vector2(400, 400), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = CanvasItem.TextureFilterEnum.Linear };
         side.AddChild(_previewImage);
-        var previewButton = new Button { Text = "Preview map" };
+        var previewRow = new HBoxContainer();
+        var previewButton = new Button { Text = "Preview map", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         previewButton.Pressed += StartPreview;
-        side.AddChild(previewButton);
+        _biomeView = new CheckButton { Text = "Show biomes" };
+        _biomeView.Toggled += _ => { if (_previewPlan != null) _previewImage.Texture = ImageTexture.CreateFromImage(WorldPreview.Render(_previewPlan, 512, _biomeView.ButtonPressed)); };
+        previewRow.AddChild(previewButton); previewRow.AddChild(_biomeView);
+        side.AddChild(previewRow);
         _previewInfo = new Label { Text = "Choose size, type and seed; parameters on auto adapt to both. Preview the map, then generate.",
             AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(400, 0) };
         side.AddChild(_previewInfo);

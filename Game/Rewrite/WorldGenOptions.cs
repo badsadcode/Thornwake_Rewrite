@@ -64,7 +64,17 @@ public sealed class WorldGenOptions
         Props = Add(new("gen.props", V, "Bushes, stumps and logs", 0, 2, .05, 1, "Amount of bushes, berry bushes, stumps and fallen logs.", "×"));
         Lakes = Add(new("gen.lakes", W, "Lakes", 0, 4, .05, 1, "Share of land that may be lake (largest basins first).", "×"));
         Deltas = Add(new("gen.deltas", W, "Deltas", 0, 4, .05, 1, "How readily large rivers split into deltas on flat coasts (0 = none).", "×"));
+
+        const string C = "Climate and biomes";
+        Latitude = Add(new("gen.latitude", C, "Latitude of the centre", 0, 80, 1, 45,
+            "Where the world lies on its planet: 0 = equator (tropical), 45 = temperate, 70 = arctic. The north edge is colder.", "°"));
+        LatitudeSpan = Add(new("gen.latitude_span", C, "Climate range", 0, 90, 1, 0,
+            "Degrees of latitude from south to north edge (left end = auto: more range for bigger worlds).", "°") { AutoAt = 0 });
+        Warmth = Add(new("gen.warmth", C, "Warmer / colder", -15, 15, .5, 0, "Added to every temperature.", "°C"));
+        Wetness = Add(new("gen.wetness", C, "Wetter / drier", .2, 3, .05, 1, "Multiplier on rain and snow (deserts and steppe ↔ forests and rainforest).", "×"));
     }
+
+    public readonly Setting Latitude, LatitudeSpan, Warmth, Wetness;
 
     /// <summary>Select a world type: its native size, every shape parameter on Auto, multipliers reset.</summary>
     public void LoadRecipe(WorldRecipe recipe)
@@ -78,6 +88,7 @@ public sealed class WorldGenOptions
         Set(Plains, 1 - style.PlainsRoughness);
         Set(Classic, 0);
         Set(ForestCover, 1.15); Set(ForestDensity, 1.2); Set(Rocks, 1); Set(Props, 1);
+        Set(Latitude, 45); Set(LatitudeSpan, 0); Set(Warmth, 0); Set(Wetness, 1);
         foreach (var s in new[] { Hills, Rock, CoastDetail, Erosion, Shores, Rivers, RiverWidth, Meanders, Wander, WidthVariation, Banks, Lakes, Deltas }) Set(s, 1);
         // A world type may start from its own parameter values (saved custom types).
         foreach (var (key, value) in recipe.Settings)
@@ -140,6 +151,11 @@ public sealed class WorldGenOptions
             ForestCover = ForestCover.Value, ForestDensity = ForestDensity.Value, RockAmount = Rocks.Value, PropAmount = Props.Value,
             LakeShare = b.LakeShare * Lakes.Value,
             DeltaMinCatchmentKm2 = Deltas.Value <= 0 ? double.PositiveInfinity : b.DeltaMinCatchmentKm2 / Deltas.Value,
+            Climate = new ClimateSettings
+            {
+                CentreLatitude = Latitude.Value, LatitudeSpan = LatitudeSpan.Value <= 0 ? -1 : LatitudeSpan.Value,
+                TemperatureOffset = Warmth.Value, Moisture = Wetness.Value,
+            },
         };
         return (profile, style);
     }

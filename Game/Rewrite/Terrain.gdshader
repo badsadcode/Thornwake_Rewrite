@@ -10,6 +10,8 @@ uniform bool show_grid = false;
 // x: surface wetness (rain darkens and glosses the ground), y: cosmetic puddles in flat hollows (Atmosphere.cs).
 global uniform vec2 rain_wetness;
 varying vec3 world_normal;
+varying vec4 biome_a; // biome grass colour, snow cover (D42)
+varying vec4 biome_b; // biome dry-ground colour, plant cover
 
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float vnoise(vec2 p) {
@@ -19,6 +21,7 @@ float vnoise(vec2 p) {
 
 void vertex() {
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	biome_a = CUSTOM0; biome_b = CUSTOM1;
 }
 
 void fragment() {
@@ -28,9 +31,12 @@ void fragment() {
 	float slope = 1.0 - clamp(world_normal.y, 0.0, 1.0);
 	float n1 = vnoise(p * 0.012), n2 = vnoise(p * 0.21), n3 = vnoise(p * 1.7);
 
-	vec3 grass = mix(vec3(0.337, 0.420, 0.247), vec3(0.420, 0.470, 0.300), n1);          // valley 566b3f .. 7b8059
-	grass = mix(grass, vec3(0.500, 0.495, 0.330), smoothstep(0.6, 0.95, n2) * 0.35);       // dry patches
-	vec3 woods = vec3(0.235, 0.300, 0.170);                                                // forest floor / far canopy
+	// Ground colours from the biome (temperate: valley 566b3f .. 7b8059 as before).
+	vec3 grass = mix(biome_a.rgb, biome_b.rgb, n1);
+	grass = mix(grass, biome_b.rgb * vec3(1.08, 1.04, 0.95), smoothstep(0.6, 0.95, n2) * 0.35); // dry patches
+	// Sparse plant cover (deserts, cold deserts, tundra): bare, dry ground shows through in patches.
+	grass = mix(biome_b.rgb * vec3(1.05, 1.0, 0.92), grass, smoothstep(0.0, 1.0, biome_b.a * 1.3 + (n2 - 0.5) * 0.5));
+	vec3 woods = biome_a.rgb * vec3(0.70, 0.71, 0.69);                                     // forest floor / far canopy
 	vec3 c = mix(grass, woods, smoothstep(0.15, 0.75, forest) * 0.85);
 	c = mix(c, vec3(0.470, 0.460, 0.350), smoothstep(1300.0, 2300.0, h) * 0.65);           // alpine meadow
 	vec3 rock = mix(vec3(0.467, 0.463, 0.416), vec3(0.560, 0.545, 0.500), n2);             // valley 77766a
@@ -57,7 +63,8 @@ void fragment() {
 	vec3 soil = mix(vec3(0.36, 0.28, 0.19), vec3(0.45, 0.36, 0.25), n3);
 	c = mix(c, soil, smoothstep(0.05, 0.35, UV2.y + (n2 - 0.5) * 0.08));
 	c = mix(c, bed, submerged);
-	float snow = smoothstep(snow_line - 250.0 + (n1 - 0.5) * 600.0, snow_line + 150.0, h) * (1.0 - smoothstep(0.55, 0.8, slope));
+	// Snow from the biome and the cold (temperature falls with height), patchy at its edge.
+	float snow = smoothstep(0.25, 0.75, biome_a.a + (n1 - 0.5) * 0.35) * (1.0 - smoothstep(0.55, 0.8, slope));
 	c = mix(c, vec3(0.93, 0.94, 0.96), snow);
 	c *= 0.92 + 0.16 * n3;
 	// Close-up detail (fades out by ~45 m): pixel-stepped speckle and small clumps at 6 cm texels, in the spirit

@@ -32,8 +32,19 @@ public static class GroundCover
         /// <summary>Per vertex 0.5 + depth below the nearest water surface / 2 m (0.5 = waterline), as in the tile colours.</summary>
         public readonly float[] Shore;
         public Grid(Vector3[] vertices, Vector3[] normals, double[] forest, TerrainSample[] samples, double spacing, double x0, double z0, int side, float[] shore,
-            Vector2[]? uv2 = null)
-        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; EditedAmount = uv2; }
+            Vector2[]? uv2 = null, float[]? biome1 = null)
+        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; EditedAmount = uv2; Biome1 = biome1; }
+
+        /// <summary>Per vertex biome data (rgb dry colour, a = plant cover), as on the terrain mesh.</summary>
+        public readonly float[]? Biome1;
+
+        /// <summary>Biome plant cover (0 bare … 1 normal) at tile-local (x, z), nearest vertex.</summary>
+        public float Plants(double x, double z)
+        {
+            if (Biome1 == null) return 1;
+            int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
+            return Biome1[(j * Side + i) * 4 + 3];
+        }
 
         /// <summary>Bilinear <see cref="Shore"/> at tile-local (x, z).</summary>
         /// <summary>True where the player has dug or raised the ground noticeably (bare soil: no grass).</summary>
@@ -105,7 +116,7 @@ public static class GroundCover
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || g.Edited(x, z)) return;
             if (up < .82f || height - sea < 1.6) return;
             float alpine = (float)DetMath.Smooth((height - sea - 1700) / 500);
-            float density = (1 - .65f * forest) * (1 - alpine) * (float)DetMath.Smooth((up - .82) / .08);
+            float density = (1 - .65f * forest) * (1 - alpine) * (float)DetMath.Smooth((up - .82) / .08) * g.Plants(x, z);
             if (Unit(h, 1) > density * .9f) return;
             float scale = .7f + .8f * Unit(h, 2);
             result.Add(new Transform3D(new Basis(Vector3.Up, Unit(h, 3) * Mathf.Tau).Scaled(Vector3.One * scale), new Vector3((float)x, height - .02f, (float)z)));

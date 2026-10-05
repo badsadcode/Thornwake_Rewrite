@@ -10,8 +10,9 @@ namespace Thornwake.Rewrite;
 /// </summary>
 public static class WorldPreview
 {
-    public static Image Render(WorldPlan plan, int pixels)
+    public static Image Render(WorldPlan plan, int pixels, bool biomes = false)
     {
+        if (biomes) return RenderBiomes(plan, pixels);
         var raster = plan.Macro;
         var p = plan.Profile;
         double world = p.WorldSize, x0 = plan.Manifest.OriginX - world / 2, z0 = plan.Manifest.OriginZ - world / 2, step = world / pixels;
@@ -80,6 +81,44 @@ public static class WorldPreview
             data[k + 1] = (byte)(data[k + 1] + (130 - data[k + 1]) * strength);
             data[k + 2] = (byte)(data[k + 2] + (200 - data[k + 2]) * strength);
         }
+    }
+
+    /// <summary>Biome map (D42): each land pixel in its biome's map colour (blended at borders), with hill shading.</summary>
+    public static Image RenderBiomes(WorldPlan plan, int pixels)
+    {
+        var p = plan.Profile;
+        var climate = plan.Climate;
+        double world = p.WorldSize, x0 = plan.Manifest.OriginX - world / 2, z0 = plan.Manifest.OriginZ - world / 2, step = world / pixels;
+        var colors = new Color[climate.Biomes.Count];
+        for (int b = 0; b < colors.Length; b++) colors[b] = new Color("#" + climate.Biomes[b].Map);
+        var height = new float[pixels * pixels];
+        var data = new byte[pixels * pixels * 3];
+        System.Threading.Tasks.Parallel.For(0, pixels, j =>
+        {
+            for (int i = 0; i < pixels; i++)
+            {
+                double x = x0 + (i + .5) * step, z = z0 + (j + .5) * step;
+                plan.Macro.Sample(x, z, WorldPlan.LandChannel, WorldPlan.HeightChannel, WorldPlan.MountainChannel, out double l, out double h, out _);
+                int k = j * pixels + i;
+                height[k] = (float)h;
+                Color c;
+                if (l <= 0) c = new Color(.36f, .58f, .7f).Lerp(new Color(.1f, .22f, .38f), Mathf.Clamp(-(float)l / .5f, 0, 1));
+                else if (plan.Hydrology.LakeAt(x, z) >= 0) c = new Color(.3f, .5f, .62f);
+                else { var (a, b, share, _, _) = climate.BiomeAt(x, z, h); c = colors[b].Lerp(colors[a], (float)share); }
+                data[k * 3] = (byte)(c.R * 255); data[k * 3 + 1] = (byte)(c.G * 255); data[k * 3 + 2] = (byte)(c.B * 255);
+            }
+        });
+        // Hill shading over land.
+        for (int j = 1; j < pixels - 1; j++)
+            for (int i = 1; i < pixels - 1; i++)
+            {
+                int k = j * pixels + i;
+                if (height[k] <= 0) continue;
+                float hx = height[k + 1] - height[k - 1], hz = height[k + pixels] - height[k - pixels];
+                float shade = Mathf.Clamp(1 - (hx + hz) / (float)(step * 2) * 6, .6f, 1.3f);
+                for (int c = 0; c < 3; c++) data[k * 3 + c] = (byte)Mathf.Clamp(data[k * 3 + c] * shade, 0, 255);
+            }
+        return Image.CreateFromData(pixels, pixels, false, Image.Format.Rgb8, data);
     }
 
     /// <summary>Share of the world that is land (raster cells), for the creation screen's summary.</summary>

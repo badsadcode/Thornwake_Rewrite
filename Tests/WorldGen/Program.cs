@@ -68,6 +68,46 @@ if (mouths != null)
     return 0;
 }
 
+// Biome maps: --biomes=<dir>,<type id>,<km>,<seed>: climate (temperature, precipitation) and biome maps
+string? biomeMaps = args.FirstOrDefault(a => a.StartsWith("--biomes="))?[9..];
+if (biomeMaps != null)
+{
+    var v = biomeMaps.Split(',');
+    var recipe = WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == v[1]);
+    var plan = new WorldPlan(WorldManifest.Create(int.Parse(v[3]), recipe.Resolve(new WorldChoices { SizeKm = double.Parse(v[2]) }), worldId: CoreTests.FixedWorldId));
+    var sw = Stopwatch.StartNew();
+    var climate = new Climate(plan);
+    Console.WriteLine($"climate {sw.ElapsedMilliseconds} ms, raster {climate.Raster.Size}², latitudes {climate.Latitude(plan.Manifest.OriginZ - plan.Profile.WorldSize / 2):0}° … {climate.Latitude(plan.Manifest.OriginZ + plan.Profile.WorldSize / 2):0}°");
+    Directory.CreateDirectory(v[0]);
+    int px = 512; double world = plan.Profile.WorldSize, step = world / px;
+    var biomes = Biomes.Defaults;
+    var counts = new int[biomes.Length]; int landCount = 0;
+    var best = new (double Share, double X, double Z)[biomes.Length];
+    var tImg = new byte[px * px * 3]; var pImg = new byte[px * px * 3]; var bImg = new byte[px * px * 3];
+    for (int j = 0; j < px; j++)
+        for (int i = 0; i < px; i++)
+        {
+            double x = plan.Manifest.OriginX - world / 2 + (i + .5) * step, z = plan.Manifest.OriginZ - world / 2 + (j + .5) * step;
+            plan.Macro.Sample(x, z, WorldPlan.LandChannel, WorldPlan.HeightChannel, WorldPlan.MountainChannel, out double land, out double h, out _);
+            int k = (j * px + i) * 3;
+            if (land <= 0) { foreach (var img in new[] { tImg, pImg, bImg }) { img[k] = 30; img[k + 1] = 55; img[k + 2] = 95; } continue; }
+            var (t, p) = climate.At(x, z, h);
+            double tn = Math.Clamp((t + 20) / 50, 0, 1), pn = Math.Clamp(Math.Log10(Math.Max(1, p)) / 3.6, 0, 1);
+            tImg[k] = (byte)(255 * tn); tImg[k + 1] = (byte)(80 + 100 * (1 - Math.Abs(tn - .5) * 2)); tImg[k + 2] = (byte)(255 * (1 - tn));
+            pImg[k] = (byte)(220 * (1 - pn)); pImg[k + 1] = (byte)(200 * (1 - pn) + 40); pImg[k + 2] = (byte)(120 + 135 * pn);
+            var (ba, bb, share, _, _) = climate.BiomeAt(x, z, h);
+            counts[ba]++; landCount++;
+            if (share > best[ba].Share && (i * 7 + j * 13) % 5 == 0) best[ba] = (share, x, z);
+            int Hex(string c, int o) => Convert.ToInt32(c.Substring(o, 2), 16);
+            for (int c = 0; c < 3; c++) bImg[k + c] = (byte)(Hex(biomes[ba].Map, c * 2) * share + Hex(biomes[bb].Map, c * 2) * (1 - share));
+        }
+    Png.Write(Path.Combine(v[0], $"{v[1]}-{v[2]}-temperature.png"), px, px, tImg);
+    Png.Write(Path.Combine(v[0], $"{v[1]}-{v[2]}-precipitation.png"), px, px, pImg);
+    Png.Write(Path.Combine(v[0], $"{v[1]}-{v[2]}-biomes.png"), px, px, bImg);
+    for (int b = 0; b < biomes.Length; b++) if (counts[b] > 0) Console.WriteLine($"  {biomes[b].Name}: {counts[b] * 100.0 / landCount:0.0} %  e.g. at {best[b].X:0},{best[b].Z:0}");
+    return 0;
+}
+
 // Close-up of a world type: --typewin=<type id>,<km>,<seed>,<x>,<z>,<side>,<pixels>,<png>[,<exaggeration>]
 string? typewin = args.FirstOrDefault(a => a.StartsWith("--typewin="))?[10..];
 if (typewin != null)
@@ -229,6 +269,7 @@ try
     HydrologyTests.Register(filter);
     SimulationTests.Register(filter);
     RecipeTests.Register(filter);
+    ClimateTests.Register(filter);
 }
 catch (TestFailure failure)
 {

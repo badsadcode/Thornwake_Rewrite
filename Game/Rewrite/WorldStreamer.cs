@@ -215,9 +215,13 @@ public partial class WorldStreamer : Node3D
             arrays[(int)Mesh.ArrayType.Color] = data.Colors;
             arrays[(int)Mesh.ArrayType.TexUV] = data.Uv;
             arrays[(int)Mesh.ArrayType.TexUV2] = data.Uv2;
+            arrays[(int)Mesh.ArrayType.Custom0] = data.Biome0;
+            arrays[(int)Mesh.ArrayType.Custom1] = data.Biome1;
             arrays[(int)Mesh.ArrayType.Index] = data.Indices;
             var mesh = new ArrayMesh();
-            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            const int rgbaFloat = (int)Mesh.ArrayCustomFormat.RgbaFloat;
+            var format = (Mesh.ArrayFormat)(((long)rgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift) | ((long)rgbaFloat << (int)Mesh.ArrayFormat.FormatCustom1Shift));
+            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays, null, null, format);
             root.AddChild(new MeshInstance3D
             {
                 Mesh = mesh, MaterialOverride = _terrain,

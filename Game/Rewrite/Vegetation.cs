@@ -22,19 +22,37 @@ public static class Vegetation
     private static readonly int[] Mixed = { 0, 1, 2, 3, 4, 8, 9, 5, 6, 15 };
     private static readonly int[] Conifer = { 0, 1, 2, 3, 4, 3, 4, 14 };
 
-    /// <summary>0..1 forest cover: broad patches of woodland and meadow, thinning toward the tree line.</summary>
-    public static double ForestDensity(TerrainSampler sampler, double x, double z, in TerrainSample t, double coverSetting = 1)
+    private static readonly int[] Green = { 5, 6, 7, 8, 9, 10, 12 };
+    private static readonly int[] Autumn = { 11, 15, 16 };
+    private static readonly int[] Needles = { 0, 1, 2, 3, 4, 3, 4 };
+
+    /// <summary>The biome blend at a point (D42): the two best-fitting biomes and the first one's share.</summary>
+    public static (Biome A, Biome B, double Share) BiomeOf(TerrainSampler sampler, double x, double z, double elevation)
+    {
+        var climate = sampler.Plan.Climate;
+        var (a, b, share, _, _) = climate.BiomeAt(x, z, elevation);
+        return (climate.Biomes[a], climate.Biomes[b], share);
+    }
+
+    /// <summary>0..1 forest cover: broad patches of woodland and meadow, thinning toward the tree line; the biome
+    /// sets how much forest there is (none in deserts and on ice, little in steppe and tundra, dense in rainforest).</summary>
+    public static double ForestDensity(TerrainSampler sampler, double x, double z, in TerrainSample t, double coverSetting = 1, double biomeForest = -1)
     {
         if (t.Water != WaterKind.None || coverSetting <= 0) return 0;
         double elevation = t.Height - sampler.Plan.Profile.SeaLevel;
         if (elevation < 2.5) return 0;
+        if (biomeForest < 0) { var (ba, bb, share) = BiomeOf(sampler, x, z, elevation); biomeForest = ba.Forest * share + bb.Forest * (1 - share); }
+        if (biomeForest <= .001) return 0;
+        // Denser biomes grow bigger forests; sparse ones (steppe, savanna, tundra) only scattered trees.
+        double sparse = Math.Min(1, biomeForest);
+        coverSetting *= Math.Clamp(biomeForest, 1, 1.8);
         ulong seed = Hashing.Mix(unchecked((ulong)sampler.Plan.Manifest.Seed * 0x2545F4914F6CDD1DUL + 77));
         // Steep enough that land is mostly either forest or meadow, with short edges (a wide band of half-wooded land
         // looked like scattered trees everywhere near the player).
         double patches = Noise.Fbm(x, z, 2600, 4, 60, seed, .55) * 3.4 + .45 + (coverSetting - 1) * 1.1;
         double treeline = 1750 + 350 * Noise.Gradient(x / 9000, z / 9000, seed + 5);
         double cover = DetMath.Smooth(patches) * DetMath.Smooth((treeline - elevation) / 220) * DetMath.Smooth((elevation - 2.5) / 4);
-        return cover * (1 - .7 * DetMath.Smooth((t.Mountain - .45) / .35));
+        return cover * (1 - .7 * DetMath.Smooth((t.Mountain - .45) / .35)) * sparse;
     }
 
     public static List<TreeInstance> Trees(TerrainSampler sampler, TileKey key, in DetailConfig config)
@@ -66,7 +84,12 @@ public static class Vegetation
                 if (sampler.Plan.Hydrology.NearestRiver(x, z, 0, out var river) && river.Distance < river.Width * .5 + 18 && (pick & 3) != 0) species = 13;
                 else
                 {
-                    var list = elevation < 550 ? Broadleaf : elevation < 1250 ? Mixed : Conifer;
+                    // The biome's tree mix (conifers / green / autumn broadleaf), more conifers higher up.
+                    var (ba, bb, share) = BiomeOf(sampler, x, z, elevation);
+                    var biome = Hashing.Unit(Hashing.Mix(pick + 7)) < share ? ba : bb;
+                    double conifers = Math.Min(1, biome.Conifers + DetMath.Smooth((elevation - 900) / 700) * .5);
+                    double r = Hashing.Unit(Hashing.Mix(pick + 3));
+                    var list = r < conifers ? Needles : r < conifers + (1 - conifers) * biome.Autumn ? Autumn : Green;
                     species = list[(int)(pick % (ulong)list.Length)];
                 }
                 float scale = (float)(.8 + .45 * Hashing.Unit(Hashing.Mix(pick)));

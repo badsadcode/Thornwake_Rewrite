@@ -19,6 +19,8 @@ public sealed class WorldPlan
     public WorldLayout Layout { get; }
     public MacroRaster Macro { get; }
     public Hydrology Hydrology { get; }
+    /// <summary>Temperature, precipitation and biomes (D42).</summary>
+    public Climate Climate { get; }
     public double BuildMilliseconds { get; }
     /// <summary>Time spent on the layout raster alone (before erosion/hydrology).</summary>
     public double RasterMilliseconds { get; }
@@ -136,6 +138,7 @@ public sealed class WorldPlan
         Hydrology.BuildMilliseconds = hydroTimer.Elapsed.TotalMilliseconds;
         for (int k = 0; k < height.Length; k++) heightRaster[k] = (float)height[k];
         Hydrology.RefineSurfaces(Style);
+        Climate = new Climate(this, Style.Climate);
         BuildMilliseconds = timer.Elapsed.TotalMilliseconds;
     }
 }

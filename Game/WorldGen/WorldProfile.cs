@@ -137,6 +137,9 @@ public sealed record TerrainStyle
     /// banks that stay walkable where they bulge (round 5).</summary>
     public int Revision { get; init; } = 9;
 
+    /// <summary>Climate of the world (latitudes, warmer/colder, wetter/drier): drives biomes (D42).</summary>
+    public ClimateSettings Climate { get; init; } = new();
+
     /// <summary>River mouths blend into sea and lake beds (groove continues into the bed, no levees in the
     /// estuary). 0 = as in preview 7.</summary>
     public double MouthBlend { get; init; } = 1;
