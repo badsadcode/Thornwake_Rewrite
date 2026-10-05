@@ -132,7 +132,7 @@ public static class GameSettings
 
     // ---- simulation (live)
     public static readonly Setting WaterSimulation = Add(new("sim.water", "Simulation", "Local water simulation", 0, 1, 1, 1,
-        "Simulated water around the player (G pour, J spring, H rain, K clear). Runs in a 128 m area that follows you."));
+        "Simulated water around the player (G pour, J spring, H rain, K clear). Runs in a 128 m area that follows you.", rebuild: true));
     public static readonly Setting RainStrength = Add(new("sim.rain", "Simulation", "Rain strength", .1, 4, .1, 1,
         "How hard it rains when rain is on (H). 1 = a heavy storm, exaggerated so runoff shows within a minute.", "×"));
 

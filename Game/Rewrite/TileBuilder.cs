@@ -22,13 +22,13 @@ public readonly record struct TreeInstance(int Species, Transform3D Transform);
 /// logs are world objects, not decoration); grass and the draw distances come from the player's settings.
 /// </summary>
 public readonly record struct DetailConfig(double Grass, double ForestCover, double ForestDensity, double Rocks, double Props,
-    int TreeLevels, int FarTreeLevels)
+    int TreeLevels, int FarTreeLevels, bool SimulatedWater = true)
 {
     public static DetailConfig For(TerrainSampler sampler)
     {
         var style = sampler.Plan.Style;
         return new(GameSettings.GrassDensity.Value, style.ForestCover, style.ForestDensity, style.RockAmount, style.PropAmount,
-            2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index);
+            2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index, GameSettings.WaterSimulation.On);
     }
 }
 
@@ -178,7 +178,7 @@ public static class TileBuilder
             // Full trees on the nearest levels; beyond, tree cards, then the terrain shader's forest tint.
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };
-        BuildWater(data, samples, heights, s2, spacing, Side);
+        BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater);
         var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2);
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
         if (key.Level == 0 && config.Grass > 0) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);
@@ -212,7 +212,7 @@ public static class TileBuilder
     /// neighbouring level, so the plane runs under the bank and the visible shoreline is the exact terrain
     /// intersection. Colour: R = depth / 20 m, G = kind (0 sea, .5 lake, 1 river).
     /// </summary>
-    private static void BuildWater(TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing, int n)
+    private static void BuildWater(TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing, int n, bool simulated)
     {
         var wet = new bool[n * n];
         bool any = false;
@@ -223,7 +223,8 @@ public static class TileBuilder
         // Ground the player dug (below its generated height) is left to the local water simulation: the river's
         // sheet must not be stretched over it (that drew gaps and overlapping sheets in dug river banks).
         var dug = new bool[n * n];
-        for (int k = 0; k < n * n; k++) dug[k] = !wet[k] && data.Uv2[k].Y > .15f;
+        // Without the simulation, dug ground next to water simply fills at the water's level (the sheet covers it).
+        for (int k = 0; k < n * n; k++) dug[k] = simulated && !wet[k] && data.Uv2[k].Y > .15f;
         // The sea's sheet also reaches ~14 m under the beach, so the swash can run up and down it.
         var under = new int[n * n];
         Array.Fill(under, int.MaxValue);

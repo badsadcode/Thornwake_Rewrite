@@ -471,6 +471,9 @@ public sealed class LocalWater
     /// <summary>Chunks (world chunk coordinates) whose visible water changed since the last call.</summary>
     public List<(long X, long Z)> TakeDirty() { var list = new List<(long, long)>(_dirty); _dirty.Clear(); return list; }
 
+    /// <summary>Water saved for a chunk outside the window (it resumes when the window returns).</summary>
+    public bool HasDormant(long chunkX, long chunkZ) => _dormant.ContainsKey((chunkX, chunkZ));
+
     public bool InWindow(long chunkX, long chunkZ) =>
         _placed && chunkX >= OriginChunkX && chunkX < OriginChunkX + WindowChunks && chunkZ >= OriginChunkZ && chunkZ < OriginChunkZ + WindowChunks;
 

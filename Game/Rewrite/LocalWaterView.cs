@@ -65,6 +65,8 @@ public partial class LocalWaterView : Node3D
 
     private void Rebuild(long cx, long cz)
     {
+        // Water left behind outside the simulated area (a filled trench, a pond) stays drawn as it was.
+        if (Sim != null && !Sim.InWindow(cx, cz) && Sim.HasDormant(cx, cz)) return;
         _meshes.Remove((cx, cz), out var old);
         old?.QueueFree();
         if (Sim == null || !Sim.ChunkView(cx, cz, _floor, _depth, _vx, _vz, _wet)) return;

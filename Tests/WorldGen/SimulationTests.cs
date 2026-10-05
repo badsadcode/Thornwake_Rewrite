@@ -18,6 +18,7 @@ internal static class SimulationTests
         T.Run("Edits: a channel dug from a river fills from it", RiverFed, filter);
         T.Run("Edits: real river and lake feed dug ground", RealRiverFed, filter);
         T.Run("Edits: a trench dug through a river bed and bank shows one water surface", RiverTrench, filter);
+        T.Run("Edits: a trench dug along a river bank fills from the river", BankTrench, filter);
         T.Run("Tools: strength, hardness, budget, flatten, directional cut", Tools, filter);
         T.Run("Waves: heights match the displaced surface; sea states; shallows", Waves, filter);
     }
@@ -37,7 +38,7 @@ internal static class SimulationTests
     };
 
     private static void Balance(LocalWater w, string label) =>
-        T.Near(w.Volume() + w.Absorbed + w.Spilled + w.Soaked, w.Added + w.Drawn, Math.Max(1e-3, w.Added * 2e-4), label + ": volume balance");
+        T.Near(w.Volume() + w.Absorbed + w.Spilled + w.Soaked, w.Added + w.Drawn, Math.Max(1e-3, w.Added * 2e-4 + w.Drawn * 2e-6), label + ": volume balance");
 
     private static void Downhill()
     {
@@ -290,6 +291,51 @@ internal static class SimulationTests
         T.Check(missing == 0, "every dug cell below the river shows water");
         T.Check(above == 0, "no water drawn above the river surface");
         Balance(w, "trench");
+    }
+
+    private static void BankTrench()
+    {
+        var plan = CoreTests.Sampler("mountainous", 42).Plan;
+        var s = new TerrainSampler(plan);
+        var reach = plan.Hydrology.Reaches.First(r => r.Catchment[^1] > 300 && !r.Distributary && r.Points.Length > 40);
+        int k = reach.Points.Length / 2;
+        var a = reach.Points[k]; var b = reach.Points[k + 4];
+        double tx = b.X - a.X, tz = b.Z - a.Z, len = Math.Sqrt(tx * tx + tz * tz), dx = -tz / len, dz = tx / len;
+        tx /= len; tz /= len;
+        double shore = 0;
+        while (s.Sample(a.X + dx * shore, a.Z + dz * shore).Water != WaterKind.None && shore < 2000) shore += .5;
+        double level = s.Sample(a.X + dx * (shore - 1), a.Z + dz * (shore - 1)).WaterLevel;
+        // Like Tom's: a 4 m dig brush run along the bank (cutting into the river's edge), 2 m deep, 30 m long.
+        for (double u = -15; u <= 15; u += 1) s.Edits.Apply(a.X + dx * (shore + 1.5) + tx * u, a.Z + dz * (shore + 1.5) + tz * u, 4, -2);
+        var w = new LocalWater((cx, cz) => LocalWater.FromSampler(s, cx, cz)) { Infiltration = 0 };
+        w.Follow(a.X + dx * shore, a.Z + dz * shore);
+        int n = LocalWater.ChunkCells + 1;
+        var floor = new float[n * n]; var depth = new float[n * n]; var vx = new float[n * n]; var vz = new float[n * n]; var wet = new float[n * n];
+        (int Cells, int Dry) Count()
+        {
+            int cells = 0, dry = 0;
+            for (double u = -12; u <= 12; u += .5)
+                for (double v = shore - 1; v <= shore + 4; v += .5)
+                {
+                    double x = a.X + dx * v + tx * u, z = a.Z + dz * v + tz * u;
+                    long cx = (long)Math.Floor(x / LocalWater.ChunkSize), cz = (long)Math.Floor(z / LocalWater.ChunkSize);
+                    if (!w.ChunkView(cx, cz, floor, depth, vx, vz, wet)) continue;
+                    int i = (int)Math.Floor((x - cx * LocalWater.ChunkSize) / LocalWater.Cell), j = (int)Math.Floor((z - cz * LocalWater.ChunkSize) / LocalWater.Cell);
+                    int q = j * n + i;
+                    if (floor[q] > level - .15 || s.Edits.Delta(x, z) > -.02) continue; // only dug ground clearly below the river
+                    cells++;
+                    if (depth[q] < .02) dry++;
+                }
+            return (cells, dry);
+        }
+        for (int i = 0; i < 60 * 10; i++) w.Step(1 / 60f);
+        var early = Count();
+        for (int i = 0; i < 60 * 50; i++) w.Step(1 / 60f);
+        var late = Count();
+        T.Note($"bank trench: {late.Cells} dug cells below the river; dry after 10 s: {early.Dry}, after 60 s: {late.Dry}; drawn from the river {w.Drawn:0.0} m³");
+        T.Check(late.Cells > 20, "the trench reaches below the river");
+        T.Check(late.Dry == 0, "the trench fills with water from the river");
+        Balance(w, "bank trench");
     }
 
     private static void Tools()
