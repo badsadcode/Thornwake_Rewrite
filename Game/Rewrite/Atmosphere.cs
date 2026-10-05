@@ -29,11 +29,19 @@ public partial class Atmosphere : Node3D
     private double _windX, _windZ;
     private float _shadowCoverage = -1;
     private MeshInstance3D? _shaftQuad;
+    private GpuParticles3D? _rainParticles;
+    private byte[] _noiseBase = Array.Empty<byte>();
+    /// <summary>Rain on (the water simulation's rain): the sky clouds over, light dims, haze thickens, rain falls.</summary>
+    public bool Raining { get; set; }
+    private float _storm; // 0 fair … 1 full storm, eased
     private ShaderMaterial? _water;
 
     public override void _Ready()
     {
         _noise = CloudNoise(Tile, 4242);
+        var raw = _noise.GetData();
+        _noiseBase = new byte[Tile * Tile];
+        for (int i = 0; i < _noiseBase.Length; i++) _noiseBase[i] = raw[i * 4];
         _sky = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Sky.gdshader") };
         _sky.SetShaderParameter("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(_noise)));
         _sky.SetShaderParameter("cloud_period", CloudPeriod);
@@ -82,6 +90,25 @@ public partial class Atmosphere : Node3D
             ExtraCullMargin = 16384, Position = new Vector3(0, 0, -1), GIMode = GeometryInstance3D.GIModeEnum.Disabled,
         };
         camera.AddChild(_shaftQuad);
+        // Rain: streaks falling around the camera (world-space particles, so they do not swing with the view).
+        var streak = new StandardMaterial3D
+        {
+            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+            AlbedoColor = new Color(.8f, .85f, .9f, .18f), ProximityFadeEnabled = true, ProximityFadeDistance = 1.5f, BillboardMode = BaseMaterial3D.BillboardModeEnum.FixedY,
+        };
+        _rainParticles = new GpuParticles3D
+        {
+            Amount = 9000, Lifetime = 1.4, Emitting = false, LocalCoords = false, Position = new Vector3(0, 14, 0),
+            VisibilityAabb = new Aabb(new Vector3(-40, -40, -40), new Vector3(80, 60, 80)),
+            DrawPass1 = new QuadMesh { Size = new Vector2(.015f, .6f), Material = streak },
+            ProcessMaterial = new ParticleProcessMaterial
+            {
+                EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box, EmissionBoxExtents = new Vector3(28, 3, 28),
+                Direction = new Vector3(.08f, -1, .05f), Spread = 3, InitialVelocityMin = 13, InitialVelocityMax = 17, Gravity = new Vector3(0, -9.8f, 0),
+            },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        camera.AddChild(_rainParticles);
         ApplyAll();
     }
 
@@ -115,7 +142,7 @@ public partial class Atmosphere : Node3D
         if (_shaftQuad != null) _shaftQuad.Visible = GameSettings.SunShafts.Value > 0;
         _shadow.Visible = GameSettings.CloudShadows.Value > 0 && GameSettings.Clouds.Value > 0;
         _shadow.Modulate = new Color(1, 1, 1, Math.Clamp(.62f * GameSettings.CloudShadows.F, 0, 1));
-        if (Math.Abs(_shadowCoverage - GameSettings.Clouds.F) > 1e-4) RebuildShadowTexture(GameSettings.Clouds.F);
+        UpdateCoverage();
         _water?.SetShaderParameter("ssr_steps", GameSettings.WaterReflections.Index switch { 0 => 0, 1 => 16, _ => 32 });
         if (vp != null)
         {
@@ -140,7 +167,18 @@ public partial class Atmosphere : Node3D
     {
         float elevation = Mathf.Sin((hour - 6) / 12 * Mathf.Pi) * 62;
         Sun.RotationDegrees = new Vector3(-Mathf.Max(elevation, -5), -35 + (hour - 12) * 12, 0);
-        Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f);
+        _storm = Mathf.MoveToward(_storm, Raining ? 1 : 0, (float)delta / 8); // ~8 s to cloud over or clear
+        Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, _storm);
+        Environment.FogDensity = .00009f * GameSettings.Haze.F * Mathf.Lerp(1, 4, _storm);
+        Environment.FogEnabled = GameSettings.Haze.Value > 0 || _storm > 0;
+        // The sky's radiance map is not re-baked for the storm (global uniform), so dim the ambient light directly.
+        Environment.AmbientLightEnergy = Mathf.Lerp(.55f, .38f, _storm);
+        UpdateCoverage();
+        if (_rainParticles != null)
+        {
+            _rainParticles.Emitting = _storm > .35f;
+            _rainParticles.AmountRatio = Mathf.Clamp((_storm - .3f) / .7f, 0, 1) * Math.Clamp(GameSettings.RainStrength.F, .2f, 1);
+        }
         // Warmer light at a low sun.
         float warm = 1 - Mathf.Clamp(elevation / 30, 0, 1);
         Sun.LightColor = new Color("fff3df").Lerp(new Color("ffc58a"), warm * .8f);
@@ -150,7 +188,7 @@ public partial class Atmosphere : Node3D
         _windX += delta * wind * .8; _windZ += delta * wind * .6;
         _windX %= CloudPeriod; _windZ %= CloudPeriod;
         double cx = Wrap(cameraWorldX + _windX), cz = Wrap(cameraWorldZ + _windZ);
-        RenderingServer.GlobalShaderParameterSet("cloud_state", new Vector4((float)cx, (float)cz, GameSettings.Clouds.F, 0));
+        RenderingServer.GlobalShaderParameterSet("cloud_state", new Vector4((float)cx, (float)cz, Coverage, _storm));
         _shafts.SetShaderParameter("sun_direction", toSun);
         _shafts.SetShaderParameter("sun_color", Sun.LightColor);
 
@@ -162,6 +200,14 @@ public partial class Atmosphere : Node3D
         double dx = c0x + CloudPeriod * Math.Round((cameraLocal.X - c0x) / CloudPeriod);
         double dz = c0z + CloudPeriod * Math.Round((cameraLocal.Z - c0z) / CloudPeriod);
         _shadow.Position = new Vector3((float)dx, cameraLocal.Y, (float)dz);
+    }
+
+    /// <summary>Cloud cover in effect: the setting, closing in toward overcast while it rains.</summary>
+    private float Coverage => Mathf.Lerp(GameSettings.Clouds.F, .97f, _storm);
+
+    private void UpdateCoverage()
+    {
+        if (Math.Abs(_shadowCoverage - Coverage) > .03f || (_storm == 0 && Math.Abs(_shadowCoverage - Coverage) > 1e-4)) RebuildShadowTexture(Coverage);
     }
 
     private static double Wrap(double v) => v - Math.Floor(v / CloudPeriod) * CloudPeriod;
@@ -176,7 +222,7 @@ public partial class Atmosphere : Node3D
         for (int y = 0; y < Tile; y++)
             for (int x = 0; x < Tile; x++)
             {
-                float n = _noise.GetPixel(x, y).R * .8f + .5f * .2f;
+                float n = _noiseBase[y * Tile + x] / 255f * .8f + .5f * .2f;
                 float d = Mathf.SmoothStep(edge - .05f, edge + .2f, n);
                 alpha[y * Tile + x] = (byte)(Mathf.Clamp(d, 0, 1) * 255);
             }

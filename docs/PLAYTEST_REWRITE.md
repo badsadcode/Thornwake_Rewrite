@@ -62,6 +62,8 @@ milestone M6), caves.
 * **Digging**: hold **V** to dig and **B** to raise the ground where you look. Water follows: dig a channel from a
   pond and it drains into it. (Edits are not saved yet.)
 * **Banks**: reed clumps along rivers and lakes, a darker damp strip just above the waterline.
+* **Rain you can see**: H now also turns the weather: the sky clouds over grey, light dims, haze thickens and rain
+  falls around you (puddles form from the water simulation). Dug ground shows bare soil.
 
 ## Controls
 | Key | Action |

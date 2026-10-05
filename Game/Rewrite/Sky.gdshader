@@ -11,7 +11,8 @@ uniform vec3 ground_color : source_color = vec3(0.24, 0.28, 0.25);
 uniform sampler2D cloud_tex : filter_linear_mipmap, repeat_enable;
 uniform float cloud_period = 6000.0;
 uniform float cloud_height = 1600.0;
-// xy: world position of the camera plus the wind drift, wrapped to the cloud period (m); z: coverage 0..1.
+// xy: world position of the camera plus the wind drift, wrapped to the cloud period (m); z: coverage 0..1;
+// w: storm 0..1 (rain: grey, darker sky and clouds).
 global uniform vec4 cloud_state;
 
 float cloud_density(vec2 xz, float coverage) {
@@ -58,5 +59,10 @@ void sky() {
 			disc *= 1.0 - d;
 		}
 	}
+	// Storm: a low grey overcast.
+	float storm = cloud_state.w;
+	vec3 overcast = mix(vec3(0.42, 0.45, 0.48), vec3(0.3, 0.32, 0.35), smoothstep(0.0, 0.5, up)) * (0.35 + 0.65 * day);
+	col = mix(col, overcast, storm * 0.85);
+	disc *= 1.0 - storm;
 	COLOR = col + disc;
 }

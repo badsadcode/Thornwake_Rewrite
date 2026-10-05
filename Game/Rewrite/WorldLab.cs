@@ -50,6 +50,7 @@ public partial class WorldLab : Node3D
     private (double X, double Z)? _shotAt;
     private (float Yaw, float Pitch, float Zoom)? _shotView;
     private float _shotHeight, _shotWait;
+    private bool _shotRain;
     private readonly List<(double X, double Z, double Volume)> _shotPours = new();
     private readonly List<(double X0, double Z0, double X1, double Z1, double Depth)> _shotDigs = new();
     private int _smokeStage;
@@ -90,7 +91,7 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--debug-draw=")) GetViewport().DebugDraw = (Viewport.DebugDrawEnum)int.Parse(arg[13..], CultureInfo.InvariantCulture);
             // Screenshot of simulated water: --pour=x,z,m³ (repeatable) --rain --wait=s (simulated seconds before the shot)
             if (arg.StartsWith("--pour=")) { var v = arg[7..].Split(','); _shotPours.Add((double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture), double.Parse(v[2], CultureInfo.InvariantCulture))); }
-            if (arg == "--rain") _rain = true;
+            if (arg == "--rain") _shotRain = true;
             // --dig=x0,z0,x1,z1,depth: a straight trench (negative depth raises a bank) for screenshots and tests
             if (arg.StartsWith("--dig=")) { var v = arg[6..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray(); _shotDigs.Add((v[0], v[1], v[2], v[3], v[4])); }
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
@@ -304,6 +305,7 @@ public partial class WorldLab : Node3D
         var sim = _water.Sim;
         if (sim == null) return;
         sim.RainRate = _rain ? 6e-5f * GameSettings.RainStrength.F : 0;
+        _atmosphere.Raining = _rain;
         _water.Step(dt, PlayerX, PlayerZ);
         if (!typing && Input.IsKeyPressed(Key.G) && Aim() is { } at) sim.Add(at.X, at.Z, 2.5 * dt);
         // Terrain edits: hold V to dig, B to raise (brush applied a few times a second; tiles rebuild behind it).
@@ -563,6 +565,7 @@ public partial class WorldLab : Node3D
             {
                 if (_shotHeight > 0) { SetFly(true); _player.Position += Vector3.Up * _shotHeight; }
                 foreach (var (x, z, v) in _shotPours) _water.Sim?.Sources.Add(new Thornwake.Hydraulics.LocalWater.Source { X = x, Z = z, Rate = (float)(v / Math.Max(1, _shotWait * .5)) });
+                if (_shotRain) _rain = true;
                 _smokeStage = 2; _smokeTimer = 0; _simTime = 0;
             }
             else if (_smokeStage == 2 && _shotPours.Count > 0 && _simTime > _shotWait * .5 && _water.Sim is { } sim && sim.Sources.Count > 0) sim.Sources.Clear();
