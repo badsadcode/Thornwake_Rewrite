@@ -254,7 +254,7 @@ public static class TileBuilder
                 int k = j * n + i;
                 double level = double.NaN, kind = 0, plume = 0;
                 if (wet[k]) { level = samples[k].WaterLevel; kind = Kind(samples[k].Water); plume = samples[k].Plume; }
-                else if (!dug[k])
+                else
                 {
                     // Average of the wet neighbours (the maximum lifted the sheet over the downstream bank of steep
                     // creeks, where the upstream neighbour is higher).
@@ -269,7 +269,14 @@ public static class TileBuilder
                             plume = Math.Max(plume, samples[z * n + x].Plume);
                         }
                     if (count > 0) level = sum / count;
-                    else if (under[k] != int.MaxValue) level = SeaLevel(samples);
+                    else if (under[k] != int.MaxValue && !dug[k]) level = SeaLevel(samples);
+                    // Dug ground still above the water: the sheet runs under it as under any bank. Dug ground below
+                    // the water is the local simulation's (its squares are left out below).
+                    if (dug[k] && !double.IsNaN(level))
+                    {
+                        if (heights[(j + 1) * s2 + i + 1] >= level) dug[k] = false;
+                        else level = double.NaN;
+                    }
                 }
                 if (double.IsNaN(level)) level = data.Vertices[k].Y - 1; // unused vertex: keep it under ground
                 double ground = heights[(j + 1) * s2 + i + 1];
@@ -283,6 +290,9 @@ public static class TileBuilder
             {
                 int a = j * n + i, b = a + 1, c = a + n, d = c + 1;
                 if (!(Covered(a) || Covered(b) || Covered(c) || Covered(d))) continue;
+                // A square touching dug ground below the water would stretch the sheet down into the hole (walls of
+                // water around a dug river bed); the local simulation draws the water there.
+                if (dug[a] || dug[b] || dug[c] || dug[d]) continue;
                 indices.Add(a); indices.Add(b); indices.Add(c);
                 indices.Add(b); indices.Add(d); indices.Add(c);
             }

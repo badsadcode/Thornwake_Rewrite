@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 /// <summary>Hill-shaded elevation maps rendered straight from the sampler (no engine), for visual review.</summary>
 internal static class MapRender
 {
+    /// <summary>Relief exaggeration override for the shading (null = automatic by window size).</summary>
+    public static double? Exaggeration;
     /// <summary>Render a square window centred on (cx, cz) with the given side length (metres).</summary>
     public static void Window(TerrainSampler sampler, string path, double cx, double cz, double side, int pixels, double? minWavelength = null)
     {
@@ -24,7 +26,7 @@ internal static class MapRender
         var rgb = new byte[pixels * pixels * 3];
         double sea = sampler.Plan.Profile.SeaLevel, top = sampler.Plan.Profile.MountainHeight + sampler.Plan.Profile.LowlandHeight;
         // Exaggerate relief for small windows so walking-scale shape is readable; always light from the north-west.
-        double exaggeration = Math.Clamp(4000 / side, 1, 8);
+        double exaggeration = Exaggeration ?? Math.Clamp(4000 / side, 1, 8);
         for (int y = 0; y < pixels; y++)
             for (int x = 0; x < pixels; x++)
             {

@@ -14,6 +14,81 @@ string? filter = args.FirstOrDefault(a => a.StartsWith("--filter="))?[9..];
 string? maps = args.FirstOrDefault(a => a.StartsWith("--maps="))?[7..];
 bool record = args.Contains("--record");
 
+// Mouth step probe: --mouths=<type id>,<km>,<seed>,<count>,<dir> scans 1 m grids around sea/lake mouths for steps
+string? mouths = args.FirstOrDefault(a => a.StartsWith("--mouths="))?[9..];
+if (mouths != null)
+{
+    var v = mouths.Split(',');
+    var recipe = WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == v[0]);
+    var plan = new WorldPlan(WorldManifest.Create(int.Parse(v[2]), recipe.Resolve(new WorldChoices { SizeKm = double.Parse(v[1]) }), worldId: CoreTests.FixedWorldId));
+    var ts = new TerrainSampler(plan);
+    Directory.CreateDirectory(v[4]);
+    var list = plan.Hydrology.Reaches.Where(r => r.EndsInSea || r.EndLake >= 0).OrderByDescending(r => r.Catchment[^1]).ToList();
+    int count = int.Parse(v[3]);
+    for (int n = 0; n < count && n < list.Count; n++)
+    {
+        var r = list[n * Math.Max(1, list.Count / count)];
+        // The mouth: first point (from the end backwards) that is on land / outside the lake.
+        int k = r.Points.Length - 1;
+        while (k > 0 && ts.Sample(r.Points[k].X, r.Points[k].Z).Water is WaterKind.Ocean or WaterKind.Lake) k--;
+        double cx = r.Points[k].X, cz = r.Points[k].Z;
+        const int N = 300;
+        var h = new double[N * N];
+        ts.HeightGridParallel(cx - N / 2, cz - N / 2, 1, N, N, h, 1);
+        double worst = 0; int wi = 0;
+        for (int j = 0; j < N - 1; j++)
+            for (int i = 0; i < N - 1; i++)
+            {
+                double d = Math.Max(Math.Abs(h[j * N + i + 1] - h[j * N + i]), Math.Abs(h[(j + 1) * N + i] - h[j * N + i]));
+                if (d > worst) { worst = d; wi = j * N + i; }
+            }
+        double wx = cx - N / 2 + wi % N, wz = cz - N / 2 + wi / N;
+        var a = ts.Sample(wx, wz); var b = ts.Sample(wx + 1, wz); var c = ts.Sample(wx, wz + 1);
+        Console.WriteLine($"  length {r.Length:0} along at mouth {r.Along[k]:0} points {r.Points.Length} k {k}");
+        Console.WriteLine($"reach {r.Id} {(r.EndsInSea ? "sea" : "lake")} width {r.Width[^1]:0} m catchment {r.Catchment[^1]:0}: mouth {cx:0},{cz:0}; worst step {worst:0.00} m at {wx:0},{wz:0} " +
+            $"({a.Height:0.00} {a.Water} | {b.Height:0.00} {b.Water} | {c.Height:0.00} {c.Water}, land {a.Land:0.000})");
+        MapRender.Window(ts, Path.Combine(v[4], $"mouth-{n}.png"), cx, cz, 400, 400, 1);
+        MapRender.Exaggeration = 1.5;
+        MapRender.Window(ts, Path.Combine(v[4], $"mouth-{n}-true.png"), cx, cz, 400, 400, 1);
+        MapRender.Exaggeration = null;
+        if (n < 2)
+            foreach (int off in new[] { -12, -4, 0, 3, 8 })
+            {
+                int q = Math.Clamp(k + off, 1, r.Points.Length - 2);
+                double tx = r.Points[q + 1].X - r.Points[q - 1].X, tz = r.Points[q + 1].Z - r.Points[q - 1].Z, tl = Math.Sqrt(tx * tx + tz * tz);
+                var sb = new System.Text.StringBuilder($"  section {off,3} (w {r.Width[q]:0}): ");
+                for (int d = -60; d <= 60; d += 3)
+                {
+                    var t = ts.Sample(r.Points[q].X - tz / tl * d, r.Points[q].Z + tx / tl * d);
+                    sb.Append($"{t.Height:0.0}{(t.Water == WaterKind.Ocean ? "o" : t.Water == WaterKind.River ? "r" : t.Water == WaterKind.Lake ? "l" : "")} ");
+                }
+                Console.WriteLine(sb);
+            }
+    }
+    return 0;
+}
+
+// Close-up of a world type: --typewin=<type id>,<km>,<seed>,<x>,<z>,<side>,<pixels>,<png>[,<exaggeration>]
+string? typewin = args.FirstOrDefault(a => a.StartsWith("--typewin="))?[10..];
+if (typewin != null)
+{
+    var v = typewin.Split(',');
+    var recipe = WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == v[0]);
+    var plan = new WorldPlan(WorldManifest.Create(int.Parse(v[2]), recipe.Resolve(new WorldChoices { SizeKm = double.Parse(v[1]) }), worldId: CoreTests.FixedWorldId));
+    if (v.Length > 9) plan = new WorldPlan(plan.Manifest, style: plan.Style with { Revision = int.Parse(v[9]) });
+    if (v.Length > 10) plan = new WorldPlan(plan.Manifest, style: plan.Style with { BankVariation = double.Parse(v[10]) });
+    var ts = new TerrainSampler(plan);
+    if (v.Length > 8) MapRender.Exaggeration = double.Parse(v[8]);
+    double x = double.Parse(v[3]), z = double.Parse(v[4]);
+    MapRender.Window(ts, v[7], x, z, double.Parse(v[5]), int.Parse(v[6]), 1);
+    var sb = new System.Text.StringBuilder("row: ");
+    for (int d = -20; d <= 20; d++) sb.Append($"{ts.Sample(x + d, z).Height:0.0} ");
+    Console.WriteLine(sb);
+    var t = ts.Sample(x, z);
+    Console.WriteLine($"land {t.Land:0.000} mountain {t.Mountain:0.00} detail {t.Detail:0.00} water {t.Water}; macro cell {plan.Macro.Cell:0} m");
+    return 0;
+}
+
 // World type maps: --types=<dir>[,<km>[,<seed>[,<only id>]]] renders every world type's whole-world map
 string? types = args.FirstOrDefault(a => a.StartsWith("--types="))?[8..];
 if (types != null)

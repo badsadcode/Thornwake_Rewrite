@@ -129,6 +129,10 @@ public sealed record TerrainStyle
     /// <summary>Amount of bushes, berry bushes, stumps and fallen logs.</summary>
     public double PropAmount { get; init; } = 1;
 
+    /// <summary>Terrain revision for changes without their own knob: 8 = as in build 8; 9 = estuaries at mouths and
+    /// banks that stay walkable where they bulge (round 5).</summary>
+    public int Revision { get; init; } = 9;
+
     /// <summary>River mouths blend into sea and lake beds (groove continues into the bed, no levees in the
     /// estuary). 0 = as in preview 7.</summary>
     public double MouthBlend { get; init; } = 1;

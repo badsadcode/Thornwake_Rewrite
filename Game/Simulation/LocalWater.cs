@@ -117,10 +117,19 @@ public sealed class LocalWater
                 floor[cz * ChunkCells + cx] = (float)h;
                 double l = Max(level[a], level[b], level[c], level[d]);
                 sink[cz * ChunkCells + cx] = !double.IsNaN(l) && h < l;
+                // The surface: the corners' average (the highest corner lifted water a little above a sloping river).
+                if (!double.IsNaN(l)) l = Mean(level[a], level[b], level[c], level[d]);
                 surface[cz * ChunkCells + cx] = double.IsNaN(l) ? float.NaN : (float)l;
                 edited[cz * ChunkCells + cx] = sampler.Edits.Delta(x0 + (cx + .5) * Cell, z0 + (cz + .5) * Cell) < -.02;
             }
         return new ChunkGround(floor, sink, surface, edited);
+
+        static double Mean(params double[] v)
+        {
+            double sum = 0; int count = 0;
+            foreach (var x in v) if (!double.IsNaN(x)) { sum += x; count++; }
+            return count > 0 ? sum / count : double.NaN;
+        }
 
         static double Max(params double[] v)
         {
@@ -446,13 +455,15 @@ public sealed class LocalWater
 
     private bool NearSimWater(int x, int z)
     {
-        for (int b = -2; b <= 2; b++)
-            for (int a = -2; a <= 2; a++)
+        float level = _level[Index(x, z)];
+        for (int b = -3; b <= 3; b++)
+            for (int a = -3; a <= 3; a++)
             {
                 int nx = x + a, nz = z + b;
                 if (nx < 0 || nz < 0 || nx >= Side || nz >= Side) continue;
                 int n = Index(nx, nz);
-                if (!_sink[n] && _depth[n] > .008f) return true;
+                // Simulated water, or dug ground below this water (the terrain tiles leave both to this view).
+                if (!_sink[n] && (_depth[n] > .008f || _edited[n] && _floor[n] < level)) return true;
             }
         return false;
     }
@@ -484,7 +495,14 @@ public sealed class LocalWater
                 wet[k] = ws / 9;
                 // A river/lake cell next to simulated water (a dug channel) is drawn at its surface too, so the two
                 // sheets join without a gap.
-                if (_sink[c] && !float.IsNaN(_level[c]) && NearSimWater(x, z)) depth[k] = Math.Max(0, _level[c] - _floor[c]);
+                if (_sink[c] && !float.IsNaN(_level[c]))
+                {
+                    if (_edited[c] && _floor[c] < _level[c] || NearSimWater(x, z)) depth[k] = Math.Max(0, _level[c] - _floor[c]);
+                    // A river/lake cell this view does not draw (the terrain tile's sheet does) reports its surface as the
+                    // floor: the edge of a drawn patch then stays on the water surface instead of dropping to the bed
+                    // (walls of water around springs placed in a river).
+                    else floor[k] = Math.Max(_floor[c], _level[c]);
+                }
                 (vx[k], vz[k]) = Velocity(x, z);
             }
         return true;

@@ -38,6 +38,7 @@ internal static class CoreTests
         T.Run("Frozen terrain fingerprints" + (record ? " (recording)" : ""), () => Fingerprints(record), filter);
         T.Run("Build 5 terrain still reproducible (classic option)", () => Fingerprints(false, "terrain-build5.json", classic: true), filter);
         T.Run("Preview 7 terrain still reproducible", () => Fingerprints(false, "terrain-preview7.json", preview7: true), filter);
+        T.Run("Build 8 terrain still reproducible", () => Fingerprints(false, "terrain-build8.json", build8: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -283,7 +284,7 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
         string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
@@ -293,9 +294,11 @@ internal static class CoreTests
             {
                 var s = Sampler(profile.Id, seed);
                 // Build 5 (commit cdb2e31) generation: no bank variation, macro-only shores.
-                if (classic) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { BankVariation = 0, ShoreSlope = 0, MouthBlend = 0 }));
+                if (classic) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { BankVariation = 0, ShoreSlope = 0, MouthBlend = 0, Revision = 8 }));
                 // Preview 7 (commit 6cf6d18): before river mouths blended into sea and lake beds.
-                if (preview7) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { MouthBlend = 0 }));
+                if (preview7) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { MouthBlend = 0, Revision = 8 }));
+                // Build 8 (commit 9e8e406): before estuaries and the bank-bulge fix.
+                if (build8) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 8 }));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];

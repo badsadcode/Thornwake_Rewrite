@@ -17,6 +17,7 @@ internal static class SimulationTests
         T.Run("Edits: water follows a dug channel", DugChannel, filter);
         T.Run("Edits: a channel dug from a river fills from it", RiverFed, filter);
         T.Run("Edits: real river and lake feed dug ground", RealRiverFed, filter);
+        T.Run("Edits: a trench dug through a river bed and bank shows one water surface", RiverTrench, filter);
         T.Run("Tools: strength, hardness, budget, flatten, directional cut", Tools, filter);
         T.Run("Waves: heights match the displaced surface; sea states; shallows", Waves, filter);
     }
@@ -226,11 +227,11 @@ internal static class SimulationTests
                 var lake = plan.Hydrology.Lakes.OrderByDescending(l => l.Area).First();
                 px = lake.Center.X; pz = lake.Center.Z; dx = 1; dz = 0;
             }
-            // Walk out to the shore, then dig a 1.5 m deep trench from 3 m inside the water 20 m inland.
+            // Walk out to the shore, then dig a ~2 m deep trench from 3 m inside the water 20 m inland.
             double shore = 0;
             while (s.Sample(px + dx * shore, pz + dz * shore).Water != WaterKind.None && shore < 20000) shore += 1;
             double level = s.Sample(px + dx * (shore - 3), pz + dz * (shore - 3)).WaterLevel;
-            for (double t = shore - 3; t <= shore + 20; t += 1) s.Edits.Apply(px + dx * t, pz + dz * t, 1.4, -1.5);
+            for (double t = shore - 3; t <= shore + 20; t += 1) s.Edits.Apply(px + dx * t, pz + dz * t, 1.4, -2.2);
             var w = new LocalWater((cx, cz) => LocalWater.FromSampler(s, cx, cz)) { Infiltration = 0 };
             double ex = px + dx * (shore + 10), ez = pz + dz * (shore + 10);
             w.Follow(ex, ez);
@@ -242,6 +243,53 @@ internal static class SimulationTests
             T.Check(!float.IsNaN(surface) && surface - s.Height(ex, ez) > .05 && Math.Abs(surface - level) < .35, $"{kind} water fills the trench");
             Balance(w, kind);
         }
+    }
+
+    private static void RiverTrench()
+    {
+        var plan = CoreTests.Sampler("mountainous", 42).Plan;
+        var s = new TerrainSampler(plan);
+        var reach = plan.Hydrology.Reaches.First(r => r.Catchment[^1] > 300 && !r.Distributary && r.Points.Length > 40);
+        int k = reach.Points.Length / 2;
+        var a = reach.Points[k]; var b = reach.Points[k + 1];
+        double tx = b.X - a.X, tz = b.Z - a.Z, len = Math.Sqrt(tx * tx + tz * tz), dx = -tz / len, dz = tx / len;
+        double shore = 0;
+        while (s.Sample(a.X + dx * shore, a.Z + dz * shore).Water != WaterKind.None && shore < 2000) shore += 1;
+        // A 2.5 m deep trench from the middle of the river out through the bank, 12 m inland (like Tom's dig).
+        for (double t = 0; t <= shore + 12; t += 1) s.Edits.Apply(a.X + dx * t, a.Z + dz * t, 2, -2.5);
+        var w = new LocalWater((cx, cz) => LocalWater.FromSampler(s, cx, cz)) { Infiltration = 0 };
+        w.Follow(a.X + dx * shore, a.Z + dz * shore);
+        for (int i = 0; i < 60 * 60; i++) w.Step(1 / 60f);
+        // Highest river surface beside the breach (the river slopes: the trench fills to about its upstream end).
+        double highest = double.MinValue;
+        for (double u = -4; u <= 4; u += .5)
+        {
+            var r = new TerrainSampler(plan).Sample(a.X + dx * (shore - 1) + tx / len * u, a.Z + dz * (shore - 1) + tz / len * u);
+            if (r.Water != WaterKind.None) highest = Math.Max(highest, r.WaterLevel);
+        }
+        int n = LocalWater.ChunkCells + 1, missing = 0, above = 0, cells = 0;
+        double worstAbove = 0;
+        var floor = new float[n * n]; var depth = new float[n * n]; var vx = new float[n * n]; var vz = new float[n * n]; var wet = new float[n * n];
+        for (double t = 0; t <= shore + 12; t += .5)
+        {
+            double x = a.X + dx * t, z = a.Z + dz * t;
+            var original = new TerrainSampler(plan).Sample(x, z);
+            double level = original.Water != WaterKind.None ? original.WaterLevel : s.Sample(a.X + dx * Math.Max(0, shore - 3), a.Z + dz * Math.Max(0, shore - 3)).WaterLevel;
+            long cx = (long)Math.Floor(x / LocalWater.ChunkSize), cz = (long)Math.Floor(z / LocalWater.ChunkSize);
+            if (!w.ChunkView(cx, cz, floor, depth, vx, vz, wet)) continue;
+            int i = (int)Math.Floor((x - cx * LocalWater.ChunkSize) / LocalWater.Cell), j = (int)Math.Floor((z - cz * LocalWater.ChunkSize) / LocalWater.Cell);
+            int q = j * n + i;
+            double ground = floor[q], surface = floor[q] + depth[q];
+            if (ground > level - .05) continue; // dug ground still above the water: dry is right
+            cells++;
+            if (depth[q] < .02) missing++;
+            else if (surface > Math.Max(level, highest) + .05) { above++; worstAbove = Math.Max(worstAbove, surface - level); if (above < 8) T.Note($"  t {t:0.0} orig {original.Water} level {level:0.00} surface {surface:0.00} ground {ground:0.00} shore {shore}"); }
+        }
+        T.Note($"trench: {cells} dug cells below the river surface, {missing} without water, {above} drawn above the river (worst +{worstAbove:0.00} m)");
+        T.Check(cells > 10, "the trench reaches below the river");
+        T.Check(missing == 0, "every dug cell below the river shows water");
+        T.Check(above == 0, "no water drawn above the river surface");
+        Balance(w, "trench");
     }
 
     private static void Tools()
