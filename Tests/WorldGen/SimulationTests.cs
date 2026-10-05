@@ -16,6 +16,7 @@ internal static class SimulationTests
         T.Run("Edits: dig and raise the generated ground", Edits, filter);
         T.Run("Edits: water follows a dug channel", DugChannel, filter);
         T.Run("Edits: a channel dug from a river fills from it", RiverFed, filter);
+        T.Run("Edits: real river and lake feed dug ground", RealRiverFed, filter);
     }
 
     private static Func<long, long, ChunkGround> Ground(Func<double, double, double> height, Func<double, double, bool>? sink = null) => (cx, cz) =>
@@ -186,6 +187,44 @@ internal static class SimulationTests
         T.Note($"channel surface at 8 m: {s:0.000} m (river 49.8 m), {w.Drawn:0.0} m³ drawn from the river");
         T.Check(!float.IsNaN(s) && Math.Abs(s - 49.8) < .05, "the dug channel fills to the river's level");
         Balance(w, "river-fed channel");
+    }
+
+    private static void RealRiverFed()
+    {
+        var plan = CoreTests.Sampler("mountainous", 42).Plan;
+        foreach (var kind in new[] { "river", "lake" })
+        {
+            var s = new TerrainSampler(plan); // own edit layer
+            double px, pz, dx, dz;
+            if (kind == "river")
+            {
+                var reach = plan.Hydrology.Reaches.First(r => r.Catchment[^1] > 300 && !r.Distributary && r.Points.Length > 40);
+                int k = reach.Points.Length / 2;
+                var a = reach.Points[k]; var b = reach.Points[k + 1];
+                double tx = b.X - a.X, tz = b.Z - a.Z, len = Math.Sqrt(tx * tx + tz * tz);
+                dx = -tz / len; dz = tx / len; px = a.X; pz = a.Z;
+            }
+            else
+            {
+                var lake = plan.Hydrology.Lakes.OrderByDescending(l => l.Area).First();
+                px = lake.Center.X; pz = lake.Center.Z; dx = 1; dz = 0;
+            }
+            // Walk out to the shore, then dig a 1.5 m deep trench from 3 m inside the water 20 m inland.
+            double shore = 0;
+            while (s.Sample(px + dx * shore, pz + dz * shore).Water != WaterKind.None && shore < 20000) shore += 1;
+            double level = s.Sample(px + dx * (shore - 3), pz + dz * (shore - 3)).WaterLevel;
+            for (double t = shore - 3; t <= shore + 20; t += 1) s.Edits.Apply(px + dx * t, pz + dz * t, 1.4, -1.5);
+            var w = new LocalWater((cx, cz) => LocalWater.FromSampler(s, cx, cz)) { Infiltration = 0 };
+            double ex = px + dx * (shore + 10), ez = pz + dz * (shore + 10);
+            w.Follow(ex, ez);
+            for (int i = 0; i < 60 * 40; i++) w.Step(1 / 60f);
+            float surface = w.SurfaceAt(ex, ez);
+            T.Note($"{kind}: water level {level:0.00} m, dug ground 10 m inland {s.Height(ex, ez):0.00} m, simulated surface {surface:0.00} m, drawn {w.Drawn:0.0} m³");
+            // The river's level varies along the breach (and a breached levee floods the lower land behind), so the
+            // trench fills to within a few decimetres of the sampled level.
+            T.Check(!float.IsNaN(surface) && surface - s.Height(ex, ez) > .05 && Math.Abs(surface - level) < .35, $"{kind} water fills the trench");
+            Balance(w, kind);
+        }
     }
 
     private static void Cost()

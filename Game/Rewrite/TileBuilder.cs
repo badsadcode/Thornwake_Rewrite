@@ -126,7 +126,7 @@ public static class TileBuilder
                 var t = samples[k];
                 // B: beach (dry ground just above the sea); A: submerged ground (river/lake/sea bed).
                 // Beach: a band along the sea (low land influence) and only a few metres above it.
-                double beach = t.Water != WaterKind.None ? 0 : (1 - DetMath.Smooth(t.Land / .0035)) * (1 - DetMath.Smooth((h - sea) / 3.5));
+                double beach = t.Water != WaterKind.None ? 0 : (1 - DetMath.Smooth(t.Land / .0025)) * (1 - DetMath.Smooth((h - sea) / 2.4));
                 colors[k] = new Color((float)forest[k], (float)t.Mountain, (float)beach, submerged[k]);
                 // World xz folded into a 4 km period keeps float precision for shader noise far from the origin.
                 uv[k] = new Vector2((float)Fold(x0 + i * spacing), (float)Fold(z0 + j * spacing));

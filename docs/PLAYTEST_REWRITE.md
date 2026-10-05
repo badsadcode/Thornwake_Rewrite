@@ -65,6 +65,19 @@ milestone M6), caves.
 * **Rain you can see**: H now also turns the weather: the sky clouds over grey, light dims, haze thickens and rain
   falls around you (puddles form from the water simulation). Dug ground shows bare soil.
 
+## New in build 6 (after Tom's build-5 playtest)
+* **River banks**: the course stays smooth, but each bank now has its own shape: slow widening and narrowing,
+  small wobble, occasional bulges with shallow shelves (wading depth) and cuts into the bank; patches of mud, sand
+  and gravel along the waterline.
+* **Digging next to water**: rivers, lakes and the sea now flow into ground you dig beside them (a trench from a
+  river fills; cutting through a river's levee floods the lower land behind it).
+* **Sea shores**: the sea deepens much sooner (a few metres deep within ~150 m instead of ankle-deep for hundreds of
+  metres) and the beach is a narrower band.
+* **Trees, rocks and logs are part of the world**: their amounts moved from Settings to **New world → Forests and
+  objects** (fixed when the world is generated). Settings keep only how far away they are drawn.
+* **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
+  New world → *Bank irregularity* and *Shore steepness* tune the new look.
+
 ## Controls
 | Key | Action |
 |---|---|
