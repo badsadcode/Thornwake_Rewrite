@@ -127,7 +127,8 @@ public static class GroundCover
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || g.Edited(x, z)) return;
             if (up < .82f || height - sea < 1.6) return;
             float alpine = (float)DetMath.Smooth((height - sea - 1700) / 500);
-            float density = (1 - .65f * forest) * (1 - alpine) * (float)DetMath.Smooth((up - .82) / .08) * g.Plants(x, z);
+            float plants = g.Plants(x, z); // biome plant cover, squared: sparse biomes (desert, ash, tundra) get only odd tufts
+            float density = (1 - .65f * forest) * (1 - alpine) * (float)DetMath.Smooth((up - .82) / .08) * plants * plants;
             if (Unit(h, 1) > density * .9f) return;
             float scale = .7f + .8f * Unit(h, 2);
             result.Add(new Transform3D(new Basis(Vector3.Up, Unit(h, 3) * Mathf.Tau).Scaled(Vector3.One * scale), new Vector3((float)x, height - .02f, (float)z)));
