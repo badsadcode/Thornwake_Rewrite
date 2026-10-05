@@ -124,6 +124,8 @@ internal static class Maps
                 var k = belt.Points[belt.Points.Length / 2].Point;
                 double bx = k.X + sampler.Plan.Manifest.OriginX, bz = k.Z + sampler.Plan.Manifest.OriginZ;
                 MapRender.Window(sampler, Path.Combine(directory, $"{id}-{seed}-mountain-40km.png"), bx, bz, 40000, 1024);
+                MapRender.Window(sampler, Path.Combine(directory, $"{id}-{seed}-mountain-flank-1500m.png"), bx + 3000, bz + 3000, 1500, 750);
+                Console.WriteLine($"  mountain flank close-up at {bx + 3000:0}, {bz + 3000:0}");
                 MapRender.Window(sampler, Path.Combine(directory, $"{id}-{seed}-mountain-4km.png"), bx, bz, 4000, 800);
             }
             // A lowland spot halfway between the continent centre and its coast.

@@ -154,3 +154,11 @@ threads never see a half-applied edit. An edit rebuilds the tiles it touches at 
 replaced) and reloads the water simulation's ground there. Ground raised out of a river or lake is dry; lowered
 ground does not fill by itself (the local water simulation does that). Not yet: saving edits, material layers
 (soil/rock), tools and costs (M9 gameplay).
+
+## D24 — Slope-aligned gully noise: tried and rejected (2026-10-05)
+Tried "erosion noise" gullies (cosines across the local slope direction around jittered lattice points, two
+octaves, 90 m and 32 m) in the sampler. With the slope direction taken from the eroded macro raster plus the broad
+rolling hills, it is nearly constant over hundreds of metres, so the grooves came out as long straight parallel
+scratches; at a strength where they did not, they were invisible next to the ridged mountain detail. Reverted.
+A convincing version needs the slope of the finer terrain itself (iterating octaves on their own gradients), which
+costs several extra noise evaluations per sample; revisit with M3 materials if hillsides still look too smooth.
