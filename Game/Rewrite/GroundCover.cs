@@ -31,10 +31,19 @@ public static class GroundCover
         public readonly int Side;
         /// <summary>Per vertex 0.5 + depth below the nearest water surface / 2 m (0.5 = waterline), as in the tile colours.</summary>
         public readonly float[] Shore;
-        public Grid(Vector3[] vertices, Vector3[] normals, double[] forest, TerrainSample[] samples, double spacing, double x0, double z0, int side, float[] shore)
-        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; }
+        public Grid(Vector3[] vertices, Vector3[] normals, double[] forest, TerrainSample[] samples, double spacing, double x0, double z0, int side, float[] shore,
+            Vector2[]? uv2 = null)
+        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; EditedAmount = uv2; }
 
         /// <summary>Bilinear <see cref="Shore"/> at tile-local (x, z).</summary>
+        /// <summary>True where the player has dug or raised the ground noticeably (bare soil: no grass).</summary>
+        public bool Edited(double x, double z)
+        {
+            int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
+            return EditedAmount != null && EditedAmount[j * Side + i].Y > .15f;
+        }
+        public readonly Vector2[]? EditedAmount;
+
         public float ShoreAt(double x, double z)
         {
             double gx = Math.Clamp(x / Spacing, 0, Side - 1.001), gz = Math.Clamp(z / Spacing, 0, Side - 1.001);
@@ -93,7 +102,7 @@ public static class GroundCover
         // Default amount 1: ~1.3 tufts per m² in meadows (cell 0.88 m); the cell shrinks as the amount grows.
         Cells(key, 1.25 / Math.Sqrt(2 * amount), seed ^ 0x6A55UL, (x, z, h) =>
         {
-            if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet) return;
+            if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || g.Edited(x, z)) return;
             if (up < .82f || height - sea < 1.6) return;
             float alpine = (float)DetMath.Smooth((height - sea - 1700) / 500);
             float density = (1 - .65f * forest) * (1 - alpine) * (float)DetMath.Smooth((up - .82) / .08);
@@ -115,7 +124,7 @@ public static class GroundCover
         Cells(key, .55 / Math.Sqrt(Math.Max(.2, amount)), seed ^ 0x2EEDUL, (x, z, h) =>
         {
             float shore = g.ShoreAt(x, z);
-            if (shore < .22f || shore > .66f) return;
+            if (shore < .22f || shore > .66f || g.Edited(x, z)) return;
             if (!g.At(x, z, out float height, out float up, out _, out _) || up < .8f || height - sea < 1.2) return;
             // Clumps: ~45 % of 5 m patches carry reeds.
             ulong patch = Hashing.Lattice((long)Math.Floor((x + key.MinX) / 5), (long)Math.Floor((z + key.MinZ) / 5), seed ^ 0x9A7CUL);

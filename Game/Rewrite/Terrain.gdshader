@@ -1,5 +1,6 @@
 // Rewrite world terrain. Palette taken from the Harthwood valley game (sRGB values, converted to linear below).
-// Vertex data: UV = world xz folded to a 4 km period (noise), UV2.x = height above sea level,
+// Vertex data: UV = world xz folded to a 4 km period (noise), UV2.x = height above sea level, UV2.y = terrain edit
+// amount (0 untouched … 1 = 0.5 m or more dug/raised),
 // COLOR = (forest cover, mountain share, beach, submerged bed: 0.5 + depth below water / 2 m).
 shader_type spatial;
 render_mode diffuse_burley;
@@ -38,6 +39,9 @@ void fragment() {
 	// Damp earth along river and lake banks: a darker strip from the waterline to ~0.4 m above it (not on beaches).
 	float damp = smoothstep(0.28, 0.48, COLOR.a + (n3 - 0.5) * 0.06) * (1.0 - submerged) * (1.0 - wet) * (1.0 - smoothstep(0.45, 0.7, slope));
 	c = mix(c, c * vec3(0.62, 0.6, 0.55) + vec3(0.03, 0.025, 0.015), damp);
+	// Ground the player dug or raised: bare, slightly lumpy soil.
+	vec3 soil = mix(vec3(0.36, 0.28, 0.19), vec3(0.45, 0.36, 0.25), n3);
+	c = mix(c, soil, smoothstep(0.05, 0.35, UV2.y + (n2 - 0.5) * 0.08));
 	c = mix(c, bed, submerged);
 	float snow = smoothstep(snow_line - 250.0 + (n1 - 0.5) * 600.0, snow_line + 150.0, h) * (1.0 - smoothstep(0.55, 0.8, slope));
 	c = mix(c, vec3(0.93, 0.94, 0.96), snow);

@@ -125,7 +125,9 @@ public static class TileBuilder
                 colors[k] = new Color((float)forest[k], (float)t.Mountain, (float)beach, submerged[k]);
                 // World xz folded into a 4 km period keeps float precision for shader noise far from the origin.
                 uv[k] = new Vector2((float)Fold(x0 + i * spacing), (float)Fold(z0 + j * spacing));
-                uv2[k] = new Vector2((float)(h - sea), 0);
+                // UV2.y: how much the player has dug or raised here (bare soil in the shader).
+                double edited = Math.Abs(sampler.Edits.Delta(x0 + i * spacing, z0 + j * spacing));
+                uv2[k] = new Vector2((float)(h - sea), (float)Math.Min(1, edited * 2));
             }
         // Skirts: a copy of each edge pushed down, so a coarser neighbour's edge never shows a gap.
         float drop = (float)(2 + spacing * 1.5);
@@ -172,7 +174,7 @@ public static class TileBuilder
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };
         BuildWater(data, samples, heights, s2, spacing, Side);
-        var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged);
+        var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2);
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
         if (key.Level == 0 && config.Grass > 0) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);
         if (key.Level == 0 && config.Grass > 0) data.Reeds = GroundCover.Reeds(key, grid, sea, coverSeed, config.Grass);
