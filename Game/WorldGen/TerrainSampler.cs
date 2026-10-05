@@ -330,9 +330,11 @@ public sealed class TerrainSampler
     private double[]? _coastAlong;
 
     /// <summary>Distance along a sea-bound reach where it crosses the (raster) coastline; reaches continue out to sea.</summary>
+    private static double[] NewNaN(int count) { var a = new double[count]; Array.Fill(a, double.NaN); return a; }
+
     private double CoastAlong(int index)
     {
-        var cache = _coastAlong ??= System.Linq.Enumerable.Repeat(double.NaN, _hydrology.Reaches.Count).ToArray();
+        var cache = _coastAlong ??= NewNaN(_hydrology.Reaches.Count);
         double v = cache[index];
         if (!double.IsNaN(v)) return v;
         var reach = _hydrology.Reaches[index];
