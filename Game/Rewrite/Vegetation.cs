@@ -87,9 +87,14 @@ public static class Vegetation
                     // The biome's tree mix (conifers / green / autumn broadleaf), more conifers higher up.
                     var (ba, bb, share) = BiomeOf(sampler, x, z, elevation);
                     var biome = Hashing.Unit(Hashing.Mix(pick + 7)) < share ? ba : bb;
-                    double conifers = Math.Min(1, biome.Conifers + DetMath.Smooth((elevation - 900) / 700) * .5);
-                    double r = Hashing.Unit(Hashing.Mix(pick + 3));
-                    var list = r < conifers ? Needles : r < conifers + (1 - conifers) * biome.Autumn ? Autumn : Green;
+                    int[] list;
+                    if (biome.Conifers < 0) list = elevation < 550 ? Broadleaf : elevation < 1250 ? Mixed : Conifer; // classic (biomes off)
+                    else
+                    {
+                        double conifers = Math.Min(1, biome.Conifers + DetMath.Smooth((elevation - 900) / 700) * .5);
+                        double r = Hashing.Unit(Hashing.Mix(pick + 3));
+                        list = r < conifers ? Needles : r < conifers + (1 - conifers) * biome.Autumn ? Autumn : Green;
+                    }
                     species = list[(int)(pick % (ulong)list.Length)];
                 }
                 float scale = (float)(.8 + .45 * Hashing.Unit(Hashing.Mix(pick)));

@@ -147,7 +147,7 @@ public static class TileBuilder
                 Biome A = climate.Biomes[ba], B = climate.Biomes[bb];
                 var grass = Hex(A.Grass).Lerp(Hex(B.Grass), (float)(1 - share));
                 var dry = Hex(A.Dry).Lerp(Hex(B.Dry), (float)(1 - share));
-                double snow = Math.Max(A.Snow * share + B.Snow * (1 - share), DetMath.Smooth((-4 - temperature) / 5));
+                double snow = climate.Snow(A, B, share, temperature, h - sea);
                 double plants = A.Grassland * share + B.Grassland * (1 - share);
                 biome0[k * 4] = grass.R; biome0[k * 4 + 1] = grass.G; biome0[k * 4 + 2] = grass.B; biome0[k * 4 + 3] = (float)snow;
                 biome1[k * 4] = dry.R; biome1[k * 4 + 1] = dry.G; biome1[k * 4 + 2] = dry.B; biome1[k * 4 + 3] = (float)Math.Min(1, plants);

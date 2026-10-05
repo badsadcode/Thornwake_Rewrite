@@ -40,6 +40,13 @@ public sealed record Biome
 /// <summary>The biome catalogue and the climate → biome weights.</summary>
 public static class Biomes
 {
+    /// <summary>The single temperate look of build 9 and earlier (biomes off).</summary>
+    public static readonly Biome Classic = new()
+    {
+        Id = "classic", Name = "Classic temperate", Temperature = new[] { -80.0, 60 }, Precipitation = new[] { 0.0, 20000 },
+        Grass = "566b3f", Dry = "7b8059", Soil = "5c4a35", ForestFloor = "3c4b2b", Forest = 1, Conifers = -1, Map = "6e9a4e",
+    };
+
     public static readonly Biome[] Defaults =
     {
         new() { Id = "ice", Name = "Ice and glaciers", Temperature = new[] { -60.0, -9 }, Precipitation = new[] { 0.0, 9000 },

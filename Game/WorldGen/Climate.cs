@@ -17,6 +17,8 @@ public sealed record ClimateSettings
     public double TemperatureOffset { get; init; }
     /// <summary>Multiplier on all rain and snow.</summary>
     public double Moisture { get; init; } = 1;
+    /// <summary>Biomes on; off = the classic single temperate look of build 9 and earlier (Terrain version option).</summary>
+    public bool Biomes { get; init; } = true;
 
     public double Span(double worldSize) => LatitudeSpan > 0 ? LatitudeSpan : Math.Clamp(6 + 64 * Math.Sqrt(worldSize / 4096000), 6, 70);
 }
@@ -41,7 +43,7 @@ public sealed class Climate
     public Climate(WorldPlan plan, ClimateSettings? settings = null, IReadOnlyList<Biome>? biomes = null)
     {
         Settings = settings ?? new ClimateSettings();
-        Biomes = biomes ?? WorldGen.Biomes.Defaults;
+        Biomes = !Settings.Biomes ? new[] { WorldGen.Biomes.Classic } : biomes ?? WorldGen.Biomes.Defaults;
         _logLow = Biomes.Select(b => Math.Log(Math.Max(1, b.Precipitation[0]))).ToArray();
         _logHigh = Biomes.Select(b => Math.Log(Math.Max(1, b.Precipitation[1]))).ToArray();
         _seed = Hashing.FeatureSeed(plan.Manifest.Seed, 5, plan.Manifest.ProfileDigest, "climate");
@@ -115,6 +117,11 @@ public sealed class Climate
         return (SeaLevelTemperature(Latitude(z)) + Settings.TemperatureOffset - .0065 * Math.Max(0, elevation), p);
     }
 
+    /// <summary>Snow cover 0..1 from the biome and the cold; without biomes the classic fixed snow line (~2.7 km).</summary>
+    public double Snow(Biome a, Biome b, double share, double temperature, double elevation) => Settings.Biomes
+        ? Math.Max(a.Snow * share + b.Snow * (1 - share), DetMath.Smooth((-4 - temperature) / 5))
+        : DetMath.Smooth((elevation - 2450) / 400);
+
     /// <summary>
     /// The two best-fitting biomes at a point (and the first one's share, for blending), with regional jitter so
     /// borders wander instead of following the smooth climate lines: ±1.5 °C and ±30 % rain over 6–40 km.
@@ -122,6 +129,7 @@ public sealed class Climate
     public (int A, int B, double ShareA, double Temperature, double Precipitation) BiomeAt(double x, double z, double elevation)
     {
         var (t, p) = At(x, z, elevation);
+        if (!Settings.Biomes) return (0, 0, 1, t, p);
         double lx = x - _originX, lz = z - _originZ;
         t += Noise.Fbm(lx, lz, 40000, 3, 3000, _seed, .5) * 3;
         p *= Math.Exp(Noise.Fbm(lx, lz, 30000, 3, 3000, _seed + 1, .5) * .6);
