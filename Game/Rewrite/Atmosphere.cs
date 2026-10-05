@@ -332,8 +332,10 @@ public partial class Atmosphere : Node3D
         int mode = GameSettings.GroundFog.Index;
         float dawn = Mathf.Exp(-Mathf.Pow((hour - 6.5f) / 1.6f, 2)) + .45f * Mathf.Exp(-Mathf.Pow((hour - 20.5f) / 1.5f, 2));
         float afterRain = _wetness * (1 - _storm);
+        // Mist burns off as the sun climbs: around midday only misty biomes, rain and wet ground keep some.
+        float noon = Mathf.Exp(-Mathf.Pow((hour - 13f) / 3.2f, 2));
         float target = mode == 0 || float.IsNaN(_mistGround) ? 0
-            : Mathf.Clamp(.12f + .55f * dawn + .6f * _mistBiome + .4f * afterRain + .2f * _mistWater + .3f * _storm, 0, 1);
+            : Mathf.Clamp((.7f * dawn + .5f * _mistBiome + .1f * _mistWater) * (1 - .65f * noon) + .35f * afterRain + .3f * _storm, 0, 1);
         _mistAmount = Mathf.MoveToward(_mistAmount, target, (float)delta / 6);
         if (float.IsNaN(_mistGround)) return;
         // Follow the ground slowly, so walking down into a valley wades into its mist before it settles around you.
@@ -344,7 +346,7 @@ public partial class Atmosphere : Node3D
             // Below this height everything takes fog by its height alone (Godot height fog): valleys, rivers, lakes.
             e.FogEnabled = true;
             e.FogHeight = _mistGround - 2;
-            e.FogHeightDensity = .045f * _mistAmount;
+            e.FogHeightDensity = .03f * _mistAmount * _mistAmount;
         }
         else e.FogHeightDensity = 0;
         // Patches: a volumetric fog box around the player (volumetric fog on for it, no global density).

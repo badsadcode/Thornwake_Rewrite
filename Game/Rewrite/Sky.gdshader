@@ -7,11 +7,11 @@
 //   0 one layer   — the main layer only (build 10 look);
 //   1 layered     — + high, thin, streaky cirrus drifting slowly on another heading and low, ragged, fast clouds
 //                   under the main deck: different speeds and heights give wind and depth;
-//   2 volumetric  — experimental: the main deck ray-marched as a 1.3–2.9 km thick volume lit by the sun (self
-//                   shadowing, silver lining, darker bases), at quarter resolution; high and low layers as in 1.
+//   2 volumetric  — experimental: the main deck ray-marched as a 1.3–2.4 km thick volume lit by the sun (self
+//                   shadowing, silver lining, darker bases), at half resolution; high and low layers as in 1.
 // Biome moods: a global tint (rgb) and haze (a) set by Atmosphere.cs from the biome around the player (option).
 shader_type sky;
-render_mode use_debanding;
+render_mode use_debanding, use_half_res_pass;
 
 uniform vec3 zenith_color : source_color = vec3(0.29, 0.45, 0.62);
 uniform vec3 horizon_color : source_color = vec3(0.68, 0.75, 0.78);
@@ -43,8 +43,8 @@ float cirrus_density(vec2 xz, float coverage) {
 	vec2 uv = xz / (cloud_period * 2.5);
 	uv = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * uv;
 	float n = texture(cloud_tex, uv * vec2(1.0, 4.5)).g * 0.7 + texture(cloud_tex, uv * vec2(3.0, 9.0) + 0.37).r * 0.3;
-	float edge = 1.0 - (0.18 + coverage * 0.55);
-	return smoothstep(edge, edge + 0.3, n) * 0.45;
+	float edge = 1.0 - (0.1 + coverage * 0.45);
+	return smoothstep(edge, edge + 0.3, n) * 0.35;
 }
 
 // Low ragged clouds: smaller, broken pieces.
@@ -78,18 +78,21 @@ vec4 layer(vec3 dir, vec2 origin, float h, float d, vec3 sun_dir, vec3 sun_col, 
 
 // ---- volumetric main deck (quality 2)
 const float VBOTTOM = 1300.0;
-const float VTOP = 2900.0;
+const float VTOP = 2400.0;
 
 float vdensity(vec3 p, float coverage) {
 	vec2 uv = p.xz / cloud_period;
 	float n = texture(cloud_tex, uv).r * 0.8 + texture(cloud_tex, uv * 4.0 + vec2(0.31, 0.17)).g * 0.2;
 	float edge = 1.0 - coverage;
+	// Same footprint as the flat layer (so gaps and cloud shadows match); thicker clouds tower higher.
+	float mass = smoothstep(edge - 0.05, edge + 0.2, n);
+	if (mass <= 0.0) return 0.0;
 	float h = (p.y - VBOTTOM) / (VTOP - VBOTTOM);
-	// Thicker clouds tower higher: the column top follows the 2D density; flat-ish bases, rounded tops.
-	float top = smoothstep(edge - 0.02, edge + 0.4, n);
-	float shape = smoothstep(0.0, 0.06, h) * smoothstep(0.0, 0.18, top - h);
+	// Rounded domes: the top rises quickly from the cloud edge (sqrt), flat bases.
+	float top = sqrt(mass) * (0.4 + 0.6 * smoothstep(edge, edge + 0.45, n));
+	float shape = smoothstep(0.0, 0.06, h) * smoothstep(0.0, 0.2, top - h);
 	float detail = texture(cloud_tex, uv * 9.0 + vec2(h * 0.7, h * 0.4)).g;
-	return clamp(shape * (0.55 + 0.9 * detail) - 0.18 * (1.0 - top), 0.0, 1.0);
+	return clamp(shape * (0.6 + 0.8 * detail) - 0.25 * (1.0 - mass), 0.0, 1.0);
 }
 
 vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float coverage, float storm) {
@@ -105,7 +108,7 @@ vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float
 	// Henyey-Greenstein mix: strong forward scattering (silver lining toward the sun) plus a soft back lobe.
 	float g = 0.6, hg = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * mu, 1.5) * 0.08;
 	float phase = mix(0.09, hg, 0.65);
-	vec3 ambient_top = mix(horizon_color, zenith_color, 0.5) * sky_mood.rgb * (0.35 + 0.65 * day);
+	vec3 ambient_top = mix(horizon_color, zenith_color, 0.6) * sky_mood.rgb * (0.3 + 0.6 * day);
 	vec3 sun_light = sun_col * mix(vec3(1.0), LIGHT0_COLOR, 0.3) * (1.0 - storm * 0.7);
 	for (int i = 0; i < STEPS; i++) {
 		float t = t0 + (float(i) + jitter) * step_len;
@@ -115,11 +118,11 @@ vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float
 		// Light reaching this point: density toward the sun (a few coarse steps).
 		float toward = 0.0;
 		for (int k = 1; k <= 4; k++) toward += vdensity(p + sun_dir * float(k) * 160.0, coverage);
-		float sun_trans = exp(-toward * 160.0 * 0.006);
+		float sun_trans = exp(-toward * 160.0 * 0.004);
 		float powder = 1.0 - exp(-d * 2.0);
 		float h = (p.y - VBOTTOM) / (VTOP - VBOTTOM);
-		vec3 lit = sun_light * sun_trans * phase * 6.0 * mix(1.0, powder, 0.5) + ambient_top * mix(0.45, 1.0, h);
-		float sigma = d * 0.006;
+		vec3 lit = sun_light * sun_trans * phase * 4.5 * mix(1.0, powder, 0.5) + ambient_top * mix(0.3, 0.75, h);
+		float sigma = d * 0.003;
 		float a = exp(-sigma * step_len);
 		light += trans * (1.0 - a) * lit;
 		trans *= a;
@@ -139,7 +142,7 @@ void sky() {
 	float mu = dot(dir, sun_dir);
 	float coverage = cloud_state.z, storm = cloud_state.w;
 
-	if (AT_QUARTER_RES_PASS) {
+	if (AT_HALF_RES_PASS) {
 		// Only the volumetric deck is drawn here (premultiplied colour + opacity), composited in the full pass.
 		COLOR = vec3(0.0); ALPHA = 0.0;
 		if (quality == 2) { vec4 v = volumetric(dir, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
@@ -157,7 +160,7 @@ void sky() {
 			}
 			// Main deck: volumetric (quarter-res pass) or the flat textured layer.
 			if (quality == 2 && !AT_CUBEMAP_PASS) {
-				vec4 v = QUARTER_RES_COLOR;
+				vec4 v = HALF_RES_COLOR;
 				col = col * (1.0 - v.a) + v.rgb;
 				disc *= 1.0 - v.a;
 			} else {

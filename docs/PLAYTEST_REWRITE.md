@@ -78,6 +78,24 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 11 — plants, skies, fog, cliffs
+* **Placeholder plants** for the biomes that had none (pixel textures in the woodland style, built in code):
+  palms, saguaro and barrel cacti, dead trees and snags, acacia (savanna), jungle giants with buttress roots and
+  hanging vines, swamp cypress with hanging moss, dry desert shrubs. They are placeholders until real art exists.
+* **Leaf translucency** (Settings → Lighting and effects, 0–2): sunlight glows through leaves, palm fronds and grass
+  when you look toward the sun. Grass also sways a little in the breeze.
+* **Clouds** (Settings → Sky → Cloud quality): *layered* (new default) adds high, thin cirrus drifting slowly on
+  another heading and low, ragged clouds racing under the main clouds; *volumetric (experimental)* draws the main
+  clouds as lit 3D volumes (heavier on the GPU — please tell me how it runs and looks); *one layer* is build 10.
+* **Biome skies** (Settings → Sky, off by default): the sky and haze take on the biome's mood — dusty desert, humid
+  jungle, ashen volcanic, gloomy blighted swamp, crisp alpine.
+* **Ground fog and mist** (Settings → Lighting and effects): mist pools in valleys, over rivers and lakes below you,
+  thickest at dawn, after rain and in misty biomes, and burns off toward midday. "Valleys + mist patches" adds
+  drifting wisps around you (volumetric).
+* **Depth of field** (option, off by default): the far distance softens like a camera lens.
+* **Cliffs**: steep faces show layered rock with ledges and cracks instead of stretched streaks; grass hangs over the
+  lips, roots poke out under them near trees, and boulders gather at the feet.
+
 ## New in build 10 — biomes (phase 1)
 * **14 biomes** placed from a new climate model (temperature from latitude and height, rain carried inland by the
   wind, rain shadows behind mountains): Temperate grassland, Temperate forest, Ancient forest, Taiga, Tundra,

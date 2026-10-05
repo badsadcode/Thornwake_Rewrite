@@ -341,6 +341,14 @@ scattering on canopies and plants, configurable.
   ray-marched as a 1.3–2.9 km slab, 40 steps + 4 light steps, Henyey-Greenstein silver lining, powder term,
   quarter-resolution pass). Drift wraps where each layer's texture repeats exactly (integer texture scales after a
   3-4-5 rotation), so no jumps; the main layer's detail scale 3.7 → 4 for the same reason.
+* Ground fog (Tom: ground-level fog, mist in some areas): Godot height fog fogs any surface below a height by its
+  depth below it alone, so the height is kept ~2 m under the player's ground (following slowly): valleys, rivers and
+  lakes below fill with mist. Amount: dawn/dusk, misty biomes (Atmosphere.Mist, Fog), wet ground after rain, rain,
+  water nearby; burns off toward noon. Optional patches: a volumetric fog box around the player with a fog shader
+  (world-anchored noise, drifting, ground-hugging). Depth of field: far blur only (option).
+* Cliffs (Tom liked the sharp sea cliffs, wanted them less stretched and dressed): the terrain shader blends two side
+  projections on steep faces (strata, ledge seams, cracks); level-0 tiles find lips (a ≥ 1.8 m drop within 3 m next to
+  flat ground) for hanging-grass and root cards (pixel textures) and cliff feet for scree boulders.
 * Biome skies (option, default off = realistic): biomes set `Atmosphere.SkyTint` and `Haze`; the blend around the
   player tints the sky, adds horizon haze and fog, easing over ~3 s; "subtle" applies half.
 
