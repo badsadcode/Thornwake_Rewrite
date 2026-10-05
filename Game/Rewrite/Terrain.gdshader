@@ -93,7 +93,8 @@ void fragment() {
 	c = mix(c, soil, smoothstep(0.05, 0.35, UV2.y + (n2 - 0.5) * 0.08));
 	c = mix(c, bed, submerged);
 	// Snow from the biome and the cold (temperature falls with height), patchy at its edge.
-	float snow = smoothstep(0.25, 0.75, biome_a.a + (n1 - 0.5) * 0.35) * (1.0 - smoothstep(0.55, 0.8, slope));
+	// Snow does not hold on steep rock: faces break through (patchy edge).
+	float snow = smoothstep(0.25, 0.75, biome_a.a + (n1 - 0.5) * 0.35) * (1.0 - smoothstep(0.42, 0.62, slope + (n2 - 0.5) * 0.12));
 	c = mix(c, vec3(0.93, 0.94, 0.96), snow);
 	c *= 0.92 + 0.16 * n3;
 	// Close-up detail (fades out by ~45 m): pixel-stepped speckle and small clumps at 6 cm texels, in the spirit

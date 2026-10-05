@@ -298,10 +298,10 @@ public static class GroundCover
             if (!g.At(x + outward.X * 4, z + outward.Z * 4, out float below, out _, out _, out _) || height - below < 2.5f) return;
             if (Unit(h, 1) > .75f * a0()) return;
             var along = Vector3.Up.Cross(outward).Normalized();
-            float wide = 3 + 5 * Unit(h, 2), tall = 2.5f + 5 * Unit(h, 3), thick = 1.4f + 1.4f * Unit(h, 4);
+            float wide = 3 + 4 * Unit(h, 2), tall = 2.5f + 4 * Unit(h, 3), thick = wide * (.55f + .25f * Unit(h, 4)); // chunky blocks, not plates
             var tilt = new Basis(along, (Unit(h, 5) - .5f) * .3f) * new Basis(outward, (Unit(h, 6) - .5f) * .25f);
             var basis = tilt * new Basis(along * wide, Vector3.Up * tall, outward * thick);
-            var at = new Vector3((float)x, height - tall * .15f, (float)z) - outward * thick * .35f;
+            var at = new Vector3((float)x, height - tall * .2f, (float)z) - outward * thick * .45f;
             result.Add(new RockInstance(CliffSlab, new Transform3D(basis, at), g.RockTint(x, z)));
         });
         // Huge boulders, rare, on fairly open ground.
