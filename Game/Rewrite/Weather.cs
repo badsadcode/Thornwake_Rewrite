@@ -27,7 +27,10 @@ public sealed class Weather
         // Wetter climates: rain at weaker fronts. ~250 mm/yr: only the strongest fronts; ~1800 mm/yr: most of them.
         double threshold = Math.Clamp(1.02 - annualRain / 2600, .42, .97) / GameSettings.RainFrequency.Value;
         double humid = Math.Clamp(annualRain / 1500, 0, 1);
-        _cloudTarget = (float)Math.Clamp((front - .25) * 1.5 + .15 * humid, 0, 1);
+        // The Cloud cover setting biases the weather: 0.45 (default) as the climate says, lower = mostly clear,
+        // higher = mostly grey.
+        double bias = (GameSettings.Clouds.Value - .45) * 1.3;
+        _cloudTarget = (float)Math.Clamp((front - .25) * 1.5 + .15 * humid + bias, 0, 1);
         double over = front - threshold;
         _precipTarget = over <= 0 ? 0 : (float)Math.Clamp(.25 + over * 3.2, 0, 1);
         Snow = temperature < 1 || (groundSnow > .45 && temperature < 4);

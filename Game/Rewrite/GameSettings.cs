@@ -137,7 +137,7 @@ public static class GameSettings
 
     // ---- sky (live)
     public static readonly Setting Clouds = Add(new("sky.clouds", "Sky", "Cloud cover", 0, 1, .05, .45,
-        "Share of the sky covered by clouds (0 = clear). With simulated weather on, the weather sets the clouds."));
+        "Share of the sky covered by clouds (0 = clear). With simulated weather on, it sets how cloudy the weather tends to be (low: mostly clear days, high: mostly grey)."));
     public static readonly Setting CloudShadows = Add(new("sky.cloud_shadows", "Sky", "Cloud shadows", 0, 1, .05, .55,
         "How dark the shadows of clouds drifting over the land are.", "×"));
     public static readonly Setting SeaState = Add(new("sky.sea_state", "Sky", "Sea state", 0, 1, .05, .25,
