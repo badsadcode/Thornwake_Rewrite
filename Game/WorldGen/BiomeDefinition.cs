@@ -102,6 +102,14 @@ public sealed record BiomeVegetation
     public double Moss { get; init; }
     public string? AquaticPlants { get; init; }
     public double DeadVegetation { get; init; }
+    /// <summary>Trees standing in the standing-water pools (bayou cypress): 0 none … 1 as dense as on land.</summary>
+    public double WaterTrees { get; init; }
+    /// <summary>Floating plants on the pools (lily pads, water hyacinth mats): 0 none … 1 plenty.</summary>
+    public double FloatingPlants { get; init; }
+    /// <summary>Low shrubs and tussocks between the pools (bog shrubs, marsh tussocks): 0 none … 1 plenty.</summary>
+    public double Shrubs { get; init; }
+    /// <summary>Kind of the low plants: "bog" (green shrub mats), "tussock" (pale grass clumps).</summary>
+    public string ShrubKind { get; init; } = "bog";
 }
 
 public sealed record BiomeProps
@@ -138,6 +146,15 @@ public sealed record BiomeWater
     public string? WaterTint { get; init; }
     /// <summary>How strongly <see cref="WaterTint"/> colours the water (0 … 1).</summary>
     public double WaterTintStrength { get; init; } = .65;
+    /// <summary>Standing water (terrain revision 11): share of flat ground under real pools of water (0 none … 0.7
+    /// mostly water with islands). Pools are basins carved into the ground with a flat water surface.</summary>
+    public double Pools { get; init; }
+    /// <summary>Deepest water in the pools, metres.</summary>
+    public double PoolDepth { get; init; } = 1;
+    /// <summary>Typical pool size, metres (across one pool).</summary>
+    public double PoolSize { get; init; } = 16;
+    /// <summary>0 round pools … 1 long winding channels (fens, bayous).</summary>
+    public double PoolChannels { get; init; }
 }
 
 public sealed record BiomeAtmosphere

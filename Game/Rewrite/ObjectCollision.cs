@@ -21,6 +21,7 @@ public static class ObjectCollision
         .3f, .26f, .36f, .3f,               // palms, cacti (saguaro, barrel cluster)
         .3f, .3f, .22f, .9f, .7f,           // dead tree, snag, acacia, jungle giant (buttresses), cypress (flared base)
         0f,                                 // dry shrub: passable
+        .55f, .5f,                          // bald cypress (fluted base)
     };
 
     private static readonly Dictionary<float, CylinderShape3D> Cylinders = new();

@@ -20,6 +20,7 @@ public static class Vegetation
         "Birch_Green_C", "Maple_Autumn_A", "Poplar_A", "Willow_A", "Sparse_A", "Birch_Autumn_A", "Birch_Autumn_B",
         // Placeholder plants (PlaceholderPlants.cs) for biomes without art yet.
         "Palm_A", "Palm_B", "Cactus_A", "Cactus_B", "Dead_A", "Dead_B", "Acacia_A", "Jungle_A", "Cypress_A", "Shrub_Dry",
+        "Bald_Cypress_A", "Bald_Cypress_B",
     };
     private static readonly int[] Broadleaf = { 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 0, 1 };
     private static readonly int[] Mixed = { 0, 1, 2, 3, 4, 8, 9, 5, 6, 15 };
@@ -43,10 +44,19 @@ public static class Vegetation
     /// sets how much forest there is (none in deserts and on ice, little in steppe and tundra, dense in rainforest).</summary>
     public static double ForestDensity(TerrainSampler sampler, double x, double z, in TerrainSample t, double coverSetting = 1, double biomeForest = -1)
     {
-        if (t.Water != WaterKind.None || coverSetting <= 0) return 0;
-        double elevation = t.Height - sampler.Plan.Profile.SeaLevel;
+        if (coverSetting <= 0 || t.Water is not (WaterKind.None or WaterKind.Pond)) return 0;
+        double inWater = 1;
+        if (t.Water == WaterKind.Pond)
+        {
+            // Bayou cypress stand in the pools (not too deep); other trees keep out of the water.
+            var (wa, wb, ws) = BiomeOf(sampler, x, z);
+            inWater = (wa.Def.Vegetation.WaterTrees * ws + wb.Def.Vegetation.WaterTrees * (1 - ws)) * (1 - DetMath.Smooth((t.WaterLevel - t.Height - 1.2) / .6));
+            if (inWater <= .001) return 0;
+        }
+        double elevation = (t.Water == WaterKind.Pond ? t.WaterLevel : t.Height) - sampler.Plan.Profile.SeaLevel;
         if (elevation < 2.5) return 0;
         if (biomeForest < 0) { var (ba, bb, share) = BiomeOf(sampler, x, z); biomeForest = ba.Def.Vegetation.TreeDensity * share + bb.Def.Vegetation.TreeDensity * (1 - share); }
+        biomeForest *= inWater;
         if (biomeForest <= .001) return 0;
         // Denser biomes grow bigger forests; sparse ones (steppe, savanna, tundra) only scattered trees.
         double sparse = Math.Min(1, biomeForest);

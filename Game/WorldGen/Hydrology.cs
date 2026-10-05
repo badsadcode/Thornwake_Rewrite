@@ -4,7 +4,8 @@ using System.Linq;
 
 namespace Thornwake.WorldGen;
 
-public enum WaterKind : byte { None, Ocean, Lake, River }
+/// <summary>Pond (terrain revision 11): standing-water pools of wetland biomes (no body id, no waves).</summary>
+public enum WaterKind : byte { None, Ocean, Lake, River, Pond }
 
 /// <summary>A lake: a depression left after erosion, filled to its spill level (finite storage, Supplement §9.4).</summary>
 public sealed record Lake(int Id, double Level, double Area, double Volume, double MaxDepth, int OutletCell, Point2 Center)

@@ -383,6 +383,31 @@ scattering on canopies and plants, configurable.
   ClimateSettings fields are omitted from JSON at their defaults (saved worlds and types unchanged).
 * Cloud resolution setting (256/512/1024 with finer octaves). Volumetric clouds now render (half-res pass).
 
+## D45 — Round 8: real wetland water, four swamp types, light beams under clouds (2026-10-05)
+* Terrain revision 11 (the default; "Build 9" and older unchanged): wetland biomes carve **real standing water**.
+  New `Water.Pools` (share of flat ground under water), `PoolDepth`, `PoolSize`, `PoolChannels` (0 round pools … 1
+  long winding channels). A world noise mask (round pools, or lines where a domain-warped noise crosses zero) above a
+  threshold from the coverage (quantile tables built at start, so the share is right for any noise) marks the
+  water; the ground around follows a profile about a flat level — 0.25 m bank, bed down to the depth over a few metres,
+  a little of the local relief — then blends back. The level is the ground without its relief shorter than 500 m.
+  Water only where the shaped ground is below the level next to the mask: never dry ground under a pool surface.
+  New water kind **Pond** (no body id, calm, lake-like shading without waves, murky underwater view).
+* `Terrain.Flatten` now works in wetland biomes (walking-scale relief × (1 − flatten)), so pool surfaces stay level.
+  Pools fade near rivers, the coast, mountains and slopes > ~3 %.
+* Swamp types (Tom's references): **Swamp** (wooded, existing), **Marsh** (open grey bog, Dead Marshes: many pools,
+  pale tussocks, reeds, dead snags, mist), **Fen** (northern: winding channels through green sedge and bog shrubs,
+  lily pads, scattered spruce/tamarack), **Bayou** (Louisiana: broad brown water, bald cypress with Spanish moss
+  standing in it, water hyacinth mats). Blighted swamp gets pools too. Mixed areas blend as before.
+* Vegetation: `WaterTrees` (trees standing in pools up to ~1.2 m deep), `FloatingPlants`, `Shrubs` + `ShrubKind`
+  (bog / tussock); `AquaticPlants` "Hyacinth" or lily pads. Placeholder art: bald cypress A/B (fluted base, flat
+  feathery crown, long Spanish moss), bog shrub, tussock, sedge, lily pads, hyacinth mat (pixel textures).
+* Pool beds: dark peat and silt with sunken leaves and twigs; wetland pool margins dark mud and moss. The old
+  shader-only painted pools are gone (reeds line the real pools).
+* **Light beams under clouds** (crepuscular rays; setting, default 0.8): a full-screen pass marches each view ray
+  through the air below the cloud deck; the cloud above each point toward the light (same texture, plane, drift and
+  offset as the cloud shadows) says if that air is lit; forward-scattering phase; only with broken cloud. Follows the
+  moon at night (fainter, silver-blue, with its phase). Works with the sun hidden or off screen.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

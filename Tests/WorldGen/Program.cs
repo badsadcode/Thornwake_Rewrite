@@ -106,6 +106,13 @@ if (biomeProbe != null)
     var (a, b, share) = plan.Biomes.Sample(x, z);
     Console.WriteLine($"macro land {land:0.000} height {h:0} m mountain {m:0.00}; ground {sampler.Height(x, z):0.0} m; {t:0.0} °C {p:0} mm; lat {plan.Climate.Latitude(z):0.0}");
     Console.WriteLine($"biome {plan.Biomes.Pool[a].Def.Id} {share:0.00} / {plan.Biomes.Pool[b].Def.Id}");
+    if (plan.Biomes.WetlandAt(x, z, out double cover, out double depth, out double size, out double channels, out double flatten))
+    {
+        int wet = 0, total = 0;
+        for (double dz = -250; dz < 250; dz += 2) for (double dx = -250; dx < 250; dx += 2) { total++; if (sampler.Sample(x + dx, z + dz).Water == WaterKind.Pond) wet++; }
+        plan.Macro.SampleGradient(WorldPlan.HeightChannel, x, z, out double gx, out double gz);
+        Console.WriteLine($"wetland: pools {cover:0.00} depth {depth:0.0} m size {size:0} m channels {channels:0.00} flatten {flatten:0.00}; macro slope {Math.Sqrt(gx * gx + gz * gz):0.000}; ponds over 500 m: {wet * 100.0 / total:0.0} %");
+    }
     return 0;
 }
 

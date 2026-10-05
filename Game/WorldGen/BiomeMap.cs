@@ -182,6 +182,60 @@ public sealed class BiomeMap
             _ids[k * 3] = (byte)a; _ids[k * 3 + 1] = (byte)b2; _ids[k * 3 + 2] = (byte)c;
             _w[k * 3] = (float)(wa / sum); _w[k * 3 + 1] = (float)(wb / sum); _w[k * 3 + 2] = (float)(wc / sum);
         }
+        PoolCells(pool);
+    }
+
+    // Cells within reach (domain warp + blending) of a wetland biome (pools or flattened ground); null = none.
+    private bool[]? _poolNear;
+
+    private void PoolCells(IReadOnlyList<ResolvedBiome> pool)
+    {
+        static bool Wet(ResolvedBiome r) => r.Def.Water.Pools > 0 || r.Def.Terrain.Flatten > 0;
+        if (!pool.Any(Wet)) return;
+        int n = _n;
+        var has = new bool[n * n];
+        for (int k = 0; k < n * n; k++)
+            for (int e = 0; e < 3; e++)
+                if (_w[k * 3 + e] > 0 && Wet(pool[_ids[k * 3 + e]])) has[k] = true;
+        _poolNear = new bool[n * n];
+        const int r = 3;
+        for (int j = 0; j < n; j++)
+            for (int i = 0; i < n; i++)
+            {
+                if (!has[j * n + i]) continue;
+                for (int dj = -r; dj <= r; dj++)
+                    for (int di = -r; di <= r; di++)
+                    {
+                        int a = i + di, b = j + dj;
+                        if (a >= 0 && b >= 0 && a < n && b < n) _poolNear[b * n + a] = true;
+                    }
+            }
+    }
+
+    /// <summary>
+    /// Wetland character at a world point (terrain revision 11), blended between the two strongest biomes exactly like
+    /// the ground colours: share of ground under standing-water pools, their deepest depth (m), pool size (m), channel
+    /// share, and how much the walking-scale relief is flattened. False (fast) where no wetland biome is near.
+    /// </summary>
+    public bool WetlandAt(double x, double z, out double coverage, out double depth, out double size, out double channels, out double flatten)
+    {
+        coverage = depth = channels = flatten = 0; size = 16;
+        if (_poolNear == null) return false;
+        int i = Math.Clamp((int)Math.Floor((x - _grid.MinX) / _grid.Cell), 0, _n - 1), j = Math.Clamp((int)Math.Floor((z - _grid.MinZ) / _grid.Cell), 0, _n - 1);
+        if (!_poolNear[j * _n + i]) return false;
+        var (a, b, share) = Sample(x, z);
+        var A = Pool[a].Def; var B = Pool[b].Def;
+        double sa = share, sb = 1 - share;
+        flatten = DetMath.Clamp(A.Terrain.Flatten * sa + B.Terrain.Flatten * sb, 0, 1);
+        double pa = A.Water.Pools * sa, pb = B.Water.Pools * sb;
+        coverage = pa + pb;
+        if (coverage < .005) { coverage = 0; return flatten > 0; }
+        // Depth, size and shape follow the pool biome even into a dry neighbour (only the coverage fades out there).
+        double t = pa / coverage;
+        depth = A.Water.PoolDepth * t + B.Water.PoolDepth * (1 - t);
+        size = Math.Max(4, A.Water.PoolSize * t + B.Water.PoolSize * (1 - t));
+        channels = DetMath.Clamp(A.Water.PoolChannels * t + B.Water.PoolChannels * (1 - t), 0, 1);
+        return true;
     }
 
     /// <summary>The two strongest biomes at a world point and the first one's share (0.5..1), blended smoothly.</summary>

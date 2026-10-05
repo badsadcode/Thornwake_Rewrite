@@ -87,10 +87,29 @@ void fragment() {
 	vec3 shore = mix(c * vec3(0.62, 0.6, 0.55) + vec3(0.03, 0.025, 0.015), mud, smoothstep(0.26, 0.36, patch_kind));
 	shore = mix(shore, gravel, smoothstep(0.46, 0.56, patch_kind));
 	shore = mix(shore, shore_sand, smoothstep(0.62, 0.72, patch_kind));
+	// Wetlands: pool margins are dark mud and wet moss rather than sand and gravel.
+	float wetland = smoothstep(0.45, 0.75, biome_d.a);
+	shore = mix(shore, mix(mud * 0.8, c * vec3(0.55, 0.62, 0.45), smoothstep(0.4, 0.7, patch_kind)), wetland);
 	c = mix(c, shore, damp);
 	// Ground the player dug or raised: bare, slightly lumpy soil.
 	vec3 soil = mix(vec3(0.36, 0.28, 0.19), vec3(0.45, 0.36, 0.25), n3);
 	c = mix(c, soil, smoothstep(0.05, 0.35, UV2.y + (n2 - 0.5) * 0.08));
+	// Wetland pool beds (swamps, marshes, fens, bayous): dark peat and silt with sunken leaves and twigs.
+	if (wetland > 0.0) {
+		vec3 peat = mix(vec3(0.15, 0.115, 0.075), vec3(0.24, 0.20, 0.13), n2) * (0.85 + 0.3 * n3);
+		vec2 leaf_cell = floor(p * 3.0);
+		float leaf = step(0.82, hash(leaf_cell)) * step(0.35, hash(floor(p * 9.0)));
+		vec3 leaf_colour = mix(vec3(0.42, 0.26, 0.11), vec3(0.30, 0.30, 0.13), hash(leaf_cell + 7.0));
+		peat = mix(peat, leaf_colour, leaf * 0.8);
+		// Twigs: thin dark strokes along a per-cell direction.
+		vec2 tc = floor(p * 0.8);
+		float ang = hash(tc) * 6.2832;
+		vec2 q = fract(p * 0.8) - 0.5;
+		float along = dot(q, vec2(cos(ang), sin(ang))), across = dot(q, vec2(-sin(ang), cos(ang)));
+		float twig = step(0.6, hash(tc + 3.0)) * step(abs(across), 0.018) * step(abs(along), 0.35);
+		peat = mix(peat, vec3(0.09, 0.07, 0.05), twig);
+		bed = mix(bed, peat, wetland);
+	}
 	c = mix(c, bed, submerged);
 	// Snow from the biome and the cold (temperature falls with height), patchy at its edge.
 	// Snow does not hold on steep rock: faces break through (patchy edge).
@@ -124,18 +143,9 @@ void fragment() {
 	float flat_ground = 1.0 - smoothstep(0.03, 0.1, slope);
 	float puddle_noise = vnoise(p * 0.21) * 0.65 + vnoise(p * 0.93 + 7.1) * 0.35;
 	float puddle = smoothstep(0.64, 0.7, puddle_noise) * flat_ground * rain_wetness.y * (1.0 - submerged) * (1.0 - snow) * (1.0 - 0.6 * forest);
-	// Marshes (wet biomes: swamps): permanent murky pools in flat ground, mud around them (GroundCover places reeds
-	// along the same edges with the same noise, MarshPool in C#).
-	float marsh = smoothstep(0.45, 0.75, biome_d.a) * flat_ground * (1.0 - submerged) * (1.0 - snow) * (1.0 - smoothstep(0.1, 0.4, UV2.y));
-	float pool_noise = vnoise(p * 0.06) * 0.6 + vnoise(p * 0.19 + 3.3) * 0.4;
-	float pool = marsh * smoothstep(0.6, 0.625, pool_noise);
-	float mud_rim = marsh * smoothstep(0.52, 0.6, pool_noise) * (1.0 - pool);
-	c = mix(c, vec3(0.2, 0.17, 0.12) * (0.85 + 0.3 * n3), mud_rim * 0.75);
 	c *= mix(1.0, 0.7, wetness);
-	vec3 pool_colour = mix(vec3(0.03, 0.035, 0.022), vec3(0.02, 0.018, 0.022), smoothstep(0.75, 0.9, biome_d.a));
 	ALBEDO = mix(pow(c, vec3(2.2)), vec3(0.025, 0.03, 0.035), puddle * 0.85);
-	ALBEDO = mix(ALBEDO, pool_colour, pool);
-	ROUGHNESS = mix(mix(mix(mix(0.95, 0.55, snow), 0.45, wetness * 0.7), 0.04, puddle), 0.06, pool);
-	ROUGHNESS = mix(ROUGHNESS, 0.5, mud_rim * 0.6);
-	SPECULAR = mix(mix(0.5, 0.9, puddle), 0.85, pool);
+	ROUGHNESS = mix(mix(mix(0.95, 0.55, snow), 0.45, wetness * 0.7), 0.04, puddle);
+	ROUGHNESS = mix(ROUGHNESS, 0.55, damp * wetland * 0.7); // glistening mud at wetland pool margins
+	SPECULAR = mix(0.5, 0.9, puddle);
 }

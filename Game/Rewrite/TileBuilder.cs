@@ -61,6 +61,8 @@ public sealed class TileData
     public Vector2[]? WaterTint { get; set; }
     /// <summary>Cliff dressing cards: kind 0 hanging grass, 1 roots (GroundCover.CliffDressing).</summary>
     public List<RockInstance> Drapes { get; set; } = new();
+    /// <summary>Wetland plants (PlaceholderPlants.WetPlant kinds), tile-local.</summary>
+    public List<RockInstance> WetPlants { get; set; } = new();
     public List<RockInstance> Rocks { get; set; } = new();
     public List<RockInstance> Props { get; set; } = new();
     public List<FarTree> FarTrees { get; set; } = new();
@@ -246,6 +248,7 @@ public static class TileBuilder
         if (key.Level == 0 && config.Props > 0) data.Drapes = GroundCover.CliffDressing(key, grid, sea, coverSeed);
         if (key.Level <= 2 && config.Rocks > 0) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed, config.Rocks);
         if (key.Level <= 1 && config.Props > 0) data.Props = GroundCover.Props(key, grid, sea, coverSeed, config.Props);
+        if (key.Level <= 1 && config.Grass > 0) data.WetPlants = GroundCover.WetPlants(key, grid, sea, coverSeed, biomes, Math.Min(1.5, config.Grass));
         if (key.Level >= config.TreeLevels && key.Level <= config.FarTreeLevels)
             data.FarTrees = GroundCover.FarTrees(key, grid, sea, coverSeed, config.ForestDensity);
         data.BuildMs = timer.Elapsed.TotalMilliseconds;
@@ -437,5 +440,5 @@ public static class TileBuilder
         return flow;
     }
 
-    private static double Kind(WaterKind kind) => kind switch { WaterKind.Lake => .5, WaterKind.River => 1, _ => 0 };
+    private static double Kind(WaterKind kind) => kind switch { WaterKind.Pond => .375, WaterKind.Lake => .5, WaterKind.River => 1, _ => 0 };
 }

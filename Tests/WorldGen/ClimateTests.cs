@@ -42,7 +42,7 @@ internal static class ClimateTests
     private static void Biomes()
     {
         var reg = BiomeRegistry.Current!;
-        T.Check(reg.Pool.Count == 14 && reg.All.Select(b => b.Id).Distinct().Count() == reg.All.Count, $"{reg.Pool.Count} built-in biomes in the pool, unique ids");
+        T.Check(reg.Pool.Count == 17 && reg.All.Select(b => b.Id).Distinct().Count() == reg.All.Count, $"{reg.Pool.Count} built-in biomes in the pool, unique ids");
         // A custom biome (World Site Editor format) joins the pool without code changes; one out of the pool does not.
         string root = CoreTests.FindRepoRoot();
         string biomes = File.ReadAllText(Path.Combine(root, "Content/biomes.json")), sets = File.ReadAllText(Path.Combine(root, "Content/asset_sets.json"));

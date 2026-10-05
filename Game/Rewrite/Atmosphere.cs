@@ -25,13 +25,13 @@ public partial class Atmosphere : Node3D
     // Cloud texture size (setting "Cloud resolution"). The cloud shadow decal stays at 256 (it is blurry anyway).
     private int _cloudPixels;
     private const int Tile = 256;
-    private ShaderMaterial _sky = null!, _shafts = null!;
+    private ShaderMaterial _sky = null!, _shafts = null!, _beams = null!;
     private Decal _shadow = null!;
     private Image _noise = null!;
     private ImageTexture _shadowTexture = null!;
     private double _windX, _windZ;
     private float _shadowCoverage = -1;
-    private MeshInstance3D? _shaftQuad;
+    private MeshInstance3D? _shaftQuad, _beamQuad;
     private readonly ShaderMaterial _underwater = new() { Shader = GD.Load<Shader>("res://Game/Rewrite/Underwater.gdshader"), RenderPriority = 127 };
     private float _daylight = 1;
     private GpuParticles3D? _rainParticles;
@@ -97,6 +97,10 @@ public partial class Atmosphere : Node3D
         };
         AddChild(_shadow);
         _shafts = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/SunShafts.gdshader"), RenderPriority = 100 };
+        _beams = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/LightBeams.gdshader"), RenderPriority = 99 };
+        _beams.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
+        _beams.SetShaderParameter("cloud_period", CloudPeriod);
+        _beams.SetShaderParameter("cloud_height", CloudHeight);
 
         GameSettings.Changed += OnSetting;
         ApplyAll();
@@ -113,6 +117,13 @@ public partial class Atmosphere : Node3D
             ExtraCullMargin = 16384, Position = new Vector3(0, 0, -1), GIMode = GeometryInstance3D.GIModeEnum.Disabled,
         };
         camera.AddChild(_shaftQuad);
+        _beamQuad = new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(2, 2) }, MaterialOverride = _beams, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            ExtraCullMargin = 16384, Position = new Vector3(0, 0, -1), GIMode = GeometryInstance3D.GIModeEnum.Disabled,
+            Visible = GameSettings.LightBeams.Value > 0,
+        };
+        camera.AddChild(_beamQuad);
         camera.AddChild(new MeshInstance3D
         {
             Mesh = new QuadMesh { Size = new Vector2(2, 2) }, MaterialOverride = _underwater, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
@@ -155,6 +166,7 @@ public partial class Atmosphere : Node3D
         {
             WorldGen.WaterKind.Lake => (new Color(.06f, .24f, .2f), .09f),
             WorldGen.WaterKind.River => (new Color(.08f, .2f, .15f), .16f),
+            WorldGen.WaterKind.Pond => (new Color(.07f, .09f, .05f), .45f), // peaty, murky wetland pools
             _ => (new Color(.04f, .26f, .33f), .05f),
         };
         _underwater.SetShaderParameter("water_color", color);
@@ -196,11 +208,14 @@ public partial class Atmosphere : Node3D
             // Same pattern (periodic noise, same seed) with finer detail; the sky material keeps its uniforms.
             _cloudPixels = pixels;
             _sky.SetShaderParameter("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(pixels == Tile ? _noise : CloudNoise(pixels, 4242))));
+            _beams?.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
         }
         _sky.SetShaderParameter("sun_glare", GameSettings.SunGlare.F);
         _sky.SetShaderParameter("sun_style", GameSettings.SunStyle.Index);
         _shafts.SetShaderParameter("intensity", GameSettings.SunShafts.F);
         if (_shaftQuad != null) _shaftQuad.Visible = GameSettings.SunShafts.Value > 0;
+        _beams?.SetShaderParameter("intensity", GameSettings.LightBeams.F);
+        if (_beamQuad != null) _beamQuad.Visible = GameSettings.LightBeams.Value > 0 && GameSettings.Clouds.Value > 0;
         _shadow.Visible = GameSettings.CloudShadows.Value > 0 && GameSettings.Clouds.Value > 0;
         _shadow.Modulate = new Color(1, 1, 1, Math.Clamp(.62f * GameSettings.CloudShadows.F, 0, 1));
         UpdateCoverage();
@@ -310,6 +325,18 @@ public partial class Atmosphere : Node3D
         _water?.SetShaderParameter("sun_direction", toSun);
         _water?.SetShaderParameter("sun_color", Sun.LightColor * Sun.LightEnergy);
         _shafts.SetShaderParameter("sun_color", Sun.LightColor);
+        // Light beams follow the sun by day and the moon at night (fainter, silver-blue, with its phase).
+        if (_moon != null && _moon.Visible && Sun.LightEnergy * Mathf.Clamp(toSun.Y * 8, 0, 1) < _moon.LightEnergy * 3)
+        {
+            var toMoon = _moon.GlobalTransform.Basis.Z.Normalized();
+            _beams.SetShaderParameter("light_direction", toMoon);
+            _beams.SetShaderParameter("light_color", _moon.LightColor * _moon.LightEnergy * 2.2f);
+        }
+        else
+        {
+            _beams.SetShaderParameter("light_direction", toSun);
+            _beams.SetShaderParameter("light_color", Sun.LightColor * Sun.LightEnergy);
+        }
 
         // Shadow decal: ground point g is shaded by the cloud at g + toSun.xz · H / toSun.y. With the texture laid as
         // 3×3 tiles of period P, the decal centre must be ≡ P/2 − (origin + shift + wind) (mod P), chosen nearest the camera.

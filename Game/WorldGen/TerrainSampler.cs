@@ -31,7 +31,11 @@ public sealed class TerrainSampler
     private readonly MacroRaster _macro;
     private readonly Hydrology _hydrology;
     private readonly double _ox, _oz;
-    private readonly ulong _detailSeed, _rockSeed, _coastSeed, _regionSeed, _bankSeed;
+    private readonly ulong _detailSeed, _rockSeed, _coastSeed, _regionSeed, _bankSeed, _poolSeed;
+    // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
+    // into a threshold.
+    private readonly double[] _poolQuantiles, _channelQuantiles;
+    private readonly double _poolStd, _channelStd;
     private readonly double _coastBand;
 
     public TerrainSampler(WorldPlan plan)
@@ -41,6 +45,9 @@ public sealed class TerrainSampler
         var m = plan.Manifest;
         ulong Seed(string layer) => Hashing.FeatureSeed(m.Seed, 100 + WorldManifest.CurrentGenerator, m.ProfileDigest, layer);
         _detailSeed = Seed("detail"); _rockSeed = Seed("rock"); _coastSeed = Seed("coast"); _regionSeed = Seed("region"); _bankSeed = Seed("banks");
+        _poolSeed = Seed("pools");
+        (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
+        (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
         _coastBand = .25;
     }
@@ -88,13 +95,13 @@ public sealed class TerrainSampler
 
         // Walking-scale relief. Fades out at the shoreline so beaches and shelves stay smooth.
         double inland = DetMath.Smooth(land / .03);
-        double detail = 0;
+        double detail = 0, roughness = 1;
         if (inland > 0)
         {
             // Regional character: broad plains in some places, rougher hill country in others (Supplement §3),
             // varying over tens of kilometres so it never reads as a repeating texture.
             double character = DetMath.Smooth(.5 + .9 * Noise.Fbm(lx, lz, _style.RegionWavelength, 3, minWavelength, _regionSeed));
-            double roughness = _style.PlainsRoughness + (1 - _style.PlainsRoughness) * character;
+            roughness = _style.PlainsRoughness + (1 - _style.PlainsRoughness) * character;
             double rolling = Noise.ErodedFbm(lx, lz, _style.DetailWavelength, 11, minWavelength, _detailSeed, _style.DetailGain);
             detail = rolling * _style.LowlandDetail * roughness * (1 + 2 * mountainShare);
             if (mountainShare > .02)
@@ -103,6 +110,14 @@ public sealed class TerrainSampler
                 detail += ridges * _style.MountainDetail * _p.MountainHeight * DetMath.Smooth(mountainShare / .6);
             }
             detail *= inland;
+        }
+        // Wetlands (revision 11): biomes with standing-water pools or flattened ground (swamps, marshes, fens, bayous).
+        bool wetland = false;
+        double poolCover = 0, poolDepth = 0, poolSize = 16, poolChannels = 0, flatten = 0, riverDamp = 1;
+        if (_style.Revision >= 11 && inland > 0 && Plan.Biomes is { } biomes)
+        {
+            wetland = biomes.WetlandAt(x, z, out poolCover, out poolDepth, out poolSize, out poolChannels, out flatten);
+            if (wetland) detail *= 1 - flatten;
         }
         // Rivers: channel, banks and slope-limited valley sides replace the terrain near a river; walking-scale detail
         // fades toward it. Two nearby rivers (a confluence) combine continuously: deepest carving wins (softly),
@@ -148,6 +163,7 @@ public sealed class TerrainSampler
             }
             double rise = Math.Max(baseHeight, floor), damp = 1;
             for (int i = 0; i < count; i++) damp = Math.Min(damp, DetailDamp(reaches[i]));
+            riverDamp = damp;
             double terrain = Math.Max(baseHeight + detail * damp, floor);
             double carve = 0, raise = 0, wetInside = 0;
             for (int i = 0; i < count; i++)
@@ -198,6 +214,17 @@ public sealed class TerrainSampler
                 if (_style.MouthBlend > 0) height = MouthChannel(x, z, height, lake, out lakePlume);
             }
         }
+        if (wetland && poolCover > 0 && water == WaterKind.None)
+        {
+            // Pool water level: the ground without its short relief (the long waves only, flattened like the rest).
+            double low = Noise.ErodedFbm(lx, lz, _style.DetailWavelength, 11, Math.Max(minWavelength, PoolLevelWavelength), _detailSeed, _style.DetailGain)
+                * _style.LowlandDetail * roughness * (1 + 2 * mountainShare) * inland * (1 - flatten);
+            double smooth = Math.Max(baseHeight + low, floor);
+            _macro.SampleGradient(WorldPlan.HeightChannel, x, z, out double gx, out double gz);
+            double cover = poolCover * riverDamp * DetMath.Smooth(land / .015) * (1 - DetMath.Smooth(mountainShare / .3))
+                * (1 - DetMath.Smooth((Math.Sqrt(gx * gx + gz * gz) - .015) / .03));
+            if (cover > .005) height = Pool(lx, lz, height, smooth, Math.Min(cover, .85), poolDepth, poolSize, poolChannels, minWavelength, ref water, ref level);
+        }
         double edit = Edits.Delta(x, z);
         if (edit != 0)
         {
@@ -207,6 +234,72 @@ public sealed class TerrainSampler
             if (water != WaterKind.None && _p.SeaLevel + height >= level - .02) { water = WaterKind.None; level = double.NaN; body = -1; }
         }
         return new(_p.SeaLevel + height, land, mountainShare, detail, water, level, body, lakePlume);
+    }
+
+    /// <summary>Wavelength below which relief is left out of the pool water level (shorter relief is flattened at pools).</summary>
+    private const double PoolLevelWavelength = 500;
+
+    /// <summary>
+    /// Standing-water pools (wetland biomes, revision 11). A noise mask (round pools, or long winding channels) above a
+    /// threshold set by the coverage share marks the water. Near and in the pools the ground follows a profile around the
+    /// flat water level <paramref name="smooth"/>: a low bank (0.25 m) rising from the shore, the bed falling to
+    /// <paramref name="depth"/> over a few metres, plus a little of the local relief (bumps on the bed, an uneven
+    /// shoreline). Further out it blends back to the terrain. Water only where the shaped ground is below the level and
+    /// next to the mask, so no dry ground below the water surface is left beside a pool.
+    /// </summary>
+    private double Pool(double lx, double lz, double height, double smooth, double cover, double depth, double size, double channels,
+        double minWavelength, ref WaterKind water, ref double level)
+    {
+        double minW = Math.Min(minWavelength, size * .5); // at least the pools themselves, even on coarse distant tiles
+        // Pools and channels share the coverage; the water is their union (the larger excess wins).
+        double e = double.NegativeInfinity;
+        if (channels < .999) e = PoolNoise(lx, lz, size, minW) / _poolStd - Quantile(_poolQuantiles, cover * (1 - channels));
+        if (channels > .001) e = Math.Max(e, ChannelNoise(lx, lz, size, minW) / _channelStd - Quantile(_channelQuantiles, cover * channels));
+        const double soft = .12, bank = .25;
+        if (e < -soft * 3) return height;
+        double fine = DetMath.Clamp(.3 * (height - smooth), -.8 * bank, .8 * bank);
+        double profile = e >= 0 ? -depth * DetMath.Smooth(e / (soft * 2.5)) : bank * DetMath.Smooth(-e / soft);
+        double near = 1 - DetMath.Smooth((-e - soft) / (soft * 2));
+        double shaped = height + (smooth + profile + fine - height) * near;
+        if (e > -soft && shaped < smooth) { water = WaterKind.Pond; level = _p.SeaLevel + smooth; }
+        return shaped;
+    }
+
+    // Round pools: three octaves at about twice the pool size.
+    private double PoolNoise(double x, double z, double size, double minWavelength) =>
+        Noise.Fbm(x, z, size * 2.2, 3, minWavelength, _poolSeed, .5);
+
+    // Channels: lines where a domain-warped noise crosses zero (high = near the line), winding like fen and bayou leads.
+    private double ChannelNoise(double x, double z, double size, double minWavelength)
+    {
+        double wx = x + size * 3 * Noise.Fbm(x, z, size * 12, 2, minWavelength, _poolSeed + 8, .5);
+        double wz = z + size * 3 * Noise.Fbm(x + 71.3, z - 19.7, size * 12, 2, minWavelength, _poolSeed + 9, .5);
+        return -Math.Abs(Noise.Fbm(wx, wz, size * 9, 3, minWavelength, _poolSeed + 7, .5));
+    }
+
+    private static (double[] Sorted, double Std) Quantiles(Func<double, double, double> noise)
+    {
+        const int N = 6000;
+        var v = new double[N];
+        double sum = 0, sq = 0;
+        for (int i = 0; i < N; i++)
+        {
+            // Spread over ~80 × 80 noise wavelengths (scale-free: the noise is evaluated at unit size).
+            double u = Hashing.Unit(Hashing.Mix((ulong)i * 2 + 11)) * 80, w = Hashing.Unit(Hashing.Mix((ulong)i * 2 + 12)) * 80;
+            v[i] = noise(u, w); sum += v[i]; sq += v[i] * v[i];
+        }
+        double mean = sum / N, std = Math.Sqrt(Math.Max(1e-12, sq / N - mean * mean));
+        Array.Sort(v);
+        for (int i = 0; i < N; i++) v[i] /= std;
+        return (v, std);
+    }
+
+    /// <summary>The value exceeded by a share <paramref name="cover"/> of the samples.</summary>
+    private static double Quantile(double[] sorted, double cover)
+    {
+        double f = DetMath.Clamp(1 - cover, 0, 1) * (sorted.Length - 1);
+        int i = (int)f; if (i >= sorted.Length - 1) return sorted[^1];
+        return sorted[i] + (sorted[i + 1] - sorted[i]) * (f - i);
     }
 
     /// <summary>

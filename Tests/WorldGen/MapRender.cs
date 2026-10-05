@@ -20,7 +20,7 @@ internal static class MapRender
             for (int x = 0; x < pixels; x++)
             {
                 var t = sampler.Sample(cx - side / 2 + x * spacing, cz - side / 2 + y * spacing, mw);
-                water[y * pixels + x] = t.Water is WaterKind.Lake or WaterKind.River ? t.WaterLevel - t.Height : 0;
+                water[y * pixels + x] = t.Water is WaterKind.Lake or WaterKind.River or WaterKind.Pond ? t.WaterLevel - t.Height : 0;
             }
         });
         var rgb = new byte[pixels * pixels * 3];

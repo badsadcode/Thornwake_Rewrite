@@ -157,7 +157,6 @@ public static class GroundCover
         {
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || g.Edited(x, z)) return;
             if (up < .82f || height - sea < 1.6) return;
-            if (g.Wetness(x, z) > .45f && MarshPool(g.X0 + x, g.Z0 + z) > .6) return; // swamp pool
             float alpine = (float)DetMath.Smooth((height - sea - 1700) / 500);
             float plants = g.Plants(x, z); // biome plant cover, squared: sparse biomes (desert, ash, tundra) get only odd tufts
             float density = (1 - .65f * forest) * (1 - alpine) * (float)DetMath.Smooth((up - .82) / .08) * plants * plants;
@@ -169,8 +168,8 @@ public static class GroundCover
     }
 
     /// <summary>
-    /// Reeds along river and lake banks (level 0): tall tufts in clumps from ~0.5 m above the waterline into ~0.3 m
-    /// deep water, densest at the waterline. Not on sea shores (beaches).
+    /// Reeds along river, lake and wetland pool banks (level 0): tall tufts in clumps from ~0.5 m above the waterline
+    /// into ~0.3 m deep water, densest at the waterline. Not on sea shores (beaches).
     /// </summary>
     public static List<Transform3D> Reeds(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1)
     {
@@ -181,58 +180,16 @@ public static class GroundCover
             float shore = g.ShoreAt(x, z);
             if (shore < .22f || shore > .66f || g.Edited(x, z)) return;
             if (!g.At(x, z, out float height, out float up, out _, out _) || up < .8f || height - sea < 1.2) return;
-            // Clumps: ~45 % of 5 m patches carry reeds.
+            // Clumps: ~45 % of 5 m patches carry reeds; wetland pools (swamp, marsh, fen) are lined with them.
             ulong patch = Hashing.Lattice((long)Math.Floor((x + key.MinX) / 5), (long)Math.Floor((z + key.MinZ) / 5), seed ^ 0x9A7CUL);
-            if (Hashing.Unit(patch) > .45) return;
+            if (Hashing.Unit(patch) > .45 + .5 * Math.Min(1, g.Wetness(x, z))) return;
             float closeness = 1 - Math.Abs(shore - .47f) / .22f;
             if (Unit(h, 1) > closeness * .85f) return;
             float tall = 2.1f + 1.3f * Unit(h, 2), wide = .55f + .35f * Unit(h, 4);
             var basis = new Basis(Vector3.Up, Unit(h, 3) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 5) - .5f) * .25f);
             result.Add(new Transform3D(basis.Scaled(new Vector3(wide, tall, wide)), new Vector3((float)x, height - .05f, (float)z)));
         });
-        // Marsh reeds: in clumps along the edges of the swamp pools (same noise as the terrain shader's pools).
-        Cells(key, .7 / Math.Sqrt(Math.Max(.2, amount)), seed ^ 0x3A25UL, (x, z, h) =>
-        {
-            float wet = g.Wetness(x, z);
-            if (wet < .5f || g.Edited(x, z)) return;
-            if (!g.At(x, z, out float height, out float up, out _, out bool water) || water || up < .95f || height - sea < .6) return;
-            double n = MarshPool(g.X0 + x, g.Z0 + z);
-            if (n < .55 || n > .64) return;
-            float closeness = 1 - (float)Math.Abs(n - .6) / .05f;
-            if (Unit(h, 1) > closeness * .8f * Math.Min(1, (wet - .45f) * 3)) return;
-            float tall = 1.6f + 1.4f * Unit(h, 2), wide = .5f + .35f * Unit(h, 4);
-            var basis = new Basis(Vector3.Up, Unit(h, 3) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 5) - .5f) * .25f);
-            result.Add(new Transform3D(basis.Scaled(new Vector3(wide, tall, wide)), new Vector3((float)x, height - .05f, (float)z)));
-        });
         return result;
-    }
-
-    /// <summary>
-    /// The terrain shader's marsh pool noise at a world point (same hash and folding as Terrain.gdshader: UV is world
-    /// xz folded into 4096 m), so reeds line the pools drawn there. Pools where the value is above ~0.61.
-    /// </summary>
-    public static double MarshPool(double worldX, double worldZ)
-    {
-        float px = (float)(worldX - Math.Floor(worldX / 4096) * 4096), pz = (float)(worldZ - Math.Floor(worldZ / 4096) * 4096);
-        return VNoise(px * .06f, pz * .06f) * .6f + VNoise(px * .19f + 3.3f, pz * .19f + 3.3f) * .4f;
-    }
-
-    private static float Fract(float v) => v - MathF.Floor(v);
-
-    private static float ShaderHash(float x, float y)
-    {
-        float p3x = Fract(x * .1031f), p3y = Fract(y * .1031f), p3z = Fract(x * .1031f);
-        float d = p3x * (p3y + 33.33f) + p3y * (p3z + 33.33f) + p3z * (p3x + 33.33f);
-        p3x += d; p3y += d; p3z += d;
-        return Fract((p3x + p3y) * p3z);
-    }
-
-    private static float VNoise(float x, float y)
-    {
-        float ix = MathF.Floor(x), iy = MathF.Floor(y), fx = x - ix, fy = y - iy;
-        fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
-        float a = ShaderHash(ix, iy), b = ShaderHash(ix + 1, iy), c = ShaderHash(ix, iy + 1), d = ShaderHash(ix + 1, iy + 1);
-        return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
     }
 
     /// <summary>Stones (level 0), rocks (levels 0–1), boulders and outcrop clusters (levels 0–2).</summary>
@@ -411,6 +368,47 @@ public static class GroundCover
     }
 
     /// <summary>
+    /// Wetland plants (levels 0–1; Tom, round 8): low bog shrubs and sedges (fens) or pale tussocks (marshes) on the
+    /// ground between the pools, lily pads or water hyacinth mats floating on them. Amounts and kinds come from the
+    /// biome (Vegetation.Shrubs, ShrubKind, FloatingPlants, AquaticPlants). Kinds are <see cref="PlaceholderPlants"/>
+    /// wetland plant kinds.
+    /// </summary>
+    public static List<RockInstance> WetPlants(TileKey key, in Grid grid, double sea, ulong seed, BiomeMap biomes, double amount = 1)
+    {
+        var result = new List<RockInstance>();
+        var g = grid;
+        float a = (float)amount;
+        // Shrubs and grass clumps on dry ground.
+        Cells(key, 2.4, seed ^ 0xB06UL, (x, z, h) =>
+        {
+            if (g.Wetness(x, z) < .4f || g.Edited(x, z)) return;
+            if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .85f || height - sea < .8) return;
+            var (ba, bb, share) = biomes.Sample(g.X0 + x, g.Z0 + z);
+            var v = (Unit(h, 6) < share ? biomes.Pool[ba] : biomes.Pool[bb]).Def.Vegetation;
+            if (v.Shrubs <= 0 || Unit(h, 1) > v.Shrubs * .55f * a * (1 - .6f * forest)) return;
+            int kind = v.ShrubKind == "tussock" ? PlaceholderPlants.Tussock : Unit(h, 2) < .55f ? PlaceholderPlants.BogShrub : PlaceholderPlants.Sedge;
+            float scale = .7f + .6f * Unit(h, 3);
+            result.Add(new RockInstance(kind, new Transform3D(new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(Vector3.One * scale), new Vector3((float)x, height - .04f, (float)z))));
+        });
+        // Floating plants on wetland pools (not too shallow), in loose rafts.
+        Cells(key, 3.2, seed ^ 0xF10A7UL, (x, z, h) =>
+        {
+            int i = Math.Clamp((int)Math.Round(x / g.Spacing), 0, g.Side - 1), j = Math.Clamp((int)Math.Round(z / g.Spacing), 0, g.Side - 1);
+            var t = g.Samples[j * g.Side + i];
+            if (t.Water != WaterKind.Pond || t.WaterLevel - t.Height < .3) return;
+            var (ba, bb, share) = biomes.Sample(g.X0 + x, g.Z0 + z);
+            var v = (Unit(h, 6) < share ? biomes.Pool[ba] : biomes.Pool[bb]).Def.Vegetation;
+            if (v.FloatingPlants <= 0) return;
+            ulong raft = Hashing.Lattice((long)Math.Floor((x + key.MinX) / 11), (long)Math.Floor((z + key.MinZ) / 11), seed ^ 0x4AF7UL);
+            if (Hashing.Unit(raft) > .3 + .5 * v.FloatingPlants || Unit(h, 1) > v.FloatingPlants * a) return;
+            int kind = v.AquaticPlants == "Hyacinth" ? PlaceholderPlants.Hyacinth : PlaceholderPlants.LilyPads;
+            float scale = .8f + .5f * Unit(h, 3);
+            result.Add(new RockInstance(kind, new Transform3D(new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(Vector3.One * scale), new Vector3((float)x, (float)t.WaterLevel, (float)z))));
+        });
+        return result;
+    }
+
+    /// <summary>
     /// Bushes along forest edges and in meadows, stumps and fallen logs inside forests (levels 0–1).
     /// Placeholders from the valley game's models until Tom's scatter assets arrive.
     /// </summary>
@@ -453,10 +451,11 @@ public static class GroundCover
         new(.15f, .23f, .08f), new(.16f, .24f, .08f), new(.10f, .19f, .09f), new(.10f, .18f, .09f),                         // palms, cacti
         new(.20f, .18f, .15f), new(.18f, .16f, .13f), new(.19f, .22f, .08f), new(.07f, .16f, .06f), new(.09f, .14f, .08f),  // dead, acacia, jungle, cypress
         new(.22f, .18f, .12f),                                                                                                // dry shrub
+        new(.12f, .17f, .08f), new(.12f, .17f, .08f),                                                                         // bald cypress
     };
     private static readonly bool[] ConiferSpecies = { true, true, true, true, true, false, false, false, false, false, false, false, false, false, true, false, false,
-        false, false, true, true, true, true, false, false, false, false };
-    private static readonly float[] HeightOf = { 16, 15, 17, 19, 18, 13, 14, 12, 14, 13, 15, 12, 18, 11, 9, 13, 13, 11, 7, 5, 1.3f, 7, 4, 6, 20, 13, 1.5f };
+        false, false, true, true, true, true, false, false, false, false, false, false };
+    private static readonly float[] HeightOf = { 16, 15, 17, 19, 18, 13, 14, 12, 14, 13, 15, 12, 18, 11, 9, 13, 13, 11, 7, 5, 1.3f, 7, 4, 6, 20, 13, 1.5f, 17, 13 };
 
     /// <summary>Distant tree cards (beyond the full trees, levels 3–5 by default): sparser but larger with distance;
     /// the terrain tint fills in beyond.</summary>

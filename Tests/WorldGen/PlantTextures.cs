@@ -314,6 +314,113 @@ internal static class PlantTextures
             for (int r = 0; r < 4; r++) Branch(32 + (r - 1.5) * 3, 63, (r - 1.5) * .42, 20 + 4 * Hash(r, 0, 96), 0, r + 1);
             t.Save(Path.Combine(dir, "T_Shrub_Dry_64.png"));
         }
+        Wetland(dir);
+    }
+
+    /// <summary>
+    /// Wetland plants (Tom, round 8: Dead Marshes, northern fen, Louisiana bayou): bald cypress bark and feathery
+    /// foliage, long Spanish moss, bog shrub leaves, pale marsh tussock and green sedge blades, lily pads and water
+    /// hyacinth rosettes.
+    /// </summary>
+    private static void Wetland(string dir)
+    {
+        var baldBark = new[] { (58, 52, 46), (80, 72, 62), (104, 94, 80), (128, 118, 100), (150, 140, 120) };
+        var baldLeaf = new[] { (36, 48, 28), (50, 64, 34), (66, 80, 40), (86, 98, 50), (110, 118, 64) };
+        var bogLeaf = new[] { (40, 56, 30), (56, 76, 36), (76, 96, 44), (100, 112, 50), (120, 82, 52) };
+        // Bald cypress: grey-brown bark with long vertical fissures (stringy).
+        Fill(64, 64, (x, y, u, v) =>
+        {
+            double fissure = Fbm(u, v * .15, 14, 1, 101, 2);
+            double t = .25 + .6 * Fbm(u, v, 10, 4, 102) - (fissure < .38 ? .35 : 0) + ((x * 5 + y / 13) % 9 == 0 ? -.15 : 0);
+            return Ramp(baldBark, t, x, y);
+        }).Save(Path.Combine(dir, "T_Bald_Bark_64.png"));
+        // Feathery foliage: fine needle sprays, brighter toward the light.
+        Fill(64, 64, (x, y, u, v) =>
+        {
+            double spray = ((x + 2 * y) % 5 == 0 || (2 * x - y + 64) % 7 == 0) ? .25 : 0;
+            return Ramp(baldLeaf, .15 + .6 * Fbm(u, v, 8, 8, 103) + spray * Hash(x / 2, y / 2, 104), x, y);
+        }).Save(Path.Combine(dir, "T_Bald_Foliage_64.png"));
+        // Spanish moss (32 × 64, v = 0 at the top): many thin wavy grey-green strands, long and tapering.
+        {
+            var t = new Tex(32, 64, true);
+            var pal = new[] { (112, 122, 100), (138, 148, 122), (164, 172, 146) };
+            for (int s = 0; s < 22; s++)
+            {
+                double x = 1 + s * 1.4 + Hash(s, 0, 111), len = 26 + 38 * Hash(s, 1, 112);
+                for (int y = 0; y < len && y < 64; y++)
+                {
+                    int px = (int)Math.Round(x + Math.Sin(y * .3 + s * 1.7) * 1.4 + y * (Hash(s, 2, 113) - .5) * .08);
+                    if (y > len * .7 && Hash(px, y, 114) < .4) continue; // ragged ends
+                    t.Set(px, y, pal[(int)(Hash(px, y, 115) * 3)]);
+                }
+            }
+            t.Save(Path.Combine(dir, "T_Spanish_Moss_32.png"));
+        }
+        // Bog shrub (leatherleaf, bog myrtle): dense small leaves, some red-brown.
+        Fill(64, 64, (x, y, u, v) =>
+        {
+            double leaf = Hash(x / 2, y / 2, 121), speck = Hash(x, y, 123);
+            double t = .15 + .55 * Fbm(u, v, 8, 8, 122) + (leaf > .75 ? .25 : 0) - (speck < .15 ? .2 : 0);
+            return leaf < .04 ? bogLeaf[4] : Ramp(bogLeaf[..4], t, x, y);
+        }).Save(Path.Combine(dir, "T_Bog_Leaves_64.png"));
+        // Grass clumps (v = 0 at the top): pale straw tussock (marsh) and fresh green sedge (fen).
+        void Blades(string name, (int, int, int)[] pal, int seed)
+        {
+            var t = new Tex(64, 64, true);
+            for (int b = 0; b < 46; b++)
+            {
+                double x0 = 32 + (Hash(b, 0, seed) - .5) * 26, lean = (Hash(b, 1, seed) - .5) * 1.6 + (x0 - 32) / 26;
+                double len = 30 + 32 * Hash(b, 2, seed), curve = (Hash(b, 3, seed) - .5) * .02;
+                var c = pal[(int)(Hash(b, 4, seed) * pal.Length)];
+                for (int s = 0; s < len; s++)
+                {
+                    double k = s / len, x = x0 + lean * s * .45 + curve * s * s;
+                    t.Set((int)Math.Round(x), 63 - s, k > .85 ? pal[^1] : c);
+                    if (k < .4) t.Set((int)Math.Round(x) + 1, 63 - s, pal[0]);
+                }
+            }
+            t.Save(Path.Combine(dir, name));
+        }
+        Blades("T_Tussock_64.png", new[] { (110, 102, 72), (138, 128, 88), (164, 152, 106), (186, 176, 128) }, 131);
+        Blades("T_Sedge_64.png", new[] { (46, 76, 30), (64, 100, 38), (88, 124, 46), (120, 146, 64) }, 141);
+        // Lily pads (top view, tiles loosely): round pads with a notch, a few white flowers.
+        {
+            var t = new Tex(64, 64, true);
+            var pad = new[] { (34, 64, 30), (48, 84, 36), (66, 104, 44) };
+            for (int p = 0; p < 20; p++)
+            {
+                double r = 4 + 5 * Hash(p, 2, 153), cx = r + 1 + Hash(p * 13 + 5, 17, 151) * (62 - 2 * r), cy = r + 1 + Hash(29, p * 7 + 3, 152) * (62 - 2 * r), notch = Hash(p, 3, 154) * Math.Tau;
+                for (int y = (int)(cy - r); y <= cy + r; y++)
+                    for (int x = (int)(cx - r); x <= cx + r; x++)
+                    {
+                        double dx = x - cx, dy = y - cy, d = Math.Sqrt(dx * dx + dy * dy);
+                        if (d > r) continue;
+                        double a = Math.Atan2(dy, dx), da = Math.Abs(Math.IEEERemainder(a - notch, Math.Tau));
+                        if (da < .3 && d > r * .15) continue;
+                        bool vein = Math.Abs(Math.IEEERemainder(a * 4, Math.PI)) < .12;
+                        t.Set(x, y, d > r - 1 ? pad[0] : vein ? pad[2] : pad[1]);
+                    }
+                if (p % 4 == 1)
+                    for (int k = 0; k < 6; k++) t.Set((int)cx + (k % 3) - 1, (int)cy + k / 3 - 1, k == 1 ? (230, 210, 90) : (236, 236, 226));
+            }
+            t.Save(Path.Combine(dir, "T_LilyPads_64.png"));
+        }
+        // Water hyacinth mat (top view): glossy round leaves in rosettes, lavender flower spikes.
+        {
+            var t = new Tex(64, 64, true);
+            var leaf = new[] { (30, 54, 24), (42, 72, 30), (58, 92, 36), (78, 110, 46) };
+            for (int y = 0; y < 64; y++)
+                for (int x = 0; x < 64; x++)
+                {
+                    double u = x / 64.0, v = y / 64.0, r = Math.Sqrt((u - .5) * (u - .5) + (v - .5) * (v - .5)) * 2;
+                    double m = Fbm(u, v, 4, 4, 161) + .45 - .75 * r * r; // a ragged round raft, never cut by the card edge
+                    if (m < .5 || r > .97) continue;
+                    double rosette = Hash(x / 4, y / 4, 162);
+                    t.Set(x, y, Ramp(leaf, .2 + .6 * Fbm(u, v, 16, 16, 163) + (rosette > .7 ? .2 : 0), x, y));
+                    if (m > .68 && Hash(x / 3, y / 3, 164) > .93) t.Set(x, y, Hash(x, y, 165) < .5 ? (150, 120, 190) : (184, 160, 220));
+                }
+            t.Save(Path.Combine(dir, "T_Hyacinth_64.png"));
+        }
     }
 
     /// <summary>

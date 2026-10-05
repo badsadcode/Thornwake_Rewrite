@@ -266,6 +266,9 @@ public partial class WorldStreamer : Node3D
         foreach (var kind in data.Drapes.GroupBy(d => d.Kind))
             root.AddChild(Multi(PlaceholderPlants.Drape(kind.Key), kind.Select(d => d.Transform).ToArray(), GeometryInstance3D.ShadowCastingSetting.Off,
                 160 * GameSettings.ScatterDistance.F));
+        foreach (var kind in data.WetPlants.GroupBy(d => d.Kind))
+            root.AddChild(Multi(PlaceholderPlants.WetPlant(kind.Key), kind.Select(d => d.Transform).ToArray(), GeometryInstance3D.ShadowCastingSetting.Off,
+                (kind.Key == PlaceholderPlants.BogShrub ? 220 : 150) * GameSettings.ScatterDistance.F));
         foreach (var kind in data.Rocks.GroupBy(r => r.Kind))
             root.AddChild(Multi(RockMeshes.Get(kind.Key), kind.Select(r => r.Transform).ToArray(),
                 kind.Key == GroundCover.Stone ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,

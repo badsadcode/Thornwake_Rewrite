@@ -6,7 +6,7 @@
 //    boats and swimming; same parameters, same clock `ocean_time`), shrinking in shallow water;
 //  - swash: the sea runs up and down the beach; breakers: foam bands rolling in over the shallows;
 //  - river water colouring the sea or lake near a mouth (plume).
-// COLOR.r = water depth / 20 m at the vertex (from the terrain sampler), COLOR.g = kind (0 sea, .5 lake, 1 river),
+// COLOR.r = water depth / 20 m at the vertex (from the terrain sampler), COLOR.g = kind (0 sea, .375 pond, .5 lake, 1 river),
 // COLOR.b = river plume 0..1. UV = river current (m/s).
 shader_type spatial;
 render_mode blend_mix, cull_back, depth_draw_never;
@@ -102,7 +102,8 @@ void vertex() {
 	}
 	current = UV;
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	float sea = 1.0 - step(0.25, body), lake = step(0.25, body) * (1.0 - step(0.75, body));
+	// Ponds (wetland pools, 0.375) are lake water without waves.
+	float sea = 1.0 - step(0.25, body), lake = step(0.45, body) * (1.0 - step(0.75, body));
 	vec3 offset = vec3(0.0);
 	vec3 n = vec3(0.0, 1.0, 0.0);
 	crest = 0.0; fold = 0.0; wave_lift = 0.0;
@@ -151,7 +152,8 @@ void fragment() {
 		: vec2(ripples(p + vec2(e, 0.0), TIME, speed) - h, ripples(p + vec2(0.0, e), TIME, speed) - h) / e * amp;
 	// Waves: the Gerstner normal from the vertex stage, ripples on top.
 	// Chop: mid-scale wind waves on the swell (grows with the sea state; breaks up the regular Gerstner pattern).
-	if (sea + lake > 0.5) {
+	float pond = step(0.25, body) * (1.0 - step(0.45, body));
+	if (sea + lake - pond > 0.5) {
 		float chop_amp = (0.04 + 0.25 * sea_state) * (sea > 0.5 ? 1.0 : 0.4) / (1.0 + length(VERTEX) / 300.0);
 		vec2 wind = vec2(0.8, 0.6);
 		vec2 q1 = p * 0.11 + wind * TIME * 0.35, q2 = p * 0.23 - wind.yx * TIME * 0.5;

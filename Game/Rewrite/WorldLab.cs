@@ -63,6 +63,9 @@ public partial class WorldLab : Node3D
     private string? _smokeDirectory, _shotPath;
     private (double X, double Z)? _shotAt;
     private (float Yaw, float Pitch, float Zoom)? _shotView;
+    // --extra-yaws=a,b,…: after the shot, more shots turned by these yaw offsets (<name>-1.png …), same world and tiles.
+    private readonly List<float> _extraYaws = new();
+    private int _extraShot;
     /// <summary>Screenshot aid: a row of every placeholder plant in front of the camera (--gallery).</summary>
     private bool _gallery, _openMap;
     private float _shotHeight, _shotWait;
@@ -106,6 +109,7 @@ public partial class WorldLab : Node3D
             // Single screenshot: --world-shot=<png> --at=x,z [--view=yaw,pitch,zoom] [--msaa=0|2|4] [--fly-height=m] [--hour=h] [--menu=tab]
             if (arg.StartsWith("--world-shot=")) { _shotPath = arg[13..]; _smokeDirectory = Path.GetDirectoryName(_shotPath) ?? "."; }
             if (arg.StartsWith("--at=")) { var v = arg[5..].Split(','); _shotAt = (double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture)); }
+            if (arg.StartsWith("--extra-yaws=")) foreach (var y in arg[13..].Split(',')) _extraYaws.Add(float.Parse(y, CultureInfo.InvariantCulture));
             if (arg.StartsWith("--view=")) { var v = arg[7..].Split(','); _shotView = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture), float.Parse(v[2], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--msaa=")) GetViewport().Msaa3D = arg[7..] switch { "0" => Viewport.Msaa.Disabled, "4" => Viewport.Msaa.Msaa4X, _ => Viewport.Msaa.Msaa2X };
             if (arg.StartsWith("--fly-height=")) _shotHeight = float.Parse(arg[13..], CultureInfo.InvariantCulture);
@@ -609,6 +613,7 @@ public partial class WorldLab : Node3D
             WaterKind.Ocean => "at sea",
             WaterKind.Lake => $"in lake {t.WaterBody} (surface {t.WaterLevel:0.0} m)",
             WaterKind.River => $"in a river (surface {t.WaterLevel:0.0} m)",
+            WaterKind.Pond => $"in a pool ({t.WaterLevel - t.Height:0.0} m deep)",
             _ => t.Mountain > .3 ? "mountains" : t.Height - _sampler.Plan.Profile.SeaLevel < 6 ? "coast" : "lowland",
         };
         if (_sampler.Plan.Hydrology.NearestRiver(PlayerX, PlayerZ, 400, out var river) && t.Water == WaterKind.None)
@@ -887,7 +892,16 @@ public partial class WorldLab : Node3D
             else if (_smokeStage == 2 && (settled || _smokeTimer > 240) && _smokeTimer > 1.5 && _simTime >= _shotWait)
             {
                 GD.Print($"SCATTER grass={_streamer.GrassCommitted} rocks={_streamer.RocksCommitted} props={_streamer.PropsCommitted} farTrees={_streamer.FarTreesCommitted}");
-                Screenshot(_shotPath); GetTree().Quit(0);
+                Screenshot(_shotPath);
+                if (_extraYaws.Count == 0) GetTree().Quit(0);
+                else { _smokeStage = 3; _smokeTimer = 0; _yaw += _extraYaws[0]; }
+            }
+            else if (_smokeStage == 3 && _smokeTimer > 3 && settled)
+            {
+                _extraShot++;
+                Screenshot(Path.Combine(Path.GetDirectoryName(_shotPath) ?? ".", $"{Path.GetFileNameWithoutExtension(_shotPath)}-{_extraShot}.png"));
+                if (_extraShot >= _extraYaws.Count) GetTree().Quit(0);
+                else { _smokeTimer = 0; _yaw += _extraYaws[_extraShot] - _extraYaws[_extraShot - 1]; }
             }
             return;
         }

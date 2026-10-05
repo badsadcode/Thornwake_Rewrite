@@ -14,7 +14,7 @@ namespace Thornwake.Rewrite;
 public static class PlaceholderPlants
 {
     public static readonly string[] Names =
-        { "Palm_A", "Palm_B", "Cactus_A", "Cactus_B", "Dead_A", "Dead_B", "Acacia_A", "Jungle_A", "Cypress_A", "Shrub_Dry" };
+        { "Palm_A", "Palm_B", "Cactus_A", "Cactus_B", "Dead_A", "Dead_B", "Acacia_A", "Jungle_A", "Cypress_A", "Shrub_Dry", "Bald_Cypress_A", "Bald_Cypress_B" };
 
     public static bool Has(string name) => Array.IndexOf(Names, name) >= 0;
 
@@ -55,6 +55,8 @@ public static class PlaceholderPlants
             case "Jungle_A": JungleGiant(b, 51); break;
             case "Cypress_A": Cypress(b, 61); break;
             case "Shrub_Dry": Shrub(b, 71); break;
+            case "Bald_Cypress_A": BaldCypress(b, 81, 17, 5); break;
+            case "Bald_Cypress_B": BaldCypress(b, 82, 13, 4); break;
             default: throw new ArgumentException("Unknown placeholder plant " + name);
         }
         return new List<(Mesh, Transform3D)> { (b.Commit(), Transform3D.Identity) };
@@ -70,6 +72,43 @@ public static class PlaceholderPlants
         var b = new Builder(1);
         b.Drape(kind == 0 ? "T_Drape_Grass_64" : "T_Roots_64", kind == 0, kind == 0 ? .06f : .015f);
         return Drapes[kind] = b.Commit();
+    }
+
+    public const int BogShrub = 0, Tussock = 1, Sedge = 2, LilyPads = 3, Hyacinth = 4;
+    private static readonly Dictionary<int, Mesh> WetMeshes = new();
+
+    /// <summary>Wetland plants (GroundCover.WetPlants kinds): bog shrub, marsh tussock, fen sedge, lily pads and a water
+    /// hyacinth mat (both floating: local origin on the water surface). 1 unit = 1 m.</summary>
+    public static Mesh WetPlant(int kind)
+    {
+        if (WetMeshes.TryGetValue(kind, out var mesh)) return mesh;
+        var b = new Builder(1);
+        switch (kind)
+        {
+            case BogShrub:
+                b.Blob("T_Bog_Leaves_64", new Vector3(0, .3f, 0), new Vector3(.8f, .42f, .75f), 901, .03f);
+                b.Blob("T_Bog_Leaves_64", new Vector3(.55f, .22f, .3f), new Vector3(.55f, .32f, .5f), 902, .03f);
+                b.Blob("T_Bog_Leaves_64", new Vector3(-.4f, .2f, -.45f), new Vector3(.5f, .3f, .55f), 903, .03f);
+                break;
+            case Tussock:
+            case Sedge:
+                for (int i = 0; i < 3; i++)
+                {
+                    float a = i * Mathf.Pi / 3 + .4f;
+                    var right = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * (kind == Tussock ? .6f : .5f);
+                    b.Card(kind == Tussock ? "T_Tussock_64" : "T_Sedge_64", Vector3.Zero, right, Vector3.Up * (kind == Tussock ? .95f : 1.15f), sway: .1f);
+                }
+                break;
+            case LilyPads:
+                b.Flat("T_LilyPads_64", new Vector3(0, .02f, 0), 1.3f, 0);
+                break;
+            case Hyacinth:
+                b.Flat("T_Hyacinth_64", new Vector3(0, .05f, 0), 1.6f, 0);
+                b.Flat("T_Hyacinth_64", new Vector3(.5f, .09f, -.3f), 1.1f, .9f);
+                break;
+            default: throw new ArgumentException("Unknown wetland plant " + kind);
+        }
+        return WetMeshes[kind] = b.Commit();
     }
 
     // ---------------------------------------------------------------- species
@@ -268,6 +307,59 @@ public static class PlaceholderPlants
         b.Blob("T_Cypress_Foliage_64", trunk[^1] + Vector3.Up * .2f, new Vector3(1.1f, .8f, 1.1f), seed * 10 + 9, .06f);
     }
 
+    /// <summary>
+    /// Bald cypress (Louisiana bayou, Tom round 8): tall straight trunk on a wide fluted base (it stands in the water),
+    /// branches spreading near the top into a broad, flat-topped feathery crown, long Spanish moss hanging everywhere.
+    /// </summary>
+    private static void BaldCypress(Builder b, int seed, float h, int branches)
+    {
+        var rng = new Random(seed);
+        var trunk = Crooked(rng, Vector3.Zero, Vector3.Up, h, 9, .03f);
+        var radii = Taper(9, .42f, .12f);
+        radii[0] = 1.25f; radii[1] = .62f; radii[2] = .48f; // swollen, fluted base
+        b.Tube("T_Bald_Bark_64", false, 0, trunk, radii, b.Sides(10), 1.6f, 1.5f, ribs: .12f);
+        // Buttress flutes at the foot.
+        for (int i = 0; i < 6; i++)
+        {
+            float a = i * Mathf.Tau / 6 + .3f;
+            var o = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
+            b.Plate("T_Bald_Bark_64", o * .35f + Vector3.Up * 1.6f, o * 1.55f + Vector3.Down * .1f, o * .35f + Vector3.Down * .1f);
+            b.Plate("T_Bald_Bark_64", o * .35f + Vector3.Down * .1f, o * 1.55f + Vector3.Down * .1f, o * .35f + Vector3.Up * 1.6f);
+        }
+        var blobs = new List<(Vector3 At, float Size)>();
+        for (int i = 0; i < branches; i++)
+        {
+            float t = .55f + .38f * i / Math.Max(1, branches - 1), az = i * 2.4f + (float)rng.NextDouble() * .6f;
+            float reach = (2.6f + 1.8f * (float)rng.NextDouble()) * (1.1f - .35f * i / branches) * h / 15;
+            var stem = Along(trunk, t);
+            var dir = new Vector3(Mathf.Cos(az), .28f, Mathf.Sin(az)).Normalized();
+            var mid = stem + dir * reach * .55f + Vector3.Up * .25f;
+            var end = stem + dir * reach + Vector3.Up * .55f;
+            b.Tube("T_Bald_Bark_64", false, 0, new[] { stem, mid, end }, new[] { .16f, .1f, .05f }, b.Sides(5), 1.6f, .5f);
+            // Feathery clumps: several small, rounded masses along the branch end, not one flat pad.
+            float size = 1.1f + .4f * (float)rng.NextDouble();
+            for (int c = 0; c < 4; c++)
+            {
+                var at = (c < 2 ? end : mid) + new Vector3((float)rng.NextDouble() - .5f, .2f + .5f * (float)rng.NextDouble(), (float)rng.NextDouble() - .5f) * size * 1.3f;
+                float r = size * (.75f + .35f * (float)rng.NextDouble());
+                b.Blob("T_Bald_Foliage_64", at, new Vector3(r, r * (.6f + .2f * (float)rng.NextDouble()), r * .9f), seed * 100 + i * 10 + c, .05f);
+                blobs.Add((at, r));
+            }
+        }
+        var top = trunk[^1];
+        b.Blob("T_Bald_Foliage_64", top + Vector3.Up * .1f, new Vector3(1.5f, .9f, 1.4f), seed * 10 + 99, .05f);
+        blobs.Add((top, 1.4f));
+        // Spanish moss: long grey strands under every part of the crown (fewer on the far model).
+        int per = b.Lod == 1 ? 2 : 1;
+        foreach (var (at, size) in blobs)
+            for (int m = 0; m < per; m++)
+            {
+                float ma = m * Mathf.Tau / per + (float)rng.NextDouble();
+                var anchor = at + new Vector3(Mathf.Cos(ma) * size * .6f, -.25f, Mathf.Sin(ma) * size * .6f);
+                b.Hanging("T_Spanish_Moss_32", anchor, 2.2f + 2.6f * (float)rng.NextDouble(), .9f, ma, tileMetres: 0, sway: .14f);
+            }
+    }
+
     private static void Shrub(Builder b, int seed)
     {
         for (int i = 0; i < 3; i++)
@@ -417,6 +509,17 @@ public static class PlaceholderPlants
             var n = halfRight.Cross(up).Normalized();
             int a = s.Add(bottom - halfRight, n, new Vector2(0, 1), 0), b = s.Add(bottom + halfRight, n, new Vector2(1, 1), 0);
             int c = s.Add(bottom - halfRight + up, n, new Vector2(0, 0), 1), d = s.Add(bottom + halfRight + up, n, new Vector2(1, 0), 1);
+            s.I.AddRange(new[] { a, c, b, b, c, d });
+        }
+
+        /// <summary>A flat horizontal card (floating plants), <paramref name="half"/> metres from the centre to an edge.</summary>
+        public void Flat(string texture, Vector3 centre, float half, float angle)
+        {
+            var s = S(texture, true, 0);
+            var r = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * half;
+            var f = new Vector3(-r.Z, 0, r.X);
+            int a = s.Add(centre - r - f, Vector3.Up, new Vector2(0, 0), 0), b = s.Add(centre + r - f, Vector3.Up, new Vector2(1, 0), 0);
+            int c = s.Add(centre - r + f, Vector3.Up, new Vector2(0, 1), 0), d = s.Add(centre + r + f, Vector3.Up, new Vector2(1, 1), 0);
             s.I.AddRange(new[] { a, c, b, b, c, d });
         }
 

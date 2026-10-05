@@ -117,6 +117,9 @@ public static class GameSettings
         "Brightness of the sun disc and its halo in the sky (1 = build 11).", "×"));
     public static readonly Setting SunShafts = Add(new("fx.sun_shafts", "Lighting and effects", "Sun shafts", 0, 1.5, .05, .6,
         "Light rays from the sun through clouds, trees and over ridges (screen-space).", "×"));
+    public static readonly Setting LightBeams = Add(new("fx.light_beams", "Lighting and effects", "Light beams under clouds", 0, 2, .05, .8,
+        "Beams of sunlight (or moonlight) falling through gaps in broken cloud, visible from the side even when the sun " +
+        "is hidden. 0 = off.", "×"));
     public static readonly Setting VolumetricFog = Add(new("fx.volumetric_fog", "Lighting and effects", "Volumetric fog", 0, 1, 1, 0,
         "Light scattering in the air near the camera (real shafts through trees). Costs frame time."));
     public static readonly Setting Haze = Add(new("fx.haze", "Lighting and effects", "Distance haze", 0, 2, .05, 1,
