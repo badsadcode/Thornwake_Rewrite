@@ -196,7 +196,14 @@ public partial class WorldLab : Node3D
         if (s.Rebuild) _streamer.Refresh();
     }
 
-    public override void _ExitTree() => GameSettings.Changed -= OnSettingChanged;
+    public override void _ExitTree()
+    {
+        GameSettings.Changed -= OnSettingChanged;
+        // Static caches of Godot resources (tree, rock and prop meshes, materials) must be freed while the engine is
+        // still alive; left to the .NET finalizers at process exit they intermittently crashed on quit (as the valley
+        // game already handles in Main).
+        RockMeshes.Release(); WoodlandAssets.Release(); Visuals.ReleaseMaterials();
+    }
 
     private double PlayerX => _originX + _player.Position.X;
     private double PlayerZ => _originZ + _player.Position.Z;

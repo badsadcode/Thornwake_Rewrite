@@ -11,6 +11,13 @@ public static class RockMeshes
 {
     private static ArrayMesh[]? _meshes;
 
+    /// <summary>Free the cached meshes (scene exit): static Godot resources outliving the engine crash on shutdown.</summary>
+    public static void Release()
+    {
+        if (_meshes != null) foreach (var mesh in _meshes) mesh.Dispose();
+        _meshes = null;
+    }
+
     public static ArrayMesh Get(int kind)
     {
         _meshes ??= new[] { Build(1, 0x51u, .22f), Build(1, 0x77u, .28f), Build(2, 0x93u, .3f) };
