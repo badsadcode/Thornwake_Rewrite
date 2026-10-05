@@ -78,6 +78,14 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 7
+* **Digging tools** (1–5, left/right mouse): **shovel** digs soil and fills from a soil bag (1.5 m³, weak on rock),
+  **pickaxe** breaks ground and rock in the direction you aim, **hoe** levels to the aimed height and smooths,
+  **terraform (dev)** with adjustable mode (T: dig/raise/flatten/smooth), shape (Y: round soft/hard, square,
+  directional), radius ([ ]) and strength (- =). A ring shows where and how wide the tool works (red: out of reach).
+* **River beaches**: low irregular strips of sand, gravel or mud between water and bank, different on each side.
+* Rivers no longer stop just short of lakes.
+
 ## Controls
 | Key | Action |
 |---|---|
@@ -96,8 +104,9 @@ milestone M6), caves.
 | J | Place / remove a spring where you look |
 | H | Rain on / off (Esc → Settings → Simulation: rain strength) |
 | K | Clear all simulated water |
-| V (hold) | Dig the ground where you look |
-| B (hold) | Raise the ground where you look |
+| 1–5 | Tools: hands, shovel, pickaxe, hoe, terraform (dev) |
+| Left / right mouse | Use the tool (primary / secondary) |
+| T, Y, [ ], - = | Dev tool: mode, shape, radius, strength |
 
 ## Please check (and tell me what you think)
 1. **Frame rate** with the new defaults (more grass, clouds, sun shafts). If it drops, try Esc → Settings:

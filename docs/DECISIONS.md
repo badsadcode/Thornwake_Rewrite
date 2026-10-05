@@ -197,3 +197,21 @@ New world → Forests and objects), fixed at generation. Settings keep only draw
 small objects) and decorative grass. Every object already has a stable identity: its kind plus the world-aligned cell
 it was placed on (deterministic from seed and parameters). Harvesting, felling or planting (M9) will store changes
 per chunk against those identities, the same way terrain edits overlay the generated ground.
+
+## D30 — Terrain tools (2026-10-05)
+`TerrainSculpt` (engine-free, tested) applies one tool use to the edit layer: modes dig/raise/flatten/smooth, shapes
+round (soft), round (hard), square and directional (a capsule along the aiming ray: dig into a slope, build out
+from it). Each use is limited by the tool's strength, by ground hardness (mountains and steep ground are rock: soft
+tools reach ~10 %, the pickaxe ~90 %) and by a volume budget (the soil bag, 1.5 m³: digging fills it, filling
+empties it). `Toolbox` holds the tools (1 hands, 2 shovel, 3 pickaxe, 4 hoe, 5 terraform dev tool with adjustable
+mode, shape, radius and strength, no limits), reach checks and a projected preview ring coloured by mode (red out of
+reach). Objects (trees, grass, rocks) are on render layer 2 so previews project onto the ground only.
+Limits now: 1 m edit grid (small tools touch few vertices), edits not saved yet.
+
+## D31 — Caves need a volumetric layer (planned, M10) (2026-10-05)
+Tom needs player-dug caves and generated natural cave systems. The surface stays a height field (fast, LOD to the
+horizon); caves will be a separate volumetric layer only where needed: a signed-distance field in sparse chunks
+(e.g. 0.5 m voxels in 16 m chunks) combining generated cave networks (worm/tunnel splines and chambers placed
+deterministically per region, more in karst/mountain areas) and player carving, meshed with dual contouring /
+marching cubes near the player, with openings cut into the height field where a cave meets the surface. The same
+`TerrainSculpt` tool interface will carve it (the directional dig becomes a true tunnel there).

@@ -43,8 +43,10 @@ void fragment() {
 	float patch_kind = vnoise(p * 0.045 + vec2(17.0, 3.0));
 	vec3 mud = vec3(0.30, 0.25, 0.18) * (0.9 + 0.2 * n3);
 	vec3 shore_sand = mix(vec3(0.66, 0.60, 0.45), vec3(0.55, 0.52, 0.44), n2);
-	vec3 shore = mix(c * vec3(0.62, 0.6, 0.55) + vec3(0.03, 0.025, 0.015), mud, smoothstep(0.35, 0.5, patch_kind));
-	shore = mix(shore, shore_sand, smoothstep(0.68, 0.8, patch_kind));
+	vec3 gravel = mix(vec3(0.52, 0.50, 0.46), vec3(0.62, 0.60, 0.55), hash(floor(p * 5.0))) * (0.9 + 0.2 * n3);
+	vec3 shore = mix(c * vec3(0.62, 0.6, 0.55) + vec3(0.03, 0.025, 0.015), mud, smoothstep(0.26, 0.36, patch_kind));
+	shore = mix(shore, gravel, smoothstep(0.46, 0.56, patch_kind));
+	shore = mix(shore, shore_sand, smoothstep(0.62, 0.72, patch_kind));
 	c = mix(c, shore, damp);
 	// Ground the player dug or raised: bare, slightly lumpy soil.
 	vec3 soil = mix(vec3(0.36, 0.28, 0.19), vec3(0.45, 0.36, 0.25), n3);

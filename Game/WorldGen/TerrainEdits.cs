@@ -69,6 +69,41 @@ public sealed class TerrainEdits
         return (x0, z0, x1, z1);
     }
 
+    /// <summary>
+    /// Change every edit vertex in a world rectangle: <paramref name="change"/>(x, z, current offset) returns the new
+    /// offset (clamped to ±<paramref name="limit"/>). Returns the volume moved (m³, positive = added).
+    /// </summary>
+    public double Modify(double minX, double minZ, double maxX, double maxZ, Func<long, long, double, double> change, double limit = 200)
+    {
+        long x0 = (long)Math.Floor(minX), x1 = (long)Math.Ceiling(maxX), z0 = (long)Math.Floor(minZ), z1 = (long)Math.Ceiling(maxZ);
+        double volume = 0;
+        for (long cz = Chunk(z0); cz <= Chunk(z1); cz++)
+            for (long cx = Chunk(x0); cx <= Chunk(x1); cx++)
+            {
+                _chunks.TryGetValue((cx, cz), out var old);
+                float[]? next = null;
+                for (int j = 0; j < ChunkVertices; j++)
+                    for (int i = 0; i < ChunkVertices; i++)
+                    {
+                        long vx = cx * ChunkVertices + i, vz = cz * ChunkVertices + j;
+                        if (vx < x0 || vx > x1 || vz < z0 || vz > z1) continue;
+                        int k = j * ChunkVertices + i;
+                        double current = old?[k] ?? 0;
+                        double value = Math.Clamp(change(vx, vz, current), -limit, limit);
+                        if (value == current) continue;
+                        next ??= old != null ? (float[])old.Clone() : new float[ChunkVertices * ChunkVertices];
+                        next[k] = (float)value;
+                        volume += next[k] - current;
+                    }
+                if (next != null) _chunks[(cx, cz)] = next;
+            }
+        Version++;
+        return volume;
+    }
+
+    /// <summary>Raw offset at an edit vertex (1 m grid).</summary>
+    public double At(long x, long z) => Vertex(x, z);
+
     public void Clear() { _chunks.Clear(); Version++; }
 
     private static long Chunk(long vertex) => (long)Math.Floor(vertex / (double)ChunkVertices);

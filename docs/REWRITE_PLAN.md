@@ -339,5 +339,9 @@ ground (D27), steeper shores (D28), trees/rocks/logs as world data (D29), build-
 as a New-world option with a bit-exact test (D25), intermittent exit crash fixed (static resource caches).
 31 tests pass. Feedback log: `docs/PLAYTEST_FEEDBACK.md` round 3.
 
-**Next:** Tom's build-6 feedback and asset batches first when they arrive. Then: M6 second step (optional local
+**After build 6:** river beaches and no levees in lakes; digging tools (D30: shovel, pickaxe, hoe, dev terraform
+with preview); caves planned as a volumetric layer (D31), including generated natural cave systems (Tom: important).
+
+**Next:** Tom's feedback and asset batches first. Then M10 caves (volumetric layer, generated cave systems, carving
+with the same tools), saving terrain edits, M9 gameplay (felling/harvesting world objects). Then: M6 second step (optional local
 river simulation once terrain edits exist; splashes; sound), M3 gully detail, M8 next steps (save edits, soil/rock material layers, tools).

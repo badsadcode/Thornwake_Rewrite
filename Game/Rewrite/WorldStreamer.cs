@@ -269,7 +269,7 @@ public partial class WorldStreamer : Node3D
                 multi.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(new Vector3(1, t.Height, 1)), t.Position));
                 multi.SetInstanceCustomData(i, new Color(t.Crown.R, t.Crown.G, t.Crown.B, t.Conifer ? 1 : 0));
             }
-            root.AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = _farTree, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+            root.AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = _farTree, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Layers = 2 });
         }
         return root;
     }
@@ -283,7 +283,8 @@ public partial class WorldStreamer : Node3D
         if (transforms.Length > 0) centre /= transforms.Length;
         var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = mesh, InstanceCount = transforms.Length };
         for (int i = 0; i < transforms.Length; i++) multi.SetInstanceTransform(i, transforms[i].Translated(-centre));
-        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows, Position = centre };
+        // Render layer 2: objects (tool previews project onto the terrain only, layer 1).
+        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows, Position = centre, Layers = 2 };
         if (visibleTo > 0) { node.VisibilityRangeEnd = visibleTo; node.VisibilityRangeEndMargin = 15; node.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self; }
         return node;
     }
@@ -333,7 +334,7 @@ public sealed class TreeCatalog
                 for (int i = 0; i < transforms.Length; i++) multi.SetInstanceTransform(i, transforms[i] * part);
                 root.AddChild(new MultiMeshInstance3D
                 {
-                    Multimesh = multi,
+                    Multimesh = multi, Layers = 2,
                     CastShadow = shadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
                 });
             }

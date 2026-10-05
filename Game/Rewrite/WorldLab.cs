@@ -25,6 +25,7 @@ public partial class WorldLab : Node3D
     private Camera3D _camera = null!;
     private Atmosphere _atmosphere = null!;
     private LocalWaterView _water = null!;
+    private Toolbox _tools = null!;
     private bool _rain;
     private readonly WorldGenOptions _gen = new();
     private Label _hud = null!, _overlay = null!, _help = null!;
@@ -70,6 +71,8 @@ public partial class WorldLab : Node3D
         _atmosphere.SetWater(_streamer.WaterMaterial);
         _water = new LocalWaterView { Name = "LocalWater" };
         AddChild(_water);
+        _tools = new Toolbox { Name = "Tools" };
+        AddChild(_tools);
         BuildPlayer();
         _atmosphere.AttachCamera(_camera);
         BuildUi();
@@ -95,6 +98,7 @@ public partial class WorldLab : Node3D
             // --dig=x0,z0,x1,z1,depth: a straight trench (negative depth raises a bank) for screenshots and tests
             if (arg.StartsWith("--dig=")) { var v = arg[6..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray(); _shotDigs.Add((v[0], v[1], v[2], v[3], v[4])); }
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
+            if (arg.StartsWith("--tool=")) _tools.Select(int.Parse(arg[7..], CultureInfo.InvariantCulture));
             if (arg == "--grid") { _gridShown = true; _streamer.ShowGrid(true); }
             if (arg.StartsWith("--hour=")) _timeSlider.Value = double.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--menu=")) { _menu.Visible = true; _menu.GetChild<TabContainer>(0).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); }
@@ -322,20 +326,28 @@ public partial class WorldLab : Node3D
         _atmosphere.Raining = _rain;
         _water.Step(dt, PlayerX, PlayerZ);
         if (!typing && Input.IsKeyPressed(Key.G) && Aim() is { } at) sim.Add(at.X, at.Z, 2.5 * dt);
-        // Terrain edits: hold V to dig, B to raise (brush applied a few times a second; tiles rebuild behind it).
-        _editClock += dt;
-        bool dig = !typing && Input.IsKeyPressed(Key.V), raise = !typing && Input.IsKeyPressed(Key.B);
-        if ((dig || raise) && _editClock >= .12 && _sampler != null && Aim() is { } spot)
+        // Terrain tools (1–5): left mouse = primary, right = secondary, while the cursor is captured.
+        bool captured = Input.MouseMode == Input.MouseModeEnum.Captured && !typing;
+        var aim = AimLocal();
+        var result = _tools.Update(dt, _sampler!, aim?.Hit, aim?.Direction ?? Vector3.Down, _originX, _originZ, _player.Position,
+            captured && Input.IsMouseButtonPressed(MouseButton.Left), captured && Input.IsMouseButtonPressed(MouseButton.Right));
+        if (result is { } r)
         {
-            double amount = (raise ? 1 : -1) * .7 * _editClock;
-            _editClock = 0;
-            var r = _sampler.Edits.Apply(spot.X, spot.Z, 1.8, amount);
-            _streamer.Invalidate(r.MinX - 1, r.MinZ - 1, r.MaxX + 1, r.MaxZ + 1);
-            sim.ReloadGround(r.MinX - 1, r.MinZ - 1, r.MaxX + 1, r.MaxZ + 1);
+            _streamer.Invalidate(r.MinX, r.MinZ, r.MaxX, r.MaxZ);
+            sim.ReloadGround(r.MinX, r.MinZ, r.MaxX, r.MaxZ);
         }
     }
 
-    private double _editClock;
+
+    /// <summary>Scene-local point under the screen centre and the aiming direction, or null.</summary>
+    private (Vector3 Hit, Vector3 Direction)? AimLocal()
+    {
+        var from = _camera.GlobalPosition;
+        var direction = -_camera.GlobalTransform.Basis.Z;
+        var query = PhysicsRayQueryParameters3D.Create(from, from + direction * 400, 1);
+        var hit = GetWorld3D().DirectSpaceState.IntersectRay(query);
+        return hit.Count == 0 ? null : (hit["position"].AsVector3(), direction);
+    }
 
     /// <summary>World point under the screen centre (terrain collision), or null.</summary>
     private (double X, double Z)? Aim()
@@ -388,6 +400,7 @@ public partial class WorldLab : Node3D
             $"Position {PlayerX:0} , {PlayerZ:0}   ground {t.Height:0.0} m   {where}\n" +
             $"{mode}   FPS {Engine.GetFramesPerSecond():0}   tiles {_streamer.Resident} (+{_streamer.Missing} queued)   " +
             $"terrain triangles {_streamer.Triangles / 1000}k   tile build {_streamer.LastBuildMs:0.0} ms, commit {_streamer.LastCommitMs:0.0} ms";
+        _hud.Text += "\n" + _tools.Hud();
         if (_water.Sim is { Added: > 0 } sim)
             _hud.Text += $"\nWater simulation: {sim.Volume():0.0} m³ on the land, {sim.Absorbed:0.0} m³ joined rivers/lakes{(_rain ? ", raining" : "")}" +
                 $"{(sim.Sources.Count > 0 ? $", {sim.Sources.Count} spring(s)" : "")}";
@@ -419,6 +432,8 @@ public partial class WorldLab : Node3D
             case Key.F2: _showHud = !_showHud; _hud.Visible = _showHud; break;
             case Key.F3: _gridShown = !_gridShown; _streamer.ShowGrid(_gridShown); break;
             case Key.J: if (!_menu.Visible) ToggleSpring(); break;
+            case >= Key.Key1 and <= Key.Key5: if (!_menu.Visible && _tools.Select((int)(key.Keycode - Key.Key1))) _status = _tools.Status; break;
+            case Key.T or Key.Y or Key.Bracketleft or Key.Bracketright or Key.Minus or Key.Equal: if (!_menu.Visible) _tools.DevKey(key.Keycode); break;
             case Key.H: if (!_menu.Visible) { _rain = !_rain; _status = _rain ? "Rain on (H stops it)." : "Rain stopped."; } break;
             case Key.K: if (!_menu.Visible) { _water.Clear(); _rain = false; _status = "Simulated water cleared."; } break;
             case Key.F12: Screenshot(Path.Combine(OS.GetUserDataDir(), $"screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png")); break;
@@ -475,9 +490,10 @@ public partial class WorldLab : Node3D
         {
             Text = "WASD move · Shift sprint · Space jump/swim up · mouse look (Tab frees cursor) · wheel zoom\n" +
                    "F fly (Space/C up/down, Shift faster, Ctrl ×6) · N noclip · Esc menu: teleport, new world, time of day\n" +
-                   "Water: hold G pour where you look · J spring · H rain · K clear · Ground: hold V dig, B raise\n" +
+                   "Water: hold G pour where you look · J spring · H rain · K clear\n" +
+                   "Tools: 1 hands · 2 shovel · 3 pickaxe · 4 hoe · 5 terraform (dev) — left/right mouse use\n" +
                    "F1 hide help · F2 hide HUD · F3 tile grid · F12 screenshot (saved to the user data folder)",
-            AnchorTop = 1, AnchorBottom = 1, OffsetTop = -100, OffsetLeft = 14, OffsetRight = 900,
+            AnchorTop = 1, AnchorBottom = 1, OffsetTop = -122, OffsetLeft = 14, OffsetRight = 900,
         };
         _help.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .8f));
         layer.AddChild(_help);

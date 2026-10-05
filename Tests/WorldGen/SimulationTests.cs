@@ -17,6 +17,7 @@ internal static class SimulationTests
         T.Run("Edits: water follows a dug channel", DugChannel, filter);
         T.Run("Edits: a channel dug from a river fills from it", RiverFed, filter);
         T.Run("Edits: real river and lake feed dug ground", RealRiverFed, filter);
+        T.Run("Tools: strength, hardness, budget, flatten, directional cut", Tools, filter);
     }
 
     private static Func<long, long, ChunkGround> Ground(Func<double, double, double> height, Func<double, double, bool>? sink = null) => (cx, cz) =>
@@ -225,6 +226,47 @@ internal static class SimulationTests
             T.Check(!float.IsNaN(surface) && surface - s.Height(ex, ez) > .05 && Math.Abs(surface - level) < .35, $"{kind} water fills the trench");
             Balance(w, kind);
         }
+    }
+
+    private static void Tools()
+    {
+        var plan = CoreTests.Sampler("mountainous", 42).Plan;
+        var s = new TerrainSampler(plan);
+        var f = plan.Layout.Land[0];
+        // Find soft lowland and hard mountain ground.
+        var rng = new Random(5);
+        (double X, double Z) soft = default, hard = default;
+        for (int i = 0; i < 20000 && (soft == default || hard == default); i++)
+        {
+            double x = Math.Round(f.Center.X + (rng.NextDouble() - .5) * f.RadiusX), z = Math.Round(f.Center.Z + (rng.NextDouble() - .5) * f.RadiusX);
+            var t = s.Sample(x, z);
+            if (t.Water != WaterKind.None) continue;
+            if (soft == default && t.Mountain < .01 && Math.Abs(s.Height(x + 1, z) - s.Height(x - 1, z)) < .1) soft = (x, z);
+            if (hard == default && t.Mountain > .6) hard = (x, z);
+        }
+        var down = (0.0, -1.0, 0.0);
+        double h0 = s.Height(soft.X, soft.Z);
+        var r = TerrainSculpt.Apply(s, BrushMode.Dig, BrushShape.Round, 1.1, .22, (soft.X, h0, soft.Z), down, .12);
+        T.Near(s.Height(soft.X, soft.Z), h0 - .22, 1e-4, "one shovel stroke lowers soft ground by its strength");
+        T.Check(r.Volume < 0 && r.Volume > -1, $"a stroke moves a sensible volume ({r.Volume:0.00} m³)");
+        double hh = s.Height(hard.X, hard.Z);
+        var rock = TerrainSculpt.Apply(s, BrushMode.Dig, BrushShape.Round, 1.1, .22, (hard.X, hh, hard.Z), down, .12);
+        T.Check(rock.Hardness > .6 && Math.Abs(rock.Volume) < Math.Abs(r.Volume) * .3, $"the shovel barely scratches rock ({rock.Volume:0.000} m³)");
+        var pick = TerrainSculpt.Apply(s, BrushMode.Dig, BrushShape.Directional, .9, .3, (hard.X, s.Height(hard.X, hard.Z), hard.Z), (0.0, -.3, 1.0), .9);
+        T.Check(Math.Abs(pick.Volume) > Math.Abs(rock.Volume) * 3, $"the pickaxe breaks rock ({pick.Volume:0.000} m³)");
+        // Budget: raising with a nearly empty bag places only what is in it.
+        var raise = TerrainSculpt.Apply(s, BrushMode.Raise, BrushShape.Round, 1.1, .22, (soft.X + 10, s.Height(soft.X + 10, soft.Z), soft.Z), down, 1, .05);
+        T.Near(raise.Volume, .05, 1e-3, "raising is limited by the soil carried");
+        // Flatten: repeated hoe strokes bring the ground to the aimed height.
+        double target = s.Height(soft.X + 20, soft.Z) + .3;
+        for (int i = 0; i < 10; i++) TerrainSculpt.Apply(s, BrushMode.Flatten, BrushShape.RoundHard, 1.3, .08, (soft.X + 20, target, soft.Z), down);
+        T.Near(s.Height(soft.X + 20, soft.Z), target, .02, "flatten reaches the aimed height");
+        // Directional dig into a slope: the cut follows the aiming ray into the ground beyond the hit point.
+        double sx = soft.X + 40, sz = soft.Z;
+        s.Edits.Modify(sx - 10, sz - 10, sx + 10, sz + 10, (x, z, c) => c + Math.Max(0, 6 - Math.Abs(x - (sx + 4)) * 1.2)); // a ridge east of the hit
+        double before = s.Height(sx + 2, sz);
+        TerrainSculpt.Apply(s, BrushMode.Dig, BrushShape.Directional, 1, 5, (sx, s.Height(sx, sz) + .5, sz), (1.0, 0.0, 0.0));
+        T.Check(s.Height(sx + 2, sz) < before - .5, "a horizontal directional dig cuts into the slope ahead");
     }
 
     private static void Cost()

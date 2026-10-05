@@ -70,7 +70,7 @@ public partial class Atmosphere : Node3D
         {
             Size = new Vector3((float)CloudPeriod * 3, 8000, (float)CloudPeriod * 3),
             AlbedoMix = 1, Modulate = new Color(1, 1, 1, .5f), UpperFade = .02f, LowerFade = .02f,
-            NormalFade = 0, CullMask = 1,
+            NormalFade = 0, CullMask = 3, // terrain and objects
         };
         AddChild(_shadow);
         _shafts = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/SunShafts.gdshader"), RenderPriority = 100 };
