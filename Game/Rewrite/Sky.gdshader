@@ -157,6 +157,12 @@ vec4 layer(vec3 dir, vec2 origin, float h, float d, vec3 sun_dir, vec3 sun_col, 
 	vec3 moonlit = vec3(0.07, 0.08, 0.11) * (0.4 + 0.6 * sky_extra.w) * (1.0 + 2.0 * pow(max(dot(dir, night_sky.xyz), 0.0), 8.0));
 	cloud = mix(cloud, moonlit * shade, night);
 	cloud += sun_col * pow(max(mu, 0.0), 6.0) * (1.0 - d) * 0.8;
+	// Silver lining (Tom, round 8): in front of the sun, thick cloud is backlit and darker while its thin edges blaze
+	// (light scattered forward through the edge).
+	float toward_sun = max(mu, 0.0);
+	float rim = smoothstep(0.02, 0.25, d) * (1.0 - smoothstep(0.35, 0.85, d));
+	cloud *= 1.0 - 0.35 * pow(toward_sun, 10.0) * smoothstep(0.5, 1.0, d) * (1.0 - night);
+	cloud += sun_col * rim * (pow(toward_sun, 60.0) * 2.2 + pow(toward_sun, 14.0) * 0.6) * (1.0 - night);
 	return vec4(cloud, d);
 }
 

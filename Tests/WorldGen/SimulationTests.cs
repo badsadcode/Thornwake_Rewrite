@@ -1,3 +1,4 @@
+using System.Linq;
 using Thornwake.Hydraulics;
 using Thornwake.WorldGen;
 
@@ -6,7 +7,8 @@ internal static class SimulationTests
 {
     public static void Register(string? filter)
     {
-        T.Run("Lakes: no dry ground below the surface at the lake's edge (revision 10)", LakeEdges, filter);
+        T.Run("Lakes: no dry ground below the surface at the lake's edge (revision 10 and later)", LakeEdges, filter);
+        T.Run("Wetlands: real pools, never dry ground below a pool surface (revision 11)", Wetlands, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
         T.Run("Water: generated rivers absorb it", Sinks, filter);
@@ -447,6 +449,53 @@ internal static class SimulationTests
     /// Tom (build 11): lakes cut off along straight lines. Around every lake, ground within its reach that lies below
     /// the surface must be lake (revision 10); the old 3×3-cell rule left such ground dry (straight dry walls).
     /// </summary>
+    /// <summary>
+    /// Wetland pools (revision 11, round 8): in a marsh, a bayou and a fen of the vast world, standing water covers
+    /// about the share the biome asks for, is no deeper than its depth, and no dry ground next to a pool lies below
+    /// the pool's surface. Revision 10 has no pools.
+    /// </summary>
+    private static void Wetlands()
+    {
+        var recipe = WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == "vast-world");
+        var plan = new WorldPlan(WorldManifest.Create(7319, recipe.Resolve(new WorldChoices { SizeKm = 2048 }), worldId: CoreTests.FixedWorldId));
+        var s = new TerrainSampler(plan);
+        var s10 = new TerrainSampler(new WorldPlan(plan.Manifest, style: plan.Style with { Revision = 10 }));
+        foreach (var (name, x0, z0, min, max) in new[] { ("marsh", -18000.0, 462000.0, .25, .6), ("bayou", 442000.0, 302000.0, .3, .75), ("fen", -713850.0, -293850.0, .04, .5) })
+        {
+            var (a, _, share) = plan.Biomes.Sample(x0, z0);
+            var def = plan.Biomes.Pool[a].Def;
+            T.Check(def.Id == name && share > .6, $"{name}: biome at the probe ({def.Id} {share:0.00})");
+            const int N = 200;
+            var grid = new TerrainSample[N * N];
+            int ponds = 0, oldPonds = 0, bad = 0, tooDeep = 0;
+            for (int j = 0; j < N; j++)
+                for (int i = 0; i < N; i++)
+                {
+                    var t = grid[j * N + i] = s.Sample(x0 + i, z0 + j);
+                    if (t.Water == WaterKind.Pond) { ponds++; if (t.WaterLevel - t.Height > def.Water.PoolDepth + .5) tooDeep++; }
+                    if ((i & 7) == 0 && (j & 7) == 0 && s10.Sample(x0 + i, z0 + j).Water == WaterKind.Pond) oldPonds++;
+                }
+            for (int j = 1; j < N - 1; j++)
+                for (int i = 1; i < N - 1; i++)
+                {
+                    var t = grid[j * N + i];
+                    if (t.Water != WaterKind.None) continue;
+                    foreach (int k in new[] { j * N + i - 1, j * N + i + 1, (j - 1) * N + i, (j + 1) * N + i })
+                        if (grid[k].Water == WaterKind.Pond && t.Height < grid[k].WaterLevel - .02)
+                        {
+                            if (bad++ < 3) Console.WriteLine($"       dry at +{i},+{j}: ground {t.Height:0.00}, pool level {grid[k].WaterLevel:0.00}, pool bed {grid[k].Height:0.00}");
+                            break;
+                        }
+                }
+            double cover = ponds / (double)(N * N);
+            Console.WriteLine($"     {name}: pools {cover * 100:0.0} % of 200 × 200 m (asks {def.Water.Pools:0.00}), dry spots below a pool surface {bad}, too deep {tooDeep}");
+            T.Check(cover >= min && cover <= max, $"{name}: pool share {cover:0.00} within {min}…{max}");
+            T.Check(bad == 0, $"{name}: no dry ground below a neighbouring pool's surface ({bad})");
+            T.Check(tooDeep == 0, $"{name}: pools no deeper than the biome's depth ({tooDeep})");
+            T.Check(oldPonds == 0, $"{name}: revision 10 has no pools");
+        }
+    }
+
     private static void LakeEdges()
     {
         int dryOld = 0, dryNew = 0, samples = 0;
@@ -475,7 +524,7 @@ internal static class SimulationTests
                 }
             }
         }
-        T.Note($"{samples} probes near lake edges: dry ground below the surface — revision 9: {dryOld}, revision 10: {dryNew}");
+        T.Note($"{samples} probes near lake edges: dry ground below the surface — revision 9: {dryOld}, current: {dryNew}");
         T.Check(samples > 500 && dryNew == 0, "no dry ground below a lake's surface within its reach");
     }
 }

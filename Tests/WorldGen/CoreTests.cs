@@ -46,6 +46,7 @@ internal static class CoreTests
         T.Run("Preview 7 terrain still reproducible", () => Fingerprints(false, "terrain-preview7.json", preview7: true), filter);
         T.Run("Build 8 terrain still reproducible", () => Fingerprints(false, "terrain-build8.json", build8: true), filter);
         T.Run("Build 9 terrain still reproducible", () => Fingerprints(false, "terrain-build9.json", build9: true), filter);
+        T.Run("Build 12 terrain still reproducible", () => Fingerprints(false, "terrain-build12.json", build12: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -291,7 +292,7 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
         string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
@@ -308,6 +309,8 @@ internal static class CoreTests
                 if (build8) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 8 }));
                 // Build 9 (commit f868ef5, v0.9.9): terrain revision 9, before biomes.
                 if (build9) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 9, Climate = new ClimateSettings { Biomes = false } }));
+                // Build 12 (commit aab8f0c, v0.9.12): terrain revision 10, before wetland pools.
+                if (build12) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 10 }));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];

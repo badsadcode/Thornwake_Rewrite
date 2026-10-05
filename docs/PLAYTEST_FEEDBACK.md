@@ -188,3 +188,16 @@ Tom's notes (one screenshot at Mountain kingdoms 42, -59499 / 115353, and one at
   the land, ignoring latitude) besides the current realistic one, which must be kept.
 * Boulders: small, big, really big. Collision with trees, bushes, logs, dead trees, boulders and rocks.
 * Save the whole project as it is now (backup point).
+
+## Round 8 (build 12, 2026-10-05)
+* Lakes cut off along straight lines on some chunks (fixed in build 12: terrain revision 10).
+* Cloud/sky coverage setting did nothing (weather simulation overrode it) — now it biases the weather.
+* Swamp pools were only painted puddles. Wants two (or more) swamp types: the wooded swamp as it is, and an open one
+  like the Dead Marshes (LOTR): big deeper pools of real water, pale grass tussocks, reeds, dead snags, grey and misty.
+  Mixed swamp areas are fine. All swamps: deep real water, tinted to fit the biome; a different texture on pool beds.
+* More references: a northern bog/fen (dark water channels winding through green shrub and sedge mats, lily pads,
+  spruce around) and Louisiana bayous (bald cypress with Spanish moss standing in brown water, floating mats).
+* Light shafts between clouds (crepuscular rays, photos) — the moon can make them too. Cloud edges glowing in front of
+  the sun (silver lining).
+* Liked the day's work; off to bed.
+

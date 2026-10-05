@@ -55,6 +55,10 @@ The best three biomes at each spot blend, so borders are soft and organic.
   rock; `Darkness` 0…1 moodier ground; `MapColor` hex colour on maps and the F4 view.
 * `Vegetation.Trees` — tree **sets** with weights; `TreeDensity` (0 none, 1 normal, 2 very dense); `TreeSize`
   [min, max]; `Grass` (0 bare … 1.5 lush).
+* Wetland plants: `WaterTrees` (0 … 1: trees standing in the pools, up to ~1.2 m deep — bayou cypress),
+  `FloatingPlants` (0 … 1 on the pools; `AquaticPlants` `"Hyacinth"` for water hyacinth mats, otherwise lily pads),
+  `Shrubs` (0 … 1 low plants between the pools) with `ShrubKind` `"bog"` (bog shrubs and sedge) or `"tussock"`
+  (pale grass clumps).
 * `Props.Rocks`, `Props.Logs` — multipliers.
 
 ### Rock look
@@ -62,8 +66,14 @@ Ground sets name `RockTexture`: `layered`, `granite`, `basalt`, `sandstone`, `mo
 used on cliffs, crags, rocky ground and boulders, tinted with the set's `Rock` colour.
 
 ### Water
-`Water.WaterTint` (hex) and `Water.WaterTintStrength` (0 … 1, default 0.65) colour rivers, lakes and swamp pools in the
-biome. `Water.Wetness` ≥ ~0.5 makes permanent swamp pools with mud and reeds in flat ground.
+`Water.WaterTint` (hex) and `Water.WaterTintStrength` (0 … 1, default 0.65) colour rivers, lakes and pools in the
+biome. `Water.Wetness` (0 … 1) darkens and muddies the ground; ≥ ~0.45 gives pools peat beds and muddy margins.
+
+Real standing water (terrain version "current"): `Water.Pools` — share of flat ground under water (0 none, 0.3 a
+swamp, 0.45 a marsh, 0.6 a bayou; at most ~0.85); `PoolDepth` — deepest water, m (default 1); `PoolSize` — typical
+pool size, m (default 16); `PoolChannels` — 0 round pools … 1 long winding channels. Pools are carved into the
+ground with a flat surface, reeds along the edges; they keep away from rivers, lakes, the coast, mountains and slopes.
+`Terrain.Flatten` (0 … 1) flattens the walking-scale relief in wetland biomes (and more where there are pools).
 
 ### Layout per world
 New world → *Biome layout*: realistic (climate) or patchwork (random organic patches, *Patch size*); *Biomes in this
@@ -89,11 +99,13 @@ Vines, Moss, AquaticPlants, DeadVegetation). Writing them now is fine; they star
   "Grass": "6b5a35", "Dry": "8a6a40", "Soil": "5a3f2c", "ForestFloor": "4a3220", "Rock": "77766a", "Snow": 0 }
 ```
 Tree item names are the tree models in `Assets/` (Oak_A/B/C, Birch_Green_A/B/C, Birch_Autumn_A/B, Maple_Autumn_A,
-Poplar_A, Pine_A/B/C, Spruce_A/B, Willow_A, Sparse_A). Biomes refer to sets, never to single models, so adding a
+Poplar_A, Pine_A/B/C, Spruce_A/B, Willow_A, Sparse_A) and the placeholder plants (Palm_A/B, Cactus_A/B, Dead_A/B,
+Acacia_A, Jungle_A, Cypress_A, Shrub_Dry, Bald_Cypress_A/B). Biomes refer to sets, never to single models, so adding a
 model to a set updates every biome that uses it.
 
-## The 14 built-in biomes
+## The 17 built-in biomes
 Temperate grassland, Temperate forest, Ancient forest (patches in temperate forest and taiga), Taiga, Tundra,
-Arctic/Glacier, Alpine, Swamp, Blighted swamp (patches in swamp), Jungle, Desert, Badlands, Savanna, Volcanic
-(patches in mountains). Missing assets (palms, cacti, dead trees, vines, swamp plants) use the closest existing
+Arctic/Glacier, Alpine, Swamp (wooded), Blighted swamp (patches in swamp), Marsh (open grey bog, Dead Marshes
+style), Fen (northern bog with winding channels), Bayou (Louisiana: cypress with Spanish moss in brown water), Jungle,
+Desert, Badlands, Savanna, Volcanic (patches in mountains). Missing assets (palms, cacti, dead trees, vines, swamp plants) use the closest existing
 set until art exists.

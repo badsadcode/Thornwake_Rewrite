@@ -78,6 +78,24 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 13 — real swamp water, four swamp types, light beams (round 8)
+* **Real water in swamps**: pools are now real water you can wade and swim in (0.5–1.6 m deep), carved into the
+  ground with a flat surface, tinted to the biome, with dark peat beds (sunken leaves and twigs) and muddy margins.
+  Reeds line the pools. Swamp ground is flatter, as real wetlands are.
+* **Four swamp types**:
+  * **Swamp** — the wooded swamp you know, now with real pools and lily pads.
+  * **Marsh** — open and grey like the Dead Marshes: many dark pools, pale grass tussocks, reeds, dead snags, mist.
+  * **Fen** — northern bog: dark water channels winding through green sedge and bog shrubs, lily pads, scattered
+    spruce, birch and tamarack.
+  * **Bayou** — Louisiana: broad brown water, bald cypress with long Spanish moss standing in it, water hyacinth
+    mats, green islands.
+  Blighted swamps get pools too. Biomes blend as before, so mixed areas stay.
+* **Light beams under clouds** (Settings → Lighting and effects → *Light beams under clouds*, 0 = off): sunlight
+  falling through gaps in broken cloud in visible shafts, even when the sun itself is behind a cloud or off screen;
+  at night the moon makes fainter silver beams (strongest at full moon). Best with a low sun and partly cloudy sky.
+* **Cloud cover** setting works with the weather on (it biases the simulated weather: low = mostly clear).
+* Terrain version "Build 12" is kept internally (tests); the world menu's "current" is the new terrain.
+
 ## New in build 12 — time, weather, wind, night sky, cliffs (round 7)
 * **Fixes**: no more tree-free lanes in a grid pattern; hanging grass and roots only on real cliff edges; ground mist no
   longer shows white streaks from above; god rays break through gaps in the clouds.

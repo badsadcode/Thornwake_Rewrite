@@ -18,7 +18,7 @@ uniform float intensity = 0.7;
 uniform float max_distance = 7000.0;
 global uniform vec4 cloud_state;
 
-const int STEPS = 28;
+const int STEPS = 40;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -26,12 +26,12 @@ void vertex() {
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 
-// The sky's main deck (Sky.gdshader cloud_density), slightly softened so beam edges are not pixel-hard.
+// The sky's main deck (Sky.gdshader cloud_density), from a blurrier mip (soft shaft edges) but a crisper threshold.
 float cloud_density(vec2 xz, float coverage) {
 	vec2 uv = xz / cloud_period;
-	float n = textureLod(cloud_tex, uv, 1.0).r * 0.8 + textureLod(cloud_tex, uv * 4.0 + vec2(0.31, 0.17), 1.0).g * 0.2;
+	float n = textureLod(cloud_tex, uv, 2.0).r * 0.8 + textureLod(cloud_tex, uv * 4.0 + vec2(0.31, 0.17), 2.0).g * 0.2;
 	float edge = 1.0 - coverage;
-	return smoothstep(edge - 0.05, edge + 0.2, n);
+	return smoothstep(edge - 0.02, edge + 0.1, n); // a crisper edge than the sky's: gaps cut clear shafts
 }
 
 void fragment() {
@@ -53,13 +53,16 @@ void fragment() {
 
 	// Cloud above an air point at height a over the camera: shifted along the light as for the cloud shadows.
 	vec3 l = normalize(light_direction);
-	float lift = max(l.y, 0.25);
+	// The true slant (not the cloud shadows' clamp): with a low sun the shafts are long and slanted, and looking toward
+	// the sun the view ray runs along them — that alignment is what makes beams visible.
+	float lift = max(l.y, 0.05);
 	float mu = dot(dir, l);
 	// Henyey-Greenstein (forward, g = 0.72) plus a little isotropic light, so beams also show sideways.
 	float g = 0.72;
 	float phase = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * mu, 1.5) * 0.08 + 0.025;
 
-	float jitter = hash(FRAGCOORD.xy + fract(TIME) * 61.0);
+	// Interleaved gradient noise: an even, fine dither (no visible grain with or without TAA).
+	float jitter = fract(52.9829189 * fract(dot(FRAGCOORD.xy + float(int(TIME * 60.0) % 16) * 5.588, vec2(0.06711056, 0.00583715))));
 	float lit = 0.0, total = 0.0, prev = 0.0;
 	for (int i = 0; i < STEPS; i++) {
 		float u = (float(i) + jitter) / float(STEPS);
@@ -76,6 +79,6 @@ void fragment() {
 	}
 	// Only the contrast between lit and shaded air reads as beams; the even part is the scene's own haze.
 	float beams = max(0.0, lit - total * (1.0 - 0.92 * coverage) * 0.75);
-	float strength = beams / 1000.0 * phase * intensity * broken * smoothstep(0.03, 0.15, l.y);
+	float strength = beams / 1200.0 * phase * intensity * broken * smoothstep(0.03, 0.1, l.y);
 	ALBEDO = light_color * strength;
 }

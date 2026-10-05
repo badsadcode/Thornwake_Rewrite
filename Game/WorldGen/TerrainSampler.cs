@@ -117,6 +117,8 @@ public sealed class TerrainSampler
         if (_style.Revision >= 11 && inland > 0 && Plan.Biomes is { } biomes)
         {
             wetland = biomes.WetlandAt(x, z, out poolCover, out poolDepth, out poolSize, out poolChannels, out flatten);
+            // Where there are pools the ground is flatter still (to ~8 % of the relief), so their surfaces stay level.
+            if (poolCover > 0) flatten = Math.Max(flatten, Math.Min(.92, flatten + poolCover));
             if (wetland) detail *= 1 - flatten;
         }
         // Rivers: channel, banks and slope-limited valley sides replace the terrain near a river; walking-scale detail
@@ -187,13 +189,14 @@ public sealed class TerrainSampler
         }
         else height = Math.Max(baseHeight + detail, floor); // generated land never dips below the sea
 
-        double lakePlume = 0;
+        double lakePlume = 0, lakeCells = double.PositiveInfinity;
         if (water == WaterKind.None && _style.Revision >= 10)
         {
             // Revision 10: the lake fills every point below its surface within ~1 cell of its cells (round reach);
             // between 1 and 1.6 cells the ground rises to a low shore just above the water, so no dry ground below
             // the surface is left where the reach ends (build 11: lakes cut off along straight cell lines).
             int lake = _hydrology.LakeDistance(x, z, out double cells);
+            if (lake >= 0) lakeCells = cells;
             if (lake >= 0 && cells < 1.6)
             {
                 double surface = _hydrology.Lakes[lake].Level - _p.SeaLevel;
@@ -221,7 +224,8 @@ public sealed class TerrainSampler
                 * _style.LowlandDetail * roughness * (1 + 2 * mountainShare) * inland * (1 - flatten);
             double smooth = Math.Max(baseHeight + low, floor);
             _macro.SampleGradient(WorldPlan.HeightChannel, x, z, out double gx, out double gz);
-            double cover = poolCover * riverDamp * DetMath.Smooth(land / .015) * (1 - DetMath.Smooth(mountainShare / .3))
+            // No pools at lake shores (they would dig below the lake's surface where its reach ends).
+            double cover = poolCover * riverDamp * DetMath.Smooth(land / .015) * (1 - DetMath.Smooth(mountainShare / .3)) * DetMath.Smooth((lakeCells - 1.6) / .9)
                 * (1 - DetMath.Smooth((Math.Sqrt(gx * gx + gz * gz) - .015) / .03));
             if (cover > .005) height = Pool(lx, lz, height, smooth, Math.Min(cover, .85), poolDepth, poolSize, poolChannels, minWavelength, ref water, ref level);
         }
@@ -251,30 +255,44 @@ public sealed class TerrainSampler
         double minWavelength, ref WaterKind water, ref double level)
     {
         double minW = Math.Min(minWavelength, size * .5); // at least the pools themselves, even on coarse distant tiles
-        // Pools and channels share the coverage; the water is their union (the larger excess wins).
+        // Pools and channels share the coverage; the water is their union (the larger excess wins). The mask is a
+        // little larger than the water (the shore takes the edge of it), hence ×1.3.
+        cover = Math.Min(.9, cover * 1.3);
         double e = double.NegativeInfinity;
         if (channels < .999) e = PoolNoise(lx, lz, size, minW) / _poolStd - Quantile(_poolQuantiles, cover * (1 - channels));
         if (channels > .001) e = Math.Max(e, ChannelNoise(lx, lz, size, minW) / _channelStd - Quantile(_channelQuantiles, cover * channels));
-        const double soft = .12, bank = .25;
-        if (e < -soft * 3) return height;
+        // e is in noise standard deviations; the pool noise changes by ~0.25 per metre, so soft ≈ 1.5 m of shore.
+        const double soft = .4, bank = .25;
+        if (e < -soft * 4) return height;
         double fine = DetMath.Clamp(.3 * (height - smooth), -.8 * bank, .8 * bank);
-        double profile = e >= 0 ? -depth * DetMath.Smooth(e / (soft * 2.5)) : bank * DetMath.Smooth(-e / soft);
-        double near = 1 - DetMath.Smooth((-e - soft) / (soft * 2));
+        // The bed reaches full depth ~2 noise deviations in (≥ ~3 m): walkable, never a cliff into the water.
+        double profile = e >= 0 ? -depth * DetMath.Smooth(e / (soft * 5)) : bank * DetMath.Smooth(-e / soft);
+        double near = 1 - DetMath.Smooth((-e - soft) / (soft * 3));
         double shaped = height + (smooth + profile + fine - height) * near;
-        if (e > -soft && shaped < smooth) { water = WaterKind.Pond; level = _p.SeaLevel + smooth; }
+        if (e > -soft)
+        {
+            if (shaped < smooth) { water = WaterKind.Pond; level = _p.SeaLevel + smooth; }
+        }
+        else
+        {
+            // Dry ground near a pool stays above its surface; only further out may it fall back into lower terrain
+            // (reaching exactly the terrain where the pool's influence ends).
+            double below = Math.Max(0, smooth + .05 - height);
+            shaped = Math.Max(shaped, smooth + .05 - below * DetMath.Smooth((-e - 2 * soft) / (2 * soft)));
+        }
         return shaped;
     }
 
     // Round pools: three octaves at about twice the pool size.
     private double PoolNoise(double x, double z, double size, double minWavelength) =>
-        Noise.Fbm(x, z, size * 2.2, 3, minWavelength, _poolSeed, .5);
+        Noise.Fbm(x, z, size * 2.2, 3, minWavelength, _poolSeed, .42);
 
     // Channels: lines where a domain-warped noise crosses zero (high = near the line), winding like fen and bayou leads.
     private double ChannelNoise(double x, double z, double size, double minWavelength)
     {
         double wx = x + size * 3 * Noise.Fbm(x, z, size * 12, 2, minWavelength, _poolSeed + 8, .5);
         double wz = z + size * 3 * Noise.Fbm(x + 71.3, z - 19.7, size * 12, 2, minWavelength, _poolSeed + 9, .5);
-        return -Math.Abs(Noise.Fbm(wx, wz, size * 9, 3, minWavelength, _poolSeed + 7, .5));
+        return -Math.Abs(Noise.Fbm(wx, wz, size * 9, 3, minWavelength, _poolSeed + 7, .42));
     }
 
     private static (double[] Sorted, double Std) Quantiles(Func<double, double, double> noise)

@@ -393,7 +393,9 @@ scattering on canopies and plants, configurable.
   Water only where the shaped ground is below the level next to the mask: never dry ground under a pool surface.
   New water kind **Pond** (no body id, calm, lake-like shading without waves, murky underwater view).
 * `Terrain.Flatten` now works in wetland biomes (walking-scale relief × (1 − flatten)), so pool surfaces stay level.
-  Pools fade near rivers, the coast, mountains and slopes > ~3 %.
+  Where there are pools the ground flattens further (to ~8 % of its relief) so pool surfaces stay level. Pools fade
+  near rivers, lake shores, the coast, mountains and slopes > ~3 %. Build 12 terrain (revision 10) is kept
+  bit-exact (new fixture terrain-build12.json); terrain-r1 re-recorded.
 * Swamp types (Tom's references): **Swamp** (wooded, existing), **Marsh** (open grey bog, Dead Marshes: many pools,
   pale tussocks, reeds, dead snags, mist), **Fen** (northern: winding channels through green sedge and bog shrubs,
   lily pads, scattered spruce/tamarack), **Bayou** (Louisiana: broad brown water, bald cypress with Spanish moss
@@ -403,7 +405,7 @@ scattering on canopies and plants, configurable.
   feathery crown, long Spanish moss), bog shrub, tussock, sedge, lily pads, hyacinth mat (pixel textures).
 * Pool beds: dark peat and silt with sunken leaves and twigs; wetland pool margins dark mud and moss. The old
   shader-only painted pools are gone (reeds line the real pools).
-* **Light beams under clouds** (crepuscular rays; setting, default 0.8): a full-screen pass marches each view ray
+* **Light beams under clouds** (crepuscular rays; setting, default 1): a full-screen pass marches each view ray
   through the air below the cloud deck; the cloud above each point toward the light (same texture, plane, drift and
   offset as the cloud shadows) says if that air is lit; forward-scattering phase; only with broken cloud. Follows the
   moon at night (fainter, silver-blue, with its phase). Works with the sun hidden or off screen.
