@@ -9,6 +9,7 @@ internal static class RecipeTests
         T.Run("Recipes: every type gives a valid world at every size", AllSizes, filter);
         T.Run("Recipes: land share survives 128 km and 4096 km", Coverage, filter);
         T.Run("Recipes: a saved world type round-trips through JSON", CustomType, filter);
+        T.Run("Landforms: templates shape the world and stay valid", Templates, filter);
     }
 
     private static IReadOnlyList<WorldRecipe> Recipes => WorldRecipe.Catalog(CoreTests.Profiles);
@@ -76,4 +77,47 @@ internal static class RecipeTests
         try { WorldRecipe.FromJson("{\"Id\":\"\",\"Name\":\"x\"}"); } catch (Exception) { rejected = true; }
         T.Check(rejected, "a broken file is rejected, not loaded");
     }
+
+    private static double LandAt(WorldPlan plan, double u, double v)
+    {
+        var p = plan.Profile;
+        plan.Macro.Sample(plan.Manifest.OriginX + (u - .5) * p.WorldSize, plan.Manifest.OriginZ + (v - .5) * p.WorldSize,
+            WorldPlan.LandChannel, WorldPlan.HeightChannel, WorldPlan.MountainChannel, out double land, out _, out _);
+        return land;
+    }
+
+    private static void Templates()
+    {
+        foreach (double km in new[] { 64.0, 512 })
+        {
+            WorldPlan Plan(string id, int seed = 42) => new(WorldManifest.Create(seed, Recipes.First(r => r.Id == id).Resolve(new WorldChoices { SizeKm = km }), worldId: CoreTests.FixedWorldId));
+            var inland = Plan("inland-sea");
+            T.Note($"centre {LandAt(inland, .5, .5):0.00} ring {string.Join(" ", new[] { (.5, .2), (.5, .8), (.2, .5), (.8, .5) }.Select(q => LandAt(inland, q.Item1, q.Item2).ToString("0.00")))}");
+            T.Check(LandAt(inland, .5, .5) < 0 && new[] { (.5, .22), (.5, .78), (.22, .5), (.78, .5) }.Count(q => LandAt(inland, q.Item1, q.Item2) > 0) >= 2, $"inland sea at {km} km: sea in the middle, land around it");
+            var twin = Plan("twin-continents");
+            T.Check(LandAt(twin, .28, .5) > 0 && LandAt(twin, .72, .5) > 0 && LandAt(twin, .5, .5) < 0, $"twin continents at {km} km: two lands, ocean between");
+            var a = Plan("shattered"); var b = Plan("shattered");
+            T.Check(a.Macro.Channel(WorldPlan.HeightChannel).AsSpan().SequenceEqual(b.Macro.Channel(WorldPlan.HeightChannel)), "same seed, same template world");
+            var other = Plan("shattered", 7);
+            T.Check(!a.Macro.Channel(WorldPlan.LandChannel).AsSpan().SequenceEqual(other.Macro.Channel(WorldPlan.LandChannel)), "another seed varies the template");
+        }
+        // A template survives saving as a custom type.
+        var rift = Recipes.First(r => r.Id == "rift");
+        var copy = WorldRecipe.FromJson(WorldRecipe.Create("My rift", "", rift.Base, true, new Dictionary<string, double>()).ToJson());
+        T.Check(copy.Base.Landforms!.Length == rift.Base.Landforms!.Length && copy.Base.Landforms[1].Step == "Trough", "landforms survive JSON");
+        // The example in docs/WORLD_CREATION.md loads and generates.
+        var doc = File.ReadAllText(Path.Combine(CoreTests.FindRepoRoot(), "docs/WORLD_CREATION.md"));
+        int start = doc.IndexOf("{\n  \"Id\": \"two-seas\""), end = doc.IndexOf("```", start);
+        var example = WorldRecipe.FromJson(doc[start..end]);
+        var examplePlan = new WorldPlan(WorldManifest.Create(42, example.Resolve(new WorldChoices { SizeKm = 128 }), worldId: CoreTests.FixedWorldId));
+        T.Check(examplePlan.LandformShapes > 0 && WorldShare(examplePlan) > .05, "the documented example world type loads and makes land");
+        foreach (var bad in new[] { """{"Step":"Volcano"}""", """{"Step":"Hills","Count":[1000]}""", """{"Step":"Mask","Shape":"Spiral"}""" })
+        {
+            bool rejected = false;
+            try { Landforms.Validate(new[] { System.Text.Json.JsonSerializer.Deserialize<Landform>(bad)! }); } catch (System.IO.InvalidDataException) { rejected = true; }
+            T.Check(rejected, $"rejects {bad}");
+        }
+    }
+
+    private static double WorldShare(WorldPlan plan) => plan.Macro.Channel(WorldPlan.LandChannel).Count(v => v > 0) / (double)plan.Macro.Channel(WorldPlan.LandChannel).Length;
 }

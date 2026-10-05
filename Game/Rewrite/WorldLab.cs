@@ -58,6 +58,7 @@ public partial class WorldLab : Node3D
     private (float Yaw, float Pitch, float Zoom)? _shotView;
     private float _shotHeight, _shotWait;
     private bool _shotRain;
+    private (float Ground, float Puddles)? _shotWet;
     private readonly List<(double X, double Z, double Volume)> _shotPours = new();
     private readonly List<(double X0, double Z0, double X1, double Z1, double Depth)> _shotDigs = new();
     private int _smokeStage;
@@ -102,6 +103,8 @@ public partial class WorldLab : Node3D
             // Screenshot of simulated water: --pour=x,z,m³ (repeatable) --rain --wait=s (simulated seconds before the shot)
             if (arg.StartsWith("--pour=")) { var v = arg[7..].Split(','); _shotPours.Add((double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture), double.Parse(v[2], CultureInfo.InvariantCulture))); }
             if (arg == "--rain") _shotRain = true;
+            // --wet=ground,puddles: cosmetic rain look (0..1 each) without simulating rain
+            if (arg.StartsWith("--wet=")) { var v = arg[6..].Split(','); _shotWet = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture)); }
             // --dig=x0,z0,x1,z1,depth: a straight trench (negative depth raises a bank) for screenshots and tests
             if (arg.StartsWith("--dig=")) { var v = arg[6..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray(); _shotDigs.Add((v[0], v[1], v[2], v[3], v[4])); }
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
@@ -217,7 +220,9 @@ public partial class WorldLab : Node3D
         _previewPlan = plan; _previewKey = _pendingKey;
         _previewImage.Texture = ImageTexture.CreateFromImage(WorldPreview.Render(plan, 512));
         var p = plan.Profile;
-        _previewInfo.Text = $"{p.WorldSize / 1000:0} km × {p.WorldSize / 1000:0} km · {p.Continents} continent(s), {p.Islands} islands · " +
+        _previewInfo.Text = $"{p.WorldSize / 1000:0} km × {p.WorldSize / 1000:0} km · " +
+            (plan.LandformShapes > 0 ? $"landform template ({plan.LandformShapes} shapes)" + (p.Continents > 0 ? $" + {p.Continents} continent(s)" : "") : $"{p.Continents} continent(s)") +
+            $", {p.Islands} islands · " +
             $"land {WorldPreview.LandShare(plan) * 100:0} % · {plan.Hydrology.Reaches.Count} river reaches, {plan.Hydrology.Lakes.Count} lakes · " +
             $"built in {plan.BuildMilliseconds / 1000:0.0} s";
     }
@@ -231,7 +236,7 @@ public partial class WorldLab : Node3D
         _landmarks = Landmarks.Find(_sampler);
         _landmarkList.Clear();
         foreach (var l in _landmarks) _landmarkList.AddItem(l.Name);
-        var start = _landmarks.Count > 0 ? _landmarks[0] : Landmarks.Dry(_sampler, "Start", _sampler.Plan.Layout.Land[0].Center.X, _sampler.Plan.Layout.Land[0].Center.Z);
+        var start = _landmarks.Count > 0 ? _landmarks[0] : Landmarks.Dry(_sampler, "Start", Landmarks.Home(_sampler.Plan).X, Landmarks.Home(_sampler.Plan).Z);
         _originX = Math.Floor(start.X / 64) * 64; _originZ = Math.Floor(start.Z / 64) * 64;
         _streamer.Configure(_sampler, _originX, _originZ);
         _water.Configure(_sampler, _streamer.WaterMaterial, _originX, _originZ);
@@ -689,6 +694,7 @@ public partial class WorldLab : Node3D
         bool settled = _streamer.Settled && !_holding;
         if (_shotPath != null)
         {
+            if (_shotWet is { } wet && !_shotRain) _atmosphere.SetWetness(wet.Ground, wet.Puddles);
             if (_smokeStage == 0)
             {
                 if (_shotAt is { } at) Teleport(at.X, at.Z);
@@ -713,7 +719,7 @@ public partial class WorldLab : Node3D
                 _smokeStage = 2; _smokeTimer = 0; _simTime = 0;
             }
             else if (_smokeStage == 2 && _shotPours.Count > 0 && _simTime > _shotWait * .5 && _water.Sim is { } sim && sim.Sources.Count > 0) sim.Sources.Clear();
-            else if (_smokeStage == 2 && settled && _smokeTimer > 1.5 && _simTime >= _shotWait)
+            else if (_smokeStage == 2 && (settled || _smokeTimer > 240) && _smokeTimer > 1.5 && _simTime >= _shotWait)
             {
                 GD.Print($"SCATTER grass={_streamer.GrassCommitted} rocks={_streamer.RocksCommitted} props={_streamer.PropsCommitted} farTrees={_streamer.FarTreesCommitted}");
                 Screenshot(_shotPath); GetTree().Quit(0);

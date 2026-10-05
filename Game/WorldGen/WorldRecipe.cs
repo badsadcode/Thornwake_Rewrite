@@ -98,6 +98,50 @@ public sealed class WorldRecipe
                 CoastRoughness = .24, RangesPerContinent = 3, MountainWidth = 11000,
             }, mainland: true),
         };
+        // Template types: the land comes from a landform template (D36) rather than placed continents.
+        static double[] R(params double[] v) => v;
+        static Landform L(string step) => new() { Step = step };
+        WorldProfile Template(string id, string name, int islands, params Landform[] steps) => balanced with
+        {
+            Id = id, Name = name, Continents = 0, Islands = islands, IslandRadius = 5000, RangesPerContinent = 0, Landforms = steps,
+        };
+        list.AddRange(new WorldRecipe[]
+        {
+            new("inland-sea", "Inland sea", "A ring of land around a great inner sea with islands, open to the ocean through one strait.",
+                Template("inland-sea", "Inland sea", 24,
+                    L("Raise") with { X = R(.5), Z = R(.5), Size = R(.47, .5), Land = 3.2, Relief = .4 },
+                    L("Mask") with { Shape = "Centre", Size = R(.26, .3), Strength = 1.7 },
+                    L("Strait") with { X = R(.5), Z = R(.5), Angle = R(-30, 30), Length = R(.5), Size = R(.007, .01) },
+                    L("Range") with { Count = R(2, 3), X = R(.2, .8), Z = R(.2, .8), Size = R(1, 1.4) },
+                    L("Islands") with { X = R(.4, .45), Z = R(.42, .58), Angle = R(-25, 25), Length = R(.12, .18), Size = R(.006, .01) }), mainland: true),
+            new("shattered", "Shattered lands", "One great landmass broken into many pieces by narrow sea channels.",
+                Template("shattered", "Shattered lands", 50,
+                    L("Raise") with { X = R(.5), Z = R(.5), Size = R(.4, .43), Land = 2.4, Relief = .3 },
+                    L("Mask") with { Shape = "Edges", Strength = .5 },
+                    L("Strait") with { Count = R(6, 9), Length = R(.3, .6), Size = R(.008, .014) },
+                    L("Range") with { Count = R(3, 4) },
+                    L("Hills") with { Count = R(4, 7) }), mainland: true),
+            new("rift", "Rift continent", "A great continent split by a rift valley full of long lakes, walled by mountains.",
+                Template("rift", "Rift continent", 20,
+                    L("Raise") with { X = R(.5), Z = R(.5), Size = R(.38, .41), Land = 2.3, Relief = .5 },
+                    L("Trough") with { X = R(.24), Z = R(.48, .52), Angle = R(-6, 6), Length = R(.52), Size = R(.012, .016), Relief = -3.5 },
+                    L("Basin") with { Count = R(3, 4), X = R(.3, .7), Z = R(.47, .53), Size = R(.015, .025), Relief = -3 },
+                    L("Range") with { X = R(.25), Z = R(.42), Angle = R(-8, 8), Length = R(.5), Size = R(.8) },
+                    L("Range") with { X = R(.25), Z = R(.58), Angle = R(-8, 8), Length = R(.5), Size = R(.8) }), mainland: true),
+            new("twin-continents", "Twin continents", "Two large continents facing each other across an ocean with an island chain.",
+                Template("twin-continents", "Twin continents", 36,
+                    L("Raise") with { X = R(.25, .3), Z = R(.42, .58), Size = R(.23, .26), Land = 2.2, Relief = .4 },
+                    L("Raise") with { X = R(.7, .75), Z = R(.42, .58), Size = R(.21, .25), Land = 2.2, Relief = .4 },
+                    L("Range") with { X = R(.2, .3), Z = R(.3, .38), Angle = R(70, 110), Length = R(.25, .35) },
+                    L("Range") with { X = R(.68, .78), Z = R(.3, .38), Angle = R(70, 110), Length = R(.25, .35) },
+                    L("Islands") with { X = R(.5), Z = R(.2, .25), Angle = R(80, 100), Length = R(.5, .6), Size = R(.004, .008) })),
+            new("peninsula", "Great peninsula", "A long mountainous peninsula reaching from a mainland into the ocean.",
+                Template("peninsula", "Great peninsula", 30,
+                    L("Raise") with { X = R(.82, .86), Z = R(.4, .6), Size = R(.26, .3), Land = 2.2, Relief = .4 },
+                    L("Raise") with { X = R(.82), Z = R(.48, .52), Angle = R(165, 195), Length = R(.55, .62), Size = R(.06, .08), Land = 2.0, Relief = .6 },
+                    L("Range") with { X = R(.75), Z = R(.48, .52), Angle = R(170, 190), Length = R(.5), Size = R(.8) },
+                    L("Islands") with { X = R(.2, .25), Z = R(.4, .6), Angle = R(150, 210), Length = R(.15, .2), Size = R(.003, .005) }), mainland: true),
+        });
         if (profiles.Any(p => p.Id == "vast-world"))
             list.Add(new("vast-world", "Vast continents (classic)", "The original 2,048 km 'Vast world' preset.", P("vast-world")));
         if (custom != null)
@@ -117,9 +161,11 @@ public sealed class WorldRecipe
         double f = size / b.WorldSize;
 
         // Landmasses: counts follow coverage; radii keep the land share (count × radius² ∝ world area).
-        int continents = c.Continents ?? (Mainland ? b.Continents : (int)Math.Round(b.Continents * Math.Pow(f, .8)));
-        continents = Math.Clamp(continents, 1, MaxContinents);
-        double radius = b.ContinentRadius * f * Math.Sqrt(b.Continents / (double)continents) * c.ContinentSize;
+        // A landform template may build all land itself (no continents).
+        int minContinents = b.Landforms is { Length: > 0 } ? 0 : 1;
+        int continents = c.Continents ?? (Mainland || b.Continents == 0 ? b.Continents : (int)Math.Round(b.Continents * Math.Pow(f, .8)));
+        continents = Math.Clamp(continents, minContinents, MaxContinents);
+        double radius = b.ContinentRadius * f * (continents > 0 && b.Continents > 0 ? Math.Sqrt(b.Continents / (double)continents) : 1) * c.ContinentSize;
         radius = Math.Clamp(radius, size * .036, size * .279);
         int islands = c.Islands ?? (int)Math.Round(b.Islands * Math.Pow(f, .8));
         islands = Math.Clamp(islands, 0, MaxIslands);

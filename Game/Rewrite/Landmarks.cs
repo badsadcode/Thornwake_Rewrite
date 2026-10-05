@@ -13,12 +13,12 @@ public static class Landmarks
     public static List<Landmark> Find(TerrainSampler s)
     {
         var plan = s.Plan; var hy = plan.Hydrology; var result = new List<Landmark>();
-        var home = plan.Layout.Land[0];
+        var home = Home(plan);
 
         // A medium river near the first continent's centre: the default start.
         var reach = hy.Reaches.Where(r => r.Catchment[^1] is > 150 and < 4000)
-            .OrderBy(r => Dist(r.Points[r.Points.Length / 2], home.Center)).FirstOrDefault()
-            ?? hy.Reaches.OrderBy(r => Dist(r.Points[0], home.Center)).FirstOrDefault();
+            .OrderBy(r => Dist(r.Points[r.Points.Length / 2], home)).FirstOrDefault()
+            ?? hy.Reaches.OrderBy(r => Dist(r.Points[0], home)).FirstOrDefault();
         if (reach != null)
         {
             int k = Math.Clamp(reach.Points.Length / 2, 1, reach.Points.Length - 2);
@@ -48,12 +48,23 @@ public static class Landmarks
         result.Add(new Landmark($"Highest summit (~{height[best]:0} m)", plan.Macro.CellX(best % n), plan.Macro.CellZ(best / n)));
         // A foothill viewpoint below the highest range.
         result.Add(Dry(s, "Foothills under the main range", plan.Macro.CellX(best % n) + plan.Profile.MountainWidth * 1.5, plan.Macro.CellZ(best / n)));
-        double cx = home.Center.X;
-        for (int i = 0; i < 4000 && s.Sample(cx, home.Center.Z).Water != WaterKind.Ocean; i++) cx += 100;
-        result.Add(Dry(s, "Sea coast", cx - 60, home.Center.Z));
+        double cx = home.X;
+        for (int i = 0; i < 4000 && s.Sample(cx, home.Z).Water != WaterKind.Ocean; i++) cx += 100;
+        result.Add(Dry(s, "Sea coast", cx - 60, home.Z));
         for (int i = 0; i < plan.Layout.Land.Count && i < plan.Profile.Continents; i++)
             result.Add(Dry(s, $"Continent {i + 1} interior", plan.Layout.Land[i].Center.X, plan.Layout.Land[i].Center.Z));
         return result;
+    }
+
+    /// <summary>Centre of the first continent; with a landform template (which may move or remove it) the most inland
+    /// macro cell instead.</summary>
+    public static Point2 Home(WorldPlan plan)
+    {
+        if (plan.Profile.Landforms is not { Length: > 0 } && plan.Profile.Continents > 0) return plan.Layout.Land[0].Center;
+        var land = plan.Macro.Channel(WorldPlan.LandChannel);
+        int best = 0, n = plan.Macro.Size;
+        for (int i = 1; i < land.Length; i++) if (land[i] > land[best]) best = i;
+        return new Point2(plan.Macro.CellX(best % n), plan.Macro.CellZ(best / n));
     }
 
     /// <summary>Nearest dry, gently sloped ground to (x, z) on a widening spiral.</summary>

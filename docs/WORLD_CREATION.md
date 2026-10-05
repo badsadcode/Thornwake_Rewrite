@@ -9,7 +9,9 @@ as before; world creation only decides the large-scale shape it starts from.
 ## The flow (Esc → New world)
 
 1. **World type** — the general direction: *Balanced continents*, *Great mainland*, *Archipelago*, *Mountain
-   kingdoms*, *Many small continents*, *Islands + mainland*, *Vast continents (classic)*, plus any types you saved.
+   kingdoms*, *Many small continents*, *Islands + mainland*, the template types *Inland sea*, *Shattered lands*,
+   *Rift continent*, *Twin continents*, *Great peninsula* (see *Landform templates*), *Vast continents (classic)*,
+   plus any types you saved.
 2. **Seed** — any number; same seed + same choices = the same world, on every PC.
 3. **World size** — 32 × 32 km … 4096 × 4096 km. Size is independent of the type (see *Recipes* below).
 4. **Optional parameters** — all start on **Auto** (the type decides). Override only what you care about:
@@ -81,39 +83,74 @@ They are meant to be edited by hand for deeper tweaks. Format:
 - `Mainland: true` keeps one dominant landmass at every size.
 - Delete the file to remove the type.
 
-## Next: landform templates (planned, D36)
+## Landform templates (D36)
 
 Azgaar's heightmap templates are a list of steps ("add a high range", "a few hills", "a trough", "a strait", "mask
-the edges") that give each map type its character. Thornwake will get its own version as an optional `Landforms`
-list in a world type, applied to the large-scale land/height layer before erosion and rivers — an empty list
-changes nothing, so all current types stay identical. Every step is relative to the world size, deterministic per
-seed, and bounded so the 3D terrain rules (walkable slopes, coast shapes, river routing) still hold.
+the edges") that give each map type its character. Thornwake has its own version (own code, own step set): an
+optional `Landforms` list in a world type's profile, applied to the large-scale land/height layer **before**
+erosion and rivers, so rivers, lakes, coasts and the 3D terrain all follow it. An empty or missing list changes
+nothing — the original types are bit-identical (tested).
 
-Planned step kinds (all positions/sizes as fractions of the world, ranges like `[0.2, 0.4]` pick per seed):
+Built-in template types (pick them in the World type list):
 
-| Step | Effect |
+| Type | Template |
 | --- | --- |
-| `Range` | A mountain chain between two areas (count, length, width, height, ruggedness). |
-| `Hills` | Rounded uplands in an area (count, radius, height). |
-| `Basin` | A low inland area that collects a lake (radius, depth). |
-| `Trough` | A long valley or rift, can hold a river or a long lake. |
-| `Strait` | Cuts a sea channel through land (direction, width). |
-| `Raise` / `Lower` | Lifts or sinks land in an area (makes a plateau or a shallow sea). |
-| `Mask` | Fades land towards the world edge or the centre (a single continent, or a ring of islands). |
-| `Islands` | An island chain along a line (count, radius). |
+| **Inland sea** | One big raised landmass, a centre mask makes the inner sea, a strait opens it to the ocean, ranges, an island chain inside. |
+| **Shattered lands** | One great landmass cut by 6–9 curving sea channels, faded edges, ranges and hills. |
+| **Rift continent** | A continent split by a rift trough with basins (long lakes), walled by two parallel ranges. |
+| **Twin continents** | Two raised continents facing each other, a range on each, an island chain between. |
+| **Great peninsula** | A mainland with a long, bending, mountainous arm reaching into the ocean, islands off its tip. |
 
-Example (sketch, not final):
+Every value is relative: positions, sizes and lengths are fractions of the world (0 … 1, x to the east, z to the
+south), so a template keeps its look from 32 km to 4096 km (tested at 64 and 512 km). Two numbers `[a, b]` are a
+range the seed picks from, one number `[a]` is fixed. Lines bend smoothly and vary in width; coasts get noise so
+nothing looks geometric. Same seed + same template = same world.
+
+### Steps
+
+| Step | Shape | Default effect |
+| --- | --- | --- |
+| `Hills` | blobs (`Count`, `Size`) | a little land, rounded uplands (relief 1.6 × hill height) |
+| `Raise` | blob, or a long arm if `Length` is set | adds land (0.7) and some height — use `Land` ≈ 2–3 to make a continent from open sea |
+| `Lower` | blob / arm | removes land (−0.8), lowers ground |
+| `Basin` | blobs | a deep hollow (−2.5 × hill height): rivers fill it as a lake |
+| `Range` | bending line; `Size` = × the type's mountain width | mountains (share 1 of the mountain height) with peaks and passes |
+| `Trough` | bending line | a long valley or rift (−2.2 × hill height) — long lakes, a river valley |
+| `Strait` | bending line | cuts a shallow sea channel through land (never deepens open sea) |
+| `Islands` | a chain along a bending line | islands of varied size (`Size` = island radius) |
+| `Mask` | `Shape`: `Edges`, `Centre`, `North`, `South`, `East`, `West`; `Size`; `Strength` | fades land away there |
+
+Fields of every step (all optional): `Count`, `X`, `Z` (start of a line / centre of a blob), `Size`, `Length`,
+`Angle` (degrees, 0 = east, 90 = south), and effects `Land` (land influence: about 1 = continent interior, below 0 =
+sea), `Relief` (× the type's hill height) and `Mountain` (share of the type's mountain height). Unset fields use the
+step's defaults. Limits: 32 steps, 1200 shapes, counts up to 400; out-of-range files are rejected with a message.
+A type may set `"Continents": 0` when the template builds all the land itself.
+
+Example — a custom world type file with a template (put it in `world_types`, or save any template type and edit it):
 
 ```json
-"Landforms": [
-  { "Step": "Mask", "Shape": "edges", "Strength": 0.6 },
-  { "Step": "Range", "Count": [1, 2], "From": [0.3, 0.5], "To": [0.7, 0.5], "Height": 1.2 },
-  { "Step": "Trough", "Count": 1, "Width": 0.02, "Depth": 0.4 },
-  { "Step": "Islands", "Count": [8, 14], "Along": "coast", "Radius": 0.004 }
-]
+{
+  "Id": "two-seas", "Name": "Two seas", "Description": "A continent with two inland seas.", "Mainland": true,
+  "Profile": {
+    "Id": "two-seas", "Name": "Two seas", "WorldSize": 512000, "Continents": 0, "Islands": 20,
+    "ContinentRadius": 85000, "IslandRadius": 5000, "CoastRoughness": 0.22, "SeaLevel": 0, "OceanDepth": 2200,
+    "LowlandHeight": 260, "HillHeight": 180, "HillScale": 8000, "RangesPerContinent": 0,
+    "MountainHeight": 2600, "MountainWidth": 9500,
+    "Landforms": [
+      { "Step": "Raise", "X": [0.5], "Z": [0.5], "Size": [0.46], "Land": 3.0 },
+      { "Step": "Lower", "X": [0.35, 0.4], "Z": [0.4, 0.45], "Size": [0.07, 0.09], "Land": -1.6 },
+      { "Step": "Lower", "X": [0.6, 0.65], "Z": [0.55, 0.6], "Size": [0.06, 0.08], "Land": -1.6 },
+      { "Step": "Range", "Count": [2, 3], "Length": [0.2, 0.3] },
+      { "Step": "Hills", "Count": [4, 6] }
+    ]
+  },
+  "Settings": { "gen.lakes": 1.5 }
+}
 ```
 
-A **world type editor** (list of steps with sliders and a live preview map) comes after the steps work in JSON.
+(Profile numbers other than `Landforms` are the same as a built-in type's — copy them from a saved type.)
+
+Next: a **world type editor** — the step list with sliders and the live preview map, instead of editing JSON.
 
 ## Later: biomes
 

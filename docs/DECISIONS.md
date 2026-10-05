@@ -255,9 +255,13 @@ existing world, so *Continent size ×* is the knob for now. Details: WORLD_CREAT
 A world type is a JSON definition (id, name, description, mainland flag, full `WorldProfile`, starting parameter
 values). The creation screen saves the current setup as a new type in `user://world_types/`, loaded at startup and
 listed after the built-in types; files are hand-editable for deeper tweaks and validated on load (broken files are
-skipped). Next: an optional `Landforms` step list (Azgaar-style heightmap templates as Thornwake's own bounded,
-size-relative landform operations: range, hills, basin, trough, strait, raise/lower, mask, island chain) applied
-to the macro layer before erosion; empty list = identical worlds. Then a world type editor with a live map.
+skipped). Landform templates (the idea of Azgaar's heightmap templates, own code): an optional `Landforms` step list
+in the profile (Hills, Raise, Lower, Basin, Range, Trough, Strait, Islands, Mask), all positions and sizes as world
+fractions with seed-picked ranges, compiled per world into blobs and smoothly bending lines (domain-warped, coast
+noise, group-max at line joints, cuts never deepen open sea) and added to the macro land/relief/mountain channels
+before erosion and rivers. `Landforms` is omitted from the profile JSON when null, so every existing digest and world
+is unchanged; the profile may then have 0 continents. Five built-in template types (inland sea, shattered lands,
+rift continent, twin continents, great peninsula). Next: a world type editor with a live map.
 
 ## D37 — Rain water persists; cosmetic puddles (2026-10-05)
 Tom: rain water vanished the moment rain stopped, but unlimited rain must not flood the world. The simulation now

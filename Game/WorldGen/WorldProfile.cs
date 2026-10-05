@@ -10,7 +10,8 @@ namespace Thornwake.WorldGen;
 /// <summary>
 /// World-shape preset (Supplement §2.1.1). Same JSON schema and property order as A4's <c>MacroWorldProfile</c>
 /// (<c>Content/world_profiles.json</c>), so the digest — and therefore every seed derived from it — is identical.
-/// Do not reorder or add properties here: new tuning belongs in <see cref="TerrainStyle"/>.
+/// Do not reorder or add properties here: new tuning belongs in <see cref="TerrainStyle"/>. The one exception is
+/// <see cref="Landforms"/>, which is left out of the JSON when null so every existing digest stays the same.
 /// </summary>
 public sealed record WorldProfile
 {
@@ -30,6 +31,9 @@ public sealed record WorldProfile
     public required int RangesPerContinent { get; init; }
     public required double MountainHeight { get; init; }
     public required double MountainWidth { get; init; }
+    /// <summary>Optional landform template of a world type (D36); null = none (A4-compatible digest).</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public Landform[]? Landforms { get; init; }
 
     public void Validate()
     {
@@ -37,13 +41,14 @@ public sealed record WorldProfile
         if (string.IsNullOrWhiteSpace(Id) || Id.Length > 64 || Id.Any(c => !(c is >= 'a' and <= 'z' or >= '0' and <= '9' or '-' or '_' or '.')))
             throw new InvalidDataException("Invalid world profile id.");
         if (string.IsNullOrWhiteSpace(Name) || Name.Length > 80) throw new InvalidDataException("Invalid world profile name.");
-        if (!Range(WorldSize, 16000, 4096000) || Continents < 1 || Continents > 16 || Islands < 0 || Islands > 400 ||
+        if (!Range(WorldSize, 16000, 4096000) || Continents < (Landforms is { Length: > 0 } ? 0 : 1) || Continents > 16 || Islands < 0 || Islands > 400 ||
             !Range(ContinentRadius, WorldSize * .035, WorldSize * .28) || !Range(IslandRadius, WorldSize * .002, WorldSize * .025) ||
             !Range(CoastRoughness, 0, .3) || !Range(SeaLevel, -1000, 1000) || !Range(OceanDepth, 50, 8000) ||
             !Range(LowlandHeight, 10, 800) || !Range(HillHeight, 0, 800) || !Range(HillScale, 500, WorldSize * .1) ||
             RangesPerContinent < 0 || RangesPerContinent > 6 || !Range(MountainHeight, 0, 6000) ||
             !Range(MountainWidth, 500, ContinentRadius * .5))
             throw new InvalidDataException("Unsupported world profile dimensions.");
+        WorldGen.Landforms.Validate(Landforms);
     }
 
     /// <summary>SHA-256 of the canonical JSON (A4-compatible).</summary>

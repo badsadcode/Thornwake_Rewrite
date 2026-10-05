@@ -22,6 +22,8 @@ public sealed class WorldPlan
     public double BuildMilliseconds { get; }
     /// <summary>Time spent on the layout raster alone (before erosion/hydrology).</summary>
     public double RasterMilliseconds { get; }
+    /// <summary>Shapes placed by the world type's landform template (0 = none).</summary>
+    public int LandformShapes { get; }
 
     /// <summary>Raster resolution: cells of at most ~750 m, between 512 and 2048 cells across.</summary>
     public static int RasterSizeFor(WorldProfile profile)
@@ -42,17 +44,39 @@ public sealed class WorldPlan
         var layout = Layout;
         var p = manifest.Profile;
         double ox = manifest.OriginX, oz = manifest.OriginZ;
+        var forms = new Landforms(manifest);
+        Func<double, double, double> ruggedAt = (lx, lz) => { layout.MountainWarp(lx, lz, out double wx, out double wz); return layout.RuggedBroad(wx, wz); };
         Macro.Fill((i, j, channels) =>
         {
             double x = Macro.CellX(i), z = Macro.CellZ(j), lx = x - ox, lz = z - oz;
             int k = j * size + i;
             double land = layout.LandInfluence(x, z);
+            if (!forms.Empty)
+            {
+                Relief(lx, lz, out double baseHills, out double baseMountain);
+                double extra = 0;
+                forms.Apply(lx, lz, ref land, ref extra, ref baseMountain, ruggedAt);
+                double edge = (world * .5 - Math.Max(Math.Abs(lx), Math.Abs(lz))) / (world * .06);
+                land = Math.Min(land, edge - .3);
+                channels[LandChannel][k] = (float)land;
+                if (land < -.3) return;
+                channels[HeightChannel][k] = (float)(baseHills + extra + baseMountain * p.MountainHeight);
+                channels[MountainChannel][k] = (float)baseMountain;
+                return;
+            }
             channels[LandChannel][k] = (float)land;
             if (land < -.3) return; // deep sea: relief is never used
+            Relief(lx, lz, out double hills, out double mountain);
+            channels[HeightChannel][k] = (float)(hills + mountain * p.MountainHeight); // relief; converted below
+            channels[MountainChannel][k] = (float)mountain;
+        });
+
+        void Relief(double lx, double lz, out double hills, out double mountain)
+        {
             double hs = p.HillScale;
-            double hills = (Noise.Value(lx / hs, lz / hs, layout.ReliefNoise) * .7 +
+            hills = (Noise.Value(lx / hs, lz / hs, layout.ReliefNoise) * .7 +
                 Noise.Value(lx / (hs * .35), lz / (hs * .35), layout.ReliefNoise + 1) * .3) * p.HillHeight;
-            double mountain = 0;
+            mountain = 0;
             layout.MountainEnvelope(lx, lz, out double core, out double shoulder);
             if (core > 1e-6 || shoulder > 1e-6)
             {
@@ -62,9 +86,8 @@ public sealed class WorldPlan
                 double rugged = layout.RuggedBroad(wx, wz) * .92;
                 mountain = Math.Min(1, core * (.28 + .72 * rugged) + shoulder * (.08 + .24 * rugged));
             }
-            channels[HeightChannel][k] = (float)(hills + mountain * p.MountainHeight); // relief; converted below
-            channels[MountainChannel][k] = (float)mountain;
-        });
+        }
+        LandformShapes = forms.ShapeCount;
         RasterMilliseconds = timer.Elapsed.TotalMilliseconds;
 
         // Macro height above sea level: the A4 lowland ramp from the coast plus faded relief; sea floor below 0.

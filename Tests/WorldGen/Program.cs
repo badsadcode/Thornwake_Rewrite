@@ -14,6 +14,28 @@ string? filter = args.FirstOrDefault(a => a.StartsWith("--filter="))?[9..];
 string? maps = args.FirstOrDefault(a => a.StartsWith("--maps="))?[7..];
 bool record = args.Contains("--record");
 
+// World type maps: --types=<dir>[,<km>[,<seed>[,<only id>]]] renders every world type's whole-world map
+string? types = args.FirstOrDefault(a => a.StartsWith("--types="))?[8..];
+if (types != null)
+{
+    var v = types.Split(',');
+    double km = v.Length > 1 ? double.Parse(v[1]) : 256;
+    int seed = v.Length > 2 ? int.Parse(v[2]) : 42;
+    Directory.CreateDirectory(v[0]);
+    foreach (var recipe in WorldRecipe.Catalog(CoreTests.Profiles))
+    {
+        if (v.Length > 3 && recipe.Id != v[3]) continue;
+        var sw = Stopwatch.StartNew();
+        var plan = new WorldPlan(WorldManifest.Create(seed, recipe.Resolve(new WorldChoices { SizeKm = km }), worldId: CoreTests.FixedWorldId));
+        var land = plan.Macro.Channel(WorldPlan.LandChannel);
+        var ts = new TerrainSampler(plan);
+        MapRender.Window(ts, Path.Combine(v[0], $"{recipe.Id}-{km}km-{seed}.png"), plan.Manifest.OriginX, plan.Manifest.OriginZ, plan.Profile.WorldSize, 512);
+        Console.WriteLine($"{recipe.Id}: land {land.Count(x => x > 0) * 100.0 / land.Length:0} %, {plan.LandformShapes} landform shapes, " +
+            $"{plan.Hydrology.Reaches.Count} reaches, {plan.Hydrology.Lakes.Count} lakes, {sw.Elapsed.TotalSeconds:0.0} s");
+    }
+    return 0;
+}
+
 if (args.Contains("--probe"))
 {
     Probe.Run();

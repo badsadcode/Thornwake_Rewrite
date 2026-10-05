@@ -91,6 +91,10 @@ milestone M6), caves.
   4096 km, and optionally override any parameter (all on **Auto** by default). **Preview map** shows the whole world
   in 2D before you generate. A type keeps its character at every size (bigger worlds get more landmasses, not giant
   ones). See docs/WORLD_CREATION.md.
+* **Landform templates** (like Azgaar's heightmap templates, Thornwake's own version): five new world types built
+  from a step list — **Inland sea**, **Shattered lands**, **Rift continent**, **Twin continents**, **Great
+  peninsula**. They adapt to every world size. Templates are plain JSON steps (ranges, hills, basins, troughs,
+  straits, island chains, masks), so new world types can be made by editing a saved type; see docs/WORLD_CREATION.md.
 * **Your own world types**: set things up, type a name, **Save as world type**. It is listed with the others and
   works at any size; the JSON file in the user folder can be edited for deeper tweaks.
 * **Rain water stays**: puddles and dug ponds no longer vanish when the rain stops. Soil soaks up water until it is

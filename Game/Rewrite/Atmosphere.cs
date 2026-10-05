@@ -170,6 +170,9 @@ public partial class Atmosphere : Node3D
     /// <paramref name="cameraWorldX"/>/<paramref name="cameraWorldZ"/> are absolute world metres; the scene uses a float
     /// origin at (<paramref name="originX"/>, <paramref name="originZ"/>).
     /// </summary>
+    /// <summary>Sets the cosmetic rain wetness and puddles directly (screenshots and tests).</summary>
+    public void SetWetness(float wetness, float puddles) { _wetness = wetness; _puddles = puddles; }
+
     public void Update(double delta, float hour, double cameraWorldX, double cameraWorldZ, double originX, double originZ, Vector3 cameraLocal)
     {
         float elevation = Mathf.Sin((hour - 6) / 12 * Mathf.Pi) * 62;
