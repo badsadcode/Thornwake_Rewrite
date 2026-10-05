@@ -162,3 +162,30 @@ rolling hills, it is nearly constant over hundreds of metres, so the grooves cam
 scratches; at a strength where they did not, they were invisible next to the ridged mountain detail. Reverted.
 A convincing version needs the slope of the finer terrain itself (iterating octaves on their own gradients), which
 costs several extra noise evaluations per sample; revisit with M3 materials if hillsides still look too smooth.
+
+## D25 — Build 5 generation kept reproducible (2026-10-05)
+Tom asked to keep the build-5 generation as a fallback before changing it. Build 5 is commit `cdb2e31` on
+`rewrite/main`; in addition every generation change since is a `TerrainStyle` parameter whose zero value restores
+the build-5 behaviour (bank variation, shore slope), exposed as **New world → "Build 5 terrain (for comparison)"**. A
+test (`Build 5 terrain still reproducible`) checks the build-5 terrain fingerprints bit for bit
+(`Tests/WorldGen/Fixtures/terrain-build5.json`). Future generation changes follow the same rule.
+
+## D26 — Natural river banks without touching the course (2026-10-05)
+The centreline stays smooth. Each bank's waterline moves by its own offset along the reach (distance along the
+reach and side of the river are now part of every river hit): a slow ±30 % widening/narrowing, a wobble of a few
+metres with a finer ripple, and bulges (shallow shelves, wading depth) or cuts every ~100 m. The offset moves the
+channel edge and bank only and fades across the bank, so the valley floor keeps its smooth shape. Noise scales come
+from one width per reach (the local width drifts slightly; at tens of km along a reach that jumped the noise).
+Terrain shader: bank strip in patches of mud, pale sand/gravel and damp grass.
+
+## D27 — Rivers, lakes and the sea feed the local water simulation (2026-10-05)
+Generated water cells were pure sinks, so ground dug next to a river stayed dry (Tom). They are now fixed-level
+reservoirs: water flows out of them into lower non-water neighbours and is counted as drawn; runoff into them is
+absorbed as before. Only water cells next to lower dry ground ("feeders", usually none until the player digs) are
+stepped, so an untouched world costs nothing extra.
+
+## D28 — Steeper shores (2026-10-05)
+With the macro ramp alone, the sea stayed ankle-deep for hundreds of metres and beaches were wide flats (Tom: shallow
+part too large, waves stretched). The sampler estimates the distance to the detailed coastline (land influence over
+its gradient) and applies a beach profile: the sea floor deepens at ~3.5 % toward ~25 m, the land rises at ~2.5 %
+toward ~3.5 m; beyond, the macro shape. Parameter `ShoreSlope` (New world → Shore steepness; 0 = build 5).

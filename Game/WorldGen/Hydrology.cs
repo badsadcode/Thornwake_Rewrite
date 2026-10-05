@@ -38,13 +38,19 @@ public sealed class RiverReach
     /// <summary>Main reach and point index this distributary branches from (-1 for ordinary reaches).</summary>
     public int ParentReach { get; internal set; } = -1;
     public int ParentPoint { get; internal set; } = -1;
+    /// <summary>Distance along the reach (m) at each point, from its start (float: memory).</summary>
+    public float[] Along { get; internal set; } = Array.Empty<float>();
+    public double Length => Along.Length > 0 ? Along[^1] : 0;
     /// <summary>Raster cell where the reach ends (diagnostics).</summary>
     public int EndCell { get; internal set; } = -1;
     public List<int> UpstreamReaches { get; } = new();
 }
 
 /// <summary>Nearest-river result for a point.</summary>
-public readonly record struct RiverHit(int Reach, double Distance, double Surface, double Width, double Depth, double Catchment);
+/// <summary>Nearest-river result for a point. <paramref name="Along"/>: metres from the reach start;
+/// <paramref name="Side"/>: +1 left of the flow, −1 right (0 unknown).</summary>
+public readonly record struct RiverHit(int Reach, double Distance, double Surface, double Width, double Depth, double Catchment,
+    double Along = 0, int Side = 0);
 
 /// <summary>
 /// Raster-scale erosion and hydrology (replaces the original 17-file hydrology research chain; see DECISIONS D8).
@@ -489,6 +495,17 @@ public sealed class Hydrology
         }
         foreach (var r in _reaches) if (r.EndLake >= 0) Raise(r, _lakes[r.EndLake].Level);
         AddDeltas(style);
+        foreach (var r in _reaches)
+        {
+            var along = new float[r.Points.Length];
+            double total = 0;
+            for (int k = 1; k < along.Length; k++)
+            {
+                total += Math.Sqrt(Sq(r.Points[k].X - r.Points[k - 1].X) + Sq(r.Points[k].Z - r.Points[k - 1].Z));
+                along[k] = (float)total;
+            }
+            r.Along = along;
+        }
         _index = new SegmentIndex(_reaches, _raster, 768);
     }
 
@@ -902,7 +919,8 @@ public sealed class Hydrology
                 }
                 scores[slot] = score;
                 hits[slot] = new RiverHit(r, distance, reach.Surface[k] + (reach.Surface[k + 1] - reach.Surface[k]) * t, width,
-                    reach.Depth[k] + (reach.Depth[k + 1] - reach.Depth[k]) * t, reach.Catchment[k] + (reach.Catchment[k + 1] - reach.Catchment[k]) * t);
+                    reach.Depth[k] + (reach.Depth[k + 1] - reach.Depth[k]) * t, reach.Catchment[k] + (reach.Catchment[k + 1] - reach.Catchment[k]) * t,
+                    reach.Along[k] + (reach.Along[k + 1] - reach.Along[k]) * t, dx * (z - p.Z) - dz * (x - p.X) >= 0 ? 1 : -1);
             }
             // Deterministic order: nearest channel edge first (ties by reach id).
             for (int i = 1; i < count; i++)

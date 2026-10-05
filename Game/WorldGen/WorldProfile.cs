@@ -114,6 +114,11 @@ public sealed record TerrainStyle
     /// <summary>Rivers with at least this catchment (km²) form a delta on flat coasts.</summary>
     public double DeltaMinCatchmentKm2 { get; init; } = 1500;
 
+    /// <summary>Steepness of the shore (sea floor and beach) relative to ~3.5 %; 0 = the macro ramp only (build 5).</summary>
+    public double ShoreSlope { get; init; } = 1;
+    /// <summary>River bank irregularity (left and right banks vary independently: broad widening and narrowing, small
+    /// wobble, occasional bulges with shallow shelves and cuts). 0 = clean banks.</summary>
+    public double BankVariation { get; init; } = 1;
     /// <summary>Meander amplitude multiplier (0 = straight between bends).</summary>
     public double MeanderStrength { get; init; } = 1;
     /// <summary>Multiplier on the valley-scale bends and kilometre-scale wander of rivers.</summary>

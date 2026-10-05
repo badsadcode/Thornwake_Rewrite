@@ -75,8 +75,16 @@ if (line != null)
         int n = ls.Plan.Hydrology.NearbyRivers(x, z, hits);
         Console.WriteLine($"{x:0.0} {z:0.0} h {t.Height:0.000} {t.Water} hits {n} nearest {(n > 0 ? hits[0].Distance : -1):0.0} w {(n > 0 ? hits[0].Width : 0):0.0}");
         if (args.Contains("--hits"))
-            for (int j = 0; j < n; j++) Console.WriteLine($"    reach {hits[j].Reach} d {hits[j].Distance:0.00} s {hits[j].Surface:0.000} w {hits[j].Width:0.00}");
+            for (int j = 0; j < Math.Min(n, 4); j++) Console.WriteLine($"    reach {hits[j].Reach} d {hits[j].Distance:0.00} s {hits[j].Surface:0.000} w {hits[j].Width:0.00} along {hits[j].Along:0.0} side {hits[j].Side} half {ls.WaterHalfWidth(hits[j], out _):0.00}");
     }
+    return 0;
+}
+
+if (args.Contains("--bank-probe"))
+{
+    var bs = CoreTests.Sampler("mountainous", 42);
+    for (double a = 25285; a < 25300; a += .5)
+        Console.WriteLine($"{a:0.0} {bs.WaterHalfWidth(new RiverHit(219, 5, 0, 19.7, 1, 1, a, 1), out _):0.000}");
     return 0;
 }
 

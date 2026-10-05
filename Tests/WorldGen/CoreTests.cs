@@ -36,6 +36,7 @@ internal static class CoreTests
         T.Run("Coarse LOD is fine terrain minus small detail", LodConsistency, filter);
         T.Run("Coastline has sub-raster detail", CoastDetail, filter);
         T.Run("Frozen terrain fingerprints" + (record ? " (recording)" : ""), () => Fingerprints(record), filter);
+        T.Run("Build 5 terrain still reproducible (classic option)", () => Fingerprints(false, "terrain-build5.json", classic: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -281,15 +282,17 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
-        string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/terrain-r1.json");
+        string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
         var cases = new List<Fingerprint>();
         foreach (var profile in Profiles)
             foreach (int seed in new[] { -9, 42, 7319 })
             {
                 var s = Sampler(profile.Id, seed);
+                // Build 5 (commit cdb2e31) generation: no bank variation, macro-only shores.
+                if (classic) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { BankVariation = 0, ShoreSlope = 0 }));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];

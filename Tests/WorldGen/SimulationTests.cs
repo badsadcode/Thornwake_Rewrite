@@ -15,6 +15,7 @@ internal static class SimulationTests
         T.Run("Water: puddles soak away and leave wet ground", Soak, filter);
         T.Run("Edits: dig and raise the generated ground", Edits, filter);
         T.Run("Edits: water follows a dug channel", DugChannel, filter);
+        T.Run("Edits: a channel dug from a river fills from it", RiverFed, filter);
     }
 
     private static Func<long, long, ChunkGround> Ground(Func<double, double, double> height, Func<double, double, bool>? sink = null) => (cx, cz) =>
@@ -32,7 +33,7 @@ internal static class SimulationTests
     };
 
     private static void Balance(LocalWater w, string label) =>
-        T.Near(w.Volume() + w.Absorbed + w.Spilled + w.Soaked, w.Added, Math.Max(1e-3, w.Added * 2e-4), label + ": volume balance");
+        T.Near(w.Volume() + w.Absorbed + w.Spilled + w.Soaked, w.Added + w.Drawn, Math.Max(1e-3, w.Added * 2e-4), label + ": volume balance");
 
     private static void Downhill()
     {
@@ -154,6 +155,37 @@ internal static class SimulationTests
         T.Note($"after digging: water along the channel sums to {outside:0.00} m of depth over 56 cells");
         T.Check(outside > .5, "water flows into the dug channel");
         Balance(w, "channel");
+    }
+
+    private static void RiverFed()
+    {
+        // A river (fixed surface 49.8 m over a 48 m bed) at x > 20; dry land at 50 m. Dig a channel from x = 2 to the river.
+        var edits = new TerrainEdits();
+        Func<long, long, ChunkGround> load = (cx, cz) =>
+        {
+            int n = LocalWater.ChunkCells;
+            var floor = new float[n * n]; var sink = new bool[n * n]; var level = new float[n * n];
+            for (int j = 0; j < n; j++)
+                for (int i = 0; i < n; i++)
+                {
+                    double x = (cx * n + i + .5) * LocalWater.Cell, z = (cz * n + j + .5) * LocalWater.Cell;
+                    bool river = x > 20;
+                    floor[j * n + i] = (float)((river ? 48 : 50) + edits.Delta(x, z));
+                    sink[j * n + i] = river; level[j * n + i] = river ? 49.8f : float.NaN;
+                }
+            return new ChunkGround(floor, sink, level);
+        };
+        var w = new LocalWater(load) { Infiltration = 0 };
+        w.Follow(0, 0);
+        for (int i = 0; i < 300; i++) w.Step(1 / 60f);
+        T.Check(w.Volume() < 1e-6 && w.Drawn < 1e-6, "undisturbed banks: the river stays in its bed (no cost, no water)");
+        for (double x = 2; x <= 21; x += .5) edits.Apply(Math.Round(x), 0, 1.6, -.9 / 3);
+        w.ReloadGround(-5, -5, 25, 5);
+        for (int i = 0; i < 1800; i++) w.Step(1 / 60f);
+        float s = w.SurfaceAt(8, 0);
+        T.Note($"channel surface at 8 m: {s:0.000} m (river 49.8 m), {w.Drawn:0.0} m³ drawn from the river");
+        T.Check(!float.IsNaN(s) && Math.Abs(s - 49.8) < .05, "the dug channel fills to the river's level");
+        Balance(w, "river-fed channel");
     }
 
     private static void Cost()

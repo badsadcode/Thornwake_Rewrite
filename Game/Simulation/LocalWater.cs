@@ -6,7 +6,7 @@ namespace Thornwake.Hydraulics;
 
 /// <summary>Ground for one simulation chunk: floor height per cell (absolute metres) and whether the cell lies in a
 /// generated water body (river, lake, sea), which absorbs any simulated water that reaches it.</summary>
-public readonly record struct ChunkGround(float[] Floor, bool[] Sink);
+public readonly record struct ChunkGround(float[] Floor, bool[] Sink, float[]? Level = null);
 
 /// <summary>
 /// Local shallow-water simulation around the player (milestone M6), ported from GangTheGAME's WaterField
@@ -34,6 +34,11 @@ public sealed class LocalWater
     private float[] _floor = new float[Side * Side], _depth = new float[Side * Side];
     private float[] _left = new float[Side * Side], _right = new float[Side * Side], _up = new float[Side * Side], _down = new float[Side * Side];
     private bool[] _sink = new bool[Side * Side];
+    // Surface of the generated water body at sink cells: rivers, lakes and the sea are fixed-level reservoirs, so
+    // water also flows *out* of them into lower ground next to them (a channel dug from a river fills).
+    private float[] _level = new float[Side * Side];
+    private bool[] _feeds = new bool[Side * Side];
+    private int _feedMinX, _feedMaxX = -1, _feedMinZ, _feedMaxZ = -1;
     private float[] _shown = new float[Side * Side];
     // Ground that held water stays dark for a few minutes (1 = wet now, fades to 0), as in GangTheGAME.
     private float[] _wet = new float[Side * Side], _wetShown = new float[Side * Side];
@@ -53,6 +58,8 @@ public sealed class LocalWater
     public double Spilled { get; private set; }
     /// <summary>Water soaked into the ground (m³).</summary>
     public double Soaked { get; private set; }
+    /// <summary>Water that rivers, lakes and the sea fed into lower ground beside them (m³).</summary>
+    public double Drawn { get; private set; }
     /// <summary>Infiltration into the soil (m/s of depth): puddles slowly sink away, leaving wet ground.</summary>
     public float Infiltration { get; set; } = 1.7e-5f; // ~1 mm a minute
     /// <summary>Rain over the whole window (m/s of water depth; 0 = dry).</summary>
@@ -82,6 +89,7 @@ public sealed class LocalWater
             }
         var floor = new float[ChunkCells * ChunkCells];
         var sink = new bool[ChunkCells * ChunkCells];
+        var surface = new float[ChunkCells * ChunkCells];
         for (int cz = 0; cz < ChunkCells; cz++)
             for (int cx = 0; cx < ChunkCells; cx++)
             {
@@ -95,8 +103,9 @@ public sealed class LocalWater
                 floor[cz * ChunkCells + cx] = (float)h;
                 double l = Max(level[a], level[b], level[c], level[d]);
                 sink[cz * ChunkCells + cx] = !double.IsNaN(l) && h < l;
+                surface[cz * ChunkCells + cx] = double.IsNaN(l) ? float.NaN : (float)l;
             }
-        return new ChunkGround(floor, sink);
+        return new ChunkGround(floor, sink, surface);
 
         static double Max(params double[] v)
         {
@@ -118,7 +127,7 @@ public sealed class LocalWater
 
     private void MoveTo(long ox, long oz)
     {
-        var floor = new float[Side * Side]; var depth = new float[Side * Side]; var sink = new bool[Side * Side];
+        var floor = new float[Side * Side]; var depth = new float[Side * Side]; var sink = new bool[Side * Side]; var level = new float[Side * Side];
         var left = new float[Side * Side]; var right = new float[Side * Side]; var up = new float[Side * Side]; var down = new float[Side * Side];
         var shown = new float[Side * Side]; var wet = new float[Side * Side]; var wetShown = new float[Side * Side];
         // Chunks leaving the window go dormant (if wet).
@@ -155,7 +164,7 @@ public sealed class LocalWater
                         if (kept)
                         {
                             int o = Index((int)px * ChunkCells + i, (int)pz * ChunkCells + j);
-                            floor[n] = _floor[o]; depth[n] = _depth[o]; sink[n] = _sink[o]; shown[n] = _shown[o];
+                            floor[n] = _floor[o]; depth[n] = _depth[o]; sink[n] = _sink[o]; shown[n] = _shown[o]; level[n] = _level[o];
                             wet[n] = _wet[o]; wetShown[n] = _wetShown[o];
                             left[n] = _left[o]; right[n] = _right[o]; up[n] = _up[o]; down[n] = _down[o];
                         }
@@ -163,15 +172,17 @@ public sealed class LocalWater
                         {
                             floor[n] = ground!.Value.Floor[j * ChunkCells + i];
                             sink[n] = ground.Value.Sink[j * ChunkCells + i];
+                            level[n] = ground.Value.Level?[j * ChunkCells + i] ?? float.NaN;
                             depth[n] = resumed?[j * ChunkCells + i] ?? 0;
                             wet[n] = depth[n] > WetThreshold ? 1 : 0;
                         }
                     }
                 if (!kept && resumed != null) _dirty.Add((gx, gz));
             }
-        _floor = floor; _depth = depth; _sink = sink; _shown = shown; _wet = wet; _wetShown = wetShown; _left = left; _right = right; _up = up; _down = down;
+        _floor = floor; _depth = depth; _sink = sink; _level = level; _shown = shown; _wet = wet; _wetShown = wetShown; _left = left; _right = right; _up = up; _down = down;
         OriginChunkX = ox; OriginChunkZ = oz; _placed = true;
         RecomputeBounds();
+        RecomputeFeeders();
     }
 
     private void RecomputeBounds()
@@ -223,11 +234,33 @@ public sealed class LocalWater
                         int n = Index(bx + i, bz + j);
                         _floor[n] = ground.Floor[j * ChunkCells + i];
                         _sink[n] = ground.Sink[j * ChunkCells + i];
+                        _level[n] = ground.Level?[j * ChunkCells + i] ?? float.NaN;
                         if (_depth[n] > Dry) Grow(bx + i, bz + j);
                     }
                 _dirty.Add((gx, gz));
                 // Water standing next to the change must be stepped (it may now flow into a new channel).
                 Grow(Math.Max(0, bx - 1), Math.Max(0, bz - 1)); Grow(Math.Min(Side - 1, bx + ChunkCells), Math.Min(Side - 1, bz + ChunkCells));
+            }
+        RecomputeFeeders();
+    }
+
+    /// <summary>Generated water cells next to lower dry ground: the only ones that can feed water out (usually none).</summary>
+    private void RecomputeFeeders()
+    {
+        _feedMinX = _feedMinZ = int.MaxValue; _feedMaxX = _feedMaxZ = -1;
+        for (int z = 0; z < Side; z++)
+            for (int x = 0; x < Side; x++)
+            {
+                int i = Index(x, z);
+                bool feeds = false;
+                if (_sink[i] && !float.IsNaN(_level[i]))
+                {
+                    float top = _level[i] - .005f;
+                    feeds = x > 0 && !_sink[i - 1] && _floor[i - 1] < top || x < Side - 1 && !_sink[i + 1] && _floor[i + 1] < top
+                        || z > 0 && !_sink[i - Side] && _floor[i - Side] < top || z < Side - 1 && !_sink[i + Side] && _floor[i + Side] < top;
+                }
+                _feeds[i] = feeds;
+                if (feeds) { _feedMinX = Math.Min(_feedMinX, x); _feedMaxX = Math.Max(_feedMaxX, x); _feedMinZ = Math.Min(_feedMinZ, z); _feedMaxZ = Math.Max(_feedMaxZ, z); }
             }
     }
 
@@ -271,6 +304,11 @@ public sealed class LocalWater
             Added += rain * CellArea * Side * Side;
             _minX = _minZ = 0; _maxX = _maxZ = Side - 1;
         }
+        if (_feedMaxX >= 0)
+        {
+            if (_maxX < 0) { _minX = _feedMinX; _maxX = _feedMaxX; _minZ = _feedMinZ; _maxZ = _feedMaxZ; }
+            else { _minX = Math.Min(_minX, _feedMinX); _maxX = Math.Max(_maxX, _feedMaxX); _minZ = Math.Min(_minZ, _feedMinZ); _maxZ = Math.Max(_maxZ, _feedMaxZ); }
+        }
         if (_maxX < _minX || _maxX < 0) return;
         int x0 = Math.Max(0, _minX - 1), x1 = Math.Min(Side - 1, _maxX + 1), z0 = Math.Max(0, _minZ - 1), z1 = Math.Min(Side - 1, _maxZ + 1);
         float pipe = dt * Gravity * (float)Cell, area = CellArea;
@@ -278,12 +316,28 @@ public sealed class LocalWater
             for (int x = x0; x <= x1; x++)
             {
                 int i = Index(x, z);
+                bool reservoir = _sink[i];
                 float d = _depth[i];
-                if (d <= Dry) { _left[i] = _right[i] = _up[i] = _down[i] = 0; continue; }
+                if (reservoir)
+                {
+                    // A generated water body: a fixed surface that only flows out into lower non-water neighbours.
+                    if (!_feeds[i]) { _left[i] = _right[i] = _up[i] = _down[i] = 0; continue; }
+                    d = _level[i] - _floor[i];
+                }
+                else if (d <= Dry) { _left[i] = _right[i] = _up[i] = _down[i] = 0; continue; }
                 float h = _floor[i] + d;
-                float Flow(float current, int nx, int nz) =>
-                    nx < 0 || nz < 0 || nx >= Side || nz >= Side ? Math.Max(0, current * FluxDamping + pipe * d) // open edge
-                        : Math.Max(0, current * FluxDamping + pipe * (h - _floor[Index(nx, nz)] - _depth[Index(nx, nz)]));
+                float Flow(float current, int nx, int nz)
+                {
+                    if (nx < 0 || nz < 0 || nx >= Side || nz >= Side) return reservoir ? 0 : Math.Max(0, current * FluxDamping + pipe * d); // open edge
+                    int n = Index(nx, nz);
+                    if (_sink[n])
+                    {
+                        if (reservoir) return 0;
+                        float surface = float.IsNaN(_level[n]) ? _floor[n] : Math.Max(_level[n], _floor[n]);
+                        return Math.Max(0, current * FluxDamping + pipe * (h - surface));
+                    }
+                    return Math.Max(0, current * FluxDamping + pipe * (h - _floor[n] - _depth[n]));
+                }
                 float l = Flow(_left[i], x - 1, z), r = Flow(_right[i], x + 1, z), u = Flow(_up[i], x, z - 1), w = Flow(_down[i], x, z + 1);
                 float total = (l + r + u + w) * dt;
                 float scale = total > d * area ? d * area / total : 1f; // never more out than the cell holds
@@ -300,9 +354,15 @@ public sealed class LocalWater
                 if (x == Side - 1) Spilled += _right[i] * dt;
                 if (z == 0) Spilled += _up[i] * dt;
                 if (z == Side - 1) Spilled += _down[i] * dt;
+                if (_sink[i])
+                {
+                    // Reservoir: what flows in joins the river/lake/sea, what flows out is drawn from it.
+                    Absorbed += (inflow + _depth[i] * area / dt) * dt; Drawn += outflow * dt;
+                    _depth[i] = 0;
+                    continue;
+                }
                 float d = Math.Max(0, _depth[i] + (inflow - outflow) * dt / area);
-                if (d > 0 && !_sink[i]) { float soak = Math.Min(d, Infiltration * dt); d -= soak; Soaked += soak * area; }
-                if (_sink[i] && d > 0) { Absorbed += d * area; d = 0; _left[i] = _right[i] = _up[i] = _down[i] = 0; }
+                if (d > 0) { float soak = Math.Min(d, Infiltration * dt); d -= soak; Soaked += soak * area; }
                 _depth[i] = d;
                 if (d > Dry) { nx0 = Math.Min(nx0, x); nx1 = Math.Max(nx1, x); nz0 = Math.Min(nz0, z); nz1 = Math.Max(nz1, z); }
                 if (Math.Abs(d - _shown[i]) > RenderTolerance) { _shown[i] = d; _dirty.Add((OriginChunkX + x / ChunkCells, OriginChunkZ + z / ChunkCells)); }

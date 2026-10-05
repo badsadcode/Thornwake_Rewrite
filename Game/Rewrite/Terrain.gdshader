@@ -36,9 +36,15 @@ void fragment() {
 	vec3 sand = mix(vec3(0.800, 0.725, 0.520), vec3(0.700, 0.640, 0.470), n2);             // valley cbb984
 	c = mix(c, sand, smoothstep(0.3, 0.65, wet + (n2 - 0.5) * 0.25) * (1.0 - smoothstep(0.25, 0.5, slope)));
 	vec3 bed = mix(vec3(0.360, 0.340, 0.260), vec3(0.450, 0.420, 0.330), n2);              // gravel and silt under water
-	// Damp earth along river and lake banks: a darker strip from the waterline to ~0.4 m above it (not on beaches).
+	// River and lake banks (not beaches): a strip from the waterline to ~0.4 m above it, in patches of dark mud,
+	// pale sand or gravel, and plain damp grass, varying along the shore every few tens of metres.
 	float damp = smoothstep(0.28, 0.48, COLOR.a + (n3 - 0.5) * 0.06) * (1.0 - submerged) * (1.0 - wet) * (1.0 - smoothstep(0.45, 0.7, slope));
-	c = mix(c, c * vec3(0.62, 0.6, 0.55) + vec3(0.03, 0.025, 0.015), damp);
+	float patch_kind = vnoise(p * 0.045 + vec2(17.0, 3.0));
+	vec3 mud = vec3(0.30, 0.25, 0.18) * (0.9 + 0.2 * n3);
+	vec3 shore_sand = mix(vec3(0.66, 0.60, 0.45), vec3(0.55, 0.52, 0.44), n2);
+	vec3 shore = mix(c * vec3(0.62, 0.6, 0.55) + vec3(0.03, 0.025, 0.015), mud, smoothstep(0.35, 0.5, patch_kind));
+	shore = mix(shore, shore_sand, smoothstep(0.68, 0.8, patch_kind));
+	c = mix(c, shore, damp);
 	// Ground the player dug or raised: bare, slightly lumpy soil.
 	vec3 soil = mix(vec3(0.36, 0.28, 0.19), vec3(0.45, 0.36, 0.25), n3);
 	c = mix(c, soil, smoothstep(0.05, 0.35, UV2.y + (n2 - 0.5) * 0.08));

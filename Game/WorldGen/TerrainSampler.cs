@@ -30,7 +30,7 @@ public sealed class TerrainSampler
     private readonly MacroRaster _macro;
     private readonly Hydrology _hydrology;
     private readonly double _ox, _oz;
-    private readonly ulong _detailSeed, _rockSeed, _coastSeed, _regionSeed;
+    private readonly ulong _detailSeed, _rockSeed, _coastSeed, _regionSeed, _bankSeed;
     private readonly double _coastBand;
 
     public TerrainSampler(WorldPlan plan)
@@ -39,7 +39,7 @@ public sealed class TerrainSampler
         _ox = plan.Manifest.OriginX; _oz = plan.Manifest.OriginZ;
         var m = plan.Manifest;
         ulong Seed(string layer) => Hashing.FeatureSeed(m.Seed, 100 + WorldManifest.CurrentGenerator, m.ProfileDigest, layer);
-        _detailSeed = Seed("detail"); _rockSeed = Seed("rock"); _coastSeed = Seed("coast"); _regionSeed = Seed("region");
+        _detailSeed = Seed("detail"); _rockSeed = Seed("rock"); _coastSeed = Seed("coast"); _regionSeed = Seed("region"); _bankSeed = Seed("banks");
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
         _coastBand = .25;
     }
@@ -54,17 +54,24 @@ public sealed class TerrainSampler
 
         // Sub-raster coastline: shift the coast sideways by a fractal distance (metres), converted to land
         // influence through the local gradient so continents and small islands get the same metric wiggle.
+        double coastDistance = double.PositiveInfinity; // metres from the detailed coastline (estimate)
         if (land > -_coastBand && land < _coastBand)
         {
             _macro.SampleGradient(WorldPlan.LandChannel, x, z, out double gx, out double gz);
             double gradient = Math.Sqrt(gx * gx + gz * gz);
             double shift = _style.CoastDetailShift * Noise.Fbm(lx, lz, _macro.Cell * 2.5, 7, minWavelength, _coastSeed, .55);
             land += shift * gradient * DetMath.Smooth(1 - Math.Abs(land) / _coastBand); // fades out: no step at the band edge
+            coastDistance = Math.Abs(land) / Math.Max(gradient, 1e-12);
         }
+        // Shore profile (ShoreSlope > 0): the macro ramp alone left hundreds of metres of ankle-deep water and flat
+        // beach at this world scale. A beach-like slope (~3.5 %) takes the sea floor to ~25 m within a few hundred
+        // metres and lifts the land a few metres within ~150 m; beyond, the macro shape takes over.
+        double shore = _style.ShoreSlope;
 
         if (land <= 0)
         {
             double depth = _p.OceanDepth * DetMath.Smooth(-land / .6);
+            if (shore > 0 && coastDistance < 1e7) depth = Math.Max(depth, 25 * (1 - DetMath.Exp(-coastDistance * .035 * shore / 25)));
             double seabed = _p.SeaLevel - depth + Edits.Delta(x, z);
             return seabed < _p.SeaLevel ? new(seabed, land, 0, 0, WaterKind.Ocean, _p.SeaLevel, -1)
                 : new(seabed, land, 0, 0, WaterKind.None, double.NaN, -1);
@@ -73,6 +80,7 @@ public sealed class TerrainSampler
         // Eroded macro height; the coastal ramp follows the detailed coastline rather than the raster's.
         double baseHeight = macroHeight + _p.LowlandHeight * (DetMath.Smooth(land / .4) - DetMath.Smooth(rasterLand / .4));
         baseHeight = Math.Max(_p.LowlandHeight * DetMath.Smooth(land / .08) * .05, baseHeight);
+        if (shore > 0 && coastDistance < 1e7) baseHeight = Math.Max(baseHeight, 3.5 * (1 - DetMath.Exp(-coastDistance * .025 * shore / 3.5)));
         mountainShare = DetMath.Clamp(mountainShare, 0, 1);
 
         // Walking-scale relief. Fades out at the shoreline so beaches and shelves stay smooth.
@@ -114,8 +122,11 @@ public sealed class TerrainSampler
                 bool seen = false;
                 for (int j = 0; j < count; j++) if (reaches[j].Reach == reach) { seen = true; break; }
                 if (seen) continue;
-                double dmin = double.PositiveInfinity;
-                for (int j = i; j < nearby; j++) if (rivers[j].Reach == reach) dmin = Math.Min(dmin, rivers[j].Distance);
+                // Side and distance along the reach from the nearest segment (averaging them mixed in other segments'
+                // clamped end points and made the bank noise jitter).
+                double dmin = double.PositiveInfinity, along = 0; int side = 0;
+                for (int j = i; j < nearby; j++)
+                    if (rivers[j].Reach == reach && rivers[j].Distance < dmin) { dmin = rivers[j].Distance; side = rivers[j].Side; along = rivers[j].Along; }
                 double tau = 6 + .45 * dmin, wsum = 0, surface = 0, width = 0, depth = 0, catchment = 0;
                 for (int j = i; j < nearby; j++)
                 {
@@ -123,7 +134,7 @@ public sealed class TerrainSampler
                     double q = (rivers[j].Distance - dmin) / tau, w = 1 / (1 + q * q * (1 + q));
                     wsum += w; surface += w * rivers[j].Surface; width += w * rivers[j].Width; depth += w * rivers[j].Depth; catchment += w * rivers[j].Catchment;
                 }
-                reaches[count++] = new RiverHit(reach, dmin, surface / wsum, width / wsum, depth / wsum, catchment / wsum);
+                reaches[count++] = new RiverHit(reach, dmin, surface / wsum, width / wsum, depth / wsum, catchment / wsum, along, side);
             }
             double rise = Math.Max(baseHeight, floor), damp = 1;
             for (int i = 0; i < count; i++) damp = Math.Min(damp, DetailDamp(reaches[i]));
@@ -168,10 +179,54 @@ public sealed class TerrainSampler
     /// valley side blending back to the terrain over a width that grows with the height to climb (about 1 in 4).
     /// <paramref name="weight"/> is 1 near the river, 0 at the edge of its influence; <paramref name="inside"/> > 0 in water.
     /// </summary>
-    private double Profile(in RiverHit r, double terrain, double rise, double spacing, out double weight, out double inside)
+    /// <summary>
+    /// Where the water ends on this side of the river: the nominal half width varied per bank (left and right
+    /// independently) by a slow widening/narrowing over hundreds of metres, a small wobble of a few metres and
+    /// occasional bulges (with a shallow shelf, <paramref name="shelf"/> 0..1) or cuts into the bank. Faded out near
+    /// the reach ends so junctions and mouths stay joined. The centreline itself stays smooth.
+    /// </summary>
+    public double WaterHalfWidth(in RiverHit r, out double shelf)
     {
         double half = r.Width * .5;
-        if (spacing <= 2.5 || spacing > 40) return ChannelProfile(r, half, terrain, rise, out weight, out inside);
+        shelf = 0;
+        if (_style.BankVariation <= 0 || r.Side == 0 || r.Reach < 0) return half;
+        var reach = _hydrology.Reaches[r.Reach];
+        double margin = r.Width * 2 + 25;
+        double ends = DetMath.Smooth(r.Along / margin) * DetMath.Smooth((reach.Length - r.Along) / margin);
+        if (ends <= 0) return half;
+        ulong seed = _bankSeed ^ Hashing.Mix((ulong)r.Reach * 2 + (r.Side > 0 ? 1UL : 0UL));
+        double s = r.Along;
+        // Noise scales from one width per reach (not the local width: at tens of km along a reach, a tiny width
+        // change would jump to a different part of the noise).
+        double w = reach.Width[reach.Width.Length / 2];
+        // ±~30 % over long distances, a wobble of ~0.4 m + 9 % of the width with a finer ripple on it, and bulges (+)
+        // or cuts (−) every hundred metres or so.
+        double broad = 2.5 * Noise.Gradient(s / Math.Max(300, w * 40) + 3.1, 1.7, seed) * .3;
+        double wobble = 2.5 * Noise.Gradient(s / Math.Max(20, w * 2) + 5.3, 2.9, seed + 1) * (.4 + .09 * r.Width)
+            + 2.5 * Noise.Gradient(s / Math.Max(7, w * .7) + 1.9, 6.1, seed + 3) * (.12 + .03 * r.Width);
+        double b = 2.5 * Noise.Gradient(s / Math.Max(40, w * 4.5) + 7.7, 4.4, seed + 2);
+        double bump = Math.Sign(b) * DetMath.Smooth((Math.Abs(b) - .35) / .6) * (b > 0 ? .7 : .35);
+        double factor = 1 + (broad + wobble / half + bump) * _style.BankVariation * ends;
+        factor = DetMath.Clamp(factor, .5, 2.1);
+        shelf = DetMath.Smooth((factor - 1.1) / .35);
+        return half * factor;
+    }
+
+    private double Profile(in RiverHit r0, double terrain, double rise, double spacing, out double weight, out double inside)
+    {
+        // Bank variation moves the channel edge and bank on this side by `shift`, fading out across the bank, so the
+        // floodplain and valley side keep their smooth shape (no streaks running away from the river).
+        double nominal = r0.Width * .5, shift = WaterHalfWidth(r0, out double shelf) - nominal;
+        double bankWidth = Hydrology.Bank(r0.Width);
+        double carry = 1 - DetMath.Smooth((r0.Distance - nominal - Math.Max(shift, 0) - bankWidth) / (bankWidth * 1.5));
+        var r = r0 with { Distance = Math.Max(0, r0.Distance - shift * carry) };
+        double half = nominal;
+        if (spacing <= 2.5 || spacing > 40)
+        {
+            double h = ChannelProfile(r, half, terrain, rise, out weight, out inside);
+            if (shelf > 0 && inside > 0 && shift > 0) h = Shelf(h, r0, nominal, nominal + shift, shelf);
+            return h;
+        }
         // Coarse LOD tiles: a mesh with vertex spacing s interpolates heights linearly, so a channel edge that is a
         // straight ramp in distance (the same slope inside and outside the waterline, ±1.5 s around it) is drawn
         // exactly where the water edge really is: smooth, not a saw-tooth of whole triangles. Channels narrower than
@@ -185,6 +240,15 @@ public sealed class TerrainSampler
         if (d >= half) return surface + g * (d - half);
         double bed = ChannelProfile(r, half, terrain, rise, out _, out _);
         return Math.Max(bed, surface - g * (half - d));
+    }
+
+    /// <summary>A bulging bank's extra width is a shallow shelf (wading depth), not deep channel.</summary>
+    private double Shelf(double bed, in RiverHit r, double nominal, double half, double shelf)
+    {
+        double surface = r.Surface - _p.SeaLevel, d = r.Distance;
+        double ledge = surface - (.22 + .12 * r.Depth) * (1 - DetMath.Smooth((d - half * .85) / (half * .15 + .5)));
+        double onShelf = DetMath.Smooth((d - nominal * .8) / Math.Max(1, nominal * .25)) * shelf;
+        return DetMath.Lerp(bed, Math.Max(bed, ledge), onShelf);
     }
 
     private double ChannelProfile(in RiverHit r, double half, double terrain, double rise, out double weight, out double inside, double distance = -1)

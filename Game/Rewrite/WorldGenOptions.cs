@@ -15,15 +15,17 @@ public sealed class WorldGenOptions
     private Setting Add(Setting s) { All.Add(s); return s; }
 
     // ---- world shape (profile)
-    public readonly Setting Size, Continents, Islands, ContinentSize, CoastRoughness, Ranges, MountainHeight, HillHeight;
+    public readonly Setting Size, Continents, Islands, ContinentSize, CoastRoughness, Ranges, MountainHeight, HillHeight, Classic;
     // ---- terrain
-    public readonly Setting Hills, Plains, Rock, CoastDetail, Erosion;
+    public readonly Setting Hills, Plains, Rock, CoastDetail, Erosion, Shores;
     // ---- water
-    public readonly Setting Rivers, RiverWidth, Meanders, Wander, WidthVariation, Lakes, Deltas;
+    public readonly Setting Rivers, RiverWidth, Meanders, Wander, WidthVariation, Banks, Lakes, Deltas;
 
     public WorldGenOptions()
     {
         const string S = "World shape", T = "Terrain", W = "Rivers and lakes";
+        Classic = Add(new("gen.classic", S, "Build 5 terrain (for comparison)", 0, 1, 1, 0,
+            "Generate rivers and shores exactly as in build 5 (no bank variation, gentle shores), to compare or go back."));
         Size = Add(new("gen.size", S, "World size", .5, 2, .05, 1, "Scales the whole world: continents, islands, hills and mountain ranges.", "×"));
         Continents = Add(new("gen.continents", S, "Continents", 1, 8, 1, 4, "Number of large landmasses."));
         Islands = Add(new("gen.islands", S, "Islands", 0, 128, 1, 40, "Number of small islands."));
@@ -38,12 +40,14 @@ public sealed class WorldGenOptions
         Rock = Add(new("gen.rock", T, "Mountain crags", 0, 3, .05, 1, "Rocky ridged detail on mountains.", "×"));
         CoastDetail = Add(new("gen.coast_detail", T, "Coastline detail", 0, 3, .05, 1, "Small-scale wiggles of the shoreline.", "×"));
         Erosion = Add(new("gen.erosion", T, "Erosion", 0, 3, .05, 1, "How deeply rivers have carved their valleys.", "×"));
+        Shores = Add(new("gen.shores", T, "Shore steepness", 0, 3, .05, 1, "How quickly the sea deepens and the land rises at the coast (0 = very gentle, wide shallows).", "×"));
 
         Rivers = Add(new("gen.rivers", W, "Number of rivers", .25, 4, .05, 1, "More rivers means smaller streams are shown too.", "×"));
         RiverWidth = Add(new("gen.river_width", W, "River width", .3, 3, .05, 1, "Channel width for a given catchment.", "×"));
         Meanders = Add(new("gen.meanders", W, "Meanders", 0, 3, .05, 1, "Tight river loops.", "×"));
         Wander = Add(new("gen.wander", W, "Wandering", 0, 3, .05, 1, "Large bends and swings across the valley floor.", "×"));
         WidthVariation = Add(new("gen.width_variation", W, "Width variety", 0, 3, .05, 1, "Pools, narrows and broad stretches along each river.", "×"));
+        Banks = Add(new("gen.banks", W, "Bank irregularity", 0, 3, .05, 1, "Uneven shorelines: each bank widens, narrows and wobbles on its own, with bulges, shallow shelves and cuts.", "×"));
         Lakes = Add(new("gen.lakes", W, "Lakes", 0, 4, .05, 1, "Share of land that may be lake (largest basins first).", "×"));
         Deltas = Add(new("gen.deltas", W, "Deltas", 0, 4, .05, 1, "How readily large rivers split into deltas on flat coasts (0 = none).", "×"));
     }
@@ -56,7 +60,8 @@ public sealed class WorldGenOptions
         Set(Ranges, p.RangesPerContinent); Set(MountainHeight, p.MountainHeight); Set(HillHeight, p.HillHeight);
         var style = TerrainStyle.For(p);
         Set(Plains, 1 - style.PlainsRoughness);
-        foreach (var s in new[] { Hills, Rock, CoastDetail, Erosion, Rivers, RiverWidth, Meanders, Wander, WidthVariation, Lakes, Deltas }) Set(s, 1);
+        Set(Classic, 0);
+        foreach (var s in new[] { Hills, Rock, CoastDetail, Erosion, Shores, Rivers, RiverWidth, Meanders, Wander, WidthVariation, Banks, Lakes, Deltas }) Set(s, 1);
     }
 
     public void Reset() { foreach (var s in All) s.Value = s.Default; }
@@ -98,6 +103,8 @@ public sealed class WorldGenOptions
             MeanderStrength = Meanders.Value,
             WanderStrength = Wander.Value,
             WidthVariation = WidthVariation.Value,
+            BankVariation = Classic.On ? 0 : Banks.Value,
+            ShoreSlope = Classic.On ? 0 : Shores.Value,
             LakeShare = b.LakeShare * Lakes.Value,
             DeltaMinCatchmentKm2 = Deltas.Value <= 0 ? double.PositiveInfinity : b.DeltaMinCatchmentKm2 / Deltas.Value,
         };
