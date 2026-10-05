@@ -69,8 +69,10 @@ public static class Vegetation
         long c0x = (long)Math.Floor(x0 / cell), c0z = (long)Math.Floor(z0 / cell);
         long c1x = (long)Math.Floor((x0 + size) / cell), c1z = (long)Math.Floor((z0 + size) / cell);
         ulong seed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0x7EE5UL);
-        for (long cz = c0z; cz < c1z; cz++)
-            for (long cx = c0x; cx < c1x; cx++)
+        // Inclusive: the cell straddling the tile's far edge may put its tree inside this tile (an exclusive loop lost
+        // those trees, leaving tree-free lanes along every tile border).
+        for (long cz = c0z; cz <= c1z; cz++)
+            for (long cx = c0x; cx <= c1x; cx++)
             {
                 ulong h = Hashing.Lattice(cx, cz, seed);
                 double x = (cx + .15 + .7 * Hashing.Unit(h)) * cell, z = (cz + .15 + .7 * Hashing.Unit(Hashing.Mix(h))) * cell;

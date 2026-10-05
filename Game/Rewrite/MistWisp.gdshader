@@ -28,6 +28,9 @@ void vertex() {
 	vec3 right = normalize(vec3(to_cam.z, 0.0, -to_cam.x) + vec3(1e-4, 0.0, 0.0));
 	world = origin + right * VERTEX.x * size + vec3(0.0, 1.0, 0.0) * VERTEX.y * size * 0.35;
 	POSITION = PROJECTION_MATRIX * VIEW_MATRIX * vec4(world, 1.0);
+	// Upright sheets read as streaks from above: fade out as the view steepens and the camera climbs.
+	vec3 dir = normalize(CAMERA_POSITION_WORLD - origin);
+	opacity *= (1.0 - smoothstep(0.22, 0.5, dir.y)) * (1.0 - smoothstep(25.0, 60.0, CAMERA_POSITION_WORLD.y - origin.y));
 }
 
 void fragment() {

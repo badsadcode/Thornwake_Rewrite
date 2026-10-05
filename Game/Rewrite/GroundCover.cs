@@ -242,10 +242,11 @@ public static class GroundCover
     {
         var result = new List<RockInstance>();
         var g = grid;
-        Cells(key, 1.7, seed ^ 0xC11FUL, (x, z, h) =>
+        Cells(key, 2.3, seed ^ 0xC11FUL, (x, z, h) =>
         {
-            if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .72f || height - sea < .5) return;
-            if (!Drop(g, x, z, height, out float ox, out float oz, out float depth)) return;
+            if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .8f || height - sea < .5) return;
+            if (Unit(h, 9) < .35f) return; // irregular, never a continuous fringe
+            if (!Drop(g, x, z, height, up, out float ox, out float oz, out float depth)) return;
             float plants = g.Plants(x, z);
             bool roots = Unit(h, 1) < .25f + .5f * forest;
             if (!roots && Unit(h, 2) > plants * 1.1f) return;
@@ -262,17 +263,20 @@ public static class GroundCover
         return result;
     }
 
-    /// <summary>A steep drop next to (x, z): the outward direction and how deep it goes within ~3 m.</summary>
-    private static bool Drop(in Grid g, double x, double z, float height, out float ox, out float oz, out float depth)
+    /// <summary>
+    /// A real cliff next to (x, z): the ground drops at ≥ ~60° right past the point and keeps dropping (≥ 3.5 m within
+    /// 3.2 m), and the face is much steeper than the ground on top (plain steep slopes are not cliffs).
+    /// </summary>
+    private static bool Drop(in Grid g, double x, double z, float height, float up, out float ox, out float oz, out float depth)
     {
         ox = oz = depth = 0;
+        float topSlope = Mathf.Sqrt(Math.Max(0, 1 - up * up)) / Math.Max(.2f, up);
         for (int d = 0; d < 8; d++)
         {
             float a = d * Mathf.Pi / 4, dx = Mathf.Cos(a), dz = Mathf.Sin(a);
             if (!g.At(x + dx * 1.6, z + dz * 1.6, out float near, out _, out _, out _) || !g.At(x + dx * 3.2, z + dz * 3.2, out float far, out _, out _, out _)) continue;
-            float drop = height - far;
-            // Steep right at the edge (≥ ~50° within 1.6 m) and a real face (≥ 1.8 m within 3.2 m).
-            if (height - near > .9f && drop > 1.8f && drop > depth) { depth = drop; ox = dx; oz = dz; }
+            float faceSlope = (height - near) / 1.6f, drop = height - far;
+            if (faceSlope > 1.7f && faceSlope > topSlope + 1.2f && drop > 3.5f && drop > depth) { depth = drop; ox = dx; oz = dz; }
         }
         return depth > 0;
     }

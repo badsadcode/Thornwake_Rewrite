@@ -109,6 +109,8 @@ public static class GameSettings
         "Godot's SSR for shiny opaque surfaces (rocks, wet ground). Mostly subtle."));
     public static readonly Setting Glow = Add(new("fx.glow", "Lighting and effects", "Glow (bloom)", 0, 1.5, .05, .6,
         "Bright sky, sun reflections and foam bleed softly into their surroundings.", "×"));
+    public static readonly Setting SunGlare = Add(new("fx.sun_glare", "Lighting and effects", "Sun glare", 0, 1.5, .05, .75,
+        "Brightness of the sun disc and its halo in the sky (1 = build 11).", "×"));
     public static readonly Setting SunShafts = Add(new("fx.sun_shafts", "Lighting and effects", "Sun shafts", 0, 1.5, .05, .6,
         "Light rays from the sun through clouds, trees and over ridges (screen-space).", "×"));
     public static readonly Setting VolumetricFog = Add(new("fx.volumetric_fog", "Lighting and effects", "Volumetric fog", 0, 1, 1, 0,

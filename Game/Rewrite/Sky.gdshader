@@ -20,6 +20,7 @@ uniform sampler2D cloud_tex : filter_linear_mipmap, repeat_enable;
 uniform float cloud_period = 6000.0;
 uniform float cloud_height = 1600.0;
 uniform int quality = 1;
+uniform float sun_glare = 0.75; // disc and halo strength (setting)
 // xy: world position of the camera plus the wind drift, wrapped to the cloud period (m); z: coverage 0..1;
 // w: storm 0..1 (rain: grey, darker sky and clouds).
 global uniform vec4 cloud_state;
@@ -62,7 +63,7 @@ vec3 sky_colour(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu) {
 	float low = 1.0 - smoothstep(0.05, 0.45, sun_dir.y);
 	col = mix(col, col * vec3(1.25, 0.95, 0.75), low * smoothstep(0.35, 0.0, up) * (0.5 + 0.5 * max(mu, 0.0)));
 	col *= day;
-	col += sun_col * pow(max(mu, 0.0), 10.0) * 0.18 + sun_col * pow(max(mu, 0.0), 300.0) * 0.6;
+	col += (sun_col * pow(max(mu, 0.0), 10.0) * 0.18 + sun_col * pow(max(mu, 0.0), 300.0) * 0.6) * sun_glare;
 	col = mix(col, ground_color * day, smoothstep(0.0, -0.06, up));
 	return col;
 }
@@ -148,7 +149,7 @@ void sky() {
 		if (quality == 2) { vec4 v = volumetric(dir, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
 	} else {
 		vec3 col = sky_colour(dir, sun_dir, sun_col, day, mu);
-		vec3 disc = sun_col * smoothstep(0.99955, 0.9998, mu) * 6.0;
+		vec3 disc = sun_col * smoothstep(0.99955, 0.9998, mu) * 6.0 * sun_glare;
 		bool layered = quality >= 1 && !AT_CUBEMAP_PASS;
 		if (up > 0.0) {
 			// High cirrus (7 km): thin, bright, slow, on its own heading.

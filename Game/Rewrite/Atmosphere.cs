@@ -176,6 +176,7 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
         _sky.SetShaderParameter("quality", GameSettings.CloudQuality.Index);
+        _sky.SetShaderParameter("sun_glare", GameSettings.SunGlare.F);
         _shafts.SetShaderParameter("intensity", GameSettings.SunShafts.F);
         if (_shaftQuad != null) _shaftQuad.Visible = GameSettings.SunShafts.Value > 0;
         _shadow.Visible = GameSettings.CloudShadows.Value > 0 && GameSettings.Clouds.Value > 0;

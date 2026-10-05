@@ -38,7 +38,9 @@ void fragment() {
 		float depth = textureLod(depth_tex, uv, 0.0).r;
 		if (depth < 1e-6) { // sky (reverse-Z: the far plane is 0)
 			vec3 c = textureLod(screen_tex, uv, 0.0).rgb;
-			light += max(0.0, dot(c, vec3(0.3, 0.59, 0.11)) - 0.45) * weight;
+			// Only very bright sky casts rays: the sun disc, its halo and sunlit cloud edges. Clouds (dimmer) block it,
+			// so the sun breaks through gaps in rays; a clear sky gives rays past trees and mountains.
+			light += max(0.0, dot(c, vec3(0.3, 0.59, 0.11)) - 0.9) * weight;
 		}
 		weight *= 0.955;
 	}
@@ -46,5 +48,5 @@ void fragment() {
 	// Stronger toward the sun, and only while the sun is above the horizon.
 	float near_sun = 1.0 - smoothstep(0.0, 0.9, distance(SCREEN_UV, sun_uv));
 	float elevation = smoothstep(-0.02, 0.12, sun_direction.y);
-	ALBEDO = sun_color * light * intensity * on_screen * elevation * (0.6 + 1.4 * near_sun) * 2.2;
+	ALBEDO = sun_color * light * intensity * on_screen * elevation * (0.6 + 1.4 * near_sun) * 2.6;
 }
