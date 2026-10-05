@@ -20,7 +20,8 @@ public static class RockMeshes
 
     public static ArrayMesh Get(int kind)
     {
-        _meshes ??= new[] { Build(1, 0x51u, .22f), Build(1, 0x77u, .28f), Build(2, 0x93u, .3f) };
+        // 3: cliff slab, 4: huge/shore boulder — chunky, flat-faced (few facets), like blocky rocks.
+        _meshes ??= new[] { Build(1, 0x51u, .22f), Build(1, 0x77u, .28f), Build(2, 0x93u, .3f), Build(0, 0xC1u, .32f), Build(0, 0xB7u, .26f) };
         return _meshes[Math.Clamp(kind, 0, _meshes.Length - 1)];
     }
 

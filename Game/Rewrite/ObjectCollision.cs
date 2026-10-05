@@ -44,7 +44,7 @@ public static class ObjectCollision
         }
         foreach (var rock in data.Rocks)
         {
-            if (rock.Kind == GroundCover.Stone) continue;
+            if (rock.Kind is GroundCover.Stone or GroundCover.CliffSlab) continue; // slabs lie on the (colliding) cliff
             var b = rock.Transform.Basis;
             float size = (b.X.Length() + b.Y.Length() + b.Z.Length()) / 3;
             if (size < .45f) continue;

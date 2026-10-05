@@ -14,26 +14,13 @@ varying vec4 biome_a; // biome grass colour, snow cover (D42)
 varying vec4 biome_b; // biome dry-ground colour, plant cover
 varying vec4 biome_c; // biome map colour (debug view), rock exposure
 varying vec4 biome_d; // biome rock colour, wetness
+uniform sampler2D cliff_tex : source_color, filter_nearest_mipmap, repeat_enable; // tileable pixel rock (cliff faces)
 uniform float biome_debug = 0.0; // 1: tint the ground with the biome map colours (F4)
 
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float vnoise(vec2 p) {
 	vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
-}
-
-// Layered rock seen from the side: strata a few metres apart (warped), dark seams under ledges, vertical cracks.
-float cliff_pattern(float across, float h) {
-	float warp = vnoise(vec2(across * 0.06, h * 0.04)) * 2.0;
-	float layer = h * 0.4 + warp;
-	float strata = fract(layer);
-	float band = vnoise(vec2(across * 0.25, floor(layer) * 3.1));
-	float crack = smoothstep(0.86, 0.95, vnoise(vec2(across * 1.1, h * 0.1)));
-	float v = 0.66 + 0.5 * band;
-	v *= 1.0 - 0.38 * smoothstep(0.8, 0.97, strata);
-	v *= 1.0 + 0.16 * (1.0 - smoothstep(0.0, 0.12, strata));
-	v *= 1.0 - 0.5 * crack;
-	return v * (0.85 + 0.3 * vnoise(vec2(across, h) * 2.1));
 }
 
 void vertex() {
@@ -63,8 +50,10 @@ void fragment() {
 	if (face > 0.0) {
 		vec2 wn = pow(abs(world_normal.xz) + 1e-3, vec2(4.0));
 		wn /= wn.x + wn.y;
-		float side = cliff_pattern(p.y, h) * wn.x + cliff_pattern(p.x + 37.0, h) * wn.y;
-		rock = mix(rock, biome_d.rgb * side, face);
+		// Bitmap rock: 128 px over 8 m (crisp pixels like the trees), tinted with the biome's rock colour.
+		vec3 tx = texture(cliff_tex, vec2(p.y, -h) / 8.0).rgb, tz = texture(cliff_tex, vec2(p.x + 3.7, -h) / 8.0).rgb;
+		vec3 side = (tx * wn.x + tz * wn.y) / 0.55;
+		rock = mix(rock, biome_d.rgb * side * (0.9 + 0.2 * vnoise(vec2(p.x + p.y, h) * 0.05)), face);
 	}
 	// Bare rock: on steep slopes everywhere, and on gentler ground in rocky biomes (patchy).
 	float exposure = biome_c.a * (0.25 + 0.75 * smoothstep(0.35, 0.75, n2 + (n1 - 0.5) * 0.4));
@@ -123,8 +112,18 @@ void fragment() {
 	float flat_ground = 1.0 - smoothstep(0.03, 0.1, slope);
 	float puddle_noise = vnoise(p * 0.21) * 0.65 + vnoise(p * 0.93 + 7.1) * 0.35;
 	float puddle = smoothstep(0.64, 0.7, puddle_noise) * flat_ground * rain_wetness.y * (1.0 - submerged) * (1.0 - snow) * (1.0 - 0.6 * forest);
+	// Marshes (wet biomes: swamps): permanent murky pools in flat ground, mud around them (GroundCover places reeds
+	// along the same edges with the same noise, MarshPool in C#).
+	float marsh = smoothstep(0.45, 0.75, biome_d.a) * flat_ground * (1.0 - submerged) * (1.0 - snow) * (1.0 - smoothstep(0.1, 0.4, UV2.y));
+	float pool_noise = vnoise(p * 0.06) * 0.6 + vnoise(p * 0.19 + 3.3) * 0.4;
+	float pool = marsh * smoothstep(0.6, 0.625, pool_noise);
+	float mud_rim = marsh * smoothstep(0.52, 0.6, pool_noise) * (1.0 - pool);
+	c = mix(c, vec3(0.2, 0.17, 0.12) * (0.85 + 0.3 * n3), mud_rim * 0.75);
 	c *= mix(1.0, 0.7, wetness);
+	vec3 pool_colour = mix(vec3(0.03, 0.035, 0.022), vec3(0.02, 0.018, 0.022), smoothstep(0.75, 0.9, biome_d.a));
 	ALBEDO = mix(pow(c, vec3(2.2)), vec3(0.025, 0.03, 0.035), puddle * 0.85);
-	ROUGHNESS = mix(mix(mix(0.95, 0.55, snow), 0.45, wetness * 0.7), 0.04, puddle);
-	SPECULAR = mix(0.5, 0.9, puddle);
+	ALBEDO = mix(ALBEDO, pool_colour, pool);
+	ROUGHNESS = mix(mix(mix(mix(0.95, 0.55, snow), 0.45, wetness * 0.7), 0.04, puddle), 0.06, pool);
+	ROUGHNESS = mix(ROUGHNESS, 0.5, mud_rim * 0.6);
+	SPECULAR = mix(mix(0.5, 0.9, puddle), 0.85, pool);
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Godot;
 using Thornwake.WorldGen;
+using Noise = Thornwake.WorldGen.Noise;
 
 namespace Thornwake.Rewrite;
 
@@ -19,7 +20,7 @@ public readonly record struct RockInstance(int Kind, Transform3D Transform);
 /// </summary>
 public static class GroundCover
 {
-    public const int Stone = 0, Rock = 1, Boulder = 2;
+    public const int Stone = 0, Rock = 1, Boulder = 2, CliffSlab = 3, BigBoulder = 4;
     public const int Bush = 0, BerryBush = 1, Stump = 2, Log = 3;
     public static readonly string[] RockKinds = { "stone", "rock", "boulder" };
 
@@ -32,8 +33,19 @@ public static class GroundCover
         /// <summary>Per vertex 0.5 + depth below the nearest water surface / 2 m (0.5 = waterline), as in the tile colours.</summary>
         public readonly float[] Shore;
         public Grid(Vector3[] vertices, Vector3[] normals, double[] forest, TerrainSample[] samples, double spacing, double x0, double z0, int side, float[] shore,
-            Vector2[]? uv2 = null, float[]? biome1 = null, float[]? props = null)
-        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; EditedAmount = uv2; Biome1 = biome1; PropScale = props; }
+            Vector2[]? uv2 = null, float[]? biome1 = null, float[]? props = null, float[]? biome3 = null)
+        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; EditedAmount = uv2; Biome1 = biome1; PropScale = props; Biome3 = biome3; }
+
+        /// <summary>Per vertex biome data (rgb rock colour, a = wetness), as on the terrain mesh.</summary>
+        public readonly float[]? Biome3;
+
+        /// <summary>Biome wetness (0 … 1; swamps ~0.8) at tile-local (x, z).</summary>
+        public float Wetness(double x, double z)
+        {
+            if (Biome3 == null) return 0;
+            int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
+            return Biome3[(j * Side + i) * 4 + 3];
+        }
 
         /// <summary>Per vertex biome data (rgb dry colour, a = plant cover), as on the terrain mesh.</summary>
         public readonly float[]? Biome1;
@@ -92,6 +104,12 @@ public static class GroundCover
             return true;
         }
 
+        public Vector3 NormalAt(double x, double z)
+        {
+            int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
+            return Normals[j * Side + i];
+        }
+
         public float Mountain(double x, double z)
         {
             int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
@@ -126,6 +144,7 @@ public static class GroundCover
         {
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || g.Edited(x, z)) return;
             if (up < .82f || height - sea < 1.6) return;
+            if (g.Wetness(x, z) > .45f && MarshPool(g.X0 + x, g.Z0 + z) > .6) return; // swamp pool
             float alpine = (float)DetMath.Smooth((height - sea - 1700) / 500);
             float plants = g.Plants(x, z); // biome plant cover, squared: sparse biomes (desert, ash, tundra) get only odd tufts
             float density = (1 - .65f * forest) * (1 - alpine) * (float)DetMath.Smooth((up - .82) / .08) * plants * plants;
@@ -158,7 +177,49 @@ public static class GroundCover
             var basis = new Basis(Vector3.Up, Unit(h, 3) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 5) - .5f) * .25f);
             result.Add(new Transform3D(basis.Scaled(new Vector3(wide, tall, wide)), new Vector3((float)x, height - .05f, (float)z)));
         });
+        // Marsh reeds: in clumps along the edges of the swamp pools (same noise as the terrain shader's pools).
+        Cells(key, .7 / Math.Sqrt(Math.Max(.2, amount)), seed ^ 0x3A25UL, (x, z, h) =>
+        {
+            float wet = g.Wetness(x, z);
+            if (wet < .5f || g.Edited(x, z)) return;
+            if (!g.At(x, z, out float height, out float up, out _, out bool water) || water || up < .95f || height - sea < .6) return;
+            double n = MarshPool(g.X0 + x, g.Z0 + z);
+            if (n < .55 || n > .64) return;
+            float closeness = 1 - (float)Math.Abs(n - .6) / .05f;
+            if (Unit(h, 1) > closeness * .8f * Math.Min(1, (wet - .45f) * 3)) return;
+            float tall = 1.6f + 1.4f * Unit(h, 2), wide = .5f + .35f * Unit(h, 4);
+            var basis = new Basis(Vector3.Up, Unit(h, 3) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 5) - .5f) * .25f);
+            result.Add(new Transform3D(basis.Scaled(new Vector3(wide, tall, wide)), new Vector3((float)x, height - .05f, (float)z)));
+        });
         return result;
+    }
+
+    /// <summary>
+    /// The terrain shader's marsh pool noise at a world point (same hash and folding as Terrain.gdshader: UV is world
+    /// xz folded into 4096 m), so reeds line the pools drawn there. Pools where the value is above ~0.61.
+    /// </summary>
+    public static double MarshPool(double worldX, double worldZ)
+    {
+        float px = (float)(worldX - Math.Floor(worldX / 4096) * 4096), pz = (float)(worldZ - Math.Floor(worldZ / 4096) * 4096);
+        return VNoise(px * .06f, pz * .06f) * .6f + VNoise(px * .19f + 3.3f, pz * .19f + 3.3f) * .4f;
+    }
+
+    private static float Fract(float v) => v - MathF.Floor(v);
+
+    private static float ShaderHash(float x, float y)
+    {
+        float p3x = Fract(x * .1031f), p3y = Fract(y * .1031f), p3z = Fract(x * .1031f);
+        float d = p3x * (p3y + 33.33f) + p3y * (p3z + 33.33f) + p3z * (p3x + 33.33f);
+        p3x += d; p3y += d; p3z += d;
+        return Fract((p3x + p3y) * p3z);
+    }
+
+    private static float VNoise(float x, float y)
+    {
+        float ix = MathF.Floor(x), iy = MathF.Floor(y), fx = x - ix, fy = y - iy;
+        fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+        float a = ShaderHash(ix, iy), b = ShaderHash(ix + 1, iy), c = ShaderHash(ix, iy + 1), d = ShaderHash(ix + 1, iy + 1);
+        return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
     }
 
     /// <summary>Stones (level 0), rocks (levels 0–1), boulders and outcrop clusters (levels 0–2).</summary>
@@ -210,6 +271,46 @@ public static class GroundCover
                 Place(Boulder, ox, oz, hh, 1f, 2.5f, .4f);
             }
         });
+        // Rock walls on cliff faces: big flat-faced slabs set into the face, hiding the stretched ground.
+        Cells(key, 6.5, seed ^ 0xC1FFUL, (x, z, h) =>
+        {
+            if (!g.At(x, z, out float height, out float up, out _, out bool wet) || up > .55f || height - sea < -1) return;
+            var n = g.NormalAt(x, z);
+            var outward = new Vector3(n.X, 0, n.Z);
+            if (outward.LengthSquared() < .05f) return;
+            outward = outward.Normalized();
+            // A real face: the ground keeps dropping in front of it.
+            if (!g.At(x + outward.X * 4, z + outward.Z * 4, out float below, out _, out _, out _) || height - below < 2.5f) return;
+            if (Unit(h, 1) > .75f * a0()) return;
+            var along = Vector3.Up.Cross(outward).Normalized();
+            float wide = 3 + 5 * Unit(h, 2), tall = 2.5f + 5 * Unit(h, 3), thick = 1.4f + 1.4f * Unit(h, 4);
+            var tilt = new Basis(along, (Unit(h, 5) - .5f) * .3f) * new Basis(outward, (Unit(h, 6) - .5f) * .25f);
+            var basis = tilt * new Basis(along * wide, Vector3.Up * tall, outward * thick);
+            var at = new Vector3((float)x, height - tall * .15f, (float)z) - outward * thick * .35f;
+            result.Add(new RockInstance(CliffSlab, new Transform3D(basis, at)));
+        });
+        // Huge boulders, rare, on fairly open ground.
+        if (key.Level <= 2)
+            Cells(key, 140, seed ^ 0xB16BUL, (x, z, h) =>
+            {
+                if (!g.At(x, z, out float height, out float up, out _, out bool wet) || wet || up < .8f || height - sea < 1) return;
+                if (Unit(h, 1) > .22f * a0()) return;
+                float size = 5 + 7 * Unit(h, 2) * Unit(h, 3);
+                var basis = new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 5) - .5f) * .3f);
+                basis = basis.Scaled(new Vector3(size * (.9f + .4f * Unit(h, 6)), size * (.6f + .35f * Unit(h, 7)), size * (.9f + .4f * Unit(h, 8))));
+                result.Add(new RockInstance(BigBoulder, new Transform3D(basis, new Vector3((float)x, height - size * .25f, (float)z))));
+            });
+        // Rocky shores: in patches along the sea and lakes, blocky rocks at and just above the waterline.
+        if (key.Level <= 1)
+            Cells(key, 3.2, seed ^ 0x5407EUL, (x, z, h) =>
+            {
+                if (!g.At(x, z, out float height, out _, out _, out _)) return;
+                if (RockyShore(g.X0 + x, g.Z0 + z, height - sea) < .3f || Unit(h, 1) > .45f * a0()) return;
+                float size = .8f + 2.6f * Unit(h, 2) * Unit(h, 2);
+                var basis = new Basis(Vector3.Up, Unit(h, 3) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 4) - .5f) * .5f);
+                basis = basis.Scaled(new Vector3(size * (.8f + .5f * Unit(h, 5)), size * (.5f + .4f * Unit(h, 6)), size * (.8f + .5f * Unit(h, 7))));
+                result.Add(new RockInstance(BigBoulder, new Transform3D(basis, new Vector3((float)x, height - size * .3f, (float)z))));
+            });
         // Scree at the foot of cliffs: flat ground with a face rising a few metres right next to it.
         if (key.Level <= 1)
             Cells(key, 5, seed ^ 0x5C2EEUL, (x, z, h) =>
@@ -231,6 +332,19 @@ public static class GroundCover
                 }
             });
         return result;
+    }
+
+    /// <summary>
+    /// Rocky shore strength 0..1 at a world point a given height above the sea or lake surface: shore patches (from a
+    /// world noise, so neighbouring tiles agree) between ~1 m under and ~2.5 m above the water. Also bares the ground
+    /// to rock in the terrain colours (TileBuilder).
+    /// </summary>
+    public static float RockyShore(double worldX, double worldZ, double aboveWater)
+    {
+        if (aboveWater < -1.2 || aboveWater > 3) return 0;
+        double patch = Noise.Value(worldX / 160, worldZ / 160, 0x5407EUL) * .7 + Noise.Value(worldX / 45, worldZ / 45, 0x5408UL) * .3;
+        float band = (float)(DetMath.Smooth((aboveWater + 1.2) / .6) * (1 - DetMath.Smooth((aboveWater - 1.8) / 1.2)));
+        return (float)DetMath.Smooth((patch - .15) / .25) * band;
     }
 
     /// <summary>
