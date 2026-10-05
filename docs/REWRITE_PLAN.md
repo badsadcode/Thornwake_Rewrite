@@ -331,5 +331,8 @@ simulation's ground follows. Forests: sharper forest/meadow patches; tree cards 
 tiles, collision and the water simulation's ground follow; tests for the edit layer and for water flowing into a dug
 channel. Also reeds and damp earth along river and lake banks.
 
-**Next:** Tom's build-3/4 feedback and asset batches first when they arrive. Then: M6 second step (optional local
+Then rain weather (overcast sky, dim light, haze, falling rain when H rain is on), bare soil on edited ground,
+and a rejected gully experiment (D24). **Build 5 (v0.9.4)** sent with everything above; 28 tests pass.
+
+**Next:** Tom's build-5 feedback and asset batches first when they arrive. Then: M6 second step (optional local
 river simulation once terrain edits exist; splashes; sound), M3 gully detail, M8 next steps (save edits, soil/rock material layers, tools).
