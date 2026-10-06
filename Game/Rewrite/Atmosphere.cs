@@ -285,6 +285,7 @@ public partial class Atmosphere : Node3D
         if (Math.Abs(seaState - _wavesState) > .004 || Math.Abs(Mathf.AngleDifference((float)windAngle, (float)_wavesAngle)) > .14) { _wavesAngle = windAngle; UpdateWaves(seaState); }
         Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, _storm);
         _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, _storm);
+        UpdateWaterSky(elevation);
         Environment.FogDensity = .00009f * GameSettings.Haze.F * Mathf.Lerp(1, 4, _storm);
         Environment.FogEnabled = GameSettings.Haze.Value > 0 || _storm > 0;
         // The sky's radiance map is not re-baked for the storm (global uniform), so dim the ambient light directly.
@@ -385,6 +386,26 @@ public partial class Atmosphere : Node3D
         _water.SetShaderParameter("wave2_hs", (float)Spectrum.Hs);
         _water.SetShaderParameter("wave2_chop", (float)Spectrum.Chop);
         SendSpectrumOrigin();
+    }
+
+    /// <summary>
+    /// The sky the water reflects (all water styles): the sky shader's horizon and zenith colours with its day factor,
+    /// sunset warmth near the horizon, the biome mood, and storms greying and darkening it. Fixed daylight colours made
+    /// lakes glow bright blue-white at night.
+    /// </summary>
+    private void UpdateWaterSky(float elevation)
+    {
+        if (_water == null) return;
+        float day = Mathf.Clamp(Mathf.Sin(Mathf.DegToRad(Mathf.Max(elevation, -4))) * 4 + .35f, .08f, 1) * Mathf.Lerp(1, .5f, _storm);
+        var mood = new Color(_mood.X, _mood.Y, _mood.Z);
+        var horizon = new Color(.68f, .75f, .78f) * new Color(1, 1, 1).Lerp(mood, .7f);
+        var zenith = new Color(.29f, .45f, .62f) * mood;
+        float low = 1 - Mathf.SmoothStep(3, 25, elevation);
+        horizon = horizon.Lerp(horizon * new Color(1.25f, .95f, .75f), low * (1 - _night));
+        float grey = _storm * .5f;
+        Color Grey(Color c) { float l = (c.R + c.G + c.B) / 3; return c.Lerp(new Color(l, l, l), grey); }
+        _water.SetShaderParameter("sky_horizon", Grey(horizon) * day);
+        _water.SetShaderParameter("sky_zenith", Grey(zenith) * day);
     }
 
     /// <summary>Experimental 2 waves are world-anchored: re-send the phases when the float origin moves.</summary>

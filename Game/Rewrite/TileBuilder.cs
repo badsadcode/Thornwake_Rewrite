@@ -281,6 +281,14 @@ public static class TileBuilder
     /// intersection. Colour: R = depth / 20 m, G = kind (0 sea, .5 lake, 1 river).
     /// </summary>
     /// <summary>The blended biome water tint at a vertex: rgb packed into one float (exact up to 2^24), strength 0..1.</summary>
+    /// <summary>The biome water tint at a world point (the simulated water's sheets match the generated water).</summary>
+    public static Vector2 WaterTintAt(TerrainSampler sampler, double x, double z)
+    {
+        var biomes = sampler.Plan.Biomes;
+        var (ba, bb, share) = biomes.Sample(x, z);
+        return WaterTint(biomes.Pool[ba], biomes.Pool[bb], share);
+    }
+
     private static Vector2 WaterTint(ResolvedBiome a, ResolvedBiome b, double share)
     {
         (float R, float G, float B, float S) Of(ResolvedBiome r) => r.Def.Water.WaterTint is { } hex ? (BiomeRegistry.Hex(hex).Item1, BiomeRegistry.Hex(hex).Item2, BiomeRegistry.Hex(hex).Item3, (float)r.Def.Water.WaterTintStrength) : (1f, 1f, 1f, 0f);

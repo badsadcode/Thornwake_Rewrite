@@ -78,6 +78,14 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 19 — water fixes from your screenshots
+* **Digging next to a river**: the water filling the hole now has the river's colour (biome tint) and blends into the
+  river softly instead of showing square, stepped edges.
+* **Water at night** is dark and reflects the night sky (and the moon) instead of glowing as if it were day — in all
+  three water styles. Sunsets warm the reflections; storms grey them.
+* **Windy lakes**: the hard white reflection streaks are gone; the ripples still sparkle in the sun.
+* **Fast rivers** foam in patches that drift with the current, not one white sheet.
+
 ## New in build 18 — water as a system, Noor's ground textures (switchable)
 * **Experimental 2** (Noor's review): foam follows the weather — calm: no whitecaps; breezy: a few short-lived caps;
   rough: many; storm: dense. Whitecaps come in streaks and fragments that form and fade, not big white sheets. Broader,

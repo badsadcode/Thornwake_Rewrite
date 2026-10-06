@@ -525,6 +525,23 @@ scattering on canopies and plants, configurable.
   grass with triangle-straight edges. The rock threshold now also uses the rock texture's brightness (stones show
   first) and a few-metre noise: ragged edges in both ground styles.
 
+## D51 — Round 13: dug water joins rivers softly; water reflects the real sky; calmer ripple reflections (2026-10-06)
+* Dug holes filling from a river: LocalWater redraws river/lake cells within 3 cells of simulated water so the sheets
+  join; that overlap ended in 0.5 m stair-steps and had no biome tint (clear turquoise squares over a tinted, foamy
+  river). ChunkView now reports a join weight (1 near the simulated water, fading to 0 at 3.5 cells), written to the sim
+  mesh's COLOR.a (the experimental shaders' edge fade), and the sim mesh carries the biome water tint (UV2) from
+  TileBuilder.WaterTintAt at the chunk corners. Classic water ignores COLOR.a (unchanged there apart from the tint).
+* Night: the water's sky colours (sky_horizon / sky_zenith) were never set, so every water style reflected a daytime
+  sky at night (lakes glowing blue-white). Atmosphere.UpdateWaterSky sets them each frame from the sky shader's own
+  colours and day factor (sin(sun) × 4 + 0.35, 0.08 … 1), sunset warmth near the horizon, the biome mood, and storms
+  (greyer, darker). Applies to all three water styles (a bug fix).
+* Windy lakes (Tom: "this element is annoying and too strong"): the fine ripple facets tilted toward the horizon and
+  mirrored the bright sky as hard white streaks. Experimental 2's Fresnel now uses a softened normal (big waves plus 45%
+  of the ripples); glints and refraction keep the full normal. Ripple and chop wind response lowered (0.35 → 0.22,
+  0.08 → 0.05); far chop fades (it only shimmered at the horizon).
+* Rivers: rapids come in patches drifting with the current instead of one white sheet over a whole fast river; the
+  general moving-water streaks are lighter.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

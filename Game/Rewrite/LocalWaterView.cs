@@ -15,6 +15,7 @@ public partial class LocalWaterView : Node3D
 {
     public LocalWater? Sim { get; private set; }
     private ShaderMaterial _material = null!;
+    private TerrainSampler? _sampler;
     private double _originX, _originZ;
     private readonly Dictionary<(long, long), Node3D> _meshes = new();
     private ShaderMaterial _wetMaterial = null!;
@@ -22,13 +23,13 @@ public partial class LocalWaterView : Node3D
     private readonly HashSet<(long, long)> _pending = new();
     private readonly Queue<(long, long)> _order = new();
     private const int N = LocalWater.ChunkCells + 1;
-    private readonly float[] _floor = new float[N * N], _depth = new float[N * N], _vx = new float[N * N], _vz = new float[N * N], _wet = new float[N * N];
+    private readonly float[] _floor = new float[N * N], _depth = new float[N * N], _vx = new float[N * N], _vz = new float[N * N], _wet = new float[N * N], _join = new float[N * N];
 
     public void Configure(TerrainSampler sampler, ShaderMaterial material, double originX, double originZ)
     {
         foreach (var mesh in _meshes.Values) mesh.QueueFree();
         _meshes.Clear(); _pending.Clear(); _order.Clear();
-        _material = material; _originX = originX; _originZ = originZ;
+        _material = material; _originX = originX; _originZ = originZ; _sampler = sampler;
         // Drawn before the water (both are transparent passes), so the film never multiplies over a water surface.
         _wetMaterial ??= new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/WetGround.gdshader"), RenderPriority = -1 };
         Sim = new LocalWater((cx, cz) => LocalWater.FromSampler(sampler, cx, cz));
@@ -69,7 +70,17 @@ public partial class LocalWaterView : Node3D
         if (Sim != null && !Sim.InWindow(cx, cz) && Sim.HasDormant(cx, cz)) return;
         _meshes.Remove((cx, cz), out var old);
         old?.QueueFree();
-        if (Sim == null || !Sim.ChunkView(cx, cz, _floor, _depth, _vx, _vz, _wet)) return;
+        if (Sim == null || !Sim.ChunkView(cx, cz, _floor, _depth, _vx, _vz, _wet, _join)) return;
+        // Biome water tint like the generated water (it went missing in dug holes): the chunk's four corners,
+        // interpolated (a tint varies over kilometres).
+        Vector2 t00 = Vector2.Zero, t10 = Vector2.Zero, t01 = Vector2.Zero, t11 = Vector2.Zero;
+        if (_sampler != null)
+        {
+            double x0 = cx * LocalWater.ChunkSize, z0 = cz * LocalWater.ChunkSize, size = LocalWater.ChunkSize;
+            t00 = TileBuilder.WaterTintAt(_sampler, x0, z0); t10 = TileBuilder.WaterTintAt(_sampler, x0 + size, z0);
+            t01 = TileBuilder.WaterTintAt(_sampler, x0, z0 + size); t11 = TileBuilder.WaterTintAt(_sampler, x0 + size, z0 + size);
+        }
+        var tint = new Vector2[N * N];
         var root = new Node3D { Position = ChunkPosition(cx, cz) };
         var wetMesh = WetMesh();
         if (wetMesh != null) root.AddChild(new MeshInstance3D { Mesh = wetMesh, MaterialOverride = _wetMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
@@ -99,7 +110,10 @@ public partial class LocalWaterView : Node3D
                 normals[k] = Vector3.Up;
                 // Fast sheets read as rivers, still pools as lakes.
                 float speed = MathF.Sqrt(_vx[k] * _vx[k] + _vz[k] * _vz[k]);
-                colors[k] = new Color(Math.Clamp(_depth[k] / 20, 0, 1), 1, 0, 1); // drawn as river water: no lake waves on puddles
+                // Drawn as river water (no lake waves on puddles); alpha = edge fade: overlap with the terrain's river or
+                // lake sheet fades out away from the simulated water.
+                colors[k] = new Color(Math.Clamp(_depth[k] / 20, 0, 1), 1, 0, _join[k]);
+                tint[k] = Tint((float)i / (N - 1), (float)j / (N - 1));
                 flow[k] = new Vector2(_vx[k], _vz[k]);
             }
         if (!any) { Keep(); return; }
@@ -118,11 +132,22 @@ public partial class LocalWaterView : Node3D
         arrays[(int)Mesh.ArrayType.Normal] = normals;
         arrays[(int)Mesh.ArrayType.Color] = colors;
         arrays[(int)Mesh.ArrayType.TexUV] = flow;
+        arrays[(int)Mesh.ArrayType.TexUV2] = tint;
         arrays[(int)Mesh.ArrayType.Index] = indices.ToArray();
         var mesh = new ArrayMesh();
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
         root.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         Keep();
+
+        // Packed colours cannot be blended: the dominant corner's colour, the strength interpolated.
+        Vector2 Tint(float u, float v)
+        {
+            float w00 = (1 - u) * (1 - v), w10 = u * (1 - v), w01 = (1 - u) * v, w11 = u * v;
+            float strength = t00.Y * w00 + t10.Y * w10 + t01.Y * w01 + t11.Y * w11;
+            var best = w00 >= w10 && w00 >= w01 && w00 >= w11 ? t00 : w10 >= w01 && w10 >= w11 ? t10 : w01 >= w11 ? t01 : t11;
+            if (best.Y <= 0) best = t00.Y > 0 ? t00 : t10.Y > 0 ? t10 : t01.Y > 0 ? t01 : t11;
+            return new Vector2(best.X, strength);
+        }
 
         void Keep()
         {

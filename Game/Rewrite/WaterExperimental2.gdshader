@@ -316,7 +316,8 @@ void vertex() {
 // Wind waves (per pixel, lighting only): six short travelling waves fanned around the wind (7 m … 1 m, deep-water
 // speeds), each phase wobbled by noise so crests never run straight for long, amplitude gathered in gusty patches;
 // then two scales of fine gradient-noise ripples close to the camera. Waves far smaller than a pixel fade out.
-vec2 ripple_slope(vec2 p, float t, vec2 wdir, float strength, float dist) {
+// footprint: metres of water one pixel covers along the view (grows at grazing angles).
+vec2 ripple_slope(vec2 p, float t, vec2 wdir, float strength, float dist, float footprint) {
 	vec2 slope = vec2(0.0);
 	float gust = 0.55 + 0.9 * (gnoised(p * 0.012 + wdir * t * 0.05).z + 0.5); // cat's paws: rougher patches
 	for (int i = 0; i < 6; i++) {
@@ -325,7 +326,7 @@ vec2 ripple_slope(vec2 p, float t, vec2 wdir, float strength, float dist) {
 		float k = PI2 / lambda;
 		float ang = (hash(vec2(fi, 3.7)) - 0.5) * 2.4 + (fi - 2.5) * 0.15;
 		vec2 d = vec2(wdir.x * cos(ang) - wdir.y * sin(ang), wdir.x * sin(ang) + wdir.y * cos(ang));
-		float fade = 1.0 - smoothstep(lambda * 25.0, lambda * 80.0, dist);
+		float fade = (1.0 - smoothstep(lambda * 25.0, lambda * 80.0, dist)) * (1.0 - smoothstep(lambda * 0.2, lambda * 0.45, footprint));
 		if (fade <= 0.0) continue;
 		float warp = 2.2 * gnoised(p * (0.04 / lambda) + vec2(fi * 7.1, fi * 3.3)).z;
 		float theta = k * dot(d, p) - sqrt(G * k) * t + fi * 1.7 + warp;
@@ -333,7 +334,7 @@ vec2 ripple_slope(vec2 p, float t, vec2 wdir, float strength, float dist) {
 		slope += d * (k * a * cos(theta));
 	}
 	slope *= strength * gust;
-	float near = 1.0 - smoothstep(10.0, 40.0, dist);
+	float near = (1.0 - smoothstep(10.0, 40.0, dist)) * (1.0 - smoothstep(0.08, 0.2, footprint));
 	vec2 fine = gnoised(p * 1.7 + wdir * t * 0.8).xy * 1.7 * 0.03 + gnoised(p * 4.1 - wdir.yx * t * 1.3 + 5.0).xy * 4.1 * 0.012;
 	return slope + fine * near * (0.5 + 0.5 * strength);
 }
@@ -418,12 +419,16 @@ void fragment() {
 	float use_px = smoothstep(18.0, 10.0, bed_depth) * (1.0 - smoothstep(25.0, 55.0, dist)) * step(length(behind0), 3000.0);
 	float px_depth = mix(vertex_depth, bed_depth, use_px);
 
+	float graze = max(abs(normalize(world_position - CAMERA_POSITION_WORLD).y), 0.02);
+	float footprint = dist * 0.0012 / graze; // ~1 mrad per pixel, stretched by the grazing angle
 	// Per-pixel wave normal from the full wave sum (smooth at every distance).
 	vec3 n = vec3(0.0, 1.0, 0.0); float crest = 0.0; vec3 jac = vec3(0.0);
 	float breaking = 0.0, since = 1.0, shore_k = 1.0;
 	if (sea + lake - pond > 0.5) {
 		// Waves far shorter than a pixel only add sparkle: fade them with distance.
-		float min_lambda = dist / 300.0;
+		// Nyquist on the pixel footprint along the view, not just distance: low over the water a pixel spans metres,
+		// and shorter waves aliased into rings and bands of fine lines around the camera.
+		float min_lambda = max(dist / 300.0, footprint * 2.5);
 		gerstner(p, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, min_lambda, ocean_time, wave_heads, wave_norms, wave_coast, n, crest, jac);
 		if (sea > 0.5) shore_wave(p, px_depth, bed_grad, exposure, min_lambda, ocean_time, n, breaking, since, shore_k);
 	}
@@ -431,6 +436,7 @@ void fragment() {
 	float fold = 1.0 - ((1.0 - jac.x) * (1.0 - jac.y) - jac.z * jac.z);
 	vec2 slope = -n.xz / max(n.y, 0.2);
 
+	vec2 big_slope = slope; // the waves without the small ripples (reflection strength, below)
 	// Small-scale detail: wind ripples on seas and lakes (stronger with wind and storms), flow ripples on rivers.
 	float bed_slope = length(bed_grad);
 	float rocky = sea * smoothstep(0.12, 0.35, bed_slope) * (1.0 - smoothstep(2.0, 9.0, vertex_depth)) * (0.4 + sea_state) * exposure;
@@ -438,11 +444,13 @@ void fragment() {
 	else {
 		// Small lakes stay calm (little fetch for the wind to raise waves); big ones approach the sea.
 		float lake_calm = mix(1.0, clamp(0.3 + fetch / 4000.0, 0.3, 0.75), lake);
-		float strength = (0.2 + 0.35 * wind_speed + 0.8 * sea_state) * lake_calm * mix(1.0, 0.25, pond) + rocky * 1.5;
-		slope += ripple_slope(p, TIME, wdir, strength, dist);
+		float strength = (0.2 + 0.22 * wind_speed + 0.8 * sea_state) * lake_calm * mix(1.0, 0.25, pond) + rocky * 1.5;
+		slope += ripple_slope(p, TIME, wdir, strength, dist, footprint);
 		// Wind sea: mid-scale choppy waves running with the wind on the swell, much stronger in storms (sharpened
 		// by folding the noise), fading with distance into the swell's own lighting.
-		float chop = (0.03 + 0.35 * sea_state * sea_state + 0.08 * wind_speed) * (sea + lake * 0.35 - pond * 0.3) / (1.0 + dist / 250.0);
+		float chop = (0.03 + 0.35 * sea_state * sea_state + 0.05 * wind_speed) * (sea + lake * 0.35 - pond * 0.3) / (1.0 + dist / 250.0)
+			* (1.0 - 0.7 * smoothstep(300.0, 1500.0, dist)) // far away it only shimmered
+			* (1.0 - smoothstep(1.5, 5.0, footprint));      // and aliased into bands at grazing angles
 		vec2 side = vec2(-wdir.y, wdir.x);
 		vec3 c1 = gnoised(p * 0.07 + wdir * TIME * 0.25);
 		vec3 c2 = gnoised(p * 0.17 - (wdir * 0.6 + side * 0.4) * TIME * 0.4 + 3.7);
@@ -452,7 +460,10 @@ void fragment() {
 	vec3 n_view = normalize((VIEW_MATRIX * vec4(n_world, 0.0)).xyz);
 	NORMAL = n_view;
 	vec3 to_eye = normalize(-VERTEX);
-	float fresnel = 0.02 + 0.98 * pow(1.0 - clamp(dot(n_view, to_eye), 0.0, 1.0), 5.0);
+	// Reflection strength from a softened normal (half the small ripples): ripple facets turned toward the horizon
+	// mirrored the bright sky as hard white streaks all over windy lakes. Glints and refraction keep the full normal.
+	vec3 n_soft = normalize((VIEW_MATRIX * vec4(normalize(vec3(-mix(big_slope, slope, 0.45).x, 1.0, -mix(big_slope, slope, 0.45).y)), 0.0)).xyz);
+	float fresnel = 0.02 + 0.98 * pow(1.0 - clamp(dot(n_soft, to_eye), 0.0, 1.0), 5.0);
 
 	// Behind the surface (depth buffer), refracted; never pull in things above water.
 	vec3 behind = view_from_depth(SCREEN_UV, texture(depth_tex, SCREEN_UV).r, INV_PROJECTION_MATRIX);
@@ -561,8 +572,10 @@ void fragment() {
 		float rapids = smoothstep(1.0, 2.8, fs) * (0.6 + 0.4 * (1.0 - smoothstep(0.3, 1.5, vertex_depth)));
 		// Whitewater comes in pulses and patches, not a uniform sheet.
 		float pulse = 0.65 + 0.35 * noise(p * 0.08 - current * TIME * 0.05);
-		amount = max(amount, rapids * pulse * 0.95);
-		amount = max(amount, smoothstep(0.5, 2.0, fs) * 0.35); // streaks in moving water
+		// In patches drifting with the current (a whole fast river turned into one white sheet).
+		float patches = smoothstep(0.3, 0.7, noise(p * 0.22 - current * TIME * 0.35) * 0.7 + noise(p * 0.6 + 4.2) * 0.3 + 0.15 * smoothstep(2.0, 3.5, fs));
+		amount = max(amount, rapids * pulse * patches * 0.85);
+		amount = max(amount, smoothstep(0.6, 2.2, fs) * 0.25); // streaks in moving water
 	} else {
 		amount = max(amount, smoothstep(0.45, 0.9, fold) * smoothstep(0.5, 0.9, sea_state) * 0.6 * lake);
 	}

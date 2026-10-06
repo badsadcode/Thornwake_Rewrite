@@ -453,9 +453,12 @@ public sealed class LocalWater
         return s > MaxSpeed ? (vx / s * MaxSpeed, vz / s * MaxSpeed) : (vx, vz);
     }
 
-    private bool NearSimWater(int x, int z)
+    private bool NearSimWater(int x, int z) => SimWaterDistance(x, z) <= 3;
+
+    /// <summary>Distance (cells) from a river/lake cell to the nearest simulated water or dug ground below it, up to 3; 99 if none.</summary>
+    private float SimWaterDistance(int x, int z)
     {
-        float level = _level[Index(x, z)];
+        float level = _level[Index(x, z)], best = 99;
         for (int b = -3; b <= 3; b++)
             for (int a = -3; a <= 3; a++)
             {
@@ -463,9 +466,9 @@ public sealed class LocalWater
                 if (nx < 0 || nz < 0 || nx >= Side || nz >= Side) continue;
                 int n = Index(nx, nz);
                 // Simulated water, or dug ground below this water (the terrain tiles leave both to this view).
-                if (!_sink[n] && (_depth[n] > .008f || _edited[n] && _floor[n] < level)) return true;
+                if (!_sink[n] && (_depth[n] > .008f || _edited[n] && _floor[n] < level)) best = Math.Min(best, MathF.Sqrt(a * a + b * b));
             }
-        return false;
+        return best;
     }
 
     /// <summary>Chunks (world chunk coordinates) whose visible water changed since the last call.</summary>
@@ -481,7 +484,9 @@ public sealed class LocalWater
     /// Render data for a window chunk: (ChunkCells+1)² samples at cell centres (the last row/column from the
     /// neighbouring chunk, so chunk meshes join): floor, depth, velocity. False if the chunk is not in the window.
     /// </summary>
-    public bool ChunkView(long chunkX, long chunkZ, float[] floor, float[] depth, float[] vx, float[] vz, float[] wet)
+    /// <param name="join">Optional: 1 where this view's water is its own; on river/lake cells drawn only to join the
+    /// terrain's sheet, fading to 0 away from the simulated water (the overlap ends softly, not in 0.5 m steps).</param>
+    public bool ChunkView(long chunkX, long chunkZ, float[] floor, float[] depth, float[] vx, float[] vz, float[] wet, float[]? join = null)
     {
         if (!InWindow(chunkX, chunkZ)) return false;
         int bx = (int)(chunkX - OriginChunkX) * ChunkCells, bz = (int)(chunkZ - OriginChunkZ) * ChunkCells, n = ChunkCells + 1;
@@ -490,6 +495,7 @@ public sealed class LocalWater
             {
                 int x = Math.Min(bx + i, Side - 1), z = Math.Min(bz + j, Side - 1), k = j * n + i, c = Index(x, z);
                 floor[k] = _floor[c]; depth[k] = _depth[c];
+                if (join != null) join[k] = 1;
                 // Wet ground: 3×3 average, so the darkened patch has soft edges rather than 0.5 m squares.
                 float ws = 0;
                 for (int b = -1; b <= 1; b++)
@@ -500,7 +506,12 @@ public sealed class LocalWater
                 // sheets join without a gap.
                 if (_sink[c] && !float.IsNaN(_level[c]))
                 {
-                    if (_edited[c] && _floor[c] < _level[c] || NearSimWater(x, z)) depth[k] = Math.Max(0, _level[c] - _floor[c]);
+                    float near = _edited[c] && _floor[c] < _level[c] ? 0 : SimWaterDistance(x, z);
+                    if (near <= 3)
+                    {
+                        depth[k] = Math.Max(0, _level[c] - _floor[c]);
+                        if (join != null) join[k] = Math.Clamp(1 - (near - 1) / 2.5f, 0, 1);
+                    }
                     // A river/lake cell this view does not draw (the terrain tile's sheet does) reports its surface as the
                     // floor: the edge of a drawn patch then stays on the water surface instead of dropping to the bed
                     // (walls of water around springs placed in a river).
