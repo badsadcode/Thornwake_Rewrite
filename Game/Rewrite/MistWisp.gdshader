@@ -37,7 +37,7 @@ void fragment() {
 	vec2 c = UV * 2.0 - 1.0;
 	float shape = 1.0 - smoothstep(0.35, 1.0, length(c * vec2(1.0, 1.25)));
 	float n = vnoise(UV * 3.0 + seed * 17.0 + vec2(TIME * 0.02, 0.0)) * 0.65 + vnoise(UV * 7.0 - seed * 5.0 - vec2(0.0, TIME * 0.03)) * 0.35;
-	float a = shape * smoothstep(0.25, 0.65, n) * opacity * amount * 1.8;
+	float a = shape * smoothstep(0.25, 0.65, n) * opacity * amount * 0.9;
 	// Soft where the sheet meets the ground or other geometry.
 	float depth = textureLod(depth_texture, SCREEN_UV, 0.0).r;
 	vec4 scene = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, depth, 1.0);
@@ -46,5 +46,5 @@ void fragment() {
 	// Fade near the camera and far away.
 	a *= smoothstep(4.0, 14.0, z) * (1.0 - smoothstep(110.0, 160.0, z));
 	ALBEDO = mist_color;
-	ALPHA = clamp(a, 0.0, 0.85);
+	ALPHA = clamp(a, 0.0, 0.45); // (overlapping sheets added up to a wall)
 }

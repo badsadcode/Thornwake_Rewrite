@@ -125,11 +125,12 @@ vec3 view_from_depth(vec2 uv, float raw, mat4 inv_projection) {
 	return v.xyz / v.w;
 }
 
-// ---- body classification (COLOR.g): sea 0, pond .375, lake .5, river 1
-float is_sea(float b) { return 1.0 - step(0.25, b); }
-float is_pond(float b) { return step(0.25, b) * (1.0 - step(0.45, b)); }
-float is_lake(float b) { return step(0.45, b) * (1.0 - step(0.75, b)); }
-float is_river(float b) { return step(0.75, b); }
+// Body (COLOR.g, TileBuilder.Kind): sea 0, river ⅓, lake ⅔, pond 1 — as smooth weights that sum to 1, so a river
+// opening into the sea or a lake blends across the triangles between them instead of switching at a hard line.
+float is_sea(float b) { return 1.0 - smoothstep(0.0, 0.3333, b); }
+float is_river(float b) { return smoothstep(0.0, 0.3333, b) * (1.0 - smoothstep(0.3333, 0.6667, b)); }
+float is_lake(float b) { return smoothstep(0.3333, 0.6667, b) * (1.0 - smoothstep(0.6667, 1.0, b)); }
+float is_pond(float b) { return smoothstep(0.6667, 1.0, b); }
 
 // Amplitude factor of wave i: shallow-water fade, lakes cut to their size, sheltered coasts calmer.
 float wave_factor(int i, float lambda, float depth, float sea, float lake, float fetch_m, float expo) {
@@ -375,19 +376,33 @@ vec2 flow_slope(vec2 p, vec2 f, float t, float dist) {
 	float rough = 0.15 + 0.85 * smoothstep(0.05, 1.6, speed);
 	return (sa * w0 + sb * (1.0 - w0)) * rough / (1.0 + dist / 90.0);
 }
+// Noise carried by a current that varies from place to place (round 20, Tom: "circles or thingies on the rivers… not
+// moving"). noise(p - current * TIME) shears without bound: where the current turns or slows, two points a metre apart
+// end up hundreds of metres apart in the noise after an hour, and the pattern winds into frozen arcs and stripes. Two
+// copies scrolled over a short cycle and cross-faded (as flow_slope does) keep the drift without the shear.
+float flow_noise(vec2 p, vec2 f, float t, float cycle) {
+	float p0 = fract(t / cycle), p1 = fract(t / cycle + 0.5);
+	float w0 = 1.0 - abs(2.0 * p0 - 1.0);
+	return mix(noise(p - f * p1 * cycle + vec2(7.3, 1.9)), noise(p - f * p0 * cycle), w0);
+}
+vec2 flow_gnoise(vec2 p, vec2 f, float t, float cycle) {
+	float p0 = fract(t / cycle), p1 = fract(t / cycle + 0.5);
+	float w0 = 1.0 - abs(2.0 * p0 - 1.0);
+	return mix(gnoised(p - f * p1 * cycle + vec2(7.3, 1.9)).xy, gnoised(p - f * p0 * cycle).xy, w0);
+}
 
 float sq(float x) { return x * x; } // pow(x, 2.0) is undefined for negative x in GLSL (NaN)
 
 // Water around a rock in a current (RIVERS_PLAN step 5), as a height in rock radii: a, c = downstream / across of the
 // rock in radii. A pressure bulge upstream, two V-wake arms opening downstream (narrower in fast water), and a turbulent
 // core behind with alternating eddies drifting away (a von Kármán street, cheaply).
-float obstacle_h(float a, float c, float fs, float t) {
+float obstacle_h(float a, float c, float fs, float t) { // t: a short cycled phase, never raw TIME
 	float bulge = exp(-((a + 1.3) * (a + 1.3) * 1.6 + c * c * 1.1));
 	float spread = mix(0.65, 0.32, smoothstep(0.5, 2.5, fs));
 	float arm = smoothstep(-0.2, 0.3, a) * exp(-sq(abs(c) - (1.0 + max(a, 0.0) * spread)) * 3.0) * exp(-max(a, 0.0) * 0.11);
 	float core = smoothstep(0.4, 1.2, a) * exp(-c * c / (0.5 + max(a, 0.0) * 0.12)) * exp(-max(a, 0.0) * 0.09);
 	float eddy = sin(a * 1.5 - t * fs * 1.5) * sin(c * 2.2 + a * 0.7);
-	return (bulge * 0.16 + arm * 0.09 * sin(a * 4.0 - t * 2.0) + core * 0.08 * eddy) * (1.0 - smoothstep(9.0, 13.0, a));
+	return (bulge * 0.12 + arm * 0.05 * sin(a * 4.0 - t * fs * 2.5) + core * 0.06 * eddy) * (1.0 - smoothstep(7.0, 11.0, a));
 }
 
 // The sky in a reflected direction (round 16, Tom: "the reflection is a bit boring, bland when there's a lot"): the
@@ -468,16 +483,14 @@ vec3 reflected_sky(vec3 dir, vec2 offs, vec3 base) { // offs: this water's xz mi
 // threads along bubble cells as it thins, fine speckle; y = milky aerated water just under the surface (wider, shines
 // through); z = shading (creases a little darker). Pulled into streaks along the drift (wind, current). The lace fades
 // to its average far away (cells smaller than a pixel would alias).
-vec3 foam_layers(vec2 p, vec2 drift, float t, float amount, float dist) {
+// foam_at takes the already-drifted position q and the streak frame (dn, stretch): only a frame that is the same
+// everywhere (the wind's) may be applied to q, since dot(q, dn) with dn turning from place to place winds q into arcs.
+vec3 foam_at(vec2 q, vec2 dn, float stretch, float t, float amount, float dist) {
 	if (amount <= 0.001) return vec3(0.0, 0.0, 1.0);
 	float near = 1.0 - smoothstep(12.0, 70.0, dist);
 	float far = smoothstep(35.0, 160.0, dist);
-	float speed = length(drift);
-	vec2 dn = speed > 1e-3 ? drift / speed : vec2(1.0, 0.0);
 	vec2 sd = vec2(-dn.y, dn.x);
-	vec2 q = p + drift * t;
 	q += (vec2(noise(q * 0.21), noise(q * 0.21 + 5.7)) - 0.5) * 3.0; // swirl
-	float stretch = 1.3 + 1.4 * smoothstep(0.1, 1.5, speed);
 	vec2 qs = vec2(dot(q, dn) / stretch, dot(q, sd));
 	float fbm = noise(qs * 0.55) * 0.5 + noise(qs * 1.6 + t * 0.1) * 0.3 + mix(0.5, noise(qs * 4.4 - t * 0.2), near) * 0.2;
 	float cover = smoothstep(1.0 - amount * 1.5, 1.0 - amount * 1.5 + 0.3, fbm);
@@ -499,6 +512,26 @@ vec3 foam_layers(vec2 p, vec2 drift, float t, float amount, float dist) {
 	float under = smoothstep(1.0 - amount * 1.6, 1.0 - amount * 1.6 + 0.55, fbm) * min(1.0, amount * 1.5);
 	float shade = 0.74 + 0.26 * mix(fbm * 0.5 + lace * 0.5, 0.75, far);
 	return vec3(clamp(top, 0.0, 1.0) * 0.95, under, shade);
+}
+// Foam drifting with one even drift (the wind over open water): carried and pulled into streaks along it.
+vec3 foam_layers(vec2 p, vec2 drift, float t, float amount, float dist) {
+	float speed = length(drift);
+	vec2 dn = speed > 1e-3 ? drift / speed : vec2(1.0, 0.0);
+	return foam_at(p + drift * t, dn, 1.3 + 1.4 * smoothstep(0.1, 1.5, speed), t, amount, dist);
+}
+// Foam carried by a current that varies from place to place (rivers, plumes; round 20): two copies scrolled over a short
+// cycle and cross-faded (no shear, see flow_noise), unrotated; the streaks come from smearing taps up the local current.
+vec3 foam_flow(vec2 p, vec2 drift, float t, float amount, float dist) {
+	if (amount <= 0.001) return vec3(0.0, 0.0, 1.0);
+	const float cycle = 7.0;
+	float p0 = fract(t / cycle), p1 = fract(t / cycle + 0.5);
+	float w0 = 1.0 - abs(2.0 * p0 - 1.0);
+	vec3 a = foam_at(p + drift * p0 * cycle, vec2(1.0, 0.0), 1.0, t, amount, dist);
+	vec3 b = foam_at(p + drift * p1 * cycle + vec2(31.7, 12.3), vec2(1.0, 0.0), 1.0, t, amount, dist);
+	vec3 m = mix(b, a, w0);
+	// Two half-faded masks average to a grey wash: restore the contrast at mid-fade.
+	m.x = mix(m.x, clamp((m.x - 0.2) * inversesqrt(w0 * w0 + (1.0 - w0) * (1.0 - w0)) + 0.2, 0.0, 1.0), 0.5);
+	return m;
 }
 
 void fragment() {
@@ -577,35 +610,60 @@ void fragment() {
 		slope += flow_slope(p * 0.4 + 17.0, current * 0.4 * 0.55, TIME, dist * 0.4) * 0.4 * 1.6;
 		// Standing waves in fast, shallow water (riffles, rapids): crests across the flow that stay where they are
 		// while the water runs through them, wavelength from the speed (λ = 2π v²/g), in patches.
-		float riffle = smoothstep(0.8, 2.0, fs) * (1.0 - smoothstep(0.5, 2.2, vertex_depth)) * (1.0 - smoothstep(0.6, 2.0, footprint));
+		// (not in the last film of water at the bank: that drew a white strip along the water's edge)
+		float riffle = smoothstep(0.8, 2.0, fs) * (1.0 - smoothstep(0.5, 2.2, px_depth)) * smoothstep(0.08, 0.35, px_depth)
+			* (1.0 - smoothstep(0.6, 2.0, footprint));
 		if (riffle > 0.0) {
+			// In local frames anchored to a 20 m grid and blended between its corners: the crests' phase must not be
+			// the flow direction times the (large) scene position — where a river bends, that swung the crests into
+			// big frozen arcs broken at triangle edges (Tom, build 25: "circles on the rivers").
 			float lam = clamp(PI2 * fs * fs / G, 0.8, 4.0), kk = PI2 / lam;
-			float along = dot(p, fdir), across = dot(p, fside);
-			float th = kk * along + 3.0 * noise(vec2(along * 0.12, across * 0.3)) + 0.25 * sin(TIME * 1.7 + across * 0.5);
-			float patches = smoothstep(0.35, 0.7, noise(vec2(along * 0.07, across * 0.25) + 5.3));
-			slope += fdir * (0.22 * riffle * patches * cos(th));
-			standing = riffle * patches * smoothstep(0.55, 1.0, sin(th));
+			const float CELL = 20.0;
+			vec2 g = (p + world_origin) / CELL, g0 = floor(g), gf = g - g0;
+			gf = gf * gf * (3.0 - 2.0 * gf);
+			float wave = 0.0, crest_s = 0.0;
+			for (int ci = 0; ci < 4; ci++) {
+				vec2 corner = g0 + vec2(float(ci & 1), float(ci >> 1));
+				float wgt = (ci & 1) == 1 ? gf.x : 1.0 - gf.x;
+				wgt *= (ci >> 1) == 1 ? gf.y : 1.0 - gf.y;
+				vec2 local = (g - corner) * CELL; // (small numbers: no float precision lost)
+				float along = dot(local, fdir), across = dot(local, fside);
+				float th = kk * along + PI2 * hash(corner) + 2.0 * noise(vec2(along * 0.12, across * 0.3) + corner * 7.1)
+					+ 0.25 * sin(TIME * 1.7 + across * 0.5);
+				wave += wgt * cos(th);
+				crest_s += wgt * smoothstep(0.55, 1.0, sin(th));
+			}
+			float patches = smoothstep(0.35, 0.7, noise(p * 0.08 + 5.3));
+			slope += fdir * (0.11 * riffle * patches * wave);
+			standing = riffle * patches * crest_s * 0.7;
 		}
 		// Bank turbulence: shallow margins of moving water break into small irregular ripples, now and then foam.
-		float margin = (1.0 - smoothstep(0.1, 0.6, vertex_depth)) * smoothstep(0.15, 0.6, length(current))
+		// (depth per pixel: per vertex, the margin followed the triangle edges as straight white strips — build 25)
+		float margin = (1.0 - smoothstep(0.1, 0.6, px_depth)) * smoothstep(0.15, 0.6, length(current))
 			* (1.0 - smoothstep(0.3, 1.0, footprint));
-		slope += gnoised(p * 2.4 - current * TIME * 0.4 + 9.0).xy * 2.4 * 0.025 * margin;
-		bank_foam = margin * smoothstep(0.55, 0.8, noise(p * 0.9 - current * TIME * 0.3)) * 0.55;
-		// Rocks standing in the current (TileBuilder.ObstacleWakes: CUSTOM0 = downstream, across, radius).
-		float orad = exposure;
-		if (orad > 0.05 && fs > 0.15) {
-			float a = bed_grad.x / orad, c = bed_grad.y / orad, e = 0.1;
-			float strength = smoothstep(0.15, 1.2, fs);
-			float ha = (obstacle_h(a + e, c, fs, TIME) - obstacle_h(a - e, c, fs, TIME)) / (2.0 * e);
-			float hc = (obstacle_h(a, c + e, fs, TIME) - obstacle_h(a, c - e, fs, TIME)) / (2.0 * e);
+		slope += flow_gnoise(p * 2.4 + 9.0, current * 0.4, TIME, 2.0) * 2.4 * 0.025 * margin;
+		bank_foam = margin * smoothstep(0.55, 0.8, flow_noise(p * 0.9, current * 0.3, TIME, 3.0)) * 0.55;
+		// Rocks standing in the current (TileBuilder.ObstacleWakes: CUSTOM0 = downstream, across in rock radii, weight).
+		float oweight = exposure;
+		if (oweight > 0.01 && fs > 0.15) {
+			float a = bed_grad.x, c = bed_grad.y, e = 0.1;
+			float strength = smoothstep(0.15, 1.2, fs) * oweight;
+			// TIME * fs sheared across the wake where the speed varies (rings that never move): two short cycles, cross-faded.
+			const float ocycle = 4.0;
+			float op0 = fract(TIME / ocycle), op1 = fract(TIME / ocycle + 0.5), ow0 = 1.0 - abs(2.0 * op0 - 1.0);
+			float t0 = op0 * ocycle, t1 = op1 * ocycle + 2.1;
+			float ha = mix((obstacle_h(a + e, c, fs, t1) - obstacle_h(a - e, c, fs, t1)), (obstacle_h(a + e, c, fs, t0) - obstacle_h(a - e, c, fs, t0)), ow0) / (2.0 * e);
+			float hc = mix((obstacle_h(a, c + e, fs, t1) - obstacle_h(a, c - e, fs, t1)), (obstacle_h(a, c + e, fs, t0) - obstacle_h(a, c - e, fs, t0)), ow0) / (2.0 * e);
 			slope += (fdir * ha + fside * hc) * strength;
 			float bulge = exp(-((a + 1.3) * (a + 1.3) * 1.6 + c * c * 1.1));
 			float spread = mix(0.65, 0.32, smoothstep(0.5, 2.5, fs));
 			float arm = smoothstep(-0.2, 0.3, a) * exp(-sq(abs(c) - (1.0 + max(a, 0.0) * spread)) * 3.0) * exp(-max(a, 0.0) * 0.15);
 			float core = smoothstep(0.4, 1.2, a) * exp(-c * c / (0.5 + max(a, 0.0) * 0.12)) * exp(-max(a, 0.0) * 0.12);
 			dbg_obstacle = strength * (bulge + arm + core);
-			obstacle_foam = strength * (bulge * 0.9 * smoothstep(0.6, 2.0, fs) + arm * 0.75 * smoothstep(0.5, 1.6, fs)
-				+ core * 0.95 * smoothstep(0.35, 0.75, noise(vec2(a * 0.8 - TIME * fs * 0.6, c * 1.5))));
+			// Foam breaks up and drifts downstream (no standing white arcs).
+			float drift = mix(noise(vec2(a * 0.9 - t1 * fs * 0.7 + 5.1, c * 1.7)), noise(vec2(a * 0.9 - t0 * fs * 0.7, c * 1.7)), ow0);
+			obstacle_foam = strength * (bulge * 0.7 * smoothstep(0.6, 2.0, fs) + arm * 0.35 * smoothstep(0.8, 2.0, fs) * smoothstep(0.45, 0.8, drift)
+				+ core * 0.6 * smoothstep(0.45, 0.8, drift));
 		}
 		// Wide rivers: wind waves too (fetch = the river's width), steeper where the wind blows against the current.
 		float wide = smoothstep(25.0, 150.0, fetch);
@@ -640,7 +698,7 @@ void fragment() {
 			vec2 shore_dir = length(bed_grad) > 0.003 ? normalize(bed_grad) : wave_heads.xy;
 			mouth_meet = plume_flow * max(max(0.0, -dot(wave_heads.xy, cdir)) * (0.3 + 0.7 * sea_state),
 				max(0.0, -dot(shore_dir, cdir)) * sea * smoothstep(19.0, 6.0, vertex_depth));
-			slope += gnoised(p * 0.6 - current * TIME * 0.2 + 2.0).xy * 0.6 * 0.09 * mouth_meet * (0.5 + sea_state)
+			slope += flow_gnoise(p * 0.6 + 2.0, current * 0.2, TIME, 4.0) * 0.6 * 0.09 * mouth_meet * (0.5 + sea_state)
 				* (1.0 - smoothstep(1.0, 4.0, footprint));
 		}
 	}
@@ -709,7 +767,9 @@ void fragment() {
 
 	// ---- foam amount from every source, revealed through the drifting pattern
 	vec2 drift = river > 0.5 ? current * 0.9 : mix(wdir * (0.15 + 0.2 * wind_speed), current * 0.9, plume_flow);
-	float contact = 1.0 - smoothstep(0.0, mix(0.04, 0.16, sea) + 0.1 * river, contact_depth);
+	// (rivers: only the last few cm; over a shallow bank shelf a 14 cm band was a wide white strip along the terrain's
+	// triangle edges — Tom's dumps, round 20)
+	float contact = 1.0 - smoothstep(0.0, mix(0.04, 0.16, sea) + 0.02 * river, contact_depth);
 	float amount = contact * mix(0.45, 0.75, sea);
 	if (sea > 0.5) {
 		// Breakers: a band on the crest that leaves a fading trail behind it.
@@ -759,9 +819,9 @@ void fragment() {
 		// Whitewater where the current is fast, more so over shallow beds (rocks, riffles).
 		float rapids = smoothstep(1.0, 2.8, fs) * (0.6 + 0.4 * (1.0 - smoothstep(0.3, 1.5, vertex_depth)));
 		// Whitewater comes in pulses and patches, not a uniform sheet.
-		float pulse = 0.65 + 0.35 * noise(p * 0.08 - current * TIME * 0.05);
+		float pulse = 0.65 + 0.35 * flow_noise(p * 0.08, current * 0.05, TIME, 12.0);
 		// In patches drifting with the current (a whole fast river turned into one white sheet).
-		float patches = smoothstep(0.3, 0.7, noise(p * 0.22 - current * TIME * 0.35) * 0.7 + noise(p * 0.6 + 4.2) * 0.3 + 0.15 * smoothstep(2.0, 3.5, fs));
+		float patches = smoothstep(0.3, 0.7, flow_noise(p * 0.22, current * 0.35, TIME, 5.0) * 0.7 + noise(p * 0.6 + 4.2) * 0.3 + 0.15 * smoothstep(2.0, 3.5, fs));
 		amount = max(amount, rapids * pulse * patches * 0.85);
 		amount = max(amount, smoothstep(0.6, 2.2, fs) * 0.25); // streaks in moving water
 		amount = max(amount, standing * 0.7);  // white tops on the standing waves
@@ -772,14 +832,15 @@ void fragment() {
 	}
 	amount = max(amount, wake_foam * 0.6); // splashes and churned water where something moves through
 	// Where waves meet a river's outgoing current: broken, foamy patches carried out with the plume.
-	amount = max(amount, mouth_meet * (0.12 + 0.6 * sea_state) * smoothstep(0.4, 0.75, noise(p * 0.15 - current * TIME * 0.15)));
+	amount = max(amount, mouth_meet * (0.12 + 0.6 * sea_state) * smoothstep(0.4, 0.75, flow_noise(p * 0.15, current * 0.15, TIME, 6.0)));
 	float amt = clamp(amount, 0.0, 1.0);
-	vec3 layers = foam_layers(p, drift, TIME, amt, dist);
+	bool flowing = river > 0.5 || plume_flow > 0.01;
+	vec3 layers = flowing ? foam_flow(p, drift, TIME, amt, dist) : foam_layers(p, drift, TIME, amt, dist);
 	float foam = layers.x, under_foam = layers.y, foam_shade = layers.z;
 	if (river > 0.5 && length(current) > 0.3) {
 		// Streaks along the current: the same foam smeared downstream.
 		vec2 fdir = normalize(current);
-		foam = (foam + foam_layers(p - fdir * 1.8, drift, TIME, amt, dist).x + foam_layers(p - fdir * 3.6, drift, TIME, amt, dist).x) / 3.0 * 1.3;
+		foam = (foam + foam_flow(p - fdir * 2.4, drift, TIME, amt, dist).x) * 0.5 * 1.25;
 	}
 	foam = foam * (1.0 / (1.0 + dist / 400.0) * 0.5 + 0.5) * smoothstep(0.2, 0.9, edge_fade)
 		* smoothstep(0.01, 0.12, contact_depth); // the thinnest swash film carries no solid foam

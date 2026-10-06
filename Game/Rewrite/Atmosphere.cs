@@ -601,8 +601,10 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("relief_frame", _reliefSize > 0
             ? new Vector4((float)(cameraWorldX - _reliefX), (float)(cameraWorldZ - _reliefZ), _reliefSize, cameraLocal.Y - SeaLevel)
             : Vector4.Zero);
-        // Flat cloud bases ~1.5 km above the sea (never closer than 300 m above the camera on high ground).
-        float baseAbove = Mathf.Clamp(SeaLevel + 1500 - cameraLocal.Y, 300, 2200);
+        // Flat cloud bases ~1.5 km above the sea.
+        // (never closer than ~1 km: the sky is drawn behind the terrain, so a cloud base just over the player's head on
+        // a mountain made a low grey ceiling and a wall of cloud on the horizon — Tom, build 25)
+        float baseAbove = Mathf.Clamp(SeaLevel + 1500 - cameraLocal.Y, 1000, 2200);
         float windAngle = Mathf.Atan2(Wind.Direction.Y, Wind.Direction.X);
         RenderingServer.GlobalShaderParameterSet("cloud_more", new Vector4(mackerel, windAngle, (float)_cloudTime, baseAbove));
     }
@@ -705,7 +707,7 @@ public partial class Atmosphere : Node3D
         // Mist burns off as the sun climbs: around midday only misty biomes, rain and wet ground keep some.
         float noon = Mathf.Exp(-Mathf.Pow((hour - 13f) / (_daylightHours / 4f), 2));
         float target = mode == 0 || float.IsNaN(_mistGround) ? 0
-            : Mathf.Clamp((.7f * dawn + .5f * _mistBiome + .1f * _mistWater) * (1 - .65f * noon) + .35f * afterRain + .3f * _storm, 0, 1);
+            : Mathf.Clamp((.7f * dawn + .5f * _mistBiome + .1f * _mistWater) * (1 - .65f * noon) + .35f * afterRain + .3f * _storm, 0, 1) * .75f;
         _mistAmount = Mathf.MoveToward(_mistAmount, target, (float)delta / 6);
         if (float.IsNaN(_mistGround)) return;
         // Follow the ground slowly, so walking down into a valley wades into its mist before it settles around you.
@@ -714,9 +716,12 @@ public partial class Atmosphere : Node3D
         if (_mistAmount > .005f)
         {
             // Below this height everything takes fog by its height alone (Godot height fog): valleys, rivers, lakes.
+            // Godot fogs a point by how far it lies below FogHeight (not by distance), so a valley hundreds of metres
+            // below a mountain the player stands on went fully grey (Tom, build 25: "sometimes I see nothing, just a
+            // single colour"): gentle density, a depth of ~150 m reaches only ~40 %.
             e.FogEnabled = true;
-            e.FogHeight = _mistGround - 2;
-            e.FogHeightDensity = .03f * _mistAmount * _mistAmount;
+            e.FogHeight = _mistGround - 4;
+            e.FogHeightDensity = .0035f * _mistAmount * _mistAmount;
         }
         else e.FogHeightDensity = 0;
         // Patches: a volumetric fog box around the player (volumetric fog on for it, no global density).

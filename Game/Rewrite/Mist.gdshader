@@ -25,6 +25,6 @@ void fog() {
 	// Soft edges of the box so it never shows its shape.
 	vec3 e = min(UVW, 1.0 - UVW);
 	float edge = smoothstep(0.0, 0.25, min(e.x, e.z));
-	DENSITY = amount * 0.09 * patches * layer * edge;
+	DENSITY = amount * 0.022 * patches * layer * edge; // (0.09 hid everything beyond ~15 m: Tom, build 25)
 	ALBEDO = tint;
 }

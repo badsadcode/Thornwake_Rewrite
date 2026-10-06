@@ -341,12 +341,20 @@ public static class TileBuilder
             }
             front = next;
         }
+        double sea = double.NaN; // the sea's level, if this tile has sea
+        foreach (var t in samples) if (t.Water == WaterKind.Ocean) { sea = t.WaterLevel; break; }
         for (int j = 0; j < n; j++)
             for (int i = 0; i < n; i++)
             {
                 int k = j * n + i;
                 double level = double.NaN, kind = 0, plume = 0;
-                if (wet[k]) { level = samples[k].WaterLevel; kind = Kind(samples[k].Water); plume = samples[k].Plume; }
+                if (wet[k])
+                {
+                    level = samples[k].WaterLevel; kind = Kind(samples[k].Water); plume = samples[k].Plume;
+                    // A river's channel continuing out to sea at sea level is the sea there, carrying the river's water
+                    // (plume: its colour and current) — no river surface with rapids standing in the sea.
+                    if (samples[k].Water == WaterKind.River && !double.IsNaN(sea) && samples[k].Height < sea && level < sea + .15) { kind = SeaCode; plume = 1; }
+                }
                 else
                 {
                     // Average of the wet neighbours (the maximum lifted the sheet over the downstream bank of steep
@@ -358,7 +366,7 @@ public static class TileBuilder
                             int x = i + a, z = j + b;
                             if (x < 0 || z < 0 || x >= n || z >= n || !wet[z * n + x]) continue;
                             sum += samples[z * n + x].WaterLevel; count++;
-                            kind = Math.Max(kind, Kind(samples[z * n + x].Water));
+                            kind = Math.Max(kind, Kind(samples[z * n + x].Water)); // (bank vertices: pond, lake, river, then sea)
                             plume = Math.Max(plume, samples[z * n + x].Plume);
                         }
                     if (count > 0) level = sum / count;
@@ -420,10 +428,10 @@ public static class TileBuilder
                     fetch = 1e5f;
                     (gx, gz, exposure) = WaterShore.CoastAt(sampler, x, z, depth, spacing);
                 }
-                else if (kind > .45f && kind < .75f && samples[k].WaterBody >= 0 && samples[k].WaterBody < plan.Hydrology.Lakes.Count)
+                else if (IsLakeCode(kind) && samples[k].WaterBody >= 0 && samples[k].WaterBody < plan.Hydrology.Lakes.Count)
                     fetch = (float)Math.Sqrt(plan.Hydrology.Lakes[samples[k].WaterBody].Area);
                 // Rivers: their width (the wind's fetch across them): wide rivers get wind waves too.
-                else if (kind > .75f && samples[k].WaterBody >= 0 && samples[k].WaterBody < plan.Hydrology.Reaches.Count)
+                else if (IsRiverCode(kind) && samples[k].WaterBody >= 0 && samples[k].WaterBody < plan.Hydrology.Reaches.Count)
                     fetch = RiverWidth(plan.Hydrology.Reaches[samples[k].WaterBody]);
                 result[k * 4] = gx; result[k * 4 + 1] = gz; result[k * 4 + 2] = exposure; result[k * 4 + 3] = fetch;
             }
@@ -443,14 +451,23 @@ public static class TileBuilder
     /// <summary>
     /// Obstacle wakes (round 15, RIVERS_PLAN step 5): rocks and boulders standing in a river's current. For river
     /// vertices around one (a little upstream, a long way downstream), the shore-data slots the sea uses are reused:
-    /// x = metres downstream of the rock along the local current, y = metres across it, z = the rock's radius (0 = no
+    /// x = downstream of the rock along the local current, y = across it (both in rock radii), z = weight (0 = no
     /// obstacle; rivers have no exposure). The shader draws the pressure bulge upstream, a V-wake and eddies behind.
     /// </summary>
     private static void ObstacleWakes(Vector3[] water, Color[] colors, Vector2[] flow, float[] shore, List<RockInstance> rocks)
     {
+        // Per river vertex: the nearest rock's frame (downstream, across, both in rock radii) and a weight 0..1. The
+        // weight fades to 0 toward the wake's ends and where another rock is nearly as close: the shader blends these
+        // values across each triangle, and a triangle whose corners belong to different rocks (or none) used to draw
+        // frozen rings and arcs of nonsense (Tom, build 25: "circles on the rivers … they look weird").
         var best = new float[water.Length];
+        var second = new float[water.Length];
+        var data = new Vector3[water.Length];
         for (int k = 0; k < water.Length; k++)
-            if (colors[k].G > .75f) { shore[k * 4] = 0; shore[k * 4 + 1] = 0; shore[k * 4 + 2] = 0; best[k] = float.MaxValue; }
+        {
+            best[k] = second[k] = float.MaxValue;
+            if (IsRiverCode(colors[k].G)) { shore[k * 4] = 0; shore[k * 4 + 1] = 0; shore[k * 4 + 2] = 0; }
+        }
         foreach (var rock in rocks)
         {
             if (rock.Kind == GroundCover.Stone) continue;
@@ -458,25 +475,33 @@ public static class TileBuilder
             float radius = (b.X.Length() + b.Z.Length()) * .25f; // the meshes span ±0.5 per unit scale
             if (radius < .3f) continue;
             var at = rock.Transform.Origin;
-            float reach = 2 * radius + 14 * radius + 4;
+            float reach = 12 * radius + 4;
             for (int k = 0; k < water.Length; k++)
             {
-                if (colors[k].G <= .75f || flow[k] == Vector2.Zero) continue;
+                if (!IsRiverCode(colors[k].G) || flow[k] == Vector2.Zero) continue;
                 float dx = water[k].X - at.X, dz = water[k].Z - at.Z;
                 if (Math.Abs(dx) > reach || Math.Abs(dz) > reach) continue;
-                // Only rocks that stand in the water here: base under the surface, top near or above it.
+                // Only rocks that break the surface (a rock just under it shows no wake you could tell apart).
                 float top = at.Y + b.Y.Length() * .6f;
-                if (at.Y > water[k].Y || top < water[k].Y - .3f) continue;
+                if (at.Y > water[k].Y || top < water[k].Y + .05f) continue;
                 var f = flow[k].Normalized();
-                float along = dx * f.X + dz * f.Y, across = -dx * f.Y + dz * f.X;
-                if (along < -2.5f * radius || along > 14 * radius + 3 || Math.Abs(across) > 2 * radius + Math.Max(0, along) * .6f) continue;
-                float d = dx * dx + dz * dz;
-                if (d >= best[k]) continue;
-                best[k] = d;
-                shore[k * 4] = along; shore[k * 4 + 1] = across; shore[k * 4 + 2] = radius;
+                float a = (dx * f.X + dz * f.Y) / radius, c = (-dx * f.Y + dz * f.X) / radius;
+                if (a < -3 || a > 11 || Math.Abs(c) > 2.5f + Math.Max(0, a) * .5f) continue;
+                float w = Smooth01((a + 3) / 1.2f) * Smooth01((11 - a) / 4) * Smooth01((2.5f + Math.Max(0, a) * .5f - Math.Abs(c)) / 1.2f);
+                float d = MathF.Sqrt(dx * dx + dz * dz);
+                if (d < best[k]) { second[k] = best[k]; best[k] = d; data[k] = new Vector3(a, c, w); }
+                else if (d < second[k]) second[k] = d;
             }
         }
+        for (int k = 0; k < water.Length; k++)
+        {
+            if (best[k] == float.MaxValue) continue;
+            float apart = second[k] == float.MaxValue ? 1 : Smooth01((second[k] - best[k]) / 3);
+            shore[k * 4] = data[k].X; shore[k * 4 + 1] = data[k].Y; shore[k * 4 + 2] = data[k].Z * apart;
+        }
     }
+
+    private static float Smooth01(float t) { t = Math.Clamp(t, 0, 1); return t * t * (3 - 2 * t); }
 
     private static double SeaLevel(TerrainSample[] samples)
     {
@@ -576,5 +601,13 @@ public static class TileBuilder
         return shaped;
     }
 
-    private static double Kind(WaterKind kind) => kind switch { WaterKind.Pond => .375, WaterKind.Lake => .5, WaterKind.River => 1, _ => 0 };
+    /// <summary>
+    /// Water body code in the mesh colour (G): sea 0, river ⅓, lake ⅔, pond 1. Ordered by what meets what — river mouths
+    /// open into seas and lakes — so values blended across a triangle between neighbours never pass through a third
+    /// kind (with sea 0 … river 1, a mouth's triangles showed a strip of "lake" between them: Tom, build 25).
+    /// </summary>
+    public const float SeaCode = 0, RiverCode = 1 / 3f, LakeCode = 2 / 3f, PondCode = 1;
+    public static bool IsRiverCode(float g) => Math.Abs(g - RiverCode) < .1f;
+    public static bool IsLakeCode(float g) => Math.Abs(g - LakeCode) < .1f;
+    private static double Kind(WaterKind kind) => kind switch { WaterKind.Pond => PondCode, WaterKind.Lake => LakeCode, WaterKind.River => RiverCode, _ => SeaCode };
 }

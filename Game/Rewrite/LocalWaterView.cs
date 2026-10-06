@@ -112,7 +112,7 @@ public partial class LocalWaterView : Node3D
                 float speed = MathF.Sqrt(_vx[k] * _vx[k] + _vz[k] * _vz[k]);
                 // Drawn as river water (no lake waves on puddles); alpha = edge fade: overlap with the terrain's river or
                 // lake sheet fades out away from the simulated water.
-                colors[k] = new Color(Math.Clamp(_depth[k] / 20, 0, 1), 1, 0, _join[k]);
+                colors[k] = new Color(Math.Clamp(_depth[k] / 20, 0, 1), TileBuilder.RiverCode, 0, _join[k]);
                 tint[k] = Tint((float)i / (N - 1), (float)j / (N - 1));
                 flow[k] = new Vector2(_vx[k], _vz[k]);
             }

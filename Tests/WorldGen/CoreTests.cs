@@ -49,6 +49,7 @@ internal static class CoreTests
         T.Run("Build 12 terrain still reproducible", () => Fingerprints(false, "terrain-build12.json", build12: true), filter);
         T.Run("Build 13 terrain still reproducible", () => Fingerprints(false, "terrain-build13.json", build13: true), filter);
         T.Run("Build 19 terrain still reproducible", () => Fingerprints(false, "terrain-build19.json", build19: true), filter);
+        T.Run("Build 25 terrain still reproducible", () => Fingerprints(false, "terrain-build25.json", build25: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -305,7 +306,7 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false, bool build25 = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
         string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
@@ -329,6 +330,8 @@ internal static class CoreTests
                 if (build13) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 11 }, biomes: Build13Biomes.Value));
                 // Build 19 (commit 0a104f9, v0.9.19): terrain revision 12, before tributaries follow a bigger river's floodplain.
                 if (build19) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 12 }, biomes: Build19Biomes.Value));
+                // Build 25 (commit a075047, v0.9.25): terrain revision 13, before wetland water followed the pool mask.
+                if (build25) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 13 }, biomes: Build25Biomes.Value));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];
@@ -355,6 +358,9 @@ internal static class CoreTests
         foreach (var c in cases) T.Check(expected.Single(e => e.Case == c.Case).Hash == c.Hash, "fingerprint " + c.Case);
     }
 
+    private static readonly Lazy<BiomeRegistry> Build25Biomes = new(() => BiomeRegistry.Parse(
+        File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/biomes-build25.json")),
+        File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/asset_sets-build25.json"))));
     private static readonly Lazy<BiomeRegistry> Build19Biomes = new(() => BiomeRegistry.Parse(
         File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/biomes-build19.json")),
         File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/asset_sets-build19.json"))));

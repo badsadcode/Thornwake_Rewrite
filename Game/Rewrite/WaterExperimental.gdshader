@@ -116,11 +116,11 @@ vec3 view_from_depth(vec2 uv, float raw, mat4 inv_projection) {
 	return v.xyz / v.w;
 }
 
-// ---- body classification (COLOR.g): sea 0, pond .375, lake .5, river 1
-float is_sea(float b) { return 1.0 - step(0.25, b); }
-float is_pond(float b) { return step(0.25, b) * (1.0 - step(0.45, b)); }
-float is_lake(float b) { return step(0.45, b) * (1.0 - step(0.75, b)); }
-float is_river(float b) { return step(0.75, b); }
+// ---- body classification (COLOR.g): sea 0, river ⅓, lake ⅔, pond 1 (TileBuilder.Kind)
+float is_sea(float b) { return 1.0 - step(0.1667, b); }
+float is_river(float b) { return step(0.1667, b) * (1.0 - step(0.5, b)); }
+float is_lake(float b) { return step(0.5, b) * (1.0 - step(0.8333, b)); }
+float is_pond(float b) { return step(0.8333, b); }
 
 // Amplitude factor of wave i: shallow-water fade, lakes cut to their size, sheltered coasts calmer.
 float wave_factor(int i, float lambda, float depth, float sea, float lake, float fetch_m, float expo) {

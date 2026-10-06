@@ -310,9 +310,9 @@ vec4 layer(vec3 dir, vec2 origin, float h, float d, vec3 sun_dir, vec3 sun_col, 
 // colours on the bases, aerial perspective with distance.
 uniform sampler3D cloud_noise : filter_linear, repeat_enable;
 global uniform vec4 wind; // dir.x, speed/8, dir.z, gust
-// The volume's base, a fixed height above the sea (not above the camera: on a mountain the clouds come down to you and
-// the peaks rise into them). cloud_more.w = base above the camera (Atmosphere: ~1.5 km above the sea, at least 300 m).
-#define VBOTTOM clamp(cloud_more.w - 200.0, 150.0, 2000.0)
+// The volume's base: ~1.5 km above the sea (cloud_more.w = base above the camera, Atmosphere), lower over mountains, but
+// never within ~0.8 km of the camera — the sky is drawn behind the terrain and cannot wrap clouds around it.
+#define VBOTTOM clamp(cloud_more.w - 200.0, 800.0, 2000.0)
 
 // Round 19 (Noor: "cloud banks building around mountains", "weather visible from far away … sailing toward a giant
 // wall of rain"). The land around the camera (Atmosphere.SetRelief: r = height above the sea / 4000 m, g = how much the
@@ -355,7 +355,7 @@ vec3 vweather(vec2 xz, float coverage) {
 	float tower = cloud_types.x > 0.001 ? cloud_types.x * core * (0.35 + 0.65 * texture(cloud_tex, uv * 0.5 + vec2(0.7, 0.2)).g) : 0.0;
 	vec3 extra = land_and_front(xz - cloud_state.xy);
 	// (only where the land holds cloud does the base come down toward the ridges; elsewhere it stays put)
-	float base = mix(VBOTTOM, clamp(extra.z, max(VBOTTOM - 1100.0, 150.0), VBOTTOM), clamp(extra.x / 0.85, 0.0, 1.0));
+	float base = mix(VBOTTOM, clamp(extra.z, max(VBOTTOM - 500.0, 600.0), VBOTTOM), clamp(extra.x / 0.85, 0.0, 1.0));
 	mass = max(mass, extra.x * (0.75 + 0.5 * n));
 	return vec3(mass, 350.0 + 950.0 * sqrt(mass) + tower * 5200.0 + cloud_state.w * 700.0 + extra.y + (VBOTTOM - base), base);
 }
@@ -456,7 +456,7 @@ vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float
 	if (dir.y < 0.005 || coverage < 0.001) return vec4(0.0);
 	vec2 cam = cloud_state.xy;
 	float vtop = VBOTTOM + 350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0 + 900.0;
-	float vlow = relief_frame.z > 0.0 ? max(VBOTTOM - 1100.0, 150.0) : VBOTTOM;
+	float vlow = relief_frame.z > 0.0 ? max(VBOTTOM - 500.0, 600.0) : VBOTTOM;
 	float t0 = vlow / dir.y, t1 = min(min(vtop / dir.y, 50000.0), front_distance(dir)); // nothing beyond a front shows
 	if (t0 > t1) return vec4(0.0);
 	// Steps grow with distance (the same angular detail near and far), ~45 m close up, up to 900 m far away.

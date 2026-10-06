@@ -400,10 +400,21 @@ public sealed class TerrainSampler
         // Pools and channels share the coverage; the water is their union (the larger excess wins). The mask is a
         // little larger than the water (the shore takes the edge of it), hence ×1.3.
         double coverIn = cover;
-        cover = Math.Min(.9, cover * 1.3);
-        double e = double.NegativeInfinity;
-        if (channels < .999) e = PoolNoise(lx, lz, size, minW) / _poolStd - Quantile(_poolQuantiles, cover * (1 - channels));
-        if (channels > .001) e = Math.Max(e, ChannelNoise(lx, lz, size, minW) / _channelStd - Quantile(_channelQuantiles, cover * channels));
+        // Revision 14 makes the whole mask water (no dry rim at the shore), so the ask needs less padding.
+        cover = Math.Min(.9, cover * (_style.Revision >= 14 ? 1.15 : 1.3));
+        double e;
+        if (_style.Revision >= 14)
+        {
+            // Revision 14: the pool size changes across biome borders, and noise evaluated at position / size with a
+            // varying size races through its pattern far from the origin (~4 cycles per metre at 236 km: hair-thin
+            // stripes along the border — Tom's "straight channels", build 25). Evaluate at fixed sizes on a ladder of
+            // half octaves and blend the two around the wanted size.
+            double ls = Math.Log2(size) * 2, f = Math.Floor(ls), t = ls - f;
+            double s0 = Math.Pow(2, f / 2), s1 = Math.Pow(2, (f + 1) / 2);
+            e = Excess(lx, lz, s0, Math.Min(minWavelength, s0 * .5), cover, channels) * (1 - t)
+                + Excess(lx, lz, s1, Math.Min(minWavelength, s1 * .5), cover, channels) * t;
+        }
+        else e = Excess(lx, lz, size, minW, cover, channels);
         // e is in noise standard deviations; the pool noise changes by ~0.25 per metre, so soft ≈ 1.5 m of shore.
         const double soft = .4, bank = .25;
         // How far out the pool shapes the ground (in noise deviations). Revision 12 stretches the blend back to the
@@ -415,6 +426,15 @@ public sealed class TerrainSampler
         double fine = DetMath.Clamp(.3 * (height - smooth), -.8 * bank, .8 * bank);
         // The bed reaches full depth ~2 noise deviations in (≥ ~3 m): walkable, never a cliff into the water.
         double profile = e >= 0 ? -depth * DetMath.Smooth(e / (soft * 5)) : bank * DetMath.Smooth(-e / soft);
+        if (_style.Revision >= 14)
+        {
+            // Revision 14: the shore is the mask's contour. Near it the bed was within a few cm of the water level, so
+            // the ground's remaining small relief decided what was water — and eroded relief runs in long parallel
+            // gullies downhill: wetlands filled with straight parallel channels (Tom, build 25, bayou and marsh). The
+            // local relief now fades out at the shore and the water side starts ~12 cm deep.
+            fine *= DetMath.Smooth(Math.Abs(e) / (soft * 2));
+            if (e >= 0) profile = -(.12 + (depth - .12) * DetMath.Smooth(e / (soft * 5)));
+        }
         double near = 1 - DetMath.Smooth((-e - soft) / nearRange);
         double shaped = height + (smooth + profile + fine - height) * near;
         // Revision 12: the shaping fades in with the coverage (from 0.5 % to 4 %), so where a pool biome only just reaches
@@ -435,6 +455,15 @@ public sealed class TerrainSampler
         }
         if (grow < 1) shaped = height + (shaped - height) * grow;
         return shaped;
+    }
+
+    /// <summary>The pool mask's excess over its threshold (noise deviations; water side &gt; 0) at one pool size.</summary>
+    private double Excess(double lx, double lz, double size, double minW, double cover, double channels)
+    {
+        double e = double.NegativeInfinity;
+        if (channels < .999) e = PoolNoise(lx, lz, size, minW) / _poolStd - Quantile(_poolQuantiles, cover * (1 - channels));
+        if (channels > .001) e = Math.Max(e, ChannelNoise(lx, lz, size, minW) / _channelStd - Quantile(_channelQuantiles, cover * channels));
+        return e;
     }
 
     // Round pools: three octaves at about twice the pool size.

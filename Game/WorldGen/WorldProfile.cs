@@ -137,8 +137,9 @@ public sealed record TerrainStyle
     /// banks that stay walkable where they bulge (round 5); 10 = lakes reach round and close with a shore instead of
     /// ending on straight cell lines (round 7); 11 = wetland biomes carve real standing-water pools and flatten their
     /// ground (round 8); 12 = biome landforms: dunes, mesas, needle spires (round 9); 13 = a river crossing another river's
-    /// lower valley floor flows at that floor instead of perching above it (round 14).</summary>
-    public int Revision { get; init; } = 13;
+    /// lower valley floor flows at that floor instead of perching above it (round 14); 14 = wetland water follows the
+    /// pool mask, not the ground's gullies (no straight parallel channels; round 20).</summary>
+    public int Revision { get; init; } = 14;
 
     /// <summary>Climate of the world (latitudes, warmer/colder, wetter/drier): drives biomes (D42).</summary>
     public ClimateSettings Climate { get; init; } = new();
