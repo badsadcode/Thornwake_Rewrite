@@ -78,6 +78,18 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 25 — weather you can see coming (Noor's cloud list)
+* **Rain fronts on the horizon**: when rain is on its way, a dark storm bank with billowing tops appears upwind up to
+  ~70 km away, with a grey wall of rain hanging under it, and it closes in as the rain approaches. Strong fronts tower
+  higher (thunderstorms). Clouds nearer than it stay in front of it. Works with layered and volumetric clouds.
+* **Overcast changes the mood**: under a full deck the sunlight weakens and flattens and the air gets greyer; the deck
+  itself has thick and thin patches and a lumpy base (volumetric).
+* **Mountains catch clouds** (volumetric): more cloud over high, windward ground, and the cloud base is now a fixed
+  height above the sea — on a mountain you are closer to the clouds. (Clouds wrapping around slopes in front of you need
+  a different technique; later.)
+* **More weight and colour** (volumetric): darker cores and undersides, cool slate shadows, warmer sunlight, warm light
+  bounced from the ground on the bases, thicker haze where clouds meet the horizon.
+
 ## New in build 24 — fixes from your build 23 screenshots, debug dump
 * **F9 debug dump**: writes a text file (and a screenshot) to the game's user folder → `debug/`, and opens the folder.
   It has everything I need to rebuild exactly that place, time, weather and settings — send me the .txt and the .png.

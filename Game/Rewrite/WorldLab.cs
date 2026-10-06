@@ -130,6 +130,8 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--clouds=")) { var v = arg[9..].Split(',').Select(t => float.Parse(t, CultureInfo.InvariantCulture)).ToArray(); _atmosphere.ForceClouds = new Vector4(v[0], v[1], v[2], v[3]); }
             if (arg.StartsWith("--storm-at=")) _atmosphere.ForceStormAzimuth = Mathf.DegToRad(float.Parse(arg[11..], CultureInfo.InvariantCulture));
             if (arg == "--cloud-flash") _atmosphere.ShotFlash = true;
+            // --front=km,strength: an approaching rain front at this distance (bearing from --storm-at, else upwind)
+            if (arg.StartsWith("--front=")) { var v = arg[8..].Split(','); _atmosphere.ForceFront = new Vector2(float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--tool=")) _tools.Select(int.Parse(arg[7..], CultureInfo.InvariantCulture));
             if (arg == "--grid") { _gridShown = true; _streamer.ShowGrid(true); }
@@ -347,9 +349,44 @@ public partial class WorldLab : Node3D
         _atmosphere.DistantStorm = _weather.DistantStorm;
         _atmosphere.StormComing = _weather.StormComing;
         _atmosphere.Mackerel = _weather.Mackerel;
+        _atmosphere.FrontHours = _weather.FrontHours;
+        _atmosphere.FrontStrength = _weather.FrontStrength;
     }
 
-    private double _peakTimer, _peakX = double.NaN, _peakZ;
+    private double _peakTimer, _peakX = double.NaN, _peakZ, _reliefX = double.NaN, _reliefZ;
+    private Vector2 _reliefWind;
+
+    /// <summary>
+    /// The land for the clouds (Atmosphere.SetRelief): 64 × 64 coarse heights over 64 km around the player, and how
+    /// much the wind climbs there (windward slopes). Rebuilt after moving 12 km or when the wind turns by ~25°.
+    /// </summary>
+    private void UpdateRelief()
+    {
+        if (_sampler == null) return;
+        var wd = _atmosphere.Wind.Direction;
+        bool moved = double.IsNaN(_reliefX) || Math.Abs(PlayerX - _reliefX) + Math.Abs(PlayerZ - _reliefZ) > 12000;
+        if (!moved && wd.Dot(_reliefWind) > .9f) return;
+        _reliefX = PlayerX; _reliefZ = PlayerZ; _reliefWind = wd;
+        const int N = 64; const float Size = 64000; double cell = Size / N, sea = _sampler.Plan.Profile.SeaLevel;
+        var h = new double[(N + 2) * (N + 2)];
+        for (int j = 0; j < N + 2; j++)
+            for (int i = 0; i < N + 2; i++)
+                h[j * (N + 2) + i] = Math.Max(0, _sampler.MacroHeight(_reliefX + (i - .5 - N / 2.0) * cell, _reliefZ + (j - .5 - N / 2.0) * cell) - sea);
+        var data = new byte[N * N * 4];
+        for (int j = 0; j < N; j++)
+            for (int i = 0; i < N; i++)
+            {
+                double c = h[(j + 1) * (N + 2) + i + 1];
+                double gx = (h[(j + 1) * (N + 2) + i + 2] - h[(j + 1) * (N + 2) + i]) / (2 * cell);
+                double gz = (h[(j + 2) * (N + 2) + i + 1] - h[j * (N + 2) + i + 1]) / (2 * cell);
+                double up = -(gx * wd.X + gz * wd.Y); // the ground rises into the wind's path: + where the wind climbs
+                int k = (j * N + i) * 4;
+                data[k] = (byte)Math.Clamp(c / 4000 * 255, 0, 255);
+                data[k + 1] = (byte)Math.Clamp(Math.Max(0, up) / .08 * 255, 0, 255);
+                data[k + 3] = 255;
+            }
+        _atmosphere.SetRelief(Image.CreateFromData(N, N, false, Image.Format.Rgba8, data), _reliefX, _reliefZ, Size);
+    }
 
     /// <summary>
     /// The highest peak within ~18 km and how far it rises above the land around the player (lenticular clouds stand
@@ -487,6 +524,7 @@ public partial class WorldLab : Node3D
         var sky = _clock.Advance(delta, latitude, run: _shotPath == null);
         UpdateWeather(delta, sky);
         UpdatePeak(delta);
+        UpdateRelief();
         if (!_timeSlider.HasFocus()) _timeSlider.SetValueNoSignal(sky.Hour);
         _atmosphere.Update(delta, sky, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
         if (GameSettings.GroundFog.Index > 0)

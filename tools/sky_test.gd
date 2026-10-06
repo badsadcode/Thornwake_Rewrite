@@ -59,6 +59,10 @@ func _initialize() -> void:
 	var LN: PackedStringArray = str(args.get("lens", "0,0,0,0")).split(",")
 	RenderingServer.global_shader_parameter_set("cloud_lens", Vector4(float(LN[0]), float(LN[1]), float(LN[2]), float(LN[3])))
 	var M: PackedStringArray = str(args.get("more", "0,0.6,100,1500")).split(",")
+	# front=distance_m,strength: an approaching rain front straight ahead
+	var FR: PackedStringArray = str(args.get("front", "1000000,0")).split(",")
+	RenderingServer.global_shader_parameter_set("cloud_front", Vector4(fwd.x, fwd.z, float(FR[0]), float(FR[1])) if fwd.length() > 0 else Vector4(1, 0, 1e6, 0))
+	RenderingServer.global_shader_parameter_set("relief_frame", Vector4.ZERO)
 	# wind=speed/8 (0.5 calm … 1.6+ strong), along +X
 	RenderingServer.global_shader_parameter_set("wind", Vector4(1, float(args.get("wind", "0.7")), 0, 0.5))
 	RenderingServer.global_shader_parameter_set("cloud_more", Vector4(float(M[0]), float(M[1]), float(M[2]), float(M[3])))

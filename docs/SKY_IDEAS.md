@@ -37,5 +37,5 @@ storms), then 4 (the Milky Way and auroras).
 **Status (build 22):** 1 (twilight), 2 (rainbows, halos, sun dogs), 3 (cloud types: afternoon towers, distant
 thunderstorms with anvils, rain shafts and lightning, lenticulars over peaks, mackerel sky before fronts, textured rain
 deck) and the night part of 4 (auroras, shooting stars) are in; the water reflects the clouds and the far cloud types.
-Not yet from 3: fog banks rolling off the sea. Next: the Milky Way, then the cloud experiments (the far towers are a
+Round 19 (build 25): approaching rain fronts with a rain wall visible from far away, mountain cloud, overcast mood. Not yet from 3: fog banks rolling off the sea; clouds wrapping slopes in front of the player (needs fog volumes). Next: the Milky Way, then the cloud experiments (the far towers are a
 first step toward them: shaded puffs, not yet a volume).

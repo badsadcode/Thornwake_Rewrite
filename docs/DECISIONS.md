@@ -659,6 +659,30 @@ scattering on canopies and plants, configurable.
   --hour --fly-height and all --set) that rebuilds the scene for a --world-shot (new --day arg). --dump does it after a
   scripted shot.
 
+## D58 — Round 19: weather you can see coming, mountain clouds, overcast mood, contrast (2026-10-06)
+* Noor's list (build 23): more contrast and weight, high wisps moving differently, banks on mountains, haze where the
+  clouds meet the horizon, a real overcast mood, isolated storm towers, the wind pushing the field coherently, weather
+  visible from far away. Tom: more colour variance.
+* Approaching fronts: Weather.FrontHours/FrontStrength (the next rain within 8 h, from the same front signal). The front
+  edge sits upwind at ~9 km per game hour of lead time and becomes visible from ~70 km. Drawn (Sky.front_wall) as one
+  object on a vertical curtain at its edge: a dark slate bank with rounded billowing tops (two rows of domes; taller
+  towers for strong fronts — thunderstorms) and slanting grey rain under it to the ground. Nearer clouds stay in front;
+  nothing beyond shows (the volume's march stops there). Oblique, far parts fade into the haze. Tried first as extra
+  mass in the volume: buried by nearer clouds and washed out by aerial perspective; a flat layer cannot show its height.
+* Mountains: WorldLab samples a 64 km relief map (64², macro heights, windward climb for the current wind) every 12 km
+  or ~25° of wind change; the volume gains cloud over high and windward ground with its base lowered toward the ridges.
+  The volume's base is now a fixed height above the sea (on a mountain the clouds come down to you). Limitation: the sky
+  is drawn behind the terrain, so clouds wrapping a slope in front of the player need fog volumes (later).
+* Overcast (coverage > ~0.7): the sun weakens and flattens, ambient drops, haze thickens (Atmosphere "gloom"), and the
+  full deck gets thick and thin patches and a lumpy base (darker where dense), faded with distance (the 3D noise would
+  repeat visibly near the horizon).
+* Contrast and colour: denser cores, weaker multiple-scattering orders, sky light used up deep inside (cool slate),
+  warmer sunlight, warm ground bounce on the bases, stronger aerial perspective toward the horizon.
+* Already in place from earlier rounds: high cirrus on its own slower, veered wind; the volume, cirrus and low clouds
+  each drift with their own wind (coherent fields, no in-place churning).
+* Bug found on the way: the mountain base lowering applied everywhere, so over the sea the base fell to ~175 m and every
+  cloud became a tall plume. The base now only comes down where the land holds cloud.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

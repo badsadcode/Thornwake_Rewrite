@@ -61,6 +61,11 @@ public partial class Atmosphere : Node3D
     public float SeaLevel { get; set; }
     /// <summary>Screenshots: cloud types forced to (cumulus, distant storm, mackerel, lens); null = from the weather.</summary>
     public Vector4? ForceClouds { get; set; }
+    /// <summary>The next rain front (Weather.FrontHours / FrontStrength): hours until it arrives (NaN none), strength.</summary>
+    public double FrontHours { get; set; } = double.NaN;
+    public float FrontStrength { get; set; }
+    /// <summary>Screenshots: the front forced to (distance km, strength); null = from the weather.</summary>
+    public Vector2? ForceFront { get; set; }
     /// <summary>Screenshots: the distant storms' bearing (rad); NaN = from the wind.</summary>
     public float ForceStormAzimuth { get; set; } = float.NaN;
     private float _storm; // 0 fair … 1 full storm, eased
@@ -312,13 +317,17 @@ public partial class Atmosphere : Node3D
         if (originX != Spectrum.OriginX || originZ != Spectrum.OriginZ) { Spectrum.SetOrigin(originX, originZ); SendSpectrumOrigin(); }
         double windAngle = Math.Atan2(Wind.Direction.Y, Wind.Direction.X);
         if (Math.Abs(seaState - _wavesState) > .004 || Math.Abs(Mathf.AngleDifference((float)windAngle, (float)_wavesAngle)) > .14) { _wavesAngle = windAngle; UpdateWaves(seaState); }
-        Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, _storm);
-        _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, _storm);
+        // Overcast without rain also changes the mood (Noor: "proper overcast where the whole lighting mood changes"):
+        // weaker, flatter sunlight, greyer and hazier air.
+        float overcast = Mathf.SmoothStep(.7f, .95f, Coverage);
+        float gloom = Math.Max(_storm, overcast * .7f);
+        Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, gloom);
+        _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, gloom);
         UpdateWaterSky(elevation);
-        Environment.FogDensity = .00009f * GameSettings.Haze.F * Mathf.Lerp(1, 4, _storm);
+        Environment.FogDensity = .00009f * GameSettings.Haze.F * Mathf.Lerp(1, 4, Math.Max(_storm, overcast * .45f));
         Environment.FogEnabled = GameSettings.Haze.Value > 0 || _storm > 0;
         // The sky's radiance map is not re-baked for the storm (global uniform), so dim the ambient light directly.
-        Environment.AmbientLightEnergy = Mathf.Lerp(.55f, .38f, _storm);
+        Environment.AmbientLightEnergy = Mathf.Lerp(.55f, .38f, gloom);
         UpdateCoverage();
         if (_rainParticles != null)
         {
@@ -580,6 +589,18 @@ public partial class Atmosphere : Node3D
             lens = new Vector4((float)lx, Peak.Y + 1600 - cameraLocal.Y, (float)lz, _lens);
         }
         RenderingServer.GlobalShaderParameterSet("cloud_lens", lens);
+        // The next rain front: its edge upwind, closing in as its rain approaches (~9 km per game hour); seen from
+        // ~70 km away as a dark deck on the horizon with a wall of rain under it (Sky.gdshader).
+        double frontKm = ForceFront?.X ?? (double.IsNaN(FrontHours) ? double.NaN : Math.Max(2.5, FrontHours * 9));
+        float frontStrength = ForceFront?.Y ?? FrontStrength;
+        var upwind = -Wind.Direction;
+        _frontDir = _frontDir == Vector2.Zero || ForceFront != null ? upwind : _frontDir.Lerp(upwind, (float)Math.Min(1, delta / 60)).Normalized();
+        if (ForceFront != null && !float.IsNaN(ForceStormAzimuth)) _frontDir = new Vector2(Mathf.Cos(ForceStormAzimuth), Mathf.Sin(ForceStormAzimuth));
+        float frontVisible = double.IsNaN(frontKm) ? 0 : frontStrength * Mathf.SmoothStep(75, 55, (float)frontKm);
+        RenderingServer.GlobalShaderParameterSet("cloud_front", new Vector4(_frontDir.X, _frontDir.Y, double.IsNaN(frontKm) ? 1e6f : (float)(frontKm * 1000), frontVisible));
+        RenderingServer.GlobalShaderParameterSet("relief_frame", _reliefSize > 0
+            ? new Vector4((float)(cameraWorldX - _reliefX), (float)(cameraWorldZ - _reliefZ), _reliefSize, cameraLocal.Y - SeaLevel)
+            : Vector4.Zero);
         // Flat cloud bases ~1.5 km above the sea (never closer than 300 m above the camera on high ground).
         float baseAbove = Mathf.Clamp(SeaLevel + 1500 - cameraLocal.Y, 300, 2200);
         float windAngle = Mathf.Atan2(Wind.Direction.Y, Wind.Direction.X);
@@ -598,6 +619,21 @@ public partial class Atmosphere : Node3D
             $"Sun elevation {F(_sunElevation)}°, night {F(_night)}, daylight {F(_daylight)}, ocean time {F(OceanTime)} s\n" +
             $"Sea: effective sea state {F(_wavesState)} (setting {F(GameSettings.SeaState.Value)} + storm), wave heading {F(_wavesAngle)} rad, " +
             $"spectrum origin ({F(Spectrum.OriginX)}, {F(Spectrum.OriginZ)})";
+    }
+
+    private Vector2 _frontDir;
+    private double _reliefX, _reliefZ;
+    private float _reliefSize;
+
+    /// <summary>
+    /// The land around the camera for the clouds (round 19: banks on mountains): a square <paramref name="size"/> m
+    /// wide centred on (<paramref name="x"/>, <paramref name="z"/>); r = height above the sea / 4000 m, g = how much the
+    /// wind is pushed up the slope (windward faces).
+    /// </summary>
+    public void SetRelief(Image image, double x, double z, float size)
+    {
+        _sky.SetShaderParameter("relief_tex", ImageTexture.CreateFromImage(image));
+        _reliefX = x; _reliefZ = z; _reliefSize = size;
     }
 
     /// <summary>Screenshots with forced storms: light one far cell.</summary>

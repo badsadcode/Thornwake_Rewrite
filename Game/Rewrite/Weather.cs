@@ -29,6 +29,12 @@ public sealed class Weather
     public float DistantStorm { get; private set; }
     public bool StormComing { get; private set; } = true;
     public float Mackerel { get; private set; }
+    /// <summary>
+    /// The next rain front (round 19, Noor: "sailing toward a giant wall of rain"): game hours until its rain reaches
+    /// here (NaN: none within 8 h, or it is already raining) and how strong it is (0..1; > ~0.75 thunderstorms).
+    /// </summary>
+    public double FrontHours { get; private set; } = double.NaN;
+    public float FrontStrength { get; private set; }
     private float _cloudTarget = .4f, _precipTarget;
 
     public void Update(double realSeconds, double gameHours, double annualRain, double temperature, double groundSnow, ulong seed)
@@ -75,6 +81,19 @@ public sealed class Weather
         double rainAhead = 0;
         for (double dh = 3; dh <= 9; dh += 2) rainAhead = Math.Max(rainAhead, Front(gameHours + dh) - threshold);
         double mackerel = SmoothStep(-.02, .12, rainAhead) * (1 - Math.Min(1, Precipitation * 4)) * SmoothStep(.9, .5, Cloudiness);
+        // The first time in the next 8 h the front brings rain here (the rain edge, with its strength there).
+        FrontHours = double.NaN;
+        double strength = 0;
+        if (Precipitation < .05f && !Snow)
+            for (double dh = .25; dh <= 8; dh += .25)
+            {
+                double over2 = Front(gameHours + dh) - threshold;
+                if (over2 <= 0) continue;
+                FrontHours = dh;
+                for (double k = dh; k <= dh + 3; k += .5) strength = Math.Max(strength, Front(gameHours + k) - threshold);
+                break;
+            }
+        FrontStrength = Mathf.MoveToward(FrontStrength, double.IsNaN(FrontHours) ? 0 : (float)Math.Clamp(.35 + strength * 3.2, 0, 1), (float)realSeconds / 40);
         float slow = (float)realSeconds / 40;
         Cumulus = Mathf.MoveToward(Cumulus, (float)cumulus, slow);
         DistantStorm = Mathf.MoveToward(DistantStorm, (float)distant, slow);

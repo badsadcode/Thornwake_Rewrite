@@ -310,12 +310,42 @@ vec4 layer(vec3 dir, vec2 origin, float h, float d, vec3 sun_dir, vec3 sun_col, 
 // colours on the bases, aerial perspective with distance.
 uniform sampler3D cloud_noise : filter_linear, repeat_enable;
 global uniform vec4 wind; // dir.x, speed/8, dir.z, gust
-const float VBOTTOM = 1300.0;
+// The volume's base, a fixed height above the sea (not above the camera: on a mountain the clouds come down to you and
+// the peaks rise into them). cloud_more.w = base above the camera (Atmosphere: ~1.5 km above the sea, at least 300 m).
+#define VBOTTOM clamp(cloud_more.w - 200.0, 150.0, 2000.0)
+
+// Round 19 (Noor: "cloud banks building around mountains", "weather visible from far away … sailing toward a giant
+// wall of rain"). The land around the camera (Atmosphere.SetRelief: r = height above the sea / 4000 m, g = how much the
+// wind is pushed up the slope there) and the next rain front (cloud_front: direction toward it xz, distance to its edge
+// in m, strength; Sky draws it with front_wall). relief_frame: offset of the camera from the texture's centre (xz, m), its size (m), the camera's
+// height above the sea (m).
+uniform sampler2D relief_tex : filter_linear, hint_default_black, repeat_disable;
+global uniform vec4 relief_frame;
+global uniform vec4 cloud_front;
+
+// Extra cloud at a point (relative to the camera, xz in m): x = mass the land and the front add, y = extra height (m),
+// z = how low the base comes down toward the ground (m above the camera; 1e9 = unchanged).
+vec3 land_and_front(vec2 rel) {
+	vec3 r = vec3(0.0, 0.0, 1e9);
+	if (relief_frame.z > 0.0) {
+		vec2 uv = (rel + relief_frame.xy) / relief_frame.z + 0.5;
+		if (all(greaterThan(uv, vec2(0.0))) && all(lessThan(uv, vec2(1.0)))) {
+			vec2 t = texture(relief_tex, uv).rg;
+			float hgt = t.r * 4000.0;
+			// Mountains catch cloud: caps on the high peaks, banks along the windward slopes (moist air pushed up).
+			float oro = smoothstep(600.0, 2200.0, hgt) * (0.35 + 0.65 * t.g) * (0.35 + 0.65 * cloud_state.z);
+			r.x = oro * 0.85;
+			r.y = oro * 900.0;
+			r.z = hgt - relief_frame.w - 250.0; // the bank sits on the ridge, just below its top
+		}
+	}
+	return r;
+}
 
 float vremap(float v, float a, float b, float c, float d) { return c + (v - a) / max(b - a, 1e-4) * (d - c); }
 
-// The cloud map at xz: x = mass (0..1), y = how high the cloud grows above VBOTTOM (m).
-vec2 vweather(vec2 xz, float coverage) {
+// The cloud map at xz: x = mass (0..1), y = how high the cloud grows above VBOTTOM (m), z = base (m above the camera).
+vec3 vweather(vec2 xz, float coverage) {
 	vec2 uv = xz / cloud_period;
 	float n = texture(cloud_tex, uv).r * 0.8 + texture(cloud_tex, uv * 4.0 + vec2(0.31, 0.17)).g * 0.2;
 	float edge = 1.0 - coverage;
@@ -323,7 +353,11 @@ vec2 vweather(vec2 xz, float coverage) {
 	float mass = clamp((n - edge + 0.1) / 0.35, 0.0, 1.0) * step(0.001, coverage);
 	float core = smoothstep(edge + 0.05, edge + 0.4, n);
 	float tower = cloud_types.x > 0.001 ? cloud_types.x * core * (0.35 + 0.65 * texture(cloud_tex, uv * 0.5 + vec2(0.7, 0.2)).g) : 0.0;
-	return vec2(mass, 350.0 + 950.0 * sqrt(mass) + tower * 5200.0 + cloud_state.w * 700.0);
+	vec3 extra = land_and_front(xz - cloud_state.xy);
+	// (only where the land holds cloud does the base come down toward the ridges; elsewhere it stays put)
+	float base = mix(VBOTTOM, clamp(extra.z, max(VBOTTOM - 1100.0, 150.0), VBOTTOM), clamp(extra.x / 0.85, 0.0, 1.0));
+	mass = max(mass, extra.x * (0.75 + 0.5 * n));
+	return vec3(mass, 350.0 + 950.0 * sqrt(mass) + tower * 5200.0 + cloud_state.w * 700.0 + extra.y + (VBOTTOM - base), base);
 }
 
 // Density at p (camera-relative x/z offset by the cloud drift, y above the camera). detail: the fine erosion (off for
@@ -334,9 +368,13 @@ float vdens(vec3 p, bool detail) {
 	vec4 n = texture(cloud_noise, p / 2600.0 + vec3(0.0, cloud_more.z * 0.00005, 0.0));
 	// The map is read through a 3D warp: a cloud's sides bulge in and out with height instead of standing as walls.
 	vec2 warp = (vec2(n.g, n.b) - 0.5) * (500.0 + above * 0.18);
-	vec2 wx = vweather(p.xz - lean * above + warp, cloud_state.z);
+	vec3 wx = vweather(p.xz - lean * above + warp, cloud_state.z);
 	if (wx.x <= 0.0) return -1.0; // clear sky here at every height: the march may stride
-	float h = (p.y - VBOTTOM) / wx.y;
+	// A full deck is not flat paint: thick and thin patches over kilometres, and a lumpy base (rolls of stratocumulus).
+	float full = smoothstep(0.6, 0.9, cloud_state.z) * (1.0 - 0.75 * smoothstep(7000.0, 22000.0, length(p.xz - cloud_state.xy))); // (far away the 3D noise would repeat visibly)
+	wx.x *= mix(1.0, 0.2 + 1.0 * smoothstep(0.3, 0.75, n.r), full);
+	wx.z += full * (n.g - 0.5) * 500.0;
+	float h = (p.y - wx.z) / wx.y;
 	if (h <= 0.0 || h >= 1.0) return 0.0;
 	// Flat base, rounded domes: higher up only the denser parts of the map remain.
 	// (the map never quite fills: the 3D noise carves lumps and gaps inside clouds too, not only at their edges)
@@ -345,7 +383,7 @@ float vdens(vec3 p, bool detail) {
 	float wf = n.g * 0.7 + n.b * 0.3;
 	float base = clamp(vremap(n.r, wf - 1.0, 1.0, 0.0, 1.0), 0.0, 1.0);
 	base = base * base * (3.0 - 2.0 * base); // rounder lumps
-	float d = clamp(vremap(base, 1.0 - cov, 1.0, 0.0, 1.0), 0.0, 1.0) * cov;
+	float d = clamp(vremap(base, 1.0 - cov, 1.0, 0.0, 1.0), 0.0, 1.0) * cov * (1.0 + 0.9 * wx.x); // thick parts denser
 	if (d <= 0.0 || !detail) return d;
 	// Fine detail: billowy on top, wispy underneath; in wind stretched along it (smudged streaks).
 	float windy = smoothstep(0.5, 1.6, wind.y);
@@ -358,13 +396,68 @@ float vdens(vec3 p, bool detail) {
 	return clamp(vremap(d, df * mix(0.42, 0.25, windy), 1.0, 0.0, 1.0), 0.0, 1.0);
 }
 
+// Distance along dir to an approaching front (a vertical curtain cloud_front.z metres away; 1e9 if none or behind).
+float front_distance(vec3 dir) {
+	if (cloud_front.w <= 0.02) return 1e9;
+	float c = dot(dir.xz, cloud_front.xy);
+	return c < 0.05 ? 1e9 : cloud_front.z / c;
+}
+
+// An approaching front seen from outside (round 19, Noor: "standing in sunshine and seeing a dark storm system 20 km
+// away", "sailing toward a giant wall of rain while the clouds get progressively uglier"): on a curtain at its edge, a
+// dark bank of cloud towering to 3–7 km (strong fronts higher: thunderstorms) with a lumpy, sunlit top, and under it
+// grey slanting rain down to the ground. Premultiplied colour, opacity.
+vec4 front_wall(vec3 dir, vec3 ambient, vec3 sun_dir, vec3 sun_col, vec3 haze) {
+	float tp = front_distance(dir);
+	if (tp >= 1e8) return vec4(0.0);
+	float hd = tp * length(dir.xz);
+	float y = dir.y * tp + hd * hd / 12.742e6; // height on the curtain (with the Earth's curve)
+	vec2 perp = vec2(-cloud_front.y, cloud_front.x);
+	float x = dot(dir.xz, perp) * tp;
+	float w = cloud_front.w;
+	// The bank: its top rises and falls in big lumps and small billows.
+	// Towers along the bank: several kilometres apart, some much taller (strong fronts: thunderstorm towers).
+	// (smooth waves: the cloud texture's ridged creases made spikes)
+	float towers = clamp(0.5 + 0.32 * sin(x / 6200.0 + 1.1) + 0.22 * sin(x / 2700.0 + 4.0) + 0.12 * sin(x / 17000.0 + 2.2), 0.0, 1.0);
+	towers = towers * towers * (3.0 - 2.0 * towers);
+	float top = VBOTTOM + mix(1600.0, 5200.0, smoothstep(0.55, 1.0, w)) * (0.4 + 0.75 * towers);
+	// Rounded billows on top: two overlapping rows of domes of random sizes (a function of x only: no spikes).
+	float bill = 0.0;
+	for (int r = 0; r < 2; r++) {
+		float sz = r == 0 ? 3200.0 : 1900.0, off = float(r) * 0.5;
+		float cx = floor(x / sz + off), fx = fract(x / sz + off) * 2.0 - 1.0;
+		float hc = fract(sin(cx * 91.7 + float(r) * 13.1) * 43758.5453);
+		bill = max(bill, sqrt(max(0.0, 1.0 - fx * fx)) * sz * (0.18 + 0.3 * hc));
+	}
+	top += bill - 400.0;
+	float body = smoothstep(top, top - 300.0, y) * smoothstep(VBOTTOM - 250.0, VBOTTOM + 150.0, y);
+	float v = clamp((y - VBOTTOM) / max(top - VBOTTOM, 1.0), 0.0, 1.0);
+	float lump = texture(cloud_tex, vec2(x / 1800.0, y / 1800.0)).r * 0.6 + texture(cloud_tex, vec2(x / 600.0, y / 600.0)).g * 0.4;
+	// Dark slate underneath, lighter up the towers, the tops catching the sun when it shines on this side.
+	vec3 cloud = ambient * vec3(0.92, 0.96, 1.08) * mix(0.32, 0.8, v * v) * (0.75 + 0.5 * lump)
+		+ sun_col * max(dot(-vec3(cloud_front.x, 0.0, cloud_front.y), sun_dir) * 0.5 + 0.5, 0.0) * smoothstep(0.5, 1.0, v) * (0.35 + 0.3 * lump);
+	// The rain beneath: slanting streaks in heavier and lighter bands.
+	float slant = dot(vec2(wind.x, wind.z), perp) * 0.35;
+	float streak = texture(cloud_tex, vec2((x - slant * y) / 2200.0, y / 40000.0)).r;
+	float bands = smoothstep(0.25, 0.6, texture(cloud_tex, vec2(x / 14000.0, 0.37)).g);
+	float rain = smoothstep(VBOTTOM + 100.0, VBOTTOM - 300.0, y) * (0.5 + 0.3 * streak) * mix(0.55, 1.0, bands);
+	vec3 rain_col = ambient * (0.55 + 0.2 * streak);
+	float a = clamp(max(body, rain), 0.0, 0.95) * w;
+	vec3 c = body >= rain ? cloud : rain_col;
+	// Far along the curtain (seen obliquely) the front sinks into the haze instead of squeezing into spikes.
+	c = mix(c, haze, smoothstep(cloud_front.z * 1.3, cloud_front.z * 3.5 + 20000.0, tp) * 0.8);
+	a *= 1.0 - smoothstep(cloud_front.z * 2.5 + 15000.0, cloud_front.z * 4.0 + 40000.0, tp);
+	return vec4(c * a, a);
+}
+
 float vhg(float c, float g) { float g2 = g * g; return (1.0 - g2) / pow(max(1.0 + g2 - 2.0 * g * c, 1e-4), 1.5); }
 
 vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float coverage, float storm) {
 	if (dir.y < 0.005 || coverage < 0.001) return vec4(0.0);
 	vec2 cam = cloud_state.xy;
-	float vtop = VBOTTOM + 350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0;
-	float t0 = VBOTTOM / dir.y, t1 = min(vtop / dir.y, 50000.0);
+	float vtop = VBOTTOM + 350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0 + 900.0;
+	float vlow = relief_frame.z > 0.0 ? max(VBOTTOM - 1100.0, 150.0) : VBOTTOM;
+	float t0 = vlow / dir.y, t1 = min(min(vtop / dir.y, 50000.0), front_distance(dir)); // nothing beyond a front shows
 	if (t0 > t1) return vec4(0.0);
 	// Steps grow with distance (the same angular detail near and far), ~45 m close up, up to 900 m far away.
 	float jitter = fract(sin(dot(dir.xz * 731.0, vec2(12.9898, 78.233))) * 43758.5453);
@@ -376,7 +469,10 @@ vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float
 	// Sky light: blue from above, the lit ground from below; at twilight the bases glow in sunset colours.
 	vec3 sky_top = zenith_color * sky_mood.rgb * (0.08 + 0.92 * day) * mix(1.0, 0.55, storm);
 	vec3 sky_side = horizon_color * mix(vec3(1.0), sky_mood.rgb, 0.7) * (0.08 + 0.92 * day) * mix(1.0, 0.6, storm);
-	vec3 ground = ground_color * (0.06 + 0.5 * max(sun_dir.y, 0.0)) * (1.0 - storm * 0.6);
+	// Light bounced up from the sunlit land: warm, a little green (Tom: more colour variance).
+	vec3 ground = mix(ground_color, vec3(0.55, 0.47, 0.36), 0.5) * (0.06 + 0.6 * max(sun_dir.y, 0.0)) * (1.0 - storm * 0.6);
+	// Sunlight on clouds: a touch warmer than white by day, golden low down.
+	light_col *= mix(vec3(1.0), vec3(1.06, 1.0, 0.9), 0.6 * (1.0 - night));
 	vec3 glow = underlight(dir);
 	if (night > 0.5) { sky_top = vec3(0.012, 0.016, 0.03); sky_side = sky_top; ground = vec3(0.004); }
 	vec3 haze = sky_colour(dir, sun_dir, sun_col, day, mu);
@@ -409,14 +505,22 @@ vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float
 		float sun_e = 0.0, a = 1.0, b = 1.0;
 		for (int o = 0; o < 3; o++) {
 			sun_e += a * exp(-od * sigma_k * b) * mix(1.0, phase_f, b);
-			a *= 0.5; b *= 0.45;
+			a *= 0.42; b *= 0.4; // (weaker higher orders: more self-shadowing)
 		}
 		float powder = mix(1.0, 1.0 - exp(-d * 6.0 - od * sigma_k * 1.5), 0.6 * (1.0 - max(lmu, 0.0)));
 		float hb = smoothstep(0.0, 0.45, (p.y - VBOTTOM) / 1800.0);
 		// shadows take the blue of the sky above (greyer low down, where the horizon and the ground light them)
-		vec3 amb = mix(mix(sky_side, sky_top, 0.55) * 0.75, sky_top * 1.35, hb) + ground * (1.0 - hb) * 0.7 + glow * (1.0 - hb) * 0.9;
-		vec3 s = light_col * sun_e * powder * 1.25 + amb * (0.55 + 0.45 * exp(-od * sigma_k * 0.3));
-		s = mix(s, haze, 1.0 - exp(-t / 52000.0)); // aerial perspective
+		vec3 amb = mix(mix(sky_side, sky_top, 0.55) * 0.7, sky_top * 1.35, hb) + ground * (1.0 - hb) * 0.8 + glow * (1.0 - hb) * 0.9;
+		// Deep inside thick cloud the sky light is used up too: cores and undersides darken toward a cool slate (Noor:
+		// "contrast … darker undersides, thicker cores"); thin parts keep the full light.
+		float deep = 1.0 - exp(-od * sigma_k * 0.45);
+		amb *= mix(1.0, 0.45, deep) * mix(0.75, 1.0, hb);
+		amb = mix(amb, amb * vec3(0.86, 0.9, 1.12), deep * 0.6);
+		vec3 s = light_col * sun_e * powder * 1.3 + amb;
+		// Under a full deck the dense parts are darker, the thin ones brighter (light through them).
+		s *= mix(1.0, 1.35 - 0.6 * clamp(d, 0.0, 1.0), smoothstep(0.6, 0.9, cloud_state.z));
+		// Aerial perspective, thicker toward the horizon where the clouds meet it (Noor).
+		s = mix(s, haze, clamp(1.0 - exp(-t / 36000.0) + (1.0 - smoothstep(0.0, 0.12, dir.y)) * 0.25, 0.0, 0.92));
 		// Far away a step is longer than a cloud edge is thick: soften there so samples do not flicker on and off.
 		float sigma = d * sigma_k * mix(1.0, 0.45, smoothstep(150.0, 450.0, step_len));
 		float ab = exp(-sigma * step_len);
@@ -491,6 +595,13 @@ void sky() {
 			ambient = mix(ambient, vec3(0.05, 0.06, 0.08) * (0.4 + 0.6 * sky_extra.w), night);
 			far = ct_far(dir, sun_dir, sun_col * (1.0 - night), ambient, col, underlight(dir), false, quality < 2);
 		}
+		// An approaching front: behind the main deck and the volume (clouds nearer than it stay in front).
+		if (!AT_CUBEMAP_PASS) {
+			vec3 ambient = (horizon_color * 0.55 + zenith_color * 0.45) * sky_mood.rgb * (0.12 + 0.88 * day) * 0.62;
+			vec4 fw = front_wall(dir, ambient, sun_dir, sun_col * (1.0 - night), col);
+			col = col * (1.0 - fw.a) + fw.rgb;
+			disc *= 1.0 - fw.a;
+		}
 		if (up > 0.0) {
 			// Main deck: volumetric (quarter-res pass) or the flat textured layer.
 			if (quality == 2 && !AT_CUBEMAP_PASS) {
@@ -505,6 +616,9 @@ void sky() {
 				float t = cloud_height / max(up, 0.015);
 				vec2 xz = cloud_state.xy + dir.xz * t;
 				float d = cloud_density(xz, coverage);
+				// Banks over the mountains and the deck of an approaching front (round 19).
+				d = max(d, land_and_front(dir.xz * t).x * smoothstep(0.35, 0.75, texture(cloud_tex, xz / cloud_period * 2.0).r + 0.25));
+				if (t > front_distance(dir)) d *= 1.0 - cloud_front.w; // hidden behind the front
 				if (d > 0.0) {
 					float toward = cloud_density(xz + normalize(sun_dir.xz + vec2(1e-4)) * 260.0, coverage);
 					vec4 c = layer(dir, xz, cloud_height, d, sun_dir, sun_col, day, mu, toward, 1.0);
