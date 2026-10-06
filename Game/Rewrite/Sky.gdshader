@@ -37,6 +37,89 @@ global uniform vec4 sky_extra;
 // The real sun (xyz) and its elevation in degrees (w), also below the horizon (the light itself stops at −4°).
 global uniform vec4 sun_true;
 
+// Aurora strength (Atmosphere.cs: high latitudes, dark clear nights); the sign is the hemisphere (curtains toward
+// the north pole for > 0, the south for < 0).
+global uniform float aurora;
+
+float shash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+
+// Auroras (round 16): curtains low over the poleward horizon — a bright green lower edge rising into faint violet,
+// rippling slowly along their length, with fine vertical rays.
+vec3 aurora_light(vec3 dir, float t) {
+	float strength = abs(aurora);
+	if (strength <= 0.001 || dir.y <= 0.0) return vec3(0.0);
+	float pole = aurora > 0.0 ? -dir.z : dir.z; // north is −Z
+	float facing = smoothstep(-0.25, 0.55, pole);
+	if (facing <= 0.0) return vec3(0.0);
+	float az = atan(dir.x, max(pole, 0.05));
+	float el = asin(clamp(dir.y, 0.0, 1.0));
+	vec3 total = vec3(0.0);
+	// Two curtains at different heights and drifts; each folds along its length, waxes and wanes in patches, and
+	// carries irregular vertical rays.
+	for (int i = 0; i < 2; i++) {
+		float fi = float(i), sp = 1.0 + fi * 0.6;
+		float foot = 0.18 + fi * 0.1 + 0.09 * sin(az * (2.3 + fi) + t * 0.03 * sp) + 0.05 * sin(az * (6.1 - fi * 1.7) - t * 0.07 * sp)
+			+ 0.025 * sin(az * 13.0 + t * 0.15);
+		float h = el - foot;
+		float curtain = smoothstep(-0.015, 0.01, h) * exp(-max(h, 0.0) * mix(4.5, 9.0, 0.5 + 0.5 * sin(az * 3.7 + t * 0.05 + fi * 2.0)));
+		float patch = smoothstep(0.15, 0.85, 0.5 + 0.3 * sin(az * 1.6 + t * 0.021 + fi * 4.0) + 0.25 * sin(az * 4.3 - t * 0.037 + fi));
+		float rays = 0.5 + 0.5 * sin(az * (120.0 + 40.0 * fi) + 7.0 * sin(az * 11.0 + t * 0.2) + 3.0 * sin(az * 37.0 - t * 0.31));
+		rays = mix(0.35, 1.0, rays * rays);
+		vec3 c = mix(vec3(0.12, 1.0, 0.45), vec3(0.55, 0.22, 0.75), smoothstep(0.04, 0.3, h));
+		total += c * curtain * rays * patch * (1.0 - fi * 0.45);
+	}
+	return total * facing * strength * 0.36;
+}
+
+// Shooting stars: now and then a short bright streak (every few seconds a chance of one, lasting under a second).
+vec3 meteor(vec3 dir, float t) {
+	float slot = floor(t / 6.0);
+	if (shash(slot) < 0.55) return vec3(0.0);
+	float tt = t - slot * 6.0 - shash(slot + 7.1) * 4.0;
+	if (tt < 0.0 || tt > 0.7) return vec3(0.0);
+	vec3 start = normalize(vec3(shash(slot + 1.3) * 2.0 - 1.0, 0.35 + 0.5 * shash(slot + 2.9), shash(slot + 4.7) * 2.0 - 1.0));
+	vec3 axis = normalize(cross(start, normalize(vec3(shash(slot + 5.3) - 0.5, 1.0, shash(slot + 6.1) - 0.5))));
+	vec3 head = normalize(start + axis * tt * 0.45), tail = normalize(start + axis * max(tt - 0.22, 0.0) * 0.45);
+	vec3 seg = head - tail;
+	float u = clamp(dot(dir - tail, seg) / max(dot(seg, seg), 1e-6), 0.0, 1.0);
+	float d = length(dir - (tail + seg * u));
+	float bright = smoothstep(0.0, 0.1, tt) * smoothstep(0.7, 0.45, tt) * u;
+	return vec3(0.9, 0.95, 1.0) * smoothstep(0.0025, 0.0, d) * bright * 1.6;
+}
+
+// x: how wet the world is from rain (Atmosphere.cs; rainbows appear as the rain clears), y: puddles.
+global uniform vec2 rain_wetness;
+
+// A rainbow-like spectrum: t = 0 violet … 1 red.
+vec3 spectrum(float t) {
+	return clamp(vec3(1.5 - abs(4.0 * t - 3.6), 1.5 - abs(4.0 * t - 2.2), 1.5 - abs(4.0 * t - 0.8)), 0.0, 1.0);
+}
+// Rainbows (round 16): opposite the sun — the primary bow at 40.5–42.5° (red outside), the fainter secondary at
+// 50.5–53.5° (colours reversed), Alexander's darker band between them and a brighter sky inside the primary.
+// Returns (added colour, darkening).
+vec4 rainbow(vec3 dir, vec3 sun_dir, float amount) {
+	float a = degrees(acos(clamp(dot(dir, -sun_dir), -1.0, 1.0)));
+	vec3 c = vec3(0.0);
+	float t1 = (a - 40.5) / 2.0;
+	c += spectrum(t1) * smoothstep(0.0, 0.15, t1) * smoothstep(1.0, 0.85, t1);
+	float t2 = 1.0 - (a - 50.5) / 3.0;
+	c += spectrum(t2) * smoothstep(0.0, 0.15, t2) * smoothstep(1.0, 0.85, t2) * 0.4;
+	c += vec3(0.07) * smoothstep(20.0, 40.5, a) * (1.0 - step(40.5, a));
+	float dark = smoothstep(42.0, 43.5, a) * smoothstep(51.0, 49.5, a) * 0.12;
+	return vec4(c * amount, dark * amount);
+}
+// The 22° halo and sun dogs, seen through thin high cloud (cirrus density d).
+vec3 halo(vec3 dir, vec3 sun_dir, vec3 sun_col, float d) {
+	float a = degrees(acos(clamp(dot(dir, sun_dir), -1.0, 1.0)));
+	float ra = (a - 22.0) / 0.7, ring = exp(-ra * ra);
+	vec3 col = mix(vec3(1.0, 0.75, 0.6), vec3(0.9, 0.95, 1.0), smoothstep(21.3, 23.0, a)) * ring * 0.35;
+	// Sun dogs: bright spots at the sun's height, 22° (a little more when the sun is higher) to each side.
+	float da = 22.0 + 8.0 * max(sun_dir.y, 0.0), dy = (dir.y - sun_dir.y) / 0.025;
+	float dx = (a - da) / 1.2, dog = exp(-dx * dx) * exp(-dy * dy);
+	col += spectrum(clamp(1.0 - (a - da + 1.0) / 2.5, 0.0, 1.0)) * dog * 0.9; // red on the side toward the sun
+	return col * sun_col * d;
+}
+
 // Twilight (round 16): how much of each twilight effect shows for the sun's true elevation e (degrees).
 float golden_w(float e) { return smoothstep(9.0, 1.0, e) * smoothstep(-7.0, -1.0, e); }  // sunset glow at the horizon
 float belt_w(float e) { return smoothstep(4.0, 0.0, e) * smoothstep(-7.0, -2.0, e); }     // Belt of Venus
@@ -286,7 +369,10 @@ void sky() {
 	} else {
 		vec3 col = sky_colour(dir, sun_dir, sun_col, day, mu);
 		float night = 1.0 - smoothstep(-0.16, 0.04, sun_dir.y);
-		if (!AT_CUBEMAP_PASS) col += night_sky_colour(dir, sun_dir, night);
+		if (!AT_CUBEMAP_PASS) {
+			col += night_sky_colour(dir, sun_dir, night);
+			col += (aurora_light(dir, TIME) + meteor(dir, TIME) * sky_extra.z) * night;
+		}
 		vec3 disc = sun_col * smoothstep(0.99955, 0.9998, mu) * 6.0 * sun_glare;
 		if (sun_style == 1) {
 			// Softer at noon (less blinding), larger and orange-red as it sinks toward the horizon.
@@ -297,11 +383,13 @@ void sky() {
 		}
 		disc *= smoothstep(-0.004, 0.004, up); // a sun under the horizon shows no disc
 		bool layered = quality >= 1 && !AT_CUBEMAP_PASS;
+		float cirrus_here = 0.0;
 		if (up > 0.0) {
 			// High cirrus (7 km): thin, bright, slow, on its own heading.
 			if (layered) {
 				float t = 7000.0 / max(up, 0.015);
 				float d = cirrus_density(cloud_layers.xy + dir.xz * t, coverage) * smoothstep(0.02, 0.15, up) * (1.0 - storm);
+				cirrus_here = d;
 				vec3 c = vec3(1.0, 0.99, 0.97) * (0.3 + 0.8 * day) * mix(vec3(1.0), LIGHT0_COLOR, 0.6) + sun_col * pow(max(mu, 0.0), 8.0) * 0.5
 					+ underlight(dir) * 1.1; // high cirrus stays lit longest after sunset
 				col = mix(col, c, d);
@@ -334,6 +422,17 @@ void sky() {
 					col = mix(col, c.rgb, d);
 					disc *= 1.0 - d;
 				}
+			}
+		}
+		if (!AT_CUBEMAP_PASS) {
+			// Halo and sun dogs where thin cirrus crosses 22° from the sun (the sun must be up and not hidden).
+			col += halo(dir, sun_dir, sun_col, cirrus_here * 2.2 * smoothstep(-0.02, 0.05, sun_dir.y) * (1.0 - storm));
+			// Rainbows: rain has wetted the world, the sun is breaking through, low enough (< 42°).
+			float bow = smoothstep(0.15, 0.5, rain_wetness.x) * (1.0 - smoothstep(0.35, 0.8, storm)) * smoothstep(0.0, 0.05, sun_dir.y)
+				* smoothstep(0.67, 0.55, sun_dir.y) * smoothstep(0.0, 0.03, up);
+			if (bow > 0.0) {
+				vec4 rb = rainbow(dir, sun_dir, bow * 0.28 * (0.4 + 0.6 * day));
+				col = col * (1.0 - rb.a) + rb.rgb;
 			}
 		}
 		// Biome haze: a veil of the horizon colour (mist, dust, ash).

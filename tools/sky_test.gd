@@ -38,10 +38,12 @@ func _initialize() -> void:
 	var cam := Camera3D.new()
 	cam.rotation = Vector3(float(args.get("pitch", "0.4")), float(args.get("yaw", "2.5")), 0)
 	root.add_child(cam)
-	RenderingServer.global_shader_parameter_set("cloud_state", Vector4(100, 200, 0.45, 0))
+	RenderingServer.global_shader_parameter_set("cloud_state", Vector4(100, 200, float(args.get("cover", "0.45")), 0))
 	var L: PackedStringArray = str(args.get("layers", "300,400,500,600")).split(",")
 	RenderingServer.global_shader_parameter_set("cloud_layers", Vector4(float(L[0]), float(L[1]), float(L[2]), float(L[3])))
 	RenderingServer.global_shader_parameter_set("sky_mood", Vector4(1, 1, 1, 0))
+	RenderingServer.global_shader_parameter_set("rain_wetness", Vector2(float(args.get("wet", "0")), 0))
+	RenderingServer.global_shader_parameter_set("aurora", float(args.get("aurora", "0")))
 	var md := Vector3(0.3, 0.35, -0.88).normalized()
 	cam.look_at_from_position(Vector3.ZERO, md * 10.0 if args.has("look_moon") else Vector3(0, 3, -10), Vector3.UP) if args.has("look_moon") else null
 	RenderingServer.global_shader_parameter_set("night_sky", Vector4(md.x, md.y, md.z, 0.5))

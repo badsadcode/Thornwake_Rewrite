@@ -82,3 +82,7 @@ sun_true={
 "type": "vec4",
 "value": Vector4(0, 1, 0, 45)
 }
+aurora={
+"type": "float",
+"value": 0.0
+}

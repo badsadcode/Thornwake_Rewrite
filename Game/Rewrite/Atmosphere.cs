@@ -340,6 +340,12 @@ public partial class Atmosphere : Node3D
         // The real sun, also below the horizon (the light stops at −4°): twilight colours follow it (Sky.gdshader).
         var trueSun = GameClock.Direction(sky.SunElevation, sky.SunAzimuth);
         RenderingServer.GlobalShaderParameterSet("sun_true", new Vector4(trueSun.X, trueSun.Y, trueSun.Z, (float)sky.SunElevation));
+        // Auroras: high latitudes (toward the pole: sign = hemisphere), dark nights, clear skies; some nights strong,
+        // some quiet (activity per night from the day number).
+        double absLat = Math.Abs(sky.Latitude);
+        double activity = .25 + .75 * Fract(Math.Sin((Math.Floor((double)sky.Day) + 1) * 12.9898) * 43758.5453);
+        float aurora = (float)(DetMathSmooth((absLat - 50) / 18) * activity * _night * (1 - _storm) * (1 - Coverage * .6));
+        RenderingServer.GlobalShaderParameterSet("aurora", sky.Latitude < 0 ? -aurora : aurora);
         var glowColour = Sun.LightColor * Sun.LightEnergy * Mathf.Clamp(toSun.Y * 6 + .2f, 0, 1);
         RenderingServer.GlobalShaderParameterSet("sun_glow", new Vector4(glowColour.R, glowColour.G, glowColour.B, 0));
         _shafts.SetShaderParameter("sun_direction", toSun);
@@ -400,6 +406,9 @@ public partial class Atmosphere : Node3D
         _water.SetShaderParameter("wave2_chop", (float)Spectrum.Chop);
         SendSpectrumOrigin();
     }
+
+    private static double Fract(double v) => v - Math.Floor(v);
+    private static double DetMathSmooth(double t) { t = Math.Clamp(t, 0, 1); return t * t * (3 - 2 * t); }
 
     /// <summary>
     /// The sky the water reflects (all water styles): the sky shader's horizon and zenith colours with its day factor,
