@@ -280,8 +280,9 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("rain_wetness", new Vector2(_wetness, _puddles));
         RenderingServer.GlobalShaderParameterSet("ocean_time", (float)(OceanTime % 100000));
         double seaState = Math.Clamp(GameSettings.SeaState.Value + _storm * .45, 0, 1);
+        if (originX != Spectrum.OriginX || originZ != Spectrum.OriginZ) { Spectrum.SetOrigin(originX, originZ); SendSpectrumOrigin(); }
         double windAngle = Math.Atan2(Wind.Direction.Y, Wind.Direction.X);
-        if (Math.Abs(seaState - _wavesState) > .01 || Math.Abs(Mathf.AngleDifference((float)windAngle, (float)_wavesAngle)) > .14) { _wavesAngle = windAngle; UpdateWaves(seaState); }
+        if (Math.Abs(seaState - _wavesState) > .004 || Math.Abs(Mathf.AngleDifference((float)windAngle, (float)_wavesAngle)) > .14) { _wavesAngle = windAngle; UpdateWaves(seaState); }
         Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, _storm);
         _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, _storm);
         Environment.FogDensity = .00009f * GameSettings.Haze.F * Mathf.Lerp(1, 4, _storm);
@@ -371,18 +372,29 @@ public partial class Atmosphere : Node3D
         _water.SetShaderParameter("wave_q", q);
         _water.SetShaderParameter("wave_height", (float)Waves.WaveHeight);
         _water.SetShaderParameter("sea_state", (float)seaState);
-        Spectrum.Configure(seaState, _wavesAngle);
+        // Experimental 2: fixed wavelengths and directions, only amplitudes follow the sea state (smooth); the shader
+        // follows the wind itself (regional headings).
+        Spectrum.Configure(seaState);
         var w2 = new Godot.Collections.Array<Vector4>();
-        var qp = new Vector2[SpectrumWaves.Count];
         for (int i = 0; i < SpectrumWaves.Count; i++)
         {
             var (dx, dz, k, a) = Spectrum.Waves[i];
             w2.Add(new Vector4((float)dx, (float)dz, (float)k, (float)a));
-            qp[i] = new Vector2((float)Spectrum.QP[i].Q, (float)Spectrum.QP[i].Phase);
         }
         _water.SetShaderParameter("waves2", w2);
-        _water.SetShaderParameter("wave2_qp", qp);
         _water.SetShaderParameter("wave2_hs", (float)Spectrum.Hs);
+        _water.SetShaderParameter("wave2_chop", (float)Spectrum.Chop);
+        SendSpectrumOrigin();
+    }
+
+    /// <summary>Experimental 2 waves are world-anchored: re-send the phases when the float origin moves.</summary>
+    private void SendSpectrumOrigin()
+    {
+        if (_water == null) return;
+        var phases = new float[SpectrumWaves.Count];
+        for (int i = 0; i < phases.Length; i++) phases[i] = (float)Spectrum.ShiftedPhase[i];
+        _water.SetShaderParameter("wave2_phase", phases);
+        _water.SetShaderParameter("world_origin", new Vector2((float)Spectrum.OriginX, (float)Spectrum.OriginZ));
     }
 
     /// <summary>Cloud cover in effect: the setting, closing in toward overcast while it rains.</summary>

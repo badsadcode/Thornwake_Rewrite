@@ -412,30 +412,70 @@ internal static class SimulationTests
     private static void Spectrum()
     {
         Func<double, double> full = _ => 1;
-        foreach (double state in new[] { 0.0, .5, 1.0 })
+        double windX = .8, windZ = -.6;
+        double lastHs = 0;
+        foreach (double state in new[] { 0.0, .25, .5, .75, 1.0 })
         {
-            var w = new SpectrumWaves(state, .64);
-            double sumQka = 0, sumA2 = 0;
-            foreach (var (_, _, k, a) in w.Waves) { sumA2 += a * a; T.Check(k * a <= .341, "no single wave steeper than the cap"); }
-            for (int i = 0; i < SpectrumWaves.Count; i++) sumQka += w.QP[i].Q * w.Waves[i].K * w.Waves[i].A;
-            T.Check(sumQka < 1, "crests sharpen but never loop over");
+            var w = new SpectrumWaves(state);
+            T.Check(w.Hs > lastHs, "wave height grows steadily with the sea state");
+            lastHs = w.Hs;
             var rng = new Random(3);
-            double worst = 0, peak = 0;
-            for (int i = 0; i < 400; i++)
+            double worst = 0, peak = 0, minHs = 1e9, maxHs = 0;
+            for (int i = 0; i < 300; i++)
             {
-                double x = (rng.NextDouble() - .5) * 1e4, z = (rng.NextDouble() - .5) * 1e4, t = rng.NextDouble() * 1000;
-                double g = SpectrumWaves.Group(x, z, t, .8, -.6, state);
-                var d = w.Displacement(x, z, t, full, g);
-                // Group is sampled at the query point; stay close to the particle so it barely changes.
-                double h = w.Height(x + d.X, z + d.Z, t, full, .8, -.6);
-                if (Math.Abs(SpectrumWaves.Group(x + d.X, z + d.Z, t, .8, -.6, state) - g) < .01) worst = Math.Max(worst, Math.Abs(h - d.Y));
+                double x = (rng.NextDouble() - .5) * 2e5, z = (rng.NextDouble() - .5) * 2e5, t = rng.NextDouble() * 1000;
+                var local = w.Local(x, z, windX, windZ, false);
+                double sumA2 = 0, chop = 0;
+                for (int j = 0; j < SpectrumWaves.WindCount; j++) sumA2 += local.Amp[j] * local.Amp[j];
+                for (int j = 0; j < SpectrumWaves.Count; j++) chop += local.Q[j] * w.Waves[j].K * local.Amp[j];
+                double hs = 4 * Math.Sqrt(sumA2 / 2);
+                minHs = Math.Min(minHs, hs); maxHs = Math.Max(maxHs, hs);
+                T.Check(chop < .99, "crests sharpen but never loop over");
+                double g = w.Group(x, z, t, windX, windZ);
+                var d = w.Displacement(x, z, t, full, local, g);
+                double h = w.Height(x + d.X, z + d.Z, t, full, windX, windZ);
+                worst = Math.Max(worst, Math.Abs(h - d.Y));
                 peak = Math.Max(peak, d.Y);
             }
-            T.Note($"spectrum sea state {state:0.0}: Hs {w.Hs:0.0} m (from amplitudes {4 * Math.Sqrt(sumA2 / 2):0.0} m), crests up to {peak:0.00} m, height error {worst * 1000:0.0} mm");
-            T.Check(worst < .05, "Height() inverts the spectrum sea's motion");
+            T.Note($"spectrum sea state {state:0.00}: Hs {w.Hs:0.0} m (local {minHs:0.0}–{maxHs:0.0}), crests up to {peak:0.0} m, height error {worst * 1000:0.0} mm");
+            T.Check(Math.Abs(minHs - w.Hs) < .01 * w.Hs + .01 && Math.Abs(maxHs - w.Hs) < .01 * w.Hs + .01, "same wave height everywhere (direction weights renormalised)");
+            T.Check(worst < .1, "Height() inverts the spectrum sea's motion");
             if (state == 0) T.Check(peak < .6, "calm spectrum sea is calm");
-            if (state == 1) T.Check(peak > 4, "storm spectrum sea is big");
+            if (state == 1) T.Check(peak > 8, "storm spectrum sea is huge");
         }
+        // Headings differ from place to place (sea and lakes), and swells come from their own directions.
+        var sea = new SpectrumWaves(.5);
+        double minDot = 1, minLake = 1, minSwell = 1;
+        var h0 = sea.Headings(0, 0, windX, windZ, false);
+        var s0 = h0;
+        for (int i = 1; i < 40; i++)
+        {
+            var h = sea.Headings(i * 4000, i * 2500, windX, windZ, false);
+            var hl = sea.Headings(i * 4000, i * 2500, windX, windZ, true);
+            minDot = Math.Min(minDot, h.Wx * h0.Wx + h.Wz * h0.Wz);
+            minLake = Math.Min(minLake, hl.Wx * h.Wx + hl.Wz * h.Wz);
+            minSwell = Math.Min(minSwell, h.Sx * s0.Sx + h.Sz * s0.Sz);
+        }
+        T.Note($"heading spread: sea {Math.Acos(minDot) * 180 / Math.PI:0}°, lake vs sea {Math.Acos(minLake) * 180 / Math.PI:0}°, swell {Math.Acos(minSwell) * 180 / Math.PI:0}°");
+        T.Check(minDot < Math.Cos(.5), "wind-sea heading varies across the ocean");
+        T.Check(minLake < Math.Cos(.5), "lakes have their own wave headings");
+        T.Check(minSwell < Math.Cos(1), "swells come from different directions in different seas");
+        // Smooth storms: a small sea-state change only nudges the surface (fixed wavelengths: no jumps).
+        var a = new SpectrumWaves(.6); var b = new SpectrumWaves(.61);
+        double jump = 0;
+        for (int i = 0; i < 50; i++)
+        {
+            double x = 1000 + i * 37, z = -800 + i * 53;
+            jump = Math.Max(jump, Math.Abs(a.Height(x, z, 50, full, windX, windZ) - b.Height(x, z, 50, full, windX, windZ)));
+        }
+        T.Note($"sea state .60 → .61: surface moves at most {jump * 100:0.0} cm");
+        T.Check(jump < .25, "the sea grows smoothly with the sea state");
+        // World anchored: re-centring the scene does not move the waves.
+        var o = new SpectrumWaves(.5);
+        double before = o.Height(5000, 3000, 20, full, windX, windZ);
+        o.SetOrigin(1536, -3072);
+        double after = o.Height(5000 - 1536, 3000 + 3072, 20, full, windX, windZ);
+        T.Near(after, before, .01, "waves stay put when the float origin moves");
     }
 
     private static void Cost()

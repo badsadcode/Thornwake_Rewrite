@@ -3,111 +3,218 @@ using System;
 namespace Thornwake.WorldGen;
 
 /// <summary>
-/// Ocean waves for the "experimental 2" water (round 10, Tom's Sea of Thieves references): 32 Gerstner waves drawn from a
-/// JONSWAP spectrum (energy peaked around one wavelength, sharp peak enhancement, ω⁻⁵ tail) instead of 12 hand-placed
-/// waves. Significant wave height grows steeply with the sea state (0.4 m calm … ~8.5 m storm, steep), directions fan out around
-/// the wind — wider for short waves and much wider in storms (confused, chaotic seas) — and a swell runs in from another
-/// heading. Crests are sharp (Gerstner choppiness up to ~0.95 of folding). The water shader evaluates exactly these waves
-/// (uniforms waves2 / wave2_qp) with the same group modulation, so swimming and boats can use <see cref="Height"/>.
-/// The classic <see cref="OceanWaves"/> is unchanged.
+/// Ocean waves for the "experimental 2" water (rounds 10–11, Tom's Sea of Thieves references and feedback).
+///
+/// * Fixed wave set: 52 wind-sea waves on a fixed ladder of wavelengths (1 … 260 m) whose directions cover the whole
+///   compass (golden-angle steps, so neighbouring wavelengths point far apart), plus 12 swell waves 30° apart. Only
+///   the amplitudes depend on the sea state, so storms grow and calm down smoothly (re-picking wavelengths made the
+///   whole sea jump), and wind turns never pop.
+/// * Sea state: wind-sea height 0.15 m (calm: a long soft swell carries the surface) … ~14 m (sea state 1), peak
+///   wavelength 9 … ~140 m (moderate seas stay short and lively: λ grows with the square of the sea state); stylised
+///   steep (about twice real storm steepness) in the spirit of Sea of Thieves. JONSWAP spectrum (γ = 3.3).
+/// * Direction depends on the place: each point weights the waves by how close they run to its local heading — the
+///   wind turned by a slow regional field (sea: ±~1 rad over ~8 km; lakes: their own valley winds, ±~1.2 rad over
+///   ~3 km) with a spread that is narrow in calm weather and wide (confused) in storms. Swells come from far storms:
+///   their heading follows a separate field over ~20 km, independent of the local wind. Weights are renormalised
+///   per point, so the wave height stays the same wherever you are.
+/// * Crisp crests: Gerstner choppiness goes mostly to the biggest steep waves (share ∝ k²A³), so the dominant waves
+///   get sharp, trochoid crests; the total never reaches folding.
+/// * World anchored: phases include the float origin, so waves do not jump when the scene re-centres, and the regional
+///   fields use world coordinates.
+/// The water shader (WaterExperimental2.gdshader) evaluates exactly these formulas (uniforms waves2, wave2_qp,
+/// world_origin), so swimming and boats can use <see cref="Height"/>. The classic <see cref="OceanWaves"/> is unchanged.
 /// </summary>
 public sealed class SpectrumWaves
 {
-    public const int Count = 32;
+    public const int Count = 64, WindCount = 52;
     private const double G = 9.81;
+    public const double LambdaMax = 260, LambdaMin = 1.0, CapKA = .34;
 
-    /// <summary>Per wave: direction x, direction z, wavenumber k, amplitude (m).</summary>
+    /// <summary>Per wave: direction x, direction z, wavenumber k, base amplitude (m, before the direction weighting).</summary>
     public readonly (double Dx, double Dz, double K, double A)[] Waves = new (double, double, double, double)[Count];
-    /// <summary>Per wave: Gerstner choppiness q and phase (rad).</summary>
-    public readonly (double Q, double Phase)[] QP = new (double, double)[Count];
+    /// <summary>Per wave: phase (rad) at the world origin, and the phase including the current float origin.</summary>
+    public readonly double[] Phase = new double[Count], ShiftedPhase = new double[Count];
     public double SeaState { get; private set; }
-    /// <summary>Significant wave height (m): crest-to-trough height of the highest third of the waves.</summary>
+    /// <summary>Significant wave height (m) of the wind sea and of the swell.</summary>
     public double Hs { get; private set; }
-    public double WindAngle { get; private set; }
+    public double SwellHs { get; private set; }
+    /// <summary>Total choppiness Σ q k A at a point (&lt; 1: never folds).</summary>
+    public double Chop { get; private set; }
+    public double OriginX { get; private set; }
+    public double OriginZ { get; private set; }
 
-    public SpectrumWaves(double seaState = .25, double windAngle = .64) => Configure(seaState, windAngle);
-
-    public void Configure(double seaState, double windAngle)
+    public SpectrumWaves(double seaState = .25)
     {
-        double s = SeaState = Math.Clamp(seaState, 0, 1);
-        WindAngle = windAngle;
-        Hs = .4 + 8.2 * Math.Pow(s, 1.5);
-        // Peak wavelength: short chop … ~70 m storm seas. Stylised: about twice as steep as real storm seas (whose
-        // 200 m swells look like slow hills even at 8 m), in the spirit of Sea of Thieves.
-        double lambdaPeak = 9 + 62 * Math.Pow(s, 1.2);
-        double omegaPeak = Math.Sqrt(G * 2 * Math.PI / lambdaPeak);
-        double lambdaMax = lambdaPeak * 1.8, lambdaMin = Math.Max(1.2, lambdaPeak / 34);
-        var energy = new double[Count];
-        double total = 0;
         for (int i = 0; i < Count; i++)
         {
-            double t = i / (double)(Count - 1);                     // 0 longest … 1 shortest
-            double lambda = lambdaMax * Math.Pow(lambdaMin / lambdaMax, t);
-            double k = 2 * Math.PI / lambda, omega = Math.Sqrt(G * k);
-            // JONSWAP (γ = 3.3) in ω, times Δω ∝ ω for geometric spacing.
-            double r = omegaPeak / omega;
+            double lambda, angle;
+            if (i < WindCount)
+            {
+                double t = i / (double)(WindCount - 1);
+                lambda = LambdaMax * Math.Pow(LambdaMin / LambdaMax, t) * (1 + .04 * (Hash(i, 3) - .5));
+                angle = i * 2.39996323 + .3 * (Hash(i, 1) - .5);
+            }
+            else
+            {
+                int j = i - WindCount;
+                lambda = 120 * Math.Pow(1.45, j % 3);
+                angle = j * Math.PI / 6;
+            }
+            Waves[i] = (Math.Cos(angle), Math.Sin(angle), 2 * Math.PI / lambda, 0);
+            Phase[i] = ShiftedPhase[i] = Hash(i, 2) * 2 * Math.PI;
+        }
+        Configure(seaState);
+    }
+
+    public static double PeakWavelength(double s) => 9 + 130 * s * s;
+
+    public void Configure(double seaState)
+    {
+        double s = SeaState = Math.Clamp(seaState, 0, 1);
+        // Calm: mostly a long, soft swell (the whole surface slowly rising and falling); storms: huge wind seas over it.
+        Hs = .15 + 14.1 * s * s;
+        SwellHs = .45 + 1.6 * s;
+        Chop = .62 + .3 * s;
+        double omegaPeak = Math.Sqrt(G * 2 * Math.PI / PeakWavelength(s));
+        var energy = new double[Count];
+        double total = 0;
+        for (int i = 0; i < WindCount; i++)
+        {
+            double omega = Math.Sqrt(G * Waves[i].K), r = omegaPeak / omega;
             double sigma = omega <= omegaPeak ? .07 : .09;
             double peak = Math.Pow(3.3, Math.Exp(-(omega - omegaPeak) * (omega - omegaPeak) / (2 * sigma * sigma * omegaPeak * omegaPeak)));
-            double e = Math.Pow(omega, -5) * Math.Exp(-1.25 * r * r * r * r) * peak * omega;
-            energy[i] = e; total += e;
-            // Direction: spread around the wind; short waves and storms spread wider. The longest wave is a swell from
-            // another heading (a sea is never only the local wind).
-            double spread = (.3 + .55 * s) * (.6 + .9 * t);
-            double u = Hash(i, 1) * 2 - 1;
-            double angle = i == 0 ? windAngle + .85 : windAngle + Math.Sign(u) * Math.Pow(Math.Abs(u), .8) * spread * 1.6;
-            Waves[i] = (Math.Cos(angle), Math.Sin(angle), k, 0);
-            QP[i] = (0, Hash(i, 2) * 2 * Math.PI);
+            energy[i] = Math.Pow(omega, -5) * Math.Exp(-1.25 * r * r * r * r) * peak * omega; // × Δω ∝ ω (geometric ladder)
+            total += energy[i];
         }
-        // Scale amplitudes so that Hs = 4 √(Σ A²/2); cap each wave's steepness (kA ≤ 0.34).
-        double target = Hs / 4 * (Hs / 4);
-        double choppy = .6 + .36 * s;
+        // Base amplitudes: Hs = 4 √(Σ A²/2) over the whole compass; the per-point direction weighting renormalises.
         for (int i = 0; i < Count; i++)
         {
             var w = Waves[i];
-            double a = Math.Sqrt(2 * target * energy[i] / total);
-            a = Math.Min(a, .34 / w.K);
+            double a = i < WindCount
+                ? Math.Sqrt(2 * (Hs / 4) * (Hs / 4) * energy[i] / total)
+                : Math.Sqrt(2 * (SwellHs / 4) * (SwellHs / 4) / (Count - WindCount));
             Waves[i] = (w.Dx, w.Dz, w.K, a);
         }
-        double sumKA = 0;
-        for (int i = 0; i < Count; i++) sumKA += Waves[i].K * Waves[i].A;
-        // Choppiness: Σ q k A = choppy (< 1: crests sharpen as waves line up, but never loop over).
-        for (int i = 0; i < Count; i++) QP[i] = (choppy / Math.Max(sumKA, 1e-6), QP[i].Phase);
     }
 
-    /// <summary>Wave groups: sets of higher waves drifting with the wind (same as the shader's group()).</summary>
-    public static double Group(double x, double z, double t, double windX, double windZ, double seaState)
+    /// <summary>The float origin (world position of scene (0, 0)): phases shift so the waves stay put in the world.</summary>
+    public void SetOrigin(double originX, double originZ)
     {
-        double n = Noise(x * .0035 - windX * t * .012, z * .0035 - windZ * t * .012);
-        return .65 + (.45 + .35 * seaState) * n * 1.2 - .15;
-    }
-
-    /// <summary>Displacement of the water particle at rest position (x, z), each wave scaled by <paramref name="factor"/>(λ).</summary>
-    public (double X, double Y, double Z) Displacement(double x, double z, double t, Func<double, double> factor, double group)
-    {
-        double dx = 0, dy = 0, dz = 0;
+        OriginX = originX; OriginZ = originZ;
         for (int i = 0; i < Count; i++)
         {
-            var (wx, wz, k, a) = Waves[i];
-            double amp = a * factor(2 * Math.PI / k) * group;
-            if (amp <= 0) continue;
-            double theta = k * (wx * x + wz * z) - Math.Sqrt(G * k) * t + QP[i].Phase;
-            double c = Math.Cos(theta), q = QP[i].Q;
-            dx += q * amp * wx * c; dz += q * amp * wz * c; dy += amp * Math.Sin(theta);
+            var w = Waves[i];
+            double p = Phase[i] + w.K * (w.Dx * originX + w.Dz * originZ);
+            ShiftedPhase[i] = p - Math.Floor(p / (2 * Math.PI)) * 2 * Math.PI;
         }
-        return (dx, dy, dz);
     }
 
-    /// <summary>Water surface height above the mean level at a fixed point (inverts the horizontal motion).</summary>
-    public double Height(double x, double z, double t, Func<double, double> factor, double windX, double windZ)
+    /// <summary>Wave groups: sets of higher waves drifting with the wind (same as the shader's group()); world coordinates.</summary>
+    public double Group(double lx, double lz, double t, double windX, double windZ)
     {
-        double group = Group(x, z, t, windX, windZ, SeaState);
-        double px = x, pz = z;
-        for (int it = 0; it < 10; it++)
+        double x = lx + OriginX, z = lz + OriginZ;
+        double n = Noise(x * .0035 - windX * t * .012, z * .0035 - windZ * t * .012);
+        return .65 + (.45 + .35 * SeaState) * n * 1.2 - .15;
+    }
+
+    /// <summary>
+    /// Local wave headings at scene point (lx, lz) (shader headings()): wind sea (wind turned by the regional field;
+    /// lakes have their own) and swell (independent of the wind). Unit vectors.
+    /// </summary>
+    public (double Wx, double Wz, double Sx, double Sz) Headings(double lx, double lz, double windX, double windZ, bool lake)
+    {
+        double x = lx + OriginX, z = lz + OriginZ;
+        double wind = Math.Atan2(windZ, windX);
+        double turn = lake
+            ? 2.4 * (Noise(x / 3000 + 57.1, z / 3000 - 13.7) - .5) + .8 * (Noise(x / 900 + 5.3, z / 900 + 41.9) - .5)
+            : 2.0 * (Noise(x / 8000, z / 8000) - .5) + .7 * (Noise(x / 2500 + 31.7, z / 2500 + 8.9) - .5);
+        double swell = 1.5 + 5.2 * (Noise(x / 20000 + 91.3, z / 20000 - 27.1) - .5);
+        return (Math.Cos(wind + turn), Math.Sin(wind + turn), Math.Cos(swell), Math.Sin(swell));
+    }
+
+    /// <summary>Direction weight of wave i for the local headings (shader dir_weight()).</summary>
+    public double Weight(int i, (double Wx, double Wz, double Sx, double Sz) h, bool lake)
+    {
+        var w = Waves[i];
+        if (i >= WindCount) return lake ? 0 : Math.Pow(Math.Max(0, w.Dx * h.Sx + w.Dz * h.Sz), 24);
+        double m = 10 - 8.4 * SeaState;
+        return Math.Pow(Math.Max(0, w.Dx * h.Wx + w.Dz * h.Wz), m);
+    }
+
+    /// <summary>
+    /// Per-point wave amplitudes (direction-weighted and renormalised, before the depth/fetch factor) and choppiness:
+    /// the shader computes the same in its first loop.
+    /// </summary>
+    public (double[] Amp, double[] Q) Local(double lx, double lz, double windX, double windZ, bool lake)
+    {
+        var h = Headings(lx, lz, windX, windZ, lake);
+        var weight = new double[Count];
+        double ea = 0, ew = 0, sa = 0, sw = 0;
+        for (int i = 0; i < Count; i++)
         {
-            var d = Displacement(px, pz, t, factor, group);
-            px = x - d.X; pz = z - d.Z;
+            weight[i] = Weight(i, h, lake);
+            double a2 = Waves[i].A * Waves[i].A;
+            if (i < WindCount) { ea += a2; ew += a2 * weight[i]; } else { sa += a2; sw += a2 * weight[i]; }
         }
-        return Displacement(px, pz, t, factor, group).Y;
+        double nw = Math.Sqrt(ea / Math.Max(ew, 1e-12)), ns = Math.Sqrt(sa / Math.Max(sw, 1e-12));
+        var amp = new double[Count];
+        double crisp = 0;
+        for (int i = 0; i < Count; i++)
+        {
+            amp[i] = Waves[i].A * Math.Sqrt(weight[i]) * (i < WindCount ? nw : ns);
+            double k = Waves[i].K;
+            crisp += k * k * amp[i] * amp[i] * amp[i];
+        }
+        var q = new double[Count];
+        for (int i = 0; i < Count; i++) q[i] = Chop * Waves[i].K * amp[i] * amp[i] / Math.Max(crisp, 1e-12); // Σ q k A = Chop
+        return (amp, q);
+    }
+
+    /// <summary>
+    /// Displacement of the water particle at rest position (lx, lz): amplitudes from <see cref="Local"/>, each wave
+    /// scaled by <paramref name="factor"/>(λ) (depth, fetch), capped at kA ≤ 0.34, times the group factor.
+    /// </summary>
+    public (double X, double Y, double Z) Displacement(double lx, double lz, double t, Func<double, double> factor,
+        (double[] Amp, double[] Q) local, double group) => Evaluate(lx, lz, t, factor, local, group).D;
+
+    /// <summary>Displacement and the derivatives of its horizontal part (xx, zz, xz) for the inversion.</summary>
+    private ((double X, double Y, double Z) D, double Jxx, double Jzz, double Jxz) Evaluate(double lx, double lz, double t,
+        Func<double, double> factor, (double[] Amp, double[] Q) local, double group)
+    {
+        double dx = 0, dy = 0, dz = 0, jxx = 0, jzz = 0, jxz = 0;
+        for (int i = 0; i < Count; i++)
+        {
+            var (wx, wz, k, _) = Waves[i];
+            if (local.Amp[i] <= 1e-5) continue;
+            double amp = Math.Min(local.Amp[i], CapKA / k) * factor(2 * Math.PI / k) * group;
+            if (amp <= 0) continue;
+            double theta = k * (wx * lx + wz * lz) - Math.Sqrt(G * k) * t + ShiftedPhase[i];
+            double c = Math.Cos(theta), sn = Math.Sin(theta), q = local.Q[i] / Math.Max(group, 1); // higher wave sets must not fold either
+            dx += q * amp * wx * c; dz += q * amp * wz * c; dy += amp * sn;
+            double qa = q * amp * k * sn;
+            jxx -= qa * wx * wx; jzz -= qa * wz * wz; jxz -= qa * wx * wz;
+        }
+        return ((dx, dy, dz), jxx, jzz, jxz);
+    }
+
+    /// <summary>Water surface height above the mean level at a fixed scene point (inverts the horizontal motion).</summary>
+    public double Height(double lx, double lz, double t, Func<double, double> factor, double windX, double windZ, bool lake = false)
+    {
+        // Regional weights vary over kilometres: sampled at the query point (the particle is metres away). Wave groups
+        // (~300 m) are taken at the rest position, as the shader does.
+        var local = Local(lx, lz, windX, windZ, lake);
+        // Find the rest position p with p + D(p) = (lx, lz): Newton steps (sharp crests make plain iteration crawl).
+        double px = lx, pz = lz;
+        for (int it = 0; it < 12; it++)
+        {
+            var e = Evaluate(px, pz, t, factor, local, Group(px, pz, t, windX, windZ));
+            double fx = px + e.D.X - lx, fz = pz + e.D.Z - lz;
+            if (fx * fx + fz * fz < 1e-8) break;
+            double a = 1 + e.Jxx, b = e.Jxz, d = 1 + e.Jzz, det = a * d - b * b;
+            if (det < .05) { px -= fx * .5; pz -= fz * .5; continue; } // near a fold: a damped step
+            px -= (d * fx - b * fz) / det; pz -= (a * fz - b * fx) / det;
+        }
+        return Evaluate(px, pz, t, factor, local, Group(px, pz, t, windX, windZ)).D.Y;
     }
 
     private static double Hash(int i, int salt)

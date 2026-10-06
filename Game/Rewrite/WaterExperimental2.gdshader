@@ -25,9 +25,11 @@ uniform float reflection_strength : hint_range(0.0, 1.0) = 0.9;
 uniform int ssr_steps : hint_range(0, 64) = 32;
 uniform vec4 waves[12];
 uniform float wave_q[12];
-uniform vec4 waves2[32];      // spectrum sea: dir.x, dir.z, k, amplitude (SpectrumWaves.Waves)
-uniform vec2 wave2_qp[32];    // per wave: Gerstner choppiness, phase
+uniform vec4 waves2[64];      // spectrum sea: dir.x, dir.z, k, base amplitude (SpectrumWaves.Waves; 52 wind sea + 12 swell)
+uniform float wave2_phase[64]; // per wave: phase including the float origin (SpectrumWaves.ShiftedPhase)
 uniform float wave2_hs = 1.0; // significant wave height (m)
+uniform float wave2_chop = 0.8; // Σ q k A at a point (SpectrumWaves.Chop)
+uniform vec2 world_origin;    // world position of scene (0, 0): regional wave headings and groups are world-anchored
 uniform int debug_foam = 0;   // 1: show the foam amount (tests)
 uniform vec3 sss_color : source_color = vec3(0.06, 0.62, 0.56); // light scattered through thin wave tops
 uniform float wave_height = 0.3;
@@ -52,6 +54,8 @@ varying vec2 bed_grad;    // uphill bed gradient (toward the shore)
 varying float exposure;
 varying float fetch;
 varying float edge_fade; // 1 on water, fading over the sheet's extension under the beach (COLOR.a)
+varying vec4 wave_heads;  // local headings: wind sea xy, swell zw (vary over kilometres: per vertex is enough)
+varying vec3 wave_norms;  // direction-weight renormalisation (wind sea, swell) and the crest-sharpness sum
 
 const float G = 9.81;
 const float PI2 = 6.2831853;
@@ -117,7 +121,9 @@ float wave_factor(int i, float lambda, float depth, float sea, float lake, float
 	float f = smoothstep(0.0, 1.0, depth / (lambda * 0.12 + 0.3));
 	if (sea > 0.5) {
 		// Long waves give way to the shore waves over the shallows; bays and coves are calmer.
-		f *= mix(0.3, 1.0, expo) * mix(0.25, 1.0, smoothstep(4.0, 19.0, depth));
+		// They keep running at their own angle well into the shallows, over the shore-facing waves (Noor: not every
+		// crest should hug the beach).
+		f *= mix(0.3, 1.0, expo) * mix(0.4, 1.0, smoothstep(4.0, 19.0, depth));
 	} else if (lake > 0.5) {
 		// Lakes: only waves shorter than ~1/25 of the fetch; amplitude grows with the lake's size; no swell.
 		float longest = clamp(fetch_m * 0.04, 2.5, 45.0);
@@ -127,27 +133,69 @@ float wave_factor(int i, float lambda, float depth, float sea, float lake, float
 	return f;
 }
 
-// Wave groups: sets of higher waves drifting with the wind (SpectrumWaves.Group: same formula).
+// Wave groups: sets of higher waves drifting with the wind (SpectrumWaves.Group: same formula, world coordinates).
 float group(vec2 p, float t, vec2 wd) {
-	float n = noise(vec2(p.x * 0.0035 - wd.x * t * 0.012, p.y * 0.0035 - wd.y * t * 0.012));
+	vec2 x = p + world_origin;
+	float n = noise(vec2(x.x * 0.0035 - wd.x * t * 0.012, x.y * 0.0035 - wd.y * t * 0.012));
 	return 0.65 + (0.45 + 0.35 * sea_state) * n * 1.2 - 0.15;
+}
+
+// Local headings (SpectrumWaves.Headings): the wind turned by a slow regional field (lakes: their own valley winds),
+// and the swell's heading from far storms (independent of the wind).
+vec4 headings(vec2 p, vec2 wd, float lake) {
+	vec2 x = p + world_origin;
+	float wind_a = atan(wd.y, wd.x);
+	float turn = lake > 0.5
+		? 2.4 * (noise(x / 3000.0 + vec2(57.1, -13.7)) - 0.5) + 0.8 * (noise(x / 900.0 + vec2(5.3, 41.9)) - 0.5)
+		: 2.0 * (noise(x / 8000.0) - 0.5) + 0.7 * (noise(x / 2500.0 + vec2(31.7, 8.9)) - 0.5);
+	float swell = 1.5 + 5.2 * (noise(x / 20000.0 + vec2(91.3, -27.1)) - 0.5);
+	return vec4(cos(wind_a + turn), sin(wind_a + turn), cos(swell), sin(swell));
+}
+
+// Direction weight of wave i (SpectrumWaves.Weight): narrow around the heading in calm weather, wide in storms.
+float dir_weight(int i, vec4 h, float lake) {
+	vec2 d = waves2[i].xy;
+	if (i >= 52) return lake > 0.5 ? 0.0 : pow(max(0.0, dot(d, h.zw)), 24.0);
+	return pow(max(0.0, dot(d, h.xy)), 10.0 - 8.4 * sea_state);
+}
+
+// Renormalisation of the weighted waves (same height everywhere) and the crest-sharpness sum (SpectrumWaves.Local).
+vec3 wave_norm(vec4 h, float lake) {
+	float ea = 0.0, ew = 0.0, sa = 0.0, sw = 0.0;
+	for (int i = 0; i < 64; i++) {
+		float w = dir_weight(i, h, lake), a2 = waves2[i].w * waves2[i].w;
+		if (i < 52) { ea += a2; ew += a2 * w; } else { sa += a2; sw += a2 * w; }
+	}
+	float nw = sqrt(ea / max(ew, 1e-12)), ns = sqrt(sa / max(sw, 1e-12));
+	float crisp = 0.0;
+	for (int i = 0; i < 64; i++) {
+		float a = waves2[i].w * sqrt(dir_weight(i, h, lake)) * (i < 52 ? nw : ns), k = waves2[i].z;
+		crisp += k * k * a * a * a;
+	}
+	return vec3(nw, ns, max(crisp, 1e-12));
 }
 
 // Spectrum Gerstner sum at rest position p. Geometry: only waves longer than min_lambda (what the mesh can carry);
 // lighting: all down to a pixel (called per pixel). Returns displacement; accumulates normal, crest height and Jacobian.
+// Choppiness goes mostly to the biggest steep waves (share ∝ k²A³): crisp crests on the waves that matter.
 vec3 gerstner(vec2 p, float depth, float sea, float lake, float fetch_m, float expo, float min_lambda, float t,
-		inout vec3 n, inout float crest, inout vec3 jac) {
+		vec4 h, vec3 norms, inout vec3 n, inout float crest, inout vec3 jac) {
 	vec3 offset = vec3(0.0);
 	float grp = group(p, t, normalize(vec2(wind.x, wind.z) + vec2(1e-4)));
-	for (int i = 0; i < 32; i++) {
+	float chop = wave2_chop / max(grp, 1.0) / norms.z; // higher wave sets must not fold either
+	for (int i = 0; i < 64; i++) {
 		float k = waves2[i].z;
 		float lambda = PI2 / k;
-		float amp = waves2[i].w * grp * wave_factor(i, lambda, depth, sea, lake, fetch_m, expo) * smoothstep(min_lambda, min_lambda * 2.0, lambda);
+		float cut = smoothstep(min_lambda, min_lambda * 2.0, lambda);
+		if (cut <= 0.0) continue;
+		float base = waves2[i].w * sqrt(dir_weight(i, h, lake)) * (i < 52 ? norms.x : norms.y);
+		if (base <= 1e-5) continue;
+		float amp = min(base, 0.34 / k) * grp * wave_factor(i, lambda, depth, sea, lake, fetch_m, expo) * cut;
 		if (amp <= 0.0) continue;
 		vec2 d = waves2[i].xy;
-		float theta = k * dot(d, p) - sqrt(G * k) * t + wave2_qp[i].y;
+		float theta = k * dot(d, p) - sqrt(G * k) * t + wave2_phase[i];
 		float c = cos(theta), s = sin(theta);
-		float q = wave2_qp[i].x;
+		float q = chop * k * base * base;
 		offset += vec3(q * amp * d.x * c, amp * s, q * amp * d.y * c);
 		n.x -= d.x * k * amp * c; n.z -= d.y * k * amp * c; n.y -= q * k * amp * s;
 		crest += amp * s;
@@ -173,14 +221,15 @@ vec3 shore_wave(vec2 p, float depth, vec2 grad, float expo, float min_lambda, fl
 	// moving shoreward with time. (Dividing by the local slope made the phase jump by whole cycles between vertices
 	// where the slope varies — blocky patches on coarse tiles.) The wavenumber is the phase's true gradient.
 	const float S_REF = 0.03;
-	float theta = -(2.0 * omega * sqrt(d) / (S_REF * sqrt(G)) + omega * t) + 3.0 * noise(p * 0.004); // slow wobble along the coast
+	float theta = -(2.0 * omega * sqrt(d) / (S_REF * sqrt(G)) + omega * t) + 3.0 * noise(p * 0.004) // slow wobble along the coast
+		+ 1.5 * noise(p * 0.013 + 7.7); // crest segments run ahead or lag
 	float k = omega / sqrt(G * d) * clamp(s / S_REF, 0.15, 4.0);
 	k_out = k;
 	float lambda = PI2 / k;
 	// Height: open-coast swell, shoaling (Green's law) until it breaks at ~0.75 d.
 	float h0 = (0.12 + 1.15 * sea_state) * expo * (0.75 + 0.5 * noise(p * 0.01 + t * 0.02));
 	float h = h0 * pow(10.0 / max(d, 0.4), 0.25);
-	float limit = 0.75 * d + 0.03;
+	float limit = (0.62 + 0.3 * noise(p * 0.02 + 3.1)) * d + 0.03; // some crest segments break sooner (irregular foam line)
 	breaking = smoothstep(0.55, 0.95, h / limit) * active;
 	h = min(h, limit);
 	float amp = 0.5 * h * active * smoothstep(min_lambda, min_lambda * 2.0, lambda);
@@ -210,11 +259,14 @@ void vertex() {
 	rest_xz = world_position.xz;
 	float sea = is_sea(body), lake = is_lake(body);
 	vec3 offset = vec3(0.0);
+	wave_heads = vec4(1.0, 0.0, 1.0, 0.0); wave_norms = vec3(1.0);
 	if (sea + lake > 0.0) {
+		wave_heads = headings(rest_xz, normalize(vec2(wind.x, wind.z) + vec2(1e-4)), lake);
+		wave_norms = wave_norm(wave_heads, lake);
 		// The mesh carries waves at least ~5 vertex spacings long (per-pixel lighting does the rest).
 		float spacing = max(1.0, length(world_position - CAMERA_POSITION_WORLD) / 40.0);
 		vec3 n = vec3(0.0, 1.0, 0.0); float crest = 0.0; vec3 jac = vec3(0.0);
-		offset = gerstner(rest_xz, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, 5.0 * spacing, ocean_time, n, crest, jac);
+		offset = gerstner(rest_xz, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, 5.0 * spacing, ocean_time, wave_heads, wave_norms, n, crest, jac);
 		if (sea > 0.5) {
 			float breaking, since, kw;
 			offset += shore_wave(rest_xz, vertex_depth, bed_grad, exposure, 5.0 * spacing, ocean_time, n, breaking, since, kw);
@@ -335,7 +387,7 @@ void fragment() {
 	if (sea + lake - pond > 0.5) {
 		// Waves far shorter than a pixel only add sparkle: fade them with distance.
 		float min_lambda = dist / 300.0;
-		gerstner(p, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, min_lambda, ocean_time, n, crest, jac);
+		gerstner(p, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, min_lambda, ocean_time, wave_heads, wave_norms, n, crest, jac);
 		if (sea > 0.5) shore_wave(p, px_depth, bed_grad, exposure, min_lambda, ocean_time, n, breaking, since, shore_k);
 	}
 	crest /= max(wave2_hs * 0.5, 0.01); // ~1 at a typical big crest

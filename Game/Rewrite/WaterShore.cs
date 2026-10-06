@@ -43,7 +43,7 @@ public static class WaterShore
     public static double Factor(int i, double lambda, double depth, bool sea, bool lake, double fetch, double exposure, bool wide = false)
     {
         double f = DetMath.Smooth(depth / (lambda * .12 + .3));
-        if (sea) return f * (.3 + .7 * exposure) * (wide ? .25 + .75 * Smoothstep(4, 19, depth) : .35 + .65 * Smoothstep(3, 14, depth));
+        if (sea) return f * (.3 + .7 * exposure) * (wide ? .4 + .6 * Smoothstep(4, 19, depth) : .35 + .65 * Smoothstep(3, 14, depth));
         if (!lake) return 0;
         double longest = Math.Clamp(fetch * .04, 2.5, 45);
         return f * (1 - Smoothstep(longest, longest * 1.6, lambda)) * Math.Clamp(.18 + fetch / 6000, .18, .85) * (i >= 10 ? 0 : 1)
@@ -74,7 +74,7 @@ public static class WaterShore
     public static double Height2(SpectrumWaves waves, double lx, double lz, double t, double depth, bool sea, bool lake,
         double fetch, double exposure, double gx, double gz, double windX, double windZ)
     {
-        double y = waves.Height(lx, lz, t, lambda => Factor(0, lambda, depth, sea, lake, fetch, exposure, wide: true), windX, windZ);
+        double y = waves.Height(lx, lz, t, lambda => Factor(0, lambda, depth, sea, lake, fetch, exposure, wide: true), windX, windZ, lake);
         if (sea) y += Shore(lx, lz, t, depth, gx, gz, exposure, waves.SeaState, wide: true);
         return y;
     }
@@ -103,9 +103,11 @@ public static class WaterShore
         double period = 7 + 4 * seaState, omega = 2 * Math.PI / period;
         const double SRef = .03; // reference bed slope: the phase depends on depth only (see the shader)
         double d = Math.Max(depth, .05);
-        double theta = -(2 * omega * Math.Sqrt(d) / (SRef * Math.Sqrt(G)) + omega * t) + 3 * Noise(lx * .004, lz * .004);
+        double theta = -(2 * omega * Math.Sqrt(d) / (SRef * Math.Sqrt(G)) + omega * t) + 3 * Noise(lx * .004, lz * .004)
+            + (wide ? 1.5 * Noise(lx * .013 + 7.7, lz * .013 + 7.7) : 0); // experimental 2: crest segments run ahead or lag
         double h0 = (.12 + 1.15 * seaState) * exposure * (.75 + .5 * Noise(lx * .01 + t * .02, lz * .01 + t * .02));
-        double h = h0 * Math.Pow(10 / Math.Max(d, .4), .25), limit = .75 * d + .03;
+        // Experimental 2: some crest segments break sooner than others (an irregular foam line).
+        double h = h0 * Math.Pow(10 / Math.Max(d, .4), .25), limit = (wide ? .62 + .3 * Noise(lx * .02 + 3.1, lz * .02 + 3.1) : .75) * d + .03;
         double breaking = Smoothstep(.55, .95, h / limit) * active;
         h = Math.Min(h, limit);
         double amp = .5 * h * active;

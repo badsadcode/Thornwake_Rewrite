@@ -2,10 +2,12 @@
 # biome tint, shore data), sky and sun — renders a water style in a few seconds.
 # xvfb-run godot --path . -s tools/water_test.gd -- out=/tmp/w.png [style=1] [kind=sea|lake|river] [sea=0.35]
 #   [current=0] [fetch=20000] [exposure=1] [slope=0.03] [time=10] [cam=0,8,40] [pitch=-0.25] [yaw=0] [tint=0]
+#   [origin=x,z] (world position: experimental 2 wave headings depend on it)
 extends SceneTree
 
 var _frames := 0
 var _out := "/tmp/water.png"
+var _origin := Vector2.ZERO
 
 func _initialize() -> void:
 	var args := {}
@@ -20,6 +22,8 @@ func _initialize() -> void:
 	var exposure := float(args.get("exposure", "1"))
 	var fetch := float(args.get("fetch", "20000"))
 	var t := float(args.get("time", "10"))
+	var o: PackedStringArray = str(args.get("origin", "0,0")).split(",") # world position of the scene (regional headings)
+	_origin = Vector2(float(o[0]), float(o[1]))
 
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
@@ -146,40 +150,44 @@ func _hash01(i: int, salt: int) -> float:
 	var h := hash(Vector2i(i * 7919 + salt * 104729, 12345))
 	return float(h % 1000003) / 1000003.0
 
-func _set_spectrum(mat: ShaderMaterial, s: float, wind_angle: float) -> void:
-	var n := 32
-	var hs := 0.4 + 8.2 * pow(s, 1.5)
-	var lp := 9.0 + 62.0 * pow(s, 1.2)
+func _set_spectrum(mat: ShaderMaterial, s: float, _wind_angle: float) -> void:
+	# SpectrumWaves (round 11): fixed wavelengths and directions; amplitudes from the sea state.
+	var n := 64; var nw := 52
+	var hs := 0.15 + 14.1 * s * s
+	var swell_hs := 0.45 + 1.6 * s
+	var lp := 9.0 + 130.0 * s * s
 	var wp := sqrt(9.81 * TAU / lp)
-	var lmax := lp * 1.8
-	var lmin := maxf(1.2, lp / 34.0)
-	var energy := []; var waves := []; var phases := []; var total := 0.0
+	var waves := []; var phases := PackedFloat32Array(); var energy := []; var total := 0.0
 	for i in n:
-		var t := float(i) / float(n - 1)
-		var lam := lmax * pow(lmin / lmax, t)
+		var lam := 0.0; var ang := 0.0
+		if i < nw:
+			var t := float(i) / float(nw - 1)
+			lam = 260.0 * pow(1.0 / 260.0, t) * (1.0 + 0.04 * (_hash01(i, 3) - 0.5))
+			ang = i * 2.39996323 + 0.3 * (_hash01(i, 1) - 0.5)
+		else:
+			var j := i - nw
+			lam = 120.0 * pow(1.45, j % 3)
+			ang = j * PI / 6.0
 		var k := TAU / lam
-		var w := sqrt(9.81 * k)
-		var r := wp / w
-		var sig := 0.07 if w <= wp else 0.09
-		var peak := pow(3.3, exp(-(w - wp) * (w - wp) / (2.0 * sig * sig * wp * wp)))
-		var e := pow(w, -5.0) * exp(-1.25 * r * r * r * r) * peak * w
-		energy.append(e); total += e
-		var spread := (0.3 + 0.55 * s) * (0.6 + 0.9 * t)
-		var u := _hash01(i, 1) * 2.0 - 1.0
-		var ang := wind_angle + 0.85 if i == 0 else wind_angle + signf(u) * pow(absf(u), 0.8) * spread * 1.6
 		waves.append(Vector4(cos(ang), sin(ang), k, 0.0)); phases.append(_hash01(i, 2) * TAU)
-	var target := hs / 4.0 * (hs / 4.0)
-	var sum_ka := 0.0
+		var e := 0.0
+		if i < nw:
+			var w := sqrt(9.81 * k)
+			var r := wp / w
+			var sig := 0.07 if w <= wp else 0.09
+			var peak := pow(3.3, exp(-(w - wp) * (w - wp) / (2.0 * sig * sig * wp * wp)))
+			e = pow(w, -5.0) * exp(-1.25 * r * r * r * r) * peak * w
+			total += e
+		energy.append(e)
 	for i in n:
 		var wv: Vector4 = waves[i]
-		var a := minf(sqrt(2.0 * target * float(energy[i]) / total), 0.34 / wv.z)
-		waves[i] = Vector4(wv.x, wv.y, wv.z, a); sum_ka += wv.z * a
-	var chop := 0.6 + 0.36 * s
-	var qp := PackedVector2Array()
-	for i in n: qp.append(Vector2(chop / maxf(sum_ka, 1e-6), float(phases[i])))
+		var a := sqrt(2.0 * (hs / 4.0) * (hs / 4.0) * float(energy[i]) / total) if i < nw else sqrt(2.0 * (swell_hs / 4.0) * (swell_hs / 4.0) / float(n - nw))
+		waves[i] = Vector4(wv.x, wv.y, wv.z, a)
 	mat.set_shader_parameter("waves2", waves)
-	mat.set_shader_parameter("wave2_qp", qp)
+	mat.set_shader_parameter("wave2_phase", phases)
 	mat.set_shader_parameter("wave2_hs", hs)
+	mat.set_shader_parameter("wave2_chop", 0.62 + 0.3 * s)
+	mat.set_shader_parameter("world_origin", Vector2(float(_origin.x), float(_origin.y)))
 
 func _process(_delta: float) -> bool:
 	_frames += 1
