@@ -31,7 +31,8 @@ public sealed class TerrainSampler
     private readonly MacroRaster _macro;
     private readonly Hydrology _hydrology;
     private readonly double _ox, _oz;
-    private readonly ulong _detailSeed, _rockSeed, _coastSeed, _regionSeed, _bankSeed, _poolSeed;
+    private readonly ulong _detailSeed, _rockSeed, _coastSeed, _regionSeed, _bankSeed, _poolSeed, _landformSeed;
+    private readonly double _duneAngle;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
     private readonly double[] _poolQuantiles, _channelQuantiles;
@@ -46,6 +47,8 @@ public sealed class TerrainSampler
         ulong Seed(string layer) => Hashing.FeatureSeed(m.Seed, 100 + WorldManifest.CurrentGenerator, m.ProfileDigest, layer);
         _detailSeed = Seed("detail"); _rockSeed = Seed("rock"); _coastSeed = Seed("coast"); _regionSeed = Seed("region"); _bankSeed = Seed("banks");
         _poolSeed = Seed("pools");
+        _landformSeed = Seed("landforms");
+        _duneAngle = Hashing.Unit(Hashing.Mix(_landformSeed)) * Math.Tau; // prevailing sand-moving wind of this world
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
@@ -114,13 +117,18 @@ public sealed class TerrainSampler
         // Wetlands (revision 11): biomes with standing-water pools or flattened ground (swamps, marshes, fens, bayous).
         bool wetland = false;
         double poolCover = 0, poolDepth = 0, poolSize = 16, poolChannels = 0, flatten = 0, riverDamp = 1;
+        BiomeTerrainMods mods = default;
         if (_style.Revision >= 11 && inland > 0 && Plan.Biomes is { } biomes)
         {
-            wetland = biomes.WetlandAt(x, z, out poolCover, out poolDepth, out poolSize, out poolChannels, out flatten);
+            wetland = biomes.TerrainAt(x, z, out mods, allBiomes: _style.Revision >= 12);
+            poolCover = mods.Pools; poolDepth = mods.PoolDepth; poolSize = mods.PoolSize; poolChannels = mods.PoolChannels; flatten = mods.Flatten;
             // Where there are pools the ground is flatter still (to ~8 % of the relief), so their surfaces stay level.
             if (poolCover > 0) flatten = Math.Max(flatten, Math.Min(.92, flatten + poolCover));
             if (wetland) detail *= 1 - flatten;
         }
+        // Landforms (revision 12, round 9): dunes, mesas and needle spires from the biomes' Terrain.Features.
+        if (_style.Revision >= 12 && wetland && mods.Dunes + mods.Mesas + mods.Spires > 0)
+            detail = Landforms(x, z, lx, lz, baseHeight, detail, inland, minWavelength, mods);
         // Rivers: channel, banks and slope-limited valley sides replace the terrain near a river; walking-scale detail
         // fades toward it. Two nearby rivers (a confluence) combine continuously: deepest carving wins (softly),
         // highest bank wins, so the junction reads as one water body.
@@ -224,8 +232,9 @@ public sealed class TerrainSampler
                 * _style.LowlandDetail * roughness * (1 + 2 * mountainShare) * inland * (1 - flatten);
             double smooth = Math.Max(baseHeight + low, floor);
             _macro.SampleGradient(WorldPlan.HeightChannel, x, z, out double gx, out double gz);
-            // No pools at lake shores (they would dig below the lake's surface where its reach ends).
-            double cover = poolCover * riverDamp * DetMath.Smooth(land / .015) * (1 - DetMath.Smooth(mountainShare / .3)) * DetMath.Smooth((lakeCells - 1.6) / .9)
+            // No pools at lake shores (they would dig below the lake's surface where its reach ends). The fade must end
+            // within the lake search radius (2 cells); revision 11 ended it at 2.5 (a faint seam), kept for its worlds.
+            double cover = poolCover * riverDamp * DetMath.Smooth(land / .015) * (1 - DetMath.Smooth(mountainShare / .3)) * DetMath.Smooth((lakeCells - 1.6) / (_style.Revision >= 12 ? .38 : .9))
                 * (1 - DetMath.Smooth((Math.Sqrt(gx * gx + gz * gz) - .015) / .03));
             if (cover > .005) height = Pool(lx, lz, height, smooth, Math.Min(cover, .85), poolDepth, poolSize, poolChannels, minWavelength, ref water, ref level);
         }
@@ -238,6 +247,120 @@ public sealed class TerrainSampler
             if (water != WaterKind.None && _p.SeaLevel + height >= level - .02) { water = WaterKind.None; level = double.NaN; body = -1; }
         }
         return new(_p.SeaLevel + height, land, mountainShare, detail, water, level, body, lakePlume);
+    }
+
+    /// <summary>
+    /// Biome landforms (revision 12) on top of the walking-scale detail, before rivers carve (rivers cut through them:
+    /// canyons through mesas, gaps through dune fields). Faded at lake shores so lakes keep their basins.
+    /// <list type="bullet">
+    /// <item>Dunes: transverse ridges across this world's sand-moving wind, a long gentle windward slope and a steeper
+    /// slip face (~35°), crests wandering and breaking up; 4–12 m high, ~90 m apart; the rest of the relief is
+    /// smoothed (sand seas).</item>
+    /// <item>Mesas: flat-topped uplands 40–110 m high raised out of the plain, then the ground terraced into steps of
+    /// 14–24 m with cliff-like risers and nearly flat treads; the steps wander, so they read as mesas, buttes and
+    /// benches. Rivers cut canyons through them.</item>
+    /// <item>Spires: needle rocks (Thousand Needles, hoodoos): columns 3–9 m across and 12–55 m tall with near-vertical
+    /// sides on a small talus flare, on a jittered 36 m grid.</item>
+    /// </list>
+    /// </summary>
+    private double Landforms(double x, double z, double lx, double lz, double baseHeight, double detail, double inland, double minWavelength, in BiomeTerrainMods mods)
+    {
+        int lake = _hydrology.LakeDistance(x, z, out double cells);
+        double fade = inland * (lake >= 0 ? DetMath.Smooth((cells - 1.6) / .38) : 1); // done within the 2-cell lake search
+        if (fade <= 0) return detail;
+        if (mods.Dunes > 0)
+        {
+            double s = Math.Min(1, mods.Dunes) * fade;
+            detail = detail * (1 - .6 * s) + Dunes(lx, lz, minWavelength) * s;
+        }
+        // Spire height fades out across the edge of spire biomes (a faint trace of one gave rare full-size needles).
+        if (mods.Spires > 0) detail += Spires(lx, lz, minWavelength, Math.Min(1.5, mods.Spires)) * fade * DetMath.Smooth(mods.SpirePresence / .6);
+        if (mods.Mesas > 0)
+        {
+            // Table-lands raised out of the land (mesas, buttes), stepped into cliff-sided tiers. Only the uplift is
+            // terraced: terracing the regional slope itself gave rice-paddy contour benches.
+            double s = Math.Min(1, mods.Mesas) * fade;
+            double up = MesaUplift(lx, lz, minWavelength);
+            // (× a ramp over the first 4 m: the terrace of a near-zero uplift is not exactly zero; no step at the foot.)
+            if (up > 0) detail += Math.Max(0, Terrace(up, lx, lz, minWavelength)) * DetMath.Smooth(up / 4) * s;
+        }
+        return detail;
+    }
+
+    private double Dunes(double lx, double lz, double minWavelength)
+    {
+        const double spacing = 90;
+        // Distant tiles cannot carry ridges this fine: fade them out rather than alias.
+        double lod = 1 - DetMath.Smooth((minWavelength - spacing * .35) / (spacing * .25));
+        if (lod <= 0) return 0;
+        ulong seed = _landformSeed + 100;
+        // A fixed heading per world (rotating far-from-origin coordinates by a varying angle would squeeze the ridges);
+        // the crests curve and fork through the phase warp instead: broad swings over kilometres, wobble across the wind.
+        double ux = Math.Cos(_duneAngle), uz = Math.Sin(_duneAngle);
+        double along = lx * ux + lz * uz, across = -lx * uz + lz * ux;
+        double phase = along / spacing + 6 * Noise.Fbm(lx, lz, 6000, 2, minWavelength, seed)
+            + .9 * Noise.Fbm(across, along * .25, spacing * 5, 2, minWavelength, seed + 1)
+            + .25 * Noise.Fbm(lx, lz, spacing * 1.6, 2, minWavelength, seed + 2);
+        double f = phase - Math.Floor(phase);
+        const double windward = .68;
+        double profile = f < windward ? DetMath.Smooth(f / windward) : 1 - DetMath.Smooth((f - windward) / (1 - windward));
+        // Dune fields and calmer sand sheets (km), crests breaking into separate dunes along their length.
+        double field = DetMath.Smooth(.55 + 1.1 * Noise.Fbm(lx, lz, 4000, 2, minWavelength, seed + 3));
+        double crest = .45 + .55 * DetMath.Smooth(.5 + 1.6 * Noise.Fbm(across, along, spacing * 3.5, 2, minWavelength, seed + 4));
+        return (4 + 8 * field) * crest * profile * lod;
+    }
+
+    // Flat-topped uplands 40–110 m high with steep edges: patches where a noise exceeds a threshold, so they break into
+    // mesas, buttes and long benches; ~half the land stays plain.
+    private double MesaUplift(double lx, double lz, double minWavelength)
+    {
+        // Outline noise with all its octaves at every detail level: far tiles must show the same mesas (no shifting
+        // cliffs as you approach).
+        minWavelength = Math.Min(minWavelength, 150);
+        ulong seed = _landformSeed + 210;
+        double n = Noise.Fbm(lx, lz, 1400, 3, minWavelength, seed, .5);
+        double height = 40 + 70 * DetMath.Smooth(.5 + Noise.Fbm(lx, lz, 6000, 2, minWavelength, seed + 1));
+        return height * DetMath.Smooth((n - .02) / .07);
+    }
+
+    private double Terrace(double h, double lx, double lz, double minWavelength)
+    {
+        minWavelength = Math.Min(minWavelength, 150); // tiers stay put at every detail level
+        ulong seed = _landformSeed + 200;
+        double step = 12 + 9 * DetMath.Smooth(.5 + Noise.Fbm(lx, lz, 5000, 2, minWavelength, seed));
+        double offset = step * .35 * Noise.Fbm(lx, lz, 700, 3, minWavelength, seed + 1); // tier heights wander
+        if (h <= 0) return h;
+        double t = (h + offset) / step, k = Math.Floor(t), f = t - k;
+        // Tread rises only 15 % of a step over its width; the riser (last 18 % of the height range) takes the rest.
+        const double riser = .18;
+        double g = .15 * f + .85 * DetMath.Smooth((f - (1 - riser)) / riser);
+        return (k + g) * step - offset;
+    }
+
+    private double Spires(double lx, double lz, double minWavelength, double density)
+    {
+        const double cell = 36;
+        ulong seed = _landformSeed + 300;
+        long ci = (long)Math.Floor(lx / cell), cj = (long)Math.Floor(lz / cell);
+        double best = 0;
+        for (long dj = -1; dj <= 1; dj++)
+            for (long di = -1; di <= 1; di++)
+            {
+                ulong h = Hashing.Lattice(ci + di, cj + dj, seed);
+                if (Hashing.Unit(h) > .45 * density) continue;
+                double cx = (ci + di + .2 + .6 * Hashing.Unit(Hashing.Mix(h + 1))) * cell, cz = (cj + dj + .2 + .6 * Hashing.Unit(Hashing.Mix(h + 2))) * cell;
+                double r = 3 + 6 * Hashing.Unit(Hashing.Mix(h + 3));
+                double u = Hashing.Unit(Hashing.Mix(h + 4)), height = Math.Max(12 + 43 * u * u, r * 4.2); // needles, not stumps
+                // Coarse tiles see a wider, equally tall spire (never vanishing or aliasing far away).
+                double re = Math.Max(r, minWavelength * .6);
+                double d = Math.Sqrt((lx - cx) * (lx - cx) + (lz - cz) * (lz - cz));
+                if (d > re * 1.8) continue;
+                double side = DetMath.Smooth((re - d) / (re * .2 + .6));      // near-vertical wall
+                double talus = DetMath.Smooth((re * 1.8 - d) / (re * .8)) * .12; // a small flare of scree at the foot
+                double top = .94 + .06 * DetMath.Smooth(1 - d / re);          // slightly rounded cap
+                best = Math.Max(best, height * Math.Max(side * top, talus));
+            }
+        return best;
     }
 
     /// <summary>Wavelength below which relief is left out of the pool water level (shorter relief is flattened at pools).</summary>
@@ -257,29 +380,41 @@ public sealed class TerrainSampler
         double minW = Math.Min(minWavelength, size * .5); // at least the pools themselves, even on coarse distant tiles
         // Pools and channels share the coverage; the water is their union (the larger excess wins). The mask is a
         // little larger than the water (the shore takes the edge of it), hence ×1.3.
+        double coverIn = cover;
         cover = Math.Min(.9, cover * 1.3);
         double e = double.NegativeInfinity;
         if (channels < .999) e = PoolNoise(lx, lz, size, minW) / _poolStd - Quantile(_poolQuantiles, cover * (1 - channels));
         if (channels > .001) e = Math.Max(e, ChannelNoise(lx, lz, size, minW) / _channelStd - Quantile(_channelQuantiles, cover * channels));
         // e is in noise standard deviations; the pool noise changes by ~0.25 per metre, so soft ≈ 1.5 m of shore.
         const double soft = .4, bank = .25;
-        if (e < -soft * 4) return height;
+        // How far out the pool shapes the ground (in noise deviations). Revision 12 stretches the blend back to the
+        // terrain with the height difference to cover, so it never makes a cliff on hilly ground (revision 11: fixed).
+        double dev = _style.Revision >= 12 ? Math.Abs(height - smooth) * 1.5 : 0;
+        double below = Math.Max(0, smooth + .05 - height), drop = _style.Revision >= 12 ? below * 1.5 : 0;
+        double nearRange = soft * 3 + dev, floorRange = soft * 2 + drop;
+        if (-e > Math.Max(soft + nearRange, soft * 2 + floorRange)) return height;
         double fine = DetMath.Clamp(.3 * (height - smooth), -.8 * bank, .8 * bank);
         // The bed reaches full depth ~2 noise deviations in (≥ ~3 m): walkable, never a cliff into the water.
         double profile = e >= 0 ? -depth * DetMath.Smooth(e / (soft * 5)) : bank * DetMath.Smooth(-e / soft);
-        double near = 1 - DetMath.Smooth((-e - soft) / (soft * 3));
+        double near = 1 - DetMath.Smooth((-e - soft) / nearRange);
         double shaped = height + (smooth + profile + fine - height) * near;
+        // Revision 12: the shaping fades in with the coverage (from 0.5 % to 4 %), so where a pool biome only just reaches
+        // the ground does not jump when its coverage passes the cut-off; water only once the shaping is complete.
+        double grow = _style.Revision >= 12 ? DetMath.Smooth((coverIn - .005) / .035) : 1;
         if (e > -soft)
         {
-            if (shaped < smooth) { water = WaterKind.Pond; level = _p.SeaLevel + smooth; }
+            if (shaped < smooth && grow >= 1) { water = WaterKind.Pond; level = _p.SeaLevel + smooth; }
+            // Revision 12: dry ground at the shore stands a few cm clear of the water (the surface tilts by up to ~2 cm
+            // per metre, so a neighbouring pool could otherwise lie just above it); hidden under the waterline.
+            else if (_style.Revision >= 12) shaped = Math.Max(shaped, smooth + .04);
         }
         else
         {
             // Dry ground near a pool stays above its surface; only further out may it fall back into lower terrain
             // (reaching exactly the terrain where the pool's influence ends).
-            double below = Math.Max(0, smooth + .05 - height);
-            shaped = Math.Max(shaped, smooth + .05 - below * DetMath.Smooth((-e - 2 * soft) / (2 * soft)));
+            shaped = Math.Max(shaped, smooth + .05 - below * DetMath.Smooth((-e - 2 * soft) / floorRange));
         }
+        if (grow < 1) shaped = height + (shaped - height) * grow;
         return shaped;
     }
 

@@ -1,3 +1,4 @@
+using System.Text;
 using System.Diagnostics;
 using System.Globalization;
 using Thornwake.WorldGen;
@@ -106,13 +107,52 @@ if (biomeProbe != null)
     var (a, b, share) = plan.Biomes.Sample(x, z);
     Console.WriteLine($"macro land {land:0.000} height {h:0} m mountain {m:0.00}; ground {sampler.Height(x, z):0.0} m; {t:0.0} °C {p:0} mm; lat {plan.Climate.Latitude(z):0.0}");
     Console.WriteLine($"biome {plan.Biomes.Pool[a].Def.Id} {share:0.00} / {plan.Biomes.Pool[b].Def.Id}");
-    if (plan.Biomes.WetlandAt(x, z, out double cover, out double depth, out double size, out double channels, out double flatten))
+    if (plan.Biomes.TerrainAt(x, z, out var all, allBiomes: true))
+        Console.WriteLine($"all-biome blend: pools {all.Pools:0.00} flatten {all.Flatten:0.00} dunes {all.Dunes:0.00} mesas {all.Mesas:0.00} spires {all.Spires:0.00}");
+    if (plan.Biomes.TerrainAt(x, z, out var mods) && mods.Pools + mods.Flatten > 0)
     {
+        double cover = mods.Pools, depth = mods.PoolDepth, size = mods.PoolSize, channels = mods.PoolChannels, flatten = mods.Flatten;
         int wet = 0, total = 0;
         for (double dz = -250; dz < 250; dz += 2) for (double dx = -250; dx < 250; dx += 2) { total++; if (sampler.Sample(x + dx, z + dz).Water == WaterKind.Pond) wet++; }
         plan.Macro.SampleGradient(WorldPlan.HeightChannel, x, z, out double gx, out double gz);
         Console.WriteLine($"wetland: pools {cover:0.00} depth {depth:0.0} m size {size:0} m channels {channels:0.00} flatten {flatten:0.00}; macro slope {Math.Sqrt(gx * gx + gz * gz):0.000}; ponds over 500 m: {wet * 100.0 / total:0.0} %");
     }
+    return 0;
+}
+
+// Point probe on a test profile: --point=<profile id>,<seed>,<x>,<z> → biome terrain mods and heights (rev 11 / current).
+string? pointArg = args.FirstOrDefault(a => a.StartsWith("--point="))?[8..];
+if (pointArg != null)
+{
+    var v = pointArg.Split(',');
+    var s = CoreTests.Sampler(v[0], int.Parse(v[1]));
+    var s11 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 11 }));
+    double x = double.Parse(v[2]), z = double.Parse(v[3]);
+    s.Plan.Biomes.TerrainAt(x, z, out var m, allBiomes: true);
+    Console.WriteLine($"mods: flatten {m.Flatten:0.000} pools {m.Pools:0.000} dunes {m.Dunes:0.000} mesas {m.Mesas:0.000} spires {m.Spires:0.000} presence {m.SpirePresence:0.000}");
+    for (int dz = -2; dz <= 2; dz++)
+    {
+        var sb = new StringBuilder();
+        for (int dx = -2; dx <= 2; dx++) sb.Append($"{s.Height(x + dx, z + dz):0.00}/{s11.Height(x + dx, z + dz):0.00}  ");
+        Console.WriteLine(sb.ToString());
+    }
+    return 0;
+}
+
+// Height profile: --profile=<type id>,<km>,<seed>,<x>,<z>,<dx>,<dz>,<n> → n heights from (x,z) in steps (dx,dz).
+string? profileArg = args.FirstOrDefault(a => a.StartsWith("--profile="))?[10..];
+if (profileArg != null)
+{
+    var v = profileArg.Split(',');
+    var recipe = WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == v[0]);
+    var plan = new WorldPlan(WorldManifest.Create(int.Parse(v[2]), recipe.Resolve(new WorldChoices { SizeKm = double.Parse(v[1]) }), worldId: CoreTests.FixedWorldId));
+    if (v.Length > 8) plan = new WorldPlan(plan.Manifest, style: plan.Style with { Revision = int.Parse(v[8]) });
+    var sampler = new TerrainSampler(plan);
+    double x = double.Parse(v[3]), z = double.Parse(v[4]), dx = double.Parse(v[5]), dz = double.Parse(v[6]);
+    int n = int.Parse(v[7]);
+    var sb = new StringBuilder();
+    for (int i = 0; i < n; i++) sb.Append($"{sampler.Height(x + dx * i, z + dz * i):0.0} ");
+    Console.WriteLine(sb.ToString());
     return 0;
 }
 

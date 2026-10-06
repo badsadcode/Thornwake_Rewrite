@@ -185,18 +185,22 @@ public sealed class BiomeMap
         PoolCells(pool);
     }
 
-    // Cells within reach (domain warp + blending) of a wetland biome (pools or flattened ground); null = none.
+    // Cells within reach (domain warp + blending) of a biome that shapes the local terrain (pools, flattening, dunes,
+    // mesas, spires); null = none in this world.
     private bool[]? _poolNear;
+
+    private static bool ShapesTerrain(ResolvedBiome r) =>
+        r.Def.Water.Pools > 0 || r.Def.Terrain.Flatten > 0 || BiomeTerrain.Strength(r.Def, "dunes") > 0
+        || BiomeTerrain.Strength(r.Def, "mesas") > 0 || BiomeTerrain.Strength(r.Def, "spires") > 0;
 
     private void PoolCells(IReadOnlyList<ResolvedBiome> pool)
     {
-        static bool Wet(ResolvedBiome r) => r.Def.Water.Pools > 0 || r.Def.Terrain.Flatten > 0;
-        if (!pool.Any(Wet)) return;
+        if (!pool.Any(ShapesTerrain)) return;
         int n = _n;
         var has = new bool[n * n];
         for (int k = 0; k < n * n; k++)
             for (int e = 0; e < 3; e++)
-                if (_w[k * 3 + e] > 0 && Wet(pool[_ids[k * 3 + e]])) has[k] = true;
+                if (_w[k * 3 + e] > 0 && ShapesTerrain(pool[_ids[k * 3 + e]])) has[k] = true;
         _poolNear = new bool[n * n];
         const int r = 3;
         for (int j = 0; j < n; j++)
@@ -213,29 +217,97 @@ public sealed class BiomeMap
     }
 
     /// <summary>
-    /// Wetland character at a world point (terrain revision 11), blended between the two strongest biomes exactly like
-    /// the ground colours: share of ground under standing-water pools, their deepest depth (m), pool size (m), channel
-    /// share, and how much the walking-scale relief is flattened. False (fast) where no wetland biome is near.
+    /// How the biomes shape the local terrain at a world point (terrain revisions 11+), blended between the two
+    /// strongest biomes exactly like the ground colours. False (fast) where no such biome is near.
     /// </summary>
-    public bool WetlandAt(double x, double z, out double coverage, out double depth, out double size, out double channels, out double flatten)
+    /// <param name="allBiomes">Blend over every contributing biome (revision 12+: continuous); false = the two strongest,
+    /// as revision 11 did.</param>
+    public bool TerrainAt(double x, double z, out BiomeTerrainMods mods, bool allBiomes = false)
     {
-        coverage = depth = channels = flatten = 0; size = 16;
+        mods = default;
         if (_poolNear == null) return false;
         int i = Math.Clamp((int)Math.Floor((x - _grid.MinX) / _grid.Cell), 0, _n - 1), j = Math.Clamp((int)Math.Floor((z - _grid.MinZ) / _grid.Cell), 0, _n - 1);
         if (!_poolNear[j * _n + i]) return false;
+        if (allBiomes) { TerrainAll(x, z, ref mods); return true; }
         var (a, b, share) = Sample(x, z);
         var A = Pool[a].Def; var B = Pool[b].Def;
         double sa = share, sb = 1 - share;
-        flatten = DetMath.Clamp(A.Terrain.Flatten * sa + B.Terrain.Flatten * sb, 0, 1);
-        double pa = A.Water.Pools * sa, pb = B.Water.Pools * sb;
-        coverage = pa + pb;
-        if (coverage < .005) { coverage = 0; return flatten > 0; }
-        // Depth, size and shape follow the pool biome even into a dry neighbour (only the coverage fades out there).
-        double t = pa / coverage;
-        depth = A.Water.PoolDepth * t + B.Water.PoolDepth * (1 - t);
-        size = Math.Max(4, A.Water.PoolSize * t + B.Water.PoolSize * (1 - t));
-        channels = DetMath.Clamp(A.Water.PoolChannels * t + B.Water.PoolChannels * (1 - t), 0, 1);
+        double F(string feature) => BiomeTerrain.Strength(A, feature) * sa + BiomeTerrain.Strength(B, feature) * sb;
+        mods.Flatten = DetMath.Clamp(A.Terrain.Flatten * sa + B.Terrain.Flatten * sb, 0, 1);
+        mods.Dunes = F("dunes"); mods.Mesas = F("mesas"); mods.Spires = F("spires");
+        mods.PoolSize = 16;
+        double pa = A.Water.Pools * sa, pb = B.Water.Pools * sb, coverage = pa + pb;
+        if (coverage >= .005)
+        {
+            // Depth, size and shape follow the pool biome even into a dry neighbour (only the coverage fades out there).
+            double t = pa / coverage;
+            mods.Pools = coverage;
+            mods.PoolDepth = A.Water.PoolDepth * t + B.Water.PoolDepth * (1 - t);
+            mods.PoolSize = Math.Max(4, A.Water.PoolSize * t + B.Water.PoolSize * (1 - t));
+            mods.PoolChannels = DetMath.Clamp(A.Water.PoolChannels * t + B.Water.PoolChannels * (1 - t), 0, 1);
+        }
         return true;
+    }
+
+    /// <summary>
+    /// Every biome contributing at a world point with its weight (up to 12, weights summing to 1): continuous everywhere,
+    /// unlike <see cref="Sample"/>'s two strongest, whose second place can switch abruptly (fine for colours, a step in
+    /// landforms). Returns the count.
+    /// </summary>
+    public int SampleAll(double x, double z, Span<int> ids, Span<double> weights)
+    {
+        if (Pool.Count == 1) { ids[0] = 0; weights[0] = 1; return 1; }
+        double wx = x + Noise.Fbm(x, z, _warp * 6, 3, _warp * .5, _seed + 101, .5) * _warp;
+        double wz = z + Noise.Fbm(x + 913, z - 377, _warp * 6, 3, _warp * .5, _seed + 102, .5) * _warp;
+        double fx = (wx - _grid.MinX) / _grid.Cell - .5, fz = (wz - _grid.MinZ) / _grid.Cell - .5;
+        int i0 = (int)Math.Floor(fx), j0 = (int)Math.Floor(fz);
+        double tx = fx - i0, tz = fz - j0, total = 0;
+        int used = 0;
+        for (int c = 0; c < 4; c++)
+        {
+            int i = Math.Clamp(i0 + (c & 1), 0, _n - 1), j = Math.Clamp(j0 + (c >> 1), 0, _n - 1);
+            double corner = ((c & 1) == 1 ? tx : 1 - tx) * ((c >> 1) == 1 ? tz : 1 - tz);
+            int k = (j * _n + i) * 3;
+            for (int e = 0; e < 3; e++)
+            {
+                double w = _w[k + e] * corner;
+                if (w <= 0) continue;
+                int id = _ids[k + e], slot = -1;
+                for (int q = 0; q < used; q++) if (ids[q] == id) { slot = q; break; }
+                if (slot < 0) { slot = used++; ids[slot] = id; weights[slot] = 0; }
+                weights[slot] += w; total += w;
+            }
+        }
+        if (used == 0 || total <= 0) { ids[0] = 0; weights[0] = 1; return 1; }
+        for (int q = 0; q < used; q++) weights[q] /= total;
+        return used;
+    }
+
+    private void TerrainAll(double x, double z, ref BiomeTerrainMods mods)
+    {
+        Span<int> ids = stackalloc int[12];
+        Span<double> ws = stackalloc double[12];
+        int n = SampleAll(x, z, ids, ws);
+        double pools = 0, depth = 0, size = 0, channels = 0;
+        for (int q = 0; q < n; q++)
+        {
+            var d = Pool[ids[q]].Def; double w = ws[q];
+            mods.Flatten += d.Terrain.Flatten * w;
+            mods.Dunes += BiomeTerrain.Strength(d, "dunes") * w;
+            mods.Mesas += BiomeTerrain.Strength(d, "mesas") * w;
+            double spires = BiomeTerrain.Strength(d, "spires");
+            mods.Spires += spires * w;
+            if (spires > 0) mods.SpirePresence += w;
+            double p = d.Water.Pools * w;
+            pools += p; depth += d.Water.PoolDepth * p; size += d.Water.PoolSize * p; channels += d.Water.PoolChannels * p;
+        }
+        mods.Flatten = DetMath.Clamp(mods.Flatten, 0, 1);
+        mods.PoolSize = 16;
+        if (pools >= .005)
+        {
+            mods.Pools = pools; mods.PoolDepth = depth / pools; mods.PoolSize = Math.Max(4, size / pools);
+            mods.PoolChannels = DetMath.Clamp(channels / pools, 0, 1);
+        }
     }
 
     /// <summary>The two strongest biomes at a world point and the first one's share (0.5..1), blended smoothly.</summary>

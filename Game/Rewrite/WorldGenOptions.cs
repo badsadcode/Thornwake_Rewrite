@@ -168,7 +168,7 @@ public sealed class WorldGenOptions
             BankVariation = Classic.Index == 4 ? 0 : Banks.Value,
             ShoreSlope = Classic.Index == 4 ? 0 : Shores.Value,
             MouthBlend = Classic.Index >= 3 ? 0 : 1,
-            Revision = Classic.Index >= 2 ? 8 : Classic.Index == 1 ? 9 : 11,
+            Revision = Classic.Index >= 2 ? 8 : Classic.Index == 1 ? 9 : 12,
             ForestCover = ForestCover.Value, ForestDensity = ForestDensity.Value, RockAmount = Rocks.Value, PropAmount = Props.Value,
             LakeShare = b.LakeShare * Lakes.Value,
             DeltaMinCatchmentKm2 = Deltas.Value <= 0 ? double.PositiveInfinity : b.DeltaMinCatchmentKm2 / Deltas.Value,

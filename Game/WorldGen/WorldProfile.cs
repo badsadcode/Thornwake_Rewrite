@@ -136,8 +136,8 @@ public sealed record TerrainStyle
     /// <summary>Terrain revision for changes without their own knob: 8 = as in build 8; 9 = estuaries at mouths and
     /// banks that stay walkable where they bulge (round 5); 10 = lakes reach round and close with a shore instead of
     /// ending on straight cell lines (round 7); 11 = wetland biomes carve real standing-water pools and flatten their
-    /// ground (round 8).</summary>
-    public int Revision { get; init; } = 11;
+    /// ground (round 8); 12 = biome landforms: dunes, mesas, needle spires (round 9).</summary>
+    public int Revision { get; init; } = 12;
 
     /// <summary>Climate of the world (latitudes, warmer/colder, wetter/drier): drives biomes (D42).</summary>
     public ClimateSettings Climate { get; init; } = new();

@@ -9,6 +9,7 @@ internal static class SimulationTests
     {
         T.Run("Lakes: no dry ground below the surface at the lake's edge (revision 10 and later)", LakeEdges, filter);
         T.Run("Wetlands: real pools, never dry ground below a pool surface (revision 11)", Wetlands, filter);
+        T.Run("Landforms: dunes, mesas and needle spires where their biomes are (revision 12)", Landforms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
         T.Run("Water: generated rivers absorb it", Sinks, filter);
@@ -454,10 +455,59 @@ internal static class SimulationTests
     /// about the share the biome asks for, is no deeper than its depth, and no dry ground next to a pool lies below
     /// the pool's surface. Revision 10 has no pools.
     /// </summary>
+    // The 2,048 km vast world (seed 7319) that the wetland and landform probes use.
+    private static readonly Lazy<WorldPlan> Vast = new(() => new WorldPlan(WorldManifest.Create(7319,
+        WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == "vast-world").Resolve(new WorldChoices { SizeKm = 2048 }), worldId: CoreTests.FixedWorldId)));
+
+    /// <summary>
+    /// Biome landforms (revision 12, round 9): a desert has transverse dunes (relief within a few hundred metres, ridges
+    /// tens of metres apart), the badlands have mesas (ground raised tens of metres above revision 11), needle rocks rise
+    /// as tall thin columns; no feature where its biome is absent; the same everywhere it is sampled (deterministic).
+    /// </summary>
+    private static void Landforms()
+    {
+        var plan = Vast.Value;
+        var s = new TerrainSampler(plan);
+        var s11 = new TerrainSampler(new WorldPlan(plan.Manifest, style: plan.Style with { Revision = 11 }));
+        // Dunes: relief along a 600 m line, and how many ridges cross it.
+        double x0 = 330000, z0 = -170000, lo = double.MaxValue, hi = double.MinValue;
+        var line = new double[600];
+        for (int i = 0; i < 600; i++) { line[i] = s.Height(x0 + i * .7, z0 + i * .7); lo = Math.Min(lo, line[i]); hi = Math.Max(hi, line[i]); }
+        int ridges = 0;
+        for (int i = 20; i < 580; i++)
+        {
+            bool top = line[i] > line[i - 20] + .5 && line[i] > line[i + 20] + .5;
+            for (int k = i - 20; k <= i + 20 && top; k++) if (line[k] > line[i]) top = false;
+            if (top) ridges++;
+        }
+        T.Note($"desert: {hi - lo:0.0} m relief over 600 m, {ridges} dune crests");
+        T.Check(hi - lo > 4 && ridges >= 3 && ridges <= 20, $"desert dunes ({hi - lo:0.0} m relief, {ridges} crests)");
+        // Mesas: badlands ground raised well above revision 11 in places.
+        double raised = 0;
+        for (int i = 0; i < 400; i++) raised = Math.Max(raised, s.Height(-531000 + i * 10, -250000) - s11.Height(-531000 + i * 10, -250000));
+        T.Note($"badlands: up to {raised:0} m above revision 11 (mesas)");
+        T.Check(raised > 30, $"badlands mesas ({raised:0} m)");
+        // Needle spires: columns standing > 12 m above the ground 15 m away, a few of them in a 400 m square.
+        int spires = 0;
+        for (double z = 350000; z < 350400; z += 2)
+            for (double x = -410000; x < -409600; x += 2)
+            {
+                double h = s.Height(x, z), around = Math.Min(Math.Min(s.Height(x + 15, z), s.Height(x - 15, z)), Math.Min(s.Height(x, z + 15), s.Height(x, z - 15)));
+                if (h - around > 12) spires++;
+            }
+        T.Note($"needle rocks: {spires} points of 40,000 stand > 12 m above the ground 15 m away");
+        T.Check(spires > 20, $"needle spires ({spires})");
+        // A temperate forest has none of them (identical to revision 11 away from wetland/landform biomes).
+        var (a, _, share) = plan.Biomes.Sample(-558000, -398000);
+        int same = 0;
+        for (int i = 0; i < 50; i++) if (s.Height(-558000 + i * 7, -398000) == s11.Height(-558000 + i * 7, -398000)) same++;
+        T.Check(plan.Biomes.Pool[a].Def.Id == "temperate-forest" && same == 50, $"no landforms in {plan.Biomes.Pool[a].Def.Id} ({same}/50 unchanged)");
+        T.Check(s.Height(x0 + 123.4, z0 - 56.7) == new TerrainSampler(plan).Height(x0 + 123.4, z0 - 56.7), "deterministic");
+    }
+
     private static void Wetlands()
     {
-        var recipe = WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == "vast-world");
-        var plan = new WorldPlan(WorldManifest.Create(7319, recipe.Resolve(new WorldChoices { SizeKm = 2048 }), worldId: CoreTests.FixedWorldId));
+        var plan = Vast.Value;
         var s = new TerrainSampler(plan);
         var s10 = new TerrainSampler(new WorldPlan(plan.Manifest, style: plan.Style with { Revision = 10 }));
         foreach (var (name, x0, z0, min, max) in new[] { ("marsh", -18000.0, 462000.0, .25, .6), ("bayou", 442000.0, 302000.0, .3, .75), ("fen", -713850.0, -293850.0, .04, .5) })

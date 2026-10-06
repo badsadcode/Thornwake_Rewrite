@@ -132,8 +132,26 @@ public sealed record BiomeTerrain
     public double Microterrain { get; init; } = 1;
     /// <summary>Rocky crags on slopes multiplier.</summary>
     public double Crags { get; init; } = 1;
-    /// <summary>Landform features with strengths (later phases: "spires", "ravines", "dunes", "mesas", "volcano"…).</summary>
+    /// <summary>Landform features with strengths. Working (terrain revision 12): "dunes", "mesas", "spires". Later:
+    /// "ravines", "volcano", "canyons"….</summary>
     public Dictionary<string, double> Features { get; init; } = new();
+
+    /// <summary>Strength of a landform feature in a biome (0 if absent).</summary>
+    public static double Strength(BiomeDefinition biome, string feature) =>
+        biome.Terrain.Features.TryGetValue(feature, out double v) ? Math.Max(0, v) : 0;
+}
+
+/// <summary>How the biomes shape the local terrain at a point (blended between neighbouring biomes).</summary>
+public struct BiomeTerrainMods
+{
+    /// <summary>Standing-water pools: share of ground, deepest depth (m), size (m), channel share.</summary>
+    public double Pools, PoolDepth, PoolSize, PoolChannels;
+    /// <summary>Flattening of the walking-scale relief (0 … 1).</summary>
+    public double Flatten;
+    /// <summary>Landform features (0 none … 1 full, more = stronger).</summary>
+    public double Dunes, Mesas, Spires;
+    /// <summary>Share of the blend made of biomes that have spires at all (spire height fades with it at biome edges).</summary>
+    public double SpirePresence;
 }
 
 public sealed record BiomeWater

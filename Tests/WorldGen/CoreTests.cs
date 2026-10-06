@@ -47,6 +47,7 @@ internal static class CoreTests
         T.Run("Build 8 terrain still reproducible", () => Fingerprints(false, "terrain-build8.json", build8: true), filter);
         T.Run("Build 9 terrain still reproducible", () => Fingerprints(false, "terrain-build9.json", build9: true), filter);
         T.Run("Build 12 terrain still reproducible", () => Fingerprints(false, "terrain-build12.json", build12: true), filter);
+        T.Run("Build 13 terrain still reproducible", () => Fingerprints(false, "terrain-build13.json", build13: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -240,6 +241,11 @@ internal static class CoreTests
             double x = f.Center.X + (rng.NextDouble() - .5) * f.RadiusX, z = f.Center.Z + (rng.NextDouble() - .5) * f.RadiusX;
             var probe = s.Sample(x, z);
             if (probe.Land < .1 || probe.Mountain > .05) continue; // lowland only
+            // Mesas and needle spires (revision 12) are cliffs on purpose: leave those biomes out.
+            bool cliffs = false;
+            for (int c = 0; c < 4 && !cliffs; c++)
+                cliffs = s.Plan.Biomes.TerrainAt(x + (c & 1) * 64, z + (c >> 1) * 64, out var mods, allBiomes: true) && mods.Mesas + mods.Spires > .001;
+            if (cliffs) continue;
             s.HeightGrid(x, z, 1, 65, 65, h);
             double mean = h.Average(), std = Math.Sqrt(h.Select(v => (v - mean) * (v - mean)).Average());
             for (int j = 0; j < 64; j++) for (int i = 0; i < 64; i++)
@@ -249,7 +255,10 @@ internal static class CoreTests
             }
             sumStd += std; windows++;
         }
-        T.Note($"lowland 64 m windows: mean height std-dev {sumStd / windows:0.00} m, steepest 1 m step {steepest:0.00} m at ({where.X:0}, {where.Z:0})");
+        var (wa, wb, _) = s.Plan.Biomes.Sample(where.X, where.Z);
+        var wt = s.Sample(where.X, where.Z);
+        T.Note($"lowland 64 m windows: mean height std-dev {sumStd / windows:0.00} m, steepest 1 m step {steepest:0.00} m at ({where.X:0}, {where.Z:0}) "
+            + $"[{s.Plan.Biomes.Pool[wa].Def.Id}/{s.Plan.Biomes.Pool[wb].Def.Id}, water {wt.Water}]");
         T.Check(sumStd / windows > .25, "walking-scale relief present on lowland");
         T.Check(steepest < 1.2, "lowland stays walkable (no >50° 1 m steps)");
     }
@@ -259,14 +268,17 @@ internal static class CoreTests
         var s = Sampler("mountainous", 42);
         var rng = new Random(13);
         var f = s.Plan.Layout.Land[0];
-        double sum = 0; int n = 0; double worst = 0;
+        double sum = 0; int n = 0, skipped = 0; double worst = 0;
         for (int i = 0; i < 5000; i++)
         {
             double x = f.Center.X + (rng.NextDouble() - .5) * f.RadiusX, z = f.Center.Z + (rng.NextDouble() - .5) * f.RadiusX;
+            // Needle spires and dunes change with the detail level on purpose (far spires widen to stay visible, dunes
+            // finer than the tile fade out); everything else, mesas included, must keep its shape.
+            if (s.Plan.Biomes.TerrainAt(x, z, out var mods, allBiomes: true) && mods.Spires + mods.Dunes > .001) { skipped++; continue; }
             double fine = s.Height(x, z, 2), coarse = s.Height(x, z, 64);
             sum += Math.Abs(fine - coarse); n++; worst = Math.Max(worst, Math.Abs(fine - coarse));
         }
-        T.Note($"|h(2 m) - h(64 m)| mean {sum / n:0.00} m, worst {worst:0.00} m");
+        T.Note($"|h(2 m) - h(64 m)| mean {sum / n:0.00} m, worst {worst:0.00} m ({skipped} probes in spire/dune biomes left out)");
         T.Check(sum / n < 2.5, "coarse LOD keeps the large shapes");
         T.Check(s.Height(f.Center.X, f.Center.Z, 1e9) == s.MacroHeight(f.Center.X, f.Center.Z), "infinite minimum wavelength = macro height");
     }
@@ -292,7 +304,7 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
         string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
@@ -311,6 +323,9 @@ internal static class CoreTests
                 if (build9) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 9, Climate = new ClimateSettings { Biomes = false } }));
                 // Build 12 (commit aab8f0c, v0.9.12): terrain revision 10, before wetland pools.
                 if (build12) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 10 }));
+                // Build 13 (commit b53e852, v0.9.13): terrain revision 11, before biome landforms.
+                // Revision 11 terrain depends on the biome map, so it is built from the build 13 biome catalogue.
+                if (build13) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 11 }, biomes: Build13Biomes.Value));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];
@@ -336,6 +351,10 @@ internal static class CoreTests
         T.Check(expected.Count == cases.Count, "fixture case count");
         foreach (var c in cases) T.Check(expected.Single(e => e.Case == c.Case).Hash == c.Hash, "fingerprint " + c.Case);
     }
+
+    private static readonly Lazy<BiomeRegistry> Build13Biomes = new(() => BiomeRegistry.Parse(
+        File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/biomes-build13.json")),
+        File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/asset_sets-build13.json"))));
 
     public static string FindRepoRoot()
     {
