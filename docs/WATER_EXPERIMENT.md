@@ -82,7 +82,9 @@ mountain river; fast ones show the whitewater.
 * Wave height near the shore for boats (the CPU mirror exists: `WaterShore.Height`; swimming already uses it).
 * Quality settings for the experiment (number of wave layers, foam detail); everything is cheap enough on desktop
   GPUs now, the main extra cost is the per-pixel wave sum.
-* Boat wakes, storm-driven foam streaks across the sea, wave interaction with individual rocks (only steep shores
+* Experimental 2 at the beach: where breaker foam meets the coarser far water mesh its edge can still show a short
+  straight step.
+* Boat wakes, wave interaction with individual rocks (only steep shores
   churn now).
 
 Test harness: `xvfb-run godot --path . -s tools/water_test.gd -- out=/tmp/w.png style=1 kind=sea|lake|river sea=0.5`

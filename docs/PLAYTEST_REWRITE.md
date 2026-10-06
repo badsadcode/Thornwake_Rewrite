@@ -78,6 +78,24 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 16 — "experimental 2" water (Sea of Thieves references)
+* **Esc → Settings → Lighting and effects → Water** now has three choices: classic (default, unchanged), experimental
+  (build 15, unchanged) and **experimental 2**. All three switch instantly on the spot, so you can compare.
+* Experimental 2 = experimental (shores, lakes, rivers) with a livelier ocean:
+  * **32 sharp waves** from a real ocean wave spectrum, crossing in mixed directions plus a swell from another heading;
+    **wave sets** (groups of higher waves) drift through with the wind.
+  * **Storms are wild, not just big**: at sea state 1 the seas are ~8 m and stylised steep, directions go confused,
+    crests break white, foam spills down the backs, foam lanes run along the wind, old-foam fields drift, the sea goes
+    dark grey-teal and reflections dull.
+  * **Look**: deep blue-teal, bright turquoise glow through thin wave tops, dark troughs and lit crests (waves read as
+    masses), dense sun sparkle.
+  * **Foam with detail**: dense where fresh, breaking into lace threads around bubble cells and speckle as it thins,
+    a milky layer under the surface, streaked along the wind or current, shaded (not flat white).
+  * **Waves turn toward the land**: from ~19 m deep the open-sea waves hand over to shore waves that face the beach
+    (answer to your question in WATER_EXPERIMENT.txt).
+* Try: *Mountain kingdoms* (seed 42): open sea at −66000, 115600 with Sea state 1 (fly low), beach at −60420, 116300
+  with Sea state 0.5.
+
 ## New in build 15 — experimental water (switchable)
 * **Esc → Settings → Lighting and effects → Water: classic / experimental.** Classic (the default) is the water of
   build 14, unchanged. Experimental is a new water look to compare; switch any time, it changes instantly.

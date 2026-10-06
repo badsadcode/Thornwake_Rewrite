@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 16** (water experimental 2: spectrum ocean, layered foam; classic default) | `defef2c` | Thornwake-Rewrite-Preview-16 (v0.9.16) | Settings → Water: classic / experimental / experimental 2 |
 | **Build 15** (water experiment, switchable; classic default) | `56c4d7b` | Thornwake-Rewrite-Preview-15 (v0.9.15) | Settings → Water: classic / experimental |
 | **Water baseline** (before the water experiment: the "classic" water) | `3511e4b` | build 14 | Game/Rewrite/Water.gdshader, OceanWaves.cs, TileBuilder.BuildWater as of this commit. The experiment adds a separate shader and a setting; classic stays the default |
 | **Build 14** (round 9: dunes, mesas, needle rocks) | `68c103a` | Thornwake-Rewrite-Preview-14 (v0.9.14) | Terrain revision 12; build 13 terrain = revision 11 with fixtures/biomes-build13.json |
