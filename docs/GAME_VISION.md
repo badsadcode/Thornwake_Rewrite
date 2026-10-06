@@ -28,6 +28,13 @@ gameplay follows. Tom has far more ideas than can be built; the environment come
 * The docs were written while ideas were flowing (Noor wrote many of them down); they will be reconciled once the world
   is clearer. Where they disagree, ask rather than assume.
 
+## The world generator is a framework
+Thornwake comes first, but the world generator should become a framework for worlds for other kinds of games too:
+large-scale battles (an FPS), a hunting game (in the spirit of theHunter), a colony manager on a very large scale.
+For the engineering this means: keep `Game/WorldGen` free of Godot and of Thornwake's gameplay (it already builds and
+tests without Godot); game-specific content (biomes, asset sets, points of interest) stays data passed in, not code
+inside the generator.
+
 ## What matters most in the environment
 * **Weather and environment effects** are very important: storms, blizzards, rain, hail, snow, thunderstorms, sea
   storms, dust storms.
