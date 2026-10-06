@@ -251,6 +251,8 @@ public static class TileBuilder
         if (key.Level == 0 && config.Grass > 0) data.Reeds = GroundCover.Reeds(key, grid, sea, coverSeed, config.Grass);
         if (key.Level == 0 && config.Props > 0) data.Drapes = GroundCover.CliffDressing(key, grid, sea, coverSeed);
         if (key.Level <= 2 && config.Rocks > 0) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed, config.Rocks);
+        if (data.Water is { } riverWater && data.WaterShore is { } shore && data.Rocks is { Count: > 0 } rocks)
+            ObstacleWakes(riverWater.Vertices, riverWater.Colors, riverWater.Flow, shore, rocks);
         if (key.Level <= 1 && config.Props > 0) data.Props = GroundCover.Props(key, grid, sea, coverSeed, config.Props);
         if (key.Level <= 1 && config.Grass > 0) data.WetPlants = GroundCover.WetPlants(key, grid, sea, coverSeed, biomes, Math.Min(1.5, config.Grass));
         if (key.Level >= config.TreeLevels && key.Level <= config.FarTreeLevels)
@@ -438,6 +440,44 @@ public static class TileBuilder
         return new System.Runtime.CompilerServices.StrongBox<float>(r.Width.Length > 0 ? (float)(sum / r.Width.Length) : 0);
     }).Value;
 
+    /// <summary>
+    /// Obstacle wakes (round 15, RIVERS_PLAN step 5): rocks and boulders standing in a river's current. For river
+    /// vertices around one (a little upstream, a long way downstream), the shore-data slots the sea uses are reused:
+    /// x = metres downstream of the rock along the local current, y = metres across it, z = the rock's radius (0 = no
+    /// obstacle; rivers have no exposure). The shader draws the pressure bulge upstream, a V-wake and eddies behind.
+    /// </summary>
+    private static void ObstacleWakes(Vector3[] water, Color[] colors, Vector2[] flow, float[] shore, List<RockInstance> rocks)
+    {
+        var best = new float[water.Length];
+        for (int k = 0; k < water.Length; k++)
+            if (colors[k].G > .75f) { shore[k * 4] = 0; shore[k * 4 + 1] = 0; shore[k * 4 + 2] = 0; best[k] = float.MaxValue; }
+        foreach (var rock in rocks)
+        {
+            if (rock.Kind == GroundCover.Stone) continue;
+            var b = rock.Transform.Basis;
+            float radius = (b.X.Length() + b.Z.Length()) * .25f; // the meshes span ±0.5 per unit scale
+            if (radius < .3f) continue;
+            var at = rock.Transform.Origin;
+            float reach = 2 * radius + 14 * radius + 4;
+            for (int k = 0; k < water.Length; k++)
+            {
+                if (colors[k].G <= .75f || flow[k] == Vector2.Zero) continue;
+                float dx = water[k].X - at.X, dz = water[k].Z - at.Z;
+                if (Math.Abs(dx) > reach || Math.Abs(dz) > reach) continue;
+                // Only rocks that stand in the water here: base under the surface, top near or above it.
+                float top = at.Y + b.Y.Length() * .6f;
+                if (at.Y > water[k].Y || top < water[k].Y - .3f) continue;
+                var f = flow[k].Normalized();
+                float along = dx * f.X + dz * f.Y, across = -dx * f.Y + dz * f.X;
+                if (along < -2.5f * radius || along > 14 * radius + 3 || Math.Abs(across) > 2 * radius + Math.Max(0, along) * .6f) continue;
+                float d = dx * dx + dz * dz;
+                if (d >= best[k]) continue;
+                best[k] = d;
+                shore[k * 4] = along; shore[k * 4 + 1] = across; shore[k * 4 + 2] = radius;
+            }
+        }
+    }
+
     private static double SeaLevel(TerrainSample[] samples)
     {
         foreach (var t in samples) if (t.Water == WaterKind.Ocean) return t.WaterLevel;
@@ -469,6 +509,21 @@ public static class TileBuilder
                 double g = Math.Sqrt(gx * gx + gz * gz);
                 if (g < 1e-6) continue;
                 double speed = Math.Clamp(Math.Sqrt(g) * 6, .3, 3.5);
+                flow[k] = new Vector2((float)(-gx / g * speed), (float)(-gz / g * speed));
+            }
+        // River mouths (round 15, RIVERS_PLAN step 3): the current continues into the lake or sea as a fanning plume,
+        // down the slope of the river-water share (which falls away from the channel's line and toward the plume's
+        // end), weakening with it; the smoothing below joins it to the river's own current.
+        for (int j = 0; j < n; j++)
+            for (int i = 0; i < n; i++)
+            {
+                int k = j * n + i;
+                if (!wet[k] || samples[k].Water == WaterKind.River || samples[k].Plume < .03) continue;
+                double P(int x, int z) => samples[Math.Clamp(z, 0, n - 1) * n + Math.Clamp(x, 0, n - 1)].Plume;
+                double gx = (P(i + 1, j) - P(i - 1, j)) / (2 * spacing), gz = (P(i, j + 1) - P(i, j - 1)) / (2 * spacing);
+                double g = Math.Sqrt(gx * gx + gz * gz);
+                if (g < 1e-6) continue;
+                double speed = 1.1 * Math.Pow(samples[k].Plume, .7);
                 flow[k] = new Vector2((float)(-gx / g * speed), (float)(-gz / g * speed));
             }
         // Bank vertices (under the dry ground beside the water) take their wet neighbours' current, then two passes
@@ -508,7 +563,7 @@ public static class TileBuilder
             for (int i = 0; i < n; i++)
             {
                 int k = j * n + i;
-                if (!river[k]) continue;
+                if (!river[k] || samples[k].Water != WaterKind.River) continue; // mouth plumes keep their spread
                 float deepest = .3f;
                 for (int b = -r; b <= r; b++)
                     for (int a = -r; a <= r; a++)

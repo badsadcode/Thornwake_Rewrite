@@ -64,7 +64,11 @@ func _initialize() -> void:
 			cols.append(Color(clampf(depth / 20.0, 0.0, 1.0), kind_code, 0.0, edge))
 			uvs.append(Vector2(0.0, -current) if kind == "river" else Vector2.ZERO) # downstream toward the camera (channel along z)
 			uv2.append(Vector2(packed, 0.65 if tint > 0 else 0.0))
-			custom.append_array(PackedFloat32Array([0.0, slope if kind == "sea" else 0.0, exposure, fetch if kind != "river" else float(args.get("width", "0"))]))
+			if kind == "river" and args.has("rock"):
+				# A rock of radius `rock` at the origin in the current (flowing toward -z): downstream, across, radius.
+				custom.append_array(PackedFloat32Array([-z, x, float(args["rock"]), float(args.get("width", "0"))]))
+			else:
+				custom.append_array(PackedFloat32Array([0.0, slope if kind == "sea" else 0.0, exposure, fetch if kind != "river" else float(args.get("width", "0"))]))
 	for j in n - 1:
 		for i in n - 1:
 			var a := j * n + i
