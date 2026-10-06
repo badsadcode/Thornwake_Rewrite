@@ -545,6 +545,25 @@ scattering on canopies and plants, configurable.
 * Rivers: rapids come in patches drifting with the current instead of one white sheet over a whole fast river; the
   general moving-water streaks are lighter.
 
+## D52 — Round 14: terrain revision 13 (no perched tributaries); Noor's river direction (2026-10-06)
+* Tom's desert river (Mountain kingdoms 42, ~45350, 136120): walls of water and a clear patch with straight edges. Two
+  side rivers (surfaces 314.0 and 313.1 m) ran for ~100 m across the main river's valley floor (310.5 + 0.9 bank =
+  311.4 m, flat) before joining: each river carves its own valley and the deepest carve wins, so the main valley floor
+  replaced the side rivers' banks while they kept their own water levels 2–3 m above the dry floor.
+* Revision 13 (TerrainSampler): for each river at a point, the lowest floor the other rivers carve there caps its
+  surface at that floor − 0.3 m (never below the other river's own water, smooth weight on how much they carve). A
+  tributary crossing a floodplain flows at it and drops down the valley side as rapids; rivers on high ground are
+  unchanged. Test: 86 → 0 dry points beside river water lying > 0.5 m below it at Tom's spot. Revision 12 frozen as
+  terrain-build19.json (with the build 19 biome catalogue); the current-revision fingerprints happen to be unchanged
+  (the fixture grids cross no such confluence).
+* The clear patch was the water view redrawing river cells next to rain water pooled on that sub-river floor; with a
+  real bank the rain drains. LocalWater now also needs 3 cm of standing water on undug ground before it redraws a river
+  edge (test).
+* Noor's river direction ("rivers are water with a destination"): docs/RIVERS_PLAN.md — agreed; plan: current field
+  across the channel (banks, narrows, bends), river layers incl. standing waves and wind waves on wide rivers, current
+  plumes and wave–current meeting zones at mouths, wakes from relative velocity (player/creatures/boats/debris), baked
+  obstacle wakes.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

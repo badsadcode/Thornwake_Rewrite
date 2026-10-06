@@ -78,6 +78,14 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 20 — rivers meeting rivers
+* **No more walls of water where side rivers join a big river**: a side river crossing the big river's valley floor now
+  flows at that floor and drops down to it, instead of standing 2–3 m above the dry ground beside it (terrain revision
+  13; your desert spot at 45282, 135940 in *Mountain kingdoms* seed 42). Only such confluences change; the rest of the
+  terrain is identical.
+* Rain water on a river bank no longer makes clear patches with straight edges on the river.
+* Noor's river ideas and the plan: RIVERS_PLAN.txt.
+
 ## New in build 19 — water fixes from your screenshots
 * **Digging next to a river**: the water filling the hole now has the river's colour (biome tint) and blends into the
   river softly instead of showing square, stepped edges.
