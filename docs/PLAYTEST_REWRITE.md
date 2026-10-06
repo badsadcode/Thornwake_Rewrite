@@ -78,6 +78,20 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 22 — clouds that belong to the weather and the land
+* **Towering cumulus on warm afternoons**: around the horizon, clouds bubble up into towers over a few minutes, stand,
+  then dissolve while new ones grow elsewhere — flat grey bases, bright cauliflower tops, silver edges toward the sun.
+  Overhead the clouds get darker flat bases. Needs warmth and moisture; none in the cold, at night or in rain.
+* **Distant thunderstorms**: when a storm front is a few hours away (on the side the wind comes from) or has just
+  passed (downwind), or on hot humid afternoons, huge storm cells stand on the horizon 30–100 km away: anvil tops
+  spreading downwind, grey rain shafts hanging under them, and at night **lightning flickering inside the clouds**,
+  now and then a bolt to the ground.
+* **Lenticular clouds**: smooth lens-shaped stacks of plates standing still over the highest peak nearby when the
+  wind is strong and the air dry (not every day).
+* **Mackerel sky**: rows of small high cloudlets in patches when rain is on its way.
+* **Rain**: the grey deck in steady rain now has slow darker and paler parts instead of a flat colour.
+* Calm water reflects the towers and storms on the horizon (experimental 2).
+
 ## New in build 21 — rivers that flow, a richer sky (water style experimental 2)
 * **Current across the river**: slow and lazy along the shallow edges, fastest down the deep middle.
 * **River surface**: ripples moving downstream at different speeds; in fast, shallow water **standing waves** — crests

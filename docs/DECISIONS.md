@@ -602,6 +602,27 @@ scattering on canopies and plants, configurable.
   6 s, under a second each).
 * GLSL lesson (also fixed in the existing Milky Way band): pow(x, 2.0) for x < 0 is undefined → squares.
 
+## D55 — Round 17: cloud types from the weather and the land (2026-10-06)
+* Tom approved SKY_IDEAS item 3. Each type is a quantity from the simulation, not a label: Weather derives cumulus
+  (hour 10–20, temperature, annual rain, broken sky, no rain), distant storm (a front over the thunder threshold 2–6 h
+  ahead → upwind, 2–5 h behind → downwind; or air-mass storms on hot wet afternoons, ~half of days) and mackerel (rain
+  3–9 h ahead, still dry here) — all eased over ~40 s. WorldLab finds the highest peak 5–23 km away every 4 s; a lens
+  forms over it with relief > ~450 m, wind > ~6.5 m/s, dry air, on ~2/3 of days.
+* Rendering (CloudShapes.gdshaderinc, shared by the sky and the experimental 2 water's reflection): far clouds are
+  drawn on vertical planes facing the camera at their distance, sunk by the Earth's curvature — cheap and exact enough
+  kilometres away. Towers are built from round puffs (three per level, narrowing up, a dome on top) whose blended ball
+  normals, a bumped detail normal and darkened creases give the cauliflower look; noise outlines alone looked like
+  shrubs. Cells live in slices of the horizon (two rings, 13–42 km and 30–72 km) and each lives 7–11 minutes: grows,
+  stands, dissolves, replaced elsewhere. Storm cells: tower + anvil (flat sharp top, streaky drawn-out underside sagging
+  toward the column, spread downwind) + slanted streaky rain shaft; lightning from Atmosphere (a cell index and
+  flicker in cloud_types.w) lights a spot inside, and bright flashes draw a bolt under the base. Lenticulars are real
+  ray–ellipsoid intersections (four overlapping thin plates, long across the wind), so they look right from any side.
+* Order: far clouds are composited after the flat deck; low in the sky they stand in front (the deck's thin slivers
+  otherwise sliced the towers into bands), above ~15° the deck covers them.
+* The sky's clock is now cloud_more.z (a global) instead of TIME: TIME in a sky shader makes Godot re-render the
+  radiance cubemap every frame (twinkling, auroras and meteors used it since build 21).
+* Not done: fog banks off the sea (needs the mist system to move offshore), towers in the volumetric (quality 2) deck.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
