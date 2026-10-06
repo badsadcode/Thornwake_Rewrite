@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 18** (round 12: experimental 2 as a system — weather-scaled foam, broader swell, coastal turn; Noor's ground textures switchable; ragged rock edges) | `5f1282e` | Thornwake-Rewrite-Preview-18 (v0.9.18) | Settings → Ground textures: current / Noor |
 | **Build 17** (round 11: experimental 2 sea rebuilt — smooth calm→huge storms, regional wave directions; rock collision hulls) | `614db3a` | Thornwake-Rewrite-Preview-17 (v0.9.17) | Experimental 2 of build 16 = `defef2c` |
 | **Build 16** (water experimental 2: spectrum ocean, layered foam; classic default) | `defef2c` | Thornwake-Rewrite-Preview-16 (v0.9.16) | Settings → Water: classic / experimental / experimental 2 |
 | **Build 15** (water experiment, switchable; classic default) | `56c4d7b` | Thornwake-Rewrite-Preview-15 (v0.9.15) | Settings → Water: classic / experimental |
