@@ -300,60 +300,131 @@ vec4 layer(vec3 dir, vec2 origin, float h, float d, vec3 sun_dir, vec3 sun_col, 
 	return vec4(cloud, d);
 }
 
-// ---- volumetric main deck (quality 2)
+// ---- volumetric clouds (quality 2), round 18 (Tom: "they look flat… lack detail, contrast and colours")
+// A real volume, not a lit slab: the 2D cloud map (the same one the flat layer and the ground shadows use) says where
+// cloud is and how high it grows — thick parts higher, on cumulus afternoons the cores tower to ~7 km; a tiling 3D
+// noise (CloudNoise3D.cs: Perlin-Worley billows, Worley lumps on lumps) carves the shape. Calm air: crisp cauliflower
+// edges; wind: the fine detail is drawn out along the wind into smudged, streaky edges and towers lean downwind.
+// Light: the sun traced through the cloud (dark cores, glowing thin edges, silver lining toward the sun, a few orders of
+// multiple scattering so thick cloud is not black), blue sky light from above and the sunlit ground from below, sunset
+// colours on the bases, aerial perspective with distance.
+uniform sampler3D cloud_noise : filter_linear, repeat_enable;
+global uniform vec4 wind; // dir.x, speed/8, dir.z, gust
 const float VBOTTOM = 1300.0;
-const float VTOP = 2400.0;
 
-float vdensity(vec3 p, float coverage) {
-	vec2 uv = p.xz / cloud_period;
+float vremap(float v, float a, float b, float c, float d) { return c + (v - a) / max(b - a, 1e-4) * (d - c); }
+
+// The cloud map at xz: x = mass (0..1), y = how high the cloud grows above VBOTTOM (m).
+vec2 vweather(vec2 xz, float coverage) {
+	vec2 uv = xz / cloud_period;
 	float n = texture(cloud_tex, uv).r * 0.8 + texture(cloud_tex, uv * 4.0 + vec2(0.31, 0.17)).g * 0.2;
 	float edge = 1.0 - coverage;
-	// Same footprint as the flat layer (so gaps and cloud shadows match); thicker clouds tower higher.
-	float mass = smoothstep(edge - 0.05, edge + 0.2, n);
-	if (mass <= 0.0) return 0.0;
-	float h = (p.y - VBOTTOM) / (VTOP - VBOTTOM);
-	// Rounded domes: the top rises quickly from the cloud edge (sqrt), flat bases.
-	float top = sqrt(mass) * (0.4 + 0.6 * smoothstep(edge, edge + 0.45, n));
-	float shape = smoothstep(0.0, 0.06, h) * smoothstep(0.0, 0.2, top - h);
-	float detail = texture(cloud_tex, uv * 9.0 + vec2(h * 0.7, h * 0.4)).g;
-	return clamp(shape * (0.6 + 0.8 * detail) - 0.25 * (1.0 - mass), 0.0, 1.0);
+	// (graded, not saturated: the denser the map, the more and higher the cloud)
+	float mass = clamp((n - edge + 0.1) / 0.35, 0.0, 1.0) * step(0.001, coverage);
+	float core = smoothstep(edge + 0.05, edge + 0.4, n);
+	float tower = cloud_types.x > 0.001 ? cloud_types.x * core * (0.35 + 0.65 * texture(cloud_tex, uv * 0.5 + vec2(0.7, 0.2)).g) : 0.0;
+	return vec2(mass, 350.0 + 950.0 * sqrt(mass) + tower * 5200.0 + cloud_state.w * 700.0);
 }
 
+// Density at p (camera-relative x/z offset by the cloud drift, y above the camera). detail: the fine erosion (off for
+// light rays and far away).
+float vdens(vec3 p, bool detail) {
+	vec2 lean = vec2(wind.x, wind.z) * min(wind.y, 2.0) * 0.35; // towers lean downwind with height
+	float above = max(p.y - VBOTTOM, 0.0);
+	vec4 n = texture(cloud_noise, p / 2600.0 + vec3(0.0, cloud_more.z * 0.00005, 0.0));
+	// The map is read through a 3D warp: a cloud's sides bulge in and out with height instead of standing as walls.
+	vec2 warp = (vec2(n.g, n.b) - 0.5) * (500.0 + above * 0.18);
+	vec2 wx = vweather(p.xz - lean * above + warp, cloud_state.z);
+	if (wx.x <= 0.0) return -1.0; // clear sky here at every height: the march may stride
+	float h = (p.y - VBOTTOM) / wx.y;
+	if (h <= 0.0 || h >= 1.0) return 0.0;
+	// Flat base, rounded domes: higher up only the denser parts of the map remain.
+	// (the map never quite fills: the 3D noise carves lumps and gaps inside clouds too, not only at their edges)
+	float dome = mix(0.62, 0.84, smoothstep(1800.0, 4500.0, wx.y)); // towers keep their width and round off only at the top
+	float cov = clamp(vremap(wx.x, smoothstep(dome, 1.0, h) * 0.95, 1.0, 0.0, 1.0), 0.0, 1.0) * smoothstep(0.0, 0.06, h) * mix(wx.x, 1.0, 0.25) * 0.8;
+	float wf = n.g * 0.7 + n.b * 0.3;
+	float base = clamp(vremap(n.r, wf - 1.0, 1.0, 0.0, 1.0), 0.0, 1.0);
+	base = base * base * (3.0 - 2.0 * base); // rounder lumps
+	float d = clamp(vremap(base, 1.0 - cov, 1.0, 0.0, 1.0), 0.0, 1.0) * cov;
+	if (d <= 0.0 || !detail) return d;
+	// Fine detail: billowy on top, wispy underneath; in wind stretched along it (smudged streaks).
+	float windy = smoothstep(0.5, 1.6, wind.y);
+	vec2 wd = normalize(vec2(wind.x, wind.z) + vec2(1e-4));
+	vec2 along = vec2(dot(p.xz, wd), dot(p.xz, vec2(-wd.y, wd.x)));
+	vec3 dp = vec3(along.x / mix(1.0, 3.5, windy), p.y - cloud_more.z * 2.0, along.y);
+	vec4 m = texture(cloud_noise, dp / 700.0);
+	float df = m.g * 0.75 + m.b * 0.25; // (the finest octave would only sparkle at sky distances)
+	df = mix(1.0 - df, df, smoothstep(0.1, 0.45, h));
+	return clamp(vremap(d, df * mix(0.42, 0.25, windy), 1.0, 0.0, 1.0), 0.0, 1.0);
+}
+
+float vhg(float c, float g) { float g2 = g * g; return (1.0 - g2) / pow(max(1.0 + g2 - 2.0 * g * c, 1e-4), 1.5); }
+
 vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float coverage, float storm) {
-	if (dir.y < 0.01 || coverage < 0.001) return vec4(0.0);
+	if (dir.y < 0.005 || coverage < 0.001) return vec4(0.0);
 	vec2 cam = cloud_state.xy;
-	float t0 = VBOTTOM / dir.y, t1 = min(VTOP / dir.y, 45000.0);
+	float vtop = VBOTTOM + 350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0;
+	float t0 = VBOTTOM / dir.y, t1 = min(vtop / dir.y, 50000.0);
 	if (t0 > t1) return vec4(0.0);
-	const int STEPS = 40;
-	float step_len = (t1 - t0) / float(STEPS);
+	// Steps grow with distance (the same angular detail near and far), ~45 m close up, up to 900 m far away.
 	float jitter = fract(sin(dot(dir.xz * 731.0, vec2(12.9898, 78.233))) * 43758.5453);
+	// The light: the sun by day, the moon at night (dim, silver).
+	float night = 1.0 - smoothstep(-0.16, 0.04, sun_dir.y);
+	vec3 ldir = night > 0.5 ? night_sky.xyz : sun_dir;
+	float lmu = dot(dir, ldir);
+	vec3 light_col = night > 0.5 ? vec3(0.09, 0.1, 0.13) * sky_extra.w : sun_col * mix(vec3(1.0), LIGHT0_COLOR, 0.3) * (1.0 - storm * 0.75);
+	// Sky light: blue from above, the lit ground from below; at twilight the bases glow in sunset colours.
+	vec3 sky_top = zenith_color * sky_mood.rgb * (0.08 + 0.92 * day) * mix(1.0, 0.55, storm);
+	vec3 sky_side = horizon_color * mix(vec3(1.0), sky_mood.rgb, 0.7) * (0.08 + 0.92 * day) * mix(1.0, 0.6, storm);
+	vec3 ground = ground_color * (0.06 + 0.5 * max(sun_dir.y, 0.0)) * (1.0 - storm * 0.6);
+	vec3 glow = underlight(dir);
+	if (night > 0.5) { sky_top = vec3(0.012, 0.016, 0.03); sky_side = sky_top; ground = vec3(0.004); }
+	vec3 haze = sky_colour(dir, sun_dir, sun_col, day, mu);
+	float calm = 1.0 - smoothstep(0.5, 1.6, wind.y);
+	float sigma_k = mix(0.011, 0.019, calm) * (1.0 + storm); // calm cumulus: denser, crisper edges; real cloud is opaque within ~100 m
 	float trans = 1.0;
 	vec3 light = vec3(0.0);
-	// Henyey-Greenstein mix: strong forward scattering (silver lining toward the sun) plus a soft back lobe.
-	float g = 0.6, hg = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * mu, 1.5) * 0.08;
-	float phase = mix(0.09, hg, 0.65);
-	vec3 ambient_top = mix(horizon_color, zenith_color, 0.6) * sky_mood.rgb * (0.3 + 0.6 * day);
-	vec3 sun_light = sun_col * mix(vec3(1.0), LIGHT0_COLOR, 0.3) * (1.0 - storm * 0.7);
-	for (int i = 0; i < STEPS; i++) {
-		float t = t0 + (float(i) + jitter) * step_len;
+	float phase_f = mix(vhg(lmu, 0.6), vhg(lmu, -0.25), 0.4);
+	float t = t0 + jitter * clamp(t0 * 0.005, 40.0, 450.0);
+	for (int i = 0; i < 150; i++) {
+		if (t > t1) break;
+		float step_len = clamp(t * 0.005, 40.0, 450.0);
 		vec3 p = vec3(cam.x, 0.0, cam.y) + dir * t;
-		float d = vdensity(p, coverage);
-		if (d <= 0.001) continue;
-		// Light reaching this point: density toward the sun (a few coarse steps).
-		float toward = 0.0;
-		for (int k = 1; k <= 4; k++) toward += vdensity(p + sun_dir * float(k) * 160.0, coverage);
-		float sun_trans = exp(-toward * 160.0 * 0.004);
-		float powder = 1.0 - exp(-d * 2.0);
-		float h = (p.y - VBOTTOM) / (VTOP - VBOTTOM);
-		vec3 lit = sun_light * sun_trans * phase * 7.0 * mix(1.0, powder, 0.5) + ambient_top * mix(0.3, 0.75, h);
-		float sigma = d * 0.003;
-		float a = exp(-sigma * step_len);
-		light += trans * (1.0 - a) * lit;
-		trans *= a;
-		if (trans < 0.02) break;
+		t += step_len;
+		bool near = t < 18000.0;
+		float d = vdens(p, near);
+		if (d < 0.0) { t += step_len * 0.5; continue; } // empty column: stride a little (cheaper; more would chip the edges)
+		if (d <= 0.002) continue;
+		// Toward the light: six steps, longer and longer (≈3 km), cheap density.
+		float od = 0.0, sl = 60.0;
+		vec3 lp = p;
+		for (int k = 0; k < 6; k++) {
+			lp += ldir * sl;
+			od += max(vdens(lp, false), 0.0) * sl;
+			sl *= 1.75;
+		}
+		float h = clamp((p.y - VBOTTOM) / 3000.0, 0.0, 1.0);
+		// Multiple scattering (three orders, each spreading wider and reaching deeper) and the "powder" darkening of
+		// the cloud's sunlit face when seen from the shadow side.
+		float sun_e = 0.0, a = 1.0, b = 1.0;
+		for (int o = 0; o < 3; o++) {
+			sun_e += a * exp(-od * sigma_k * b) * mix(1.0, phase_f, b);
+			a *= 0.5; b *= 0.45;
+		}
+		float powder = mix(1.0, 1.0 - exp(-d * 6.0 - od * sigma_k * 1.5), 0.6 * (1.0 - max(lmu, 0.0)));
+		float hb = smoothstep(0.0, 0.45, (p.y - VBOTTOM) / 1800.0);
+		// shadows take the blue of the sky above (greyer low down, where the horizon and the ground light them)
+		vec3 amb = mix(mix(sky_side, sky_top, 0.55) * 0.75, sky_top * 1.35, hb) + ground * (1.0 - hb) * 0.7 + glow * (1.0 - hb) * 0.9;
+		vec3 s = light_col * sun_e * powder * 1.25 + amb * (0.55 + 0.45 * exp(-od * sigma_k * 0.3));
+		s = mix(s, haze, 1.0 - exp(-t / 52000.0)); // aerial perspective
+		// Far away a step is longer than a cloud edge is thick: soften there so samples do not flicker on and off.
+		float sigma = d * sigma_k * mix(1.0, 0.45, smoothstep(150.0, 450.0, step_len));
+		float ab = exp(-sigma * step_len);
+		light += trans * (1.0 - ab) * s;
+		trans *= ab;
+		if (trans < 0.015) break;
 	}
-	// Fade with distance toward the horizon (the slab would otherwise end in a hard line).
-	float fade = smoothstep(0.01, 0.1, dir.y);
+	float fade = smoothstep(0.005, 0.04, dir.y);
 	return vec4(light * fade, (1.0 - trans) * fade);
 }
 
@@ -418,11 +489,15 @@ void sky() {
 		if (!AT_CUBEMAP_PASS && up > -0.02) {
 			vec3 ambient = (horizon_color * 0.55 + zenith_color * 0.45) * sky_mood.rgb * (0.12 + 0.88 * day) * (1.0 - storm * 0.45);
 			ambient = mix(ambient, vec3(0.05, 0.06, 0.08) * (0.4 + 0.6 * sky_extra.w), night);
-			far = ct_far(dir, sun_dir, sun_col * (1.0 - night), ambient, col, underlight(dir), false);
+			far = ct_far(dir, sun_dir, sun_col * (1.0 - night), ambient, col, underlight(dir), false, quality < 2);
 		}
 		if (up > 0.0) {
 			// Main deck: volumetric (quarter-res pass) or the flat textured layer.
 			if (quality == 2 && !AT_CUBEMAP_PASS) {
+				// Far storms and the lens stand behind the volume (it grows its own towers).
+				col = col * (1.0 - far.a) + far.rgb;
+				disc *= 1.0 - far.a;
+				far = vec4(0.0);
 				vec4 v = HALF_RES_COLOR;
 				col = col * (1.0 - v.a) + v.rgb;
 				disc *= 1.0 - v.a;

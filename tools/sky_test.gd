@@ -18,7 +18,8 @@ func _initialize() -> void:
 	noise.frequency = 0.02
 	var tex := NoiseTexture2D.new()
 	tex.width = 256; tex.height = 256; tex.seamless = true; tex.noise = noise; tex.generate_mipmaps = true
-	mat.set_shader_parameter("cloud_tex", tex)
+	mat.set_shader_parameter("cloud_tex", tex if args.get("tex", "game") == "fast" else load("res://Game/Rewrite/CloudNoise3D.cs").new().Build2D(512))
+	mat.set_shader_parameter("cloud_noise", load("res://Game/Rewrite/CloudNoise3D.cs").new().Build(64))
 	mat.set_shader_parameter("quality", int(args.get("quality", "1")))
 	mat.set_shader_parameter("sun_style", int(args.get("sun", "0")))
 	var env := Environment.new()
@@ -58,6 +59,8 @@ func _initialize() -> void:
 	var LN: PackedStringArray = str(args.get("lens", "0,0,0,0")).split(",")
 	RenderingServer.global_shader_parameter_set("cloud_lens", Vector4(float(LN[0]), float(LN[1]), float(LN[2]), float(LN[3])))
 	var M: PackedStringArray = str(args.get("more", "0,0.6,100,1500")).split(",")
+	# wind=speed/8 (0.5 calm … 1.6+ strong), along +X
+	RenderingServer.global_shader_parameter_set("wind", Vector4(1, float(args.get("wind", "0.7")), 0, 0.5))
 	RenderingServer.global_shader_parameter_set("cloud_more", Vector4(float(M[0]), float(M[1]), float(M[2]), float(M[3])))
 
 func _process(_delta: float) -> bool:

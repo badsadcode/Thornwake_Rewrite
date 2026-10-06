@@ -87,6 +87,7 @@ public partial class Atmosphere : Node3D
         _sky.SetShaderParameter("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(_noise)));
         _sky.SetShaderParameter("cloud_period", CloudPeriod);
         _sky.SetShaderParameter("cloud_height", CloudHeight);
+        _sky.SetShaderParameter("cloud_noise", CloudNoise3D.Create()); // volumetric clouds: 3D billows and detail
         Environment = new Godot.Environment
         {
             BackgroundMode = Godot.Environment.BGMode.Sky,
@@ -737,7 +738,7 @@ public partial class Atmosphere : Node3D
         _shadow.TextureAlbedo = _shadowTexture;
     }
 
-    private static Image WithMipmaps(Image image)
+    internal static Image WithMipmaps(Image image)
     {
         var copy = (Image)image.Duplicate();
         copy.GenerateMipmaps();
@@ -748,7 +749,7 @@ public partial class Atmosphere : Node3D
     /// Tileable cloud noise: R = billowy base (4 octaves of periodic value noise from 4 to 32 cells), G = finer detail
     /// (8 to 64 cells). Deterministic; ~10 ms.
     /// </summary>
-    private static Image CloudNoise(int size, uint seed)
+    internal static Image CloudNoise(int size, uint seed)
     {
         var data = new byte[size * size * 4];
         float Lattice(int x, int y, int period, uint salt)

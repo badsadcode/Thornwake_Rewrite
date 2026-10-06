@@ -451,7 +451,7 @@ vec3 reflected_sky(vec3 dir, vec2 offs, vec3 base) { // offs: this water's xz mi
 	// are just what calm water mirrors at a glancing angle.
 	if (up < 0.5 && (cloud_types.x + cloud_types.y + cloud_lens.w) > 0.001) {
 		vec3 ambient = (sky_horizon * 0.55 + sky_zenith * 0.45) * 1.1;
-		vec4 far = ct_far(dir, normalize(sun_direction), sun_color, ambient, base, cloud_underlight(dir), true);
+		vec4 far = ct_far(dir, normalize(sun_direction), sun_color, ambient, base, cloud_underlight(dir), true, true);
 		col = col * (1.0 - far.a) + far.rgb;
 	}
 	return col;

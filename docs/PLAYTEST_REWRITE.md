@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 23 — real 3D clouds (Settings → Sky → Cloud quality: volumetric)
+* **Volumetric clouds rebuilt**: real billowing 3D shapes (lumps on lumps, no rows of balls), towers on warm afternoons
+  that grow up to ~7 km, flat bases, rounded tops.
+* **Colour from the light**: blue-grey shadows from the sky above, bright sunlit sides, glowing edges and silver
+  linings toward the sun, grey (not black) thick cores; golden, pink and violet at sunset and dusk; distant clouds fade
+  into the sky colour.
+* **Wind changes them**: in calm air crisp cauliflower edges; in wind softer, smudged edges drawn out along the wind,
+  and tall clouds lean downwind.
+* Still experimental: it is heavy on the GPU — please tell me the FPS with it on and off. "Layered" stays the default.
+
 ## New in build 22 — clouds that belong to the weather and the land
 * **Towering cumulus on warm afternoons**: around the horizon, clouds bubble up into towers over a few minutes, stand,
   then dissolve while new ones grow elsewhere — flat grey bases, bright cauliflower tops, silver edges toward the sun.

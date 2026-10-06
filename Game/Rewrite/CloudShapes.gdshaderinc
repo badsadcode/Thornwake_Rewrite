@@ -198,8 +198,8 @@ vec4 ct_lens(vec3 dir, vec3 sun_dir, vec3 sun_col, vec3 ambient, vec3 glow) {
 
 // All far cloud types along dir (premultiplied colour, opacity), haze toward `haze` with distance. `ambient` is the
 // sky light on clouds (day, night, storm), `glow` the sunset light on their tops.
-vec4 ct_far(vec3 dir, vec3 sun_dir, vec3 sun_col, vec3 ambient, vec3 haze, vec3 glow, bool cheap) {
-	float cum = cloud_types.x, storm = cloud_types.y;
+vec4 ct_far(vec3 dir, vec3 sun_dir, vec3 sun_col, vec3 ambient, vec3 haze, vec3 glow, bool cheap, bool towers) {
+	float cum = towers ? cloud_types.x : 0.0, storm = cloud_types.y;
 	vec4 acc = vec4(0.0);
 	if (dir.y < -0.02) return acc;
 	float base = cloud_more.w, t = cloud_more.z;

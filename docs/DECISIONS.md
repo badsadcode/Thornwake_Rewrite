@@ -623,6 +623,26 @@ scattering on canopies and plants, configurable.
   radiance cubemap every frame (twinkling, auroras and meteors used it since build 21).
 * Not done: fog banks off the sea (needs the mist system to move offshore), towers in the volumetric (quality 2) deck.
 
+## D56 — Round 18: volumetric clouds with real volume and colour (2026-10-06)
+* Tom on build 22: the far towers "look flat" and "made of spheres, very regular"; the volumetric clouds "lack detail,
+  contrast and colours"; clouds may be smudged or crisp depending on the wind ("we can fake it"). References: towering
+  cumulus with blue-grey shadows, sunset clouds lit pink.
+* Cause: the towers were cards facing the camera with ball-shaded puffs; the old volume was a slab from the 2D map with
+  one detail texture and a fixed thickness.
+* Now (Cloud quality = volumetric): a tiling 3D noise (CloudNoise3D.cs, 64³ RGBA, built at start-up: Perlin-Worley
+  billows + three Worley octaves, all periodic) carves the clouds; the 2D cloud map (same as the flat layer and the
+  ground shadows) only says where cloud is and how high it grows (thick parts higher; on cumulus afternoons the cores
+  tower to ~7 km), read through a 3D warp so sides bulge instead of standing as walls. Domes round off near the top.
+* Light: the sun (moon at night) traced through the cloud in six growing steps; three orders of multiple scattering so
+  thick cloud is grey, not black; forward/back phase mix (silver linings toward the sun); "powder" darkening of
+  sunlit faces seen from the shade; ambient from the zenith colour above (blue shadows) and from the horizon and the lit
+  ground below; sunset light (the existing underlight) on the bases; aerial perspective toward the sky colour.
+* Wind (faked, no simulation): wind speed blends extinction (calm: dense, crisp cauliflower edges) and the fine
+  erosion (wind: stretched 3.5× along the wind, softer — smudged, streaky), and towers lean downwind with height.
+* Cost: steps grow with distance (40–450 m), half resolution, empty columns stride; the far flat towers are off in this
+  mode (the volume grows its own), far storms and the lens stay behind it. The water still reflects the flat layers.
+* The other qualities are unchanged; volumetric stays "experimental" until Tom has seen its frame rate.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
