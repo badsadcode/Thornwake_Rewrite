@@ -130,7 +130,7 @@ float wave_factor(int i, float lambda, float depth, float sea, float lake, float
 // Wave groups: sets of higher waves drifting with the wind (SpectrumWaves.Group: same formula).
 float group(vec2 p, float t, vec2 wd) {
 	float n = noise(vec2(p.x * 0.0035 - wd.x * t * 0.012, p.y * 0.0035 - wd.y * t * 0.012));
-	return 0.55 + (0.5 + 0.45 * sea_state) * n * 1.4 - 0.2;
+	return 0.65 + (0.45 + 0.35 * sea_state) * n * 1.2 - 0.15;
 }
 
 // Spectrum Gerstner sum at rest position p. Geometry: only waves longer than min_lambda (what the mesh can carry);
@@ -388,6 +388,8 @@ void fragment() {
 	// Sea of Thieves palette: deep saturated blue-teal open sea, greyer and darker in storms.
 	scatter = mix(scatter, vec3(0.02, 0.15, 0.27), sea * 0.6);
 	scatter = mix(scatter, vec3(0.05, 0.09, 0.10), sea * smoothstep(0.55, 1.0, sea_state) * 0.55);
+	// Masses: troughs darker and denser, crests lighter (the contrast that makes big waves read as moving water).
+	scatter *= mix(1.0, mix(0.55, 1.45, smoothstep(-1.0, 1.0, crest)), sea);
 	scatter = mix(scatter, biome_tint.rgb * 0.35, biome_tint.a);
 	transmittance = mix(transmittance, transmittance * transmittance * biome_tint.rgb, biome_tint.a * 0.8);
 	// Stirred-up shallows (breakers, rapids) are cloudier.
@@ -490,7 +492,11 @@ void fragment() {
 	vec3 sky = mix(sky_horizon, sky_zenith, smoothstep(0.0, 0.6, ray_world.y));
 	sky = mix(sky, (sky_horizon + sky_zenith) * 0.5, sea_state * 0.5);
 	// Rough seas scatter the reflection: duller and darker, so the water's own colour carries the storm.
-	vec3 reflected = mix(sky, hit.rgb, hit.a) * reflection_strength * mix(1.0, 0.5, sea * smoothstep(0.4, 1.0, sea_state));
+	// Steep wave faces (breakers, storm crests) are rough, churned water: they reflect far less than a mirror, so the
+	// water's own colour and the light through it carry them (a mirror-bright face drew a white band on breakers).
+	float face_r = clamp(1.0 - n_world.y, 0.0, 0.5) / 0.5;
+	vec3 reflected = mix(sky, hit.rgb, hit.a) * reflection_strength * mix(1.0, 0.5, sea * smoothstep(0.4, 1.0, sea_state))
+		* mix(1.0, 0.45, face_r * sea) * mix(1.0, 0.8, sea);
 	// Light through thin crests (seas, breakers): looking toward the sun, the upper part of waves glows.
 	vec3 eye_world = normalize(CAMERA_POSITION_WORLD - world_position);
 	vec3 sun_flat = normalize(vec3(sun_direction.x, 0.0, sun_direction.z) + 1e-4);

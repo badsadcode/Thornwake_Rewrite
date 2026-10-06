@@ -148,7 +148,7 @@ func _hash01(i: int, salt: int) -> float:
 
 func _set_spectrum(mat: ShaderMaterial, s: float, wind_angle: float) -> void:
 	var n := 32
-	var hs := 0.4 + 6.8 * pow(s, 1.5)
+	var hs := 0.4 + 8.2 * pow(s, 1.5)
 	var lp := 9.0 + 62.0 * pow(s, 1.2)
 	var wp := sqrt(9.81 * TAU / lp)
 	var lmax := lp * 1.8
@@ -172,7 +172,7 @@ func _set_spectrum(mat: ShaderMaterial, s: float, wind_angle: float) -> void:
 	var sum_ka := 0.0
 	for i in n:
 		var wv: Vector4 = waves[i]
-		var a := minf(sqrt(2.0 * target * float(energy[i]) / total), 0.3 / wv.z)
+		var a := minf(sqrt(2.0 * target * float(energy[i]) / total), 0.34 / wv.z)
 		waves[i] = Vector4(wv.x, wv.y, wv.z, a); sum_ka += wv.z * a
 	var chop := 0.6 + 0.36 * s
 	var qp := PackedVector2Array()

@@ -31,7 +31,7 @@ public sealed class SpectrumWaves
     {
         double s = SeaState = Math.Clamp(seaState, 0, 1);
         WindAngle = windAngle;
-        Hs = .4 + 6.8 * Math.Pow(s, 1.5);
+        Hs = .4 + 8.2 * Math.Pow(s, 1.5);
         // Peak wavelength: short chop … ~70 m storm seas. Stylised: about twice as steep as real storm seas (whose
         // 200 m swells look like slow hills even at 8 m), in the spirit of Sea of Thieves.
         double lambdaPeak = 9 + 62 * Math.Pow(s, 1.2);
@@ -65,7 +65,7 @@ public sealed class SpectrumWaves
         {
             var w = Waves[i];
             double a = Math.Sqrt(2 * target * energy[i] / total);
-            a = Math.Min(a, .3 / w.K);
+            a = Math.Min(a, .34 / w.K);
             Waves[i] = (w.Dx, w.Dz, w.K, a);
         }
         double sumKA = 0;
@@ -78,7 +78,7 @@ public sealed class SpectrumWaves
     public static double Group(double x, double z, double t, double windX, double windZ, double seaState)
     {
         double n = Noise(x * .0035 - windX * t * .012, z * .0035 - windZ * t * .012);
-        return .55 + (.5 + .45 * seaState) * n * 1.4 - .2;
+        return .65 + (.45 + .35 * seaState) * n * 1.2 - .15;
     }
 
     /// <summary>Displacement of the water particle at rest position (x, z), each wave scaled by <paramref name="factor"/>(λ).</summary>
