@@ -18,9 +18,22 @@ public static class WaterShore
     /// </summary>
     public static (float Gx, float Gz, float Exposure) Coast(TerrainSampler sampler, double x, double z, double spacing = 1)
     {
-        double d = Math.Max(8, spacing * 2);
-        float gx = (float)((sampler.Height(x + d, z, d) - sampler.Height(x - d, z, d)) / (2 * d));
-        float gz = (float)((sampler.Height(x, z + d, d) - sampler.Height(x, z - d, d)) / (2 * d));
+        // How steeply the bed rises (over ~50 m) — but the direction "toward the shore" comes from the coastline's
+        // large-scale shape (the macro land field, smooth over kilometres). From the local bed it was noise on gentle
+        // shelves and flipped across every ridge and trough of the sea floor; the waves' sharp direction weights then
+        // broke the sea into triangle-edged patches of different waves (Tom, build 23).
+        double d = Math.Max(48, spacing * 3);
+        double bx = (sampler.Height(x + d, z, d) - sampler.Height(x - d, z, d)) / (2 * d);
+        double bz = (sampler.Height(x, z + d, d) - sampler.Height(x, z - d, d)) / (2 * d);
+        double slope = Math.Sqrt(bx * bx + bz * bz);
+        sampler.Plan.Macro.SampleGradient(WorldPlan.LandChannel, x, z, out double lx, out double lz);
+        double ll = Math.Sqrt(lx * lx + lz * lz);
+        // Where the coast's direction is unclear (far from land, or between shores), fall back to the bed's own.
+        double sure = DetMath.Smooth(ll / 1e-4 - .5);
+        double dx = ll > 0 ? lx / ll : 0, dz = ll > 0 ? lz / ll : 0;
+        double ox = slope > 0 ? bx / slope : 0, oz = slope > 0 ? bz / slope : 0;
+        double fx = dx * sure + ox * (1 - sure), fz = dz * sure + oz * (1 - sure), fl = Math.Sqrt(fx * fx + fz * fz);
+        float gx = fl > 1e-6 ? (float)(fx / fl * slope) : 0, gz = fl > 1e-6 ? (float)(fz / fl * slope) : 0;
         double open = 0;
         var macro = sampler.Plan.Macro;
         for (int a = 0; a < 8; a++)
@@ -29,7 +42,10 @@ public static class WaterShore
             foreach (double r in Radii)
             {
                 macro.Sample(x + cx * r, z + cz * r, WorldPlan.LandChannel, WorldPlan.HeightChannel, WorldPlan.MountainChannel, out double land, out _, out _);
-                if (land > 0) dirOpen *= r < 1000 ? 0 : r < 3000 ? .35 : .7;
+                // Smoothly by how far inland the probe lands (the macro land value is continuous): a yes/no test flipped
+                // between neighbouring vertices and switched waves on and off in triangle-sized steps (Tom, build 23).
+                double w = DetMath.Smooth((land + .12) / .24);
+                dirOpen *= 1 - w * (r < 1000 ? 1 : r < 3000 ? .65 : .3);
             }
             open += dirOpen;
         }
@@ -37,6 +53,18 @@ public static class WaterShore
     }
 
     private static readonly double[] Radii = { 600, 2000, 6000 };
+
+    /// <summary>
+    /// <see cref="Coast"/> for a sea point <paramref name="depth"/> metres deep, faded out toward 25 m (where it stops
+    /// being computed): beyond that the water counts as open and the bed as flat, with no jump at the cut-off.
+    /// </summary>
+    public static (float Gx, float Gz, float Exposure) CoastAt(TerrainSampler sampler, double x, double z, double depth, double spacing = 1)
+    {
+        if (depth >= 25) return (0, 0, 1);
+        var (gx, gz, e) = Coast(sampler, x, z, spacing);
+        float fade = (float)DetMath.Smooth((depth - 17) / 8);
+        return (gx * (1 - fade), gz * (1 - fade), e + (1 - e) * fade);
+    }
 
     /// <summary>Experimental amplitude factor of Gerstner wave <paramref name="i"/> (shader wave_factor).</summary>
     /// <param name="wide">Experimental 2: the hand-over to the shore waves starts at 19 m instead of 14 m.</param>

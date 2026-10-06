@@ -42,6 +42,9 @@ public sealed class GameClock
         return (hours, Math.Clamp(share, .05, .95));
     }
 
+    /// <summary>Set the day number (debug dumps, --day; the weather follows day and hour).</summary>
+    public void SetDay(int day) => Day = Math.Max(1, day);
+
     /// <summary>Set the clock to an hour of the day (Esc menu slider, --hour).</summary>
     public void SetHour(double hour, double latitude)
     {

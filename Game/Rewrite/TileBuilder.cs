@@ -418,7 +418,7 @@ public static class TileBuilder
                 if (kind < .25f)
                 {
                     fetch = 1e5f;
-                    if (depth < 25) (gx, gz, exposure) = WaterShore.Coast(sampler, x, z, spacing);
+                    (gx, gz, exposure) = WaterShore.CoastAt(sampler, x, z, depth, spacing);
                 }
                 else if (kind > .45f && kind < .75f && samples[k].WaterBody >= 0 && samples[k].WaterBody < plan.Hydrology.Lakes.Count)
                     fetch = (float)Math.Sqrt(plan.Hydrology.Lakes[samples[k].WaterBody].Area);

@@ -78,6 +78,14 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 24 — fixes from your build 23 screenshots, debug dump
+* **F9 debug dump**: writes a text file (and a screenshot) to the game's user folder → `debug/`, and opens the folder.
+  It has everything I need to rebuild exactly that place, time, weather and settings — send me the .txt and the .png.
+* **Black smudges in fog** (dawn, desert) fixed: the fog was not lit by the sky in shadow. Cloud shadows also fade at
+  sunrise and sunset and under overcast skies.
+* **Sea patterns** fixed (experimental 2): the triangle-edged patches on calm water and the odd wall in storms came
+  from the waves near coasts turning the wrong way round in places. The sea is continuous again.
+
 ## New in build 23 — real 3D clouds (Settings → Sky → Cloud quality: volumetric)
 * **Volumetric clouds rebuilt**: real billowing 3D shapes (lumps on lumps, no rows of balls), towers on warm afternoons
   that grow up to ~7 km, flat bases, rounded tops.

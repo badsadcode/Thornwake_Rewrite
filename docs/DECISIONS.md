@@ -643,6 +643,22 @@ scattering on canopies and plants, configurable.
   mode (the volume grows its own), far storms and the lens stay behind it. The water still reflects the flat layers.
 * The other qualities are unchanged; volumetric stays "experimental" until Tom has seen its frame rate.
 
+## D57 — Build 23 bugs: black fog, sea seams; F9 debug dump (2026-10-06)
+* Black smudges at dawn (Tom: gone with the fog off): Godot's volumetric fog ignores ambient light by default, so mist
+  in shadow rendered black. VolumetricFogAmbientInject = 1. Also: cloud shadows (a decal darkening the ground) now fade
+  out with a low sun (3°–18°) and under overcast — at dawn they made black patches stretched across the land.
+* Sea patterns (Tom: triangle-edged patches on calm water; a "wall" in a storm). Found by rendering each input as a
+  colour: all were smooth, but the crest height jumped. The coastal turn of the wave headings turned by angle the
+  short way round; where the shore lay straight behind the wind that angle flipped from +180° to −180°, so a line
+  across the sea separated waves turned left from waves turned right. Now the headings blend as vectors (shader and
+  SpectrumWaves.TurnToward, same formula). Also: the shore direction comes from the coastline's large shape (macro land
+  gradient) instead of the local bed slope (noise on gentle shelves), the slope is measured over ~50 m, exposure
+  changes smoothly with how far inland a probe lands, and the shore data fade out toward 25 m instead of stopping.
+* F9 writes user://debug/dump-<time>.txt + .png: version, GPU, world (type, seed, parameters), position, view, time,
+  weather, cloud types, wind, sea state, every setting, and a ready command line (--preset --seed --at --view --day
+  --hour --fly-height and all --set) that rebuilds the scene for a --world-shot (new --day arg). --dump does it after a
+  scripted shot.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

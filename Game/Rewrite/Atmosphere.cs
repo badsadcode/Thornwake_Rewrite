@@ -101,6 +101,8 @@ public partial class Atmosphere : Node3D
             SsrMaxSteps = 48, SsrFadeIn = .15f, SsrFadeOut = 2, SsrDepthTolerance = .3f,
             GlowBloom = .04f, GlowHdrThreshold = 1.05f, GlowBlendMode = Godot.Environment.GlowBlendModeEnum.Softlight,
             VolumetricFogDensity = .0035f, VolumetricFogLength = 180, VolumetricFogAnisotropy = .65f, VolumetricFogAlbedo = new Color("dfe6ea"),
+            // Fog also scatters the sky's ambient light (Godot's default 0 left mist in shadow black: Tom, build 23, desert at dawn).
+            VolumetricFogAmbientInject = 1,
             AdjustmentEnabled = true,
         };
         AddChild(new WorldEnvironment { Environment = Environment });
@@ -250,7 +252,7 @@ public partial class Atmosphere : Node3D
         _beams?.SetShaderParameter("intensity", GameSettings.LightBeams.F);
         if (_beamQuad != null) _beamQuad.Visible = GameSettings.LightBeams.Value > 0 && GameSettings.Clouds.Value > 0;
         _shadow.Visible = GameSettings.CloudShadows.Value > 0 && GameSettings.Clouds.Value > 0;
-        _shadow.Modulate = new Color(1, 1, 1, Math.Clamp(.62f * GameSettings.CloudShadows.F, 0, 1));
+        _shadowStrength = Math.Clamp(.62f * GameSettings.CloudShadows.F, 0, 1);
         UpdateCoverage();
         _water?.SetShaderParameter("ssr_steps", GameSettings.WaterReflections.Index switch { 0 => 0, 1 => 16, _ => 32 });
         if (vp != null)
@@ -391,7 +393,13 @@ public partial class Atmosphere : Node3D
         double dx = c0x + CloudPeriod * Math.Round((cameraLocal.X - c0x) / CloudPeriod);
         double dz = c0z + CloudPeriod * Math.Round((cameraLocal.Z - c0z) / CloudPeriod);
         _shadow.Position = new Vector3((float)dx, cameraLocal.Y, (float)dz);
+        // The decal darkens the ground's colour: right only while the sun is up and clear. At dawn and dusk the light
+        // is weak and from the side (and the projection stretches), and under overcast there is no direct sun left to
+        // block: fade the shadows there (Tom, build 23: black smudges at 04:40 in the desert).
+        float sunUp = Mathf.SmoothStep(3, 18, _sunElevation);
+        _shadow.Modulate = new Color(1, 1, 1, _shadowStrength * sunUp * (1 - _storm * .8f));
     }
+    private float _shadowStrength = .31f;
 
     private void UpdateWaves(double seaState)
     {
@@ -577,6 +585,21 @@ public partial class Atmosphere : Node3D
         float windAngle = Mathf.Atan2(Wind.Direction.Y, Wind.Direction.X);
         RenderingServer.GlobalShaderParameterSet("cloud_more", new Vector4(mackerel, windAngle, (float)_cloudTime, baseAbove));
     }
+    /// <summary>Everything the sky, weather and sea are doing now (F9 debug dump).</summary>
+    public string DebugInfo()
+    {
+        var c = System.Globalization.CultureInfo.InvariantCulture;
+        string F(double v) => v.ToString("0.###", c);
+        return $"Weather input: precipitation {F(Precipitation)}{(Raining ? " (H rain on)" : "")}, snow {Snowing}, thunder {Thunder}, clouds {F(WeatherClouds)}\n" +
+            $"Storm (eased) {F(_storm)}, cloud coverage {F(Coverage)}, wetness {F(_wetness)}, puddles {F(_puddles)}, mist {F(_mistAmount)}\n" +
+            $"Cloud types: cumulus {F(Cumulus)}, distant storm {F(DistantStorm)} ({(StormComing ? "coming" : "passed")}), mackerel {F(Mackerel)}, lens {F(_lens)}" +
+            (float.IsNaN(Peak.X) ? "" : $" (peak {F(Peak.X)}, {F(Peak.Y)}, {F(Peak.Z)}, relief {F(PeakRelief)} m)") + "\n" +
+            $"Wind: from {Wind.Compass()}, direction ({F(Wind.Direction.X)}, {F(Wind.Direction.Y)}), {F(Wind.Speed)} m/s, gust {F(Wind.Gust)}\n" +
+            $"Sun elevation {F(_sunElevation)}°, night {F(_night)}, daylight {F(_daylight)}, ocean time {F(OceanTime)} s\n" +
+            $"Sea: effective sea state {F(_wavesState)} (setting {F(GameSettings.SeaState.Value)} + storm), wave heading {F(_wavesAngle)} rad, " +
+            $"spectrum origin ({F(Spectrum.OriginX)}, {F(Spectrum.OriginZ)})";
+    }
+
     /// <summary>Screenshots with forced storms: light one far cell.</summary>
     public bool ShotFlash { set => _shotFlash = value; }
     private bool _shotFlash;

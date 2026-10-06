@@ -144,10 +144,15 @@ public sealed class SpectrumWaves
         return (Math.Cos(wa), Math.Sin(wa), Math.Cos(swell), Math.Sin(swell));
     }
 
+    /// <summary>
+    /// Turn heading <paramref name="a"/> a share <paramref name="k"/> of the way to <paramref name="target"/>, by
+    /// blending the two directions as vectors. (Turning the shorter way round by angle jumped by 2πk where the target
+    /// lay straight behind — a seam across the sea between waves turned left and waves turned right: Tom, build 23.)
+    /// </summary>
     private static double TurnToward(double a, double target, double k)
     {
-        double d = target - a;
-        return a + Math.Atan2(Math.Sin(d), Math.Cos(d)) * k;
+        double x = Math.Cos(a) * (1 - k) + Math.Cos(target) * k, z = Math.Sin(a) * (1 - k) + Math.Sin(target) * k;
+        return x * x + z * z < 1e-12 ? target : Math.Atan2(z, x);
     }
 
     /// <summary>0 in open water … 1 in the coastal shallows of seas (not lakes or steep rocky coasts) (shader coastal()).</summary>

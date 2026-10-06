@@ -136,6 +136,7 @@ public partial class WorldLab : Node3D
             if (arg == "--biome-tint") { _biomeTint = true; _streamer.ShowBiomes(true); }
             if (arg == "--gallery") _gallery = true;
             if (arg == "--open-map") _openMap = true;
+            if (arg.StartsWith("--day=")) _clock.SetDay(int.Parse(arg[6..], CultureInfo.InvariantCulture));
             if (arg.StartsWith("--hour=")) _pendingHour = double.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--menu=")) { _menu.Visible = true; _menu.GetChild<TabContainer>(0).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); }
         }
@@ -167,6 +168,7 @@ public partial class WorldLab : Node3D
         try { (profile, style) = _gen.Build(recipe); }
         catch (Exception error) { _status = "These world parameters are not valid: " + error.Message; return; }
         _custom = !_gen.IsPreset;
+        _worldArgs = $"--preset={recipe.Id} --seed={seed}" + (_custom ? " " + string.Join(" ", _gen.All.Select(g => $"--set=gen.{g.Key}={g.Value.ToString("R", CultureInfo.InvariantCulture)}")) : "");
         _overlay.Text = $"Generating {profile.Name}{(_custom ? " (custom)" : "")}, seed {seed}…\ncontinents → erosion → rivers and lakes";
         _overlay.Visible = true;
         _generationStarted = Time.GetTicksMsec();
@@ -511,7 +513,7 @@ public partial class WorldLab : Node3D
             if (GameSettings.WaterStyle.Index >= 1)
             {
                 bool sea = t.Water == WaterKind.Ocean;
-                var (gx, gz, exposure) = sea && depth < 25 ? WaterShore.Coast(_sampler, x, z) : (0f, 0f, 1f);
+                var (gx, gz, exposure) = sea ? WaterShore.CoastAt(_sampler, x, z, depth) : (0f, 0f, 1f);
                 double fetch = sea ? 1e5 : t.WaterBody >= 0 && t.WaterBody < _sampler.Plan.Hydrology.Lakes.Count ? Math.Sqrt(_sampler.Plan.Hydrology.Lakes[t.WaterBody].Area) : 0;
                 var wind = _atmosphere.Wind.Direction;
                 level += GameSettings.WaterStyle.Index == 2
@@ -755,6 +757,7 @@ public partial class WorldLab : Node3D
             case Key.T or Key.Y or Key.Bracketleft or Key.Bracketright or Key.Minus or Key.Equal: if (!_menu.Visible) _tools.DevKey(key.Keycode); break;
             case Key.H: if (!_menu.Visible) { _rain = !_rain; _status = _rain ? "Rain on (H stops it)." : "Rain stopped."; } break;
             case Key.K: if (!_menu.Visible) { _water.Clear(); _rain = false; _status = "Simulated water cleared."; } break;
+            case Key.F9: DebugDump(); break;
             case Key.F12: Screenshot(Path.Combine(OS.GetUserDataDir(), $"screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png")); break;
         }
     }
@@ -768,6 +771,58 @@ public partial class WorldLab : Node3D
     {
         _menu.Visible = open;
         Input.MouseMode = open ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
+    }
+
+    private string _worldArgs = "";
+
+    /// <summary>
+    /// F9 (Tom: "a debug dump … so you can recreate the same place, same situation"): a text file with the world, the
+    /// place, the view, time, weather, sea, every setting and the machine, plus a screenshot next to it and a ready
+    /// command line that rebuilds the same scene for a --world-shot. Saved in the user folder (opened afterwards).
+    /// </summary>
+    private void DebugDump()
+    {
+        if (_sampler == null) return;
+        var c = CultureInfo.InvariantCulture;
+        string F(double v) => v.ToString("0.###", c);
+        string dir = Path.Combine(OS.GetUserDataDir(), "debug");
+        Directory.CreateDirectory(dir);
+        string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", c), path = Path.Combine(dir, $"dump-{stamp}.txt");
+        var t = _sampler.Sample(PlayerX, PlayerZ);
+        var plan = _sampler.Plan;
+        var cam = _camera.GlobalPosition;
+        var (ba, bb, share) = plan.Biomes.Sample(PlayerX, PlayerZ);
+        var (temperature, rain) = plan.Climate.At(PlayerX, PlayerZ, Math.Max(0, t.Height - plan.Profile.SeaLevel));
+        double latitude = plan.Climate.Latitude(PlayerZ);
+        double fly = _player.Position.Y - Math.Max(t.Height, double.IsNaN(t.WaterLevel) ? t.Height : t.WaterLevel);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"Thornwake debug dump {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", c)}");
+        sb.AppendLine($"Version {ProjectSettings.GetSetting("application/config/version", "?")} · Godot {Engine.GetVersionInfo()["string"]} · {OS.GetName()} {OS.GetVersion()}");
+        sb.AppendLine($"GPU {RenderingServer.GetVideoAdapterName()} ({RenderingServer.GetVideoAdapterVendor()}, {RenderingServer.GetVideoAdapterApiVersion()}) · window {DisplayServer.WindowGetSize()} · FPS {Engine.GetFramesPerSecond():0}");
+        sb.AppendLine();
+        sb.AppendLine($"World: {plan.Profile.Name} (type {_recipes[Math.Max(0, _profileList.Selected)].Id}{(_custom ? ", custom parameters" : "")}), seed {plan.Manifest.Seed}, size {F(plan.Profile.WorldSize / 1000)} km, sea level {F(plan.Profile.SeaLevel)} m");
+        if (_custom) sb.AppendLine("World parameters: " + string.Join(", ", _gen.All.Select(g => $"{g.Key}={F(g.Value)}")));
+        sb.AppendLine($"Player: x {F(PlayerX)}, z {F(PlayerZ)}, y {F(_player.Position.Y)} ({F(fly)} m above ground/water) · {(_fly ? (_noclip ? "fly+noclip" : "fly") : _swimming ? "swimming" : "walking")}");
+        sb.AppendLine($"Ground {F(t.Height)} m · water {t.Water}{(double.IsNaN(t.WaterLevel) ? "" : $" surface {F(t.WaterLevel)} m, depth {F(t.WaterLevel - t.Height)} m")} · mountain {F(t.Mountain)}");
+        sb.AppendLine($"Biome {plan.Biomes.Pool[ba].Def.Name}{(bb != ba ? $" ({F(share * 100)} %, → {plan.Biomes.Pool[bb].Def.Name})" : "")} · {F(temperature)} °C, {F(rain)} mm/yr · latitude {F(latitude)}°");
+        sb.AppendLine($"Camera: yaw {F(_yaw)}, pitch {F(_pitch)}, zoom {F(_zoom)} · scene position {cam} · origin ({F(_originX)}, {F(_originZ)})");
+        sb.AppendLine($"Time: {_clock.Describe()} (hour {F(_clock.Hour)})");
+        sb.AppendLine(_atmosphere.DebugInfo());
+        if (_water.Sim is { Added: > 0 } sim) sb.AppendLine($"Water simulation: {F(sim.Volume())} m³ on the land, {sim.Sources.Count} spring(s){(_rain ? ", raining" : "")}");
+        sb.AppendLine();
+        sb.AppendLine("Settings:");
+        foreach (var g in GameSettings.All) sb.AppendLine($"  {g.Key} = {F(g.Value)}{(g.Options != null ? $" ({g.Options[Math.Clamp((int)g.Value, 0, g.Options.Length - 1)]})" : "")}");
+        sb.AppendLine();
+        // The same scene for the developer's screenshot tool (view: yaw, pitch, zoom; weather follows day + hour).
+        string settings = string.Join(" ", GameSettings.All.Select(g => $"--set={g.Key}={g.Value.ToString("R", c)}"));
+        sb.AppendLine("Reproduce:");
+        sb.AppendLine($"  {_worldArgs} --at={F(PlayerX)},{F(PlayerZ)} --view={F(_yaw)},{F(_pitch)},{F(_zoom)} --day={_clock.Day} --hour={F(_clock.Hour)}" +
+            (_fly ? $" --fly-height={F(fly)}" : "") + (_rain ? " --rain" : "") + $" {settings}");
+        File.WriteAllText(path, sb.ToString());
+        Screenshot(Path.Combine(dir, $"dump-{stamp}.png"));
+        _status = $"Debug dump saved: {path} (send me the .txt and .png)";
+        if (_shotPath == null) OS.ShellOpen(dir);
+        else GD.Print("DUMPED " + path);
     }
 
     private void Screenshot(string path)
@@ -820,7 +875,7 @@ public partial class WorldLab : Node3D
                    "F fly (Space/C up/down, Shift faster, Ctrl ×6) · N noclip · Esc menu: teleport, new world, time of day\n" +
                    "Water: hold G pour where you look · J spring · H rain · K clear\n" +
                    "Tools: 1 hands · 2 shovel · 3 pickaxe · 4 hoe · 5 terraform (dev) — left/right mouse use\n" +
-                   "M world map (right-click teleports) · F1 hide help · F2 hide HUD · F3 tile grid · F4 biome colours · F12 screenshot",
+                   "M world map (right-click teleports) · F1 hide help · F2 hide HUD · F3 tile grid · F4 biome colours · F9 debug dump · F12 screenshot",
             AnchorTop = 1, AnchorBottom = 1, OffsetTop = -122, OffsetLeft = 14, OffsetRight = 900,
         };
         _help.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .8f));
@@ -968,6 +1023,7 @@ public partial class WorldLab : Node3D
             {
                 GD.Print($"SCATTER grass={_streamer.GrassCommitted} rocks={_streamer.RocksCommitted} props={_streamer.PropsCommitted} farTrees={_streamer.FarTreesCommitted}");
                 Screenshot(_shotPath);
+                if (OS.GetCmdlineUserArgs().Contains("--dump")) DebugDump();
                 if (_extraYaws.Count == 0) GetTree().Quit(0);
                 else { _smokeStage = 3; _smokeTimer = 0; _yaw += _extraYaws[0]; }
             }

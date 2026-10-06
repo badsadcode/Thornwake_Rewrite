@@ -162,7 +162,12 @@ float coastal(float depth, vec2 grad, float lake) {
 	return (1.0 - lake) * smoothstep(20.0, 4.0, depth) * smoothstep(0.003, 0.012, s) * (1.0 - smoothstep(0.22, 0.45, s));
 }
 
-float turn_toward(float a, float target, float k) { float d = target - a; return a + atan(sin(d), cos(d)) * k; }
+// Turn heading a a share k of the way to target, blending directions as vectors (SpectrumWaves.TurnToward): by angle
+// it jumped by 2πk where the shore lay straight behind the wind — a seam across the sea (Tom, build 23).
+float turn_toward(float a, float target, float k) {
+	vec2 v = vec2(cos(a), sin(a)) * (1.0 - k) + vec2(cos(target), sin(target)) * k;
+	return dot(v, v) < 1e-10 ? target : atan(v.y, v.x);
+}
 
 // Local headings (SpectrumWaves.Headings): the wind turned by a slow regional field (lakes: their own valley winds),
 // and the swell's heading from far storms (independent of the wind). Toward the coast both turn toward the shore
@@ -526,7 +531,10 @@ void fragment() {
 		// Nyquist on the pixel footprint along the view, not just distance: low over the water a pixel spans metres,
 		// and shorter waves aliased into rings and bands of fine lines around the camera.
 		float min_lambda = max(dist / 300.0, footprint * 2.5);
-		gerstner(p, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, min_lambda, ocean_time, wave_heads, wave_norms, wave_coast, n, crest, jac);
+		// Interpolated headings shrink between vertices that differ: back to unit length (the weights are powers of the
+		// cosine, so a shorter vector would fade every wave there).
+		vec4 heads = vec4(normalize(wave_heads.xy + vec2(1e-5)), normalize(wave_heads.zw + vec2(1e-5)));
+		gerstner(p, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, min_lambda, ocean_time, heads, wave_norms, wave_coast, n, crest, jac);
 		if (sea > 0.5) shore_wave(p, px_depth, bed_grad, exposure, min_lambda, ocean_time, n, breaking, since, shore_k);
 	}
 	crest /= max(wave2_hs * 0.5, 0.01); // ~1 at a typical big crest
