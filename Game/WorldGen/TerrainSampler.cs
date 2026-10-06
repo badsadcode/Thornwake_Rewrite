@@ -175,6 +175,25 @@ public sealed class TerrainSampler
             for (int i = 0; i < count; i++) damp = Math.Min(damp, DetailDamp(reaches[i]));
             riverDamp = damp;
             double terrain = Math.Max(baseHeight + detail * damp, floor);
+            // Revision 13: a river crossing a bigger river's lower valley floor (a tributary running out over the main
+            // river's floodplain) flows at that floor, a little below it, instead of keeping its own level 2–3 m above
+            // the dry floodplain (Tom's desert confluence: water walls along both banks). The floor is what the other
+            // rivers carve here; the cap only bites where they carve (smooth weight) and never lifts a river.
+            if (_style.Revision >= 13 && count > 1)
+            {
+                Span<double> deltas = stackalloc double[16];
+                for (int i = 0; i < count; i++) deltas[i] = Profile(reaches[i], terrain, rise, minWavelength * .5, out _, out _) - terrain;
+                for (int i = 0; i < count; i++)
+                {
+                    double other = 0; int deepest = -1;
+                    for (int j = 0; j < count; j++) if (j != i && deltas[j] < other) { other = deltas[j]; deepest = j; }
+                    if (deepest < 0) continue;
+                    // Never below the other river's own water (inside its channel the "floor" is its bed).
+                    double cap = Math.Max(_p.SeaLevel + terrain + other - .3, reaches[deepest].Surface), excess = reaches[i].Surface - cap;
+                    if (excess <= 0) continue;
+                    reaches[i] = reaches[i] with { Surface = reaches[i].Surface - excess * DetMath.Smooth(-other / .5) };
+                }
+            }
             double carve = 0, raise = 0, wetInside = 0;
             for (int i = 0; i < count; i++)
             {

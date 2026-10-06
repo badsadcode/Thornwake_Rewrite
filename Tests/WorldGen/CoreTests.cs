@@ -48,6 +48,7 @@ internal static class CoreTests
         T.Run("Build 9 terrain still reproducible", () => Fingerprints(false, "terrain-build9.json", build9: true), filter);
         T.Run("Build 12 terrain still reproducible", () => Fingerprints(false, "terrain-build12.json", build12: true), filter);
         T.Run("Build 13 terrain still reproducible", () => Fingerprints(false, "terrain-build13.json", build13: true), filter);
+        T.Run("Build 19 terrain still reproducible", () => Fingerprints(false, "terrain-build19.json", build19: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -304,7 +305,7 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
         string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
@@ -326,6 +327,8 @@ internal static class CoreTests
                 // Build 13 (commit b53e852, v0.9.13): terrain revision 11, before biome landforms.
                 // Revision 11 terrain depends on the biome map, so it is built from the build 13 biome catalogue.
                 if (build13) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 11 }, biomes: Build13Biomes.Value));
+                // Build 19 (commit 0a104f9, v0.9.19): terrain revision 12, before tributaries follow a bigger river's floodplain.
+                if (build19) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 12 }, biomes: Build19Biomes.Value));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];
@@ -352,6 +355,9 @@ internal static class CoreTests
         foreach (var c in cases) T.Check(expected.Single(e => e.Case == c.Case).Hash == c.Hash, "fingerprint " + c.Case);
     }
 
+    private static readonly Lazy<BiomeRegistry> Build19Biomes = new(() => BiomeRegistry.Parse(
+        File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/biomes-build19.json")),
+        File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/asset_sets-build19.json"))));
     private static readonly Lazy<BiomeRegistry> Build13Biomes = new(() => BiomeRegistry.Parse(
         File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/biomes-build13.json")),
         File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/asset_sets-build13.json"))));

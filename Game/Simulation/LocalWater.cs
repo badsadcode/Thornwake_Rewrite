@@ -465,8 +465,10 @@ public sealed class LocalWater
                 int nx = x + a, nz = z + b;
                 if (nx < 0 || nz < 0 || nx >= Side || nz >= Side) continue;
                 int n = Index(nx, nz);
-                // Simulated water, or dug ground below this water (the terrain tiles leave both to this view).
-                if (!_sink[n] && (_depth[n] > .008f || _edited[n] && _floor[n] < level)) best = Math.Min(best, MathF.Sqrt(a * a + b * b));
+                // Simulated water, or dug ground below this water (the terrain tiles leave both to this view). On ground
+                // nobody dug, only real standing water (3 cm) counts: a rain film along a bank made this view redraw
+                // the river's edge without its current (clear patches ending in straight chunk edges).
+                if (!_sink[n] && (_depth[n] > (_edited[n] ? .008f : .03f) || _edited[n] && _floor[n] < level)) best = Math.Min(best, MathF.Sqrt(a * a + b * b));
             }
         return best;
     }

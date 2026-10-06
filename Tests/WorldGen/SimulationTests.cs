@@ -17,6 +17,8 @@ internal static class SimulationTests
         T.Run("Water: real terrain ground and sinks", RealTerrain, filter);
         T.Run("Water: step cost with rain over the window", Cost, filter);
         T.Run("Water: puddles soak away and leave wet ground", Soak, filter);
+        T.Run("Water: a rain film on a bank does not redraw the river beside it", RainBank, filter);
+        T.Run("Rivers: no river perched above the dry ground beside it (revision 13 confluences)", Perched, filter);
         T.Run("Edits: dig and raise the generated ground", Edits, filter);
         T.Run("Edits: water follows a dug channel", DugChannel, filter);
         T.Run("Edits: a channel dug from a river fills from it", RiverFed, filter);
@@ -92,6 +94,79 @@ internal static class SimulationTests
         for (int i = 0; i < 2400; i++) w.Step(1 / 60f);
         Balance(w, "sink");
         T.Check(w.Absorbed > 14, $"river absorbed the runoff ({w.Absorbed:0.00} of 15 m³)");
+    }
+
+    private static void Perched()
+    {
+        // Tom's desert confluence (Mountain kingdoms 42): two side rivers crossing the main river's floodplain kept their
+        // levels 2–3 m above the dry floor beside them (walls of water). Count dry points within 2 m of river water
+        // whose ground lies more than 0.5 m below that water.
+        foreach (int revision in new[] { 12, 13 })
+        {
+            var b = CoreTests.Sampler("mountainous", 42);
+            var s = new TerrainSampler(new WorldPlan(b.Plan.Manifest, style: b.Plan.Style with { Revision = revision }));
+            const double step = 2;
+            int nx = 81, nz = 71, river = 0, perched = 0;
+            var lvl = new double[nx * nz]; var ground = new double[nx * nz];
+            for (int j = 0; j < nz; j++)
+                for (int i = 0; i < nx; i++)
+                {
+                    var t = s.Sample(45280 + i * step, 136060 + j * step);
+                    lvl[j * nx + i] = t.Water == WaterKind.River ? t.WaterLevel : double.NaN; ground[j * nx + i] = t.Height;
+                    if (t.Water == WaterKind.River) river++;
+                }
+            for (int j = 1; j < nz - 1; j++)
+                for (int i = 1; i < nx - 1; i++)
+                {
+                    int k = j * nx + i;
+                    if (!double.IsNaN(lvl[k])) continue;
+                    double highest = double.NegativeInfinity;
+                    foreach (int n in new[] { k - 1, k + 1, k - nx, k + nx }) if (!double.IsNaN(lvl[n])) highest = Math.Max(highest, lvl[n]);
+                    if (ground[k] < highest - .5) perched++;
+                }
+            T.Note($"revision {revision}: {river} river points, {perched} dry points beside the water lying > 0.5 m below it");
+            if (revision >= 13) T.Check(perched <= river / 100, "no river perched above the dry ground beside it");
+        }
+    }
+
+    private static void RainBank()
+    {
+        // A gentle slope to a river bank at x = 20, the river beyond (surface 99.5 m, 10 cm below the bank top). Rain wets the bank with a thin film; the view must
+        // not redraw the river's own cells over it (it did, without the river's current: clear patches ending in a
+        // chunk's straight edge, Tom's build 19 screenshot).
+        int nc = LocalWater.ChunkCells;
+        var w = new LocalWater((cx, cz) =>
+        {
+            var floor = new float[nc * nc]; var sink = new bool[nc * nc]; var level = new float[nc * nc];
+            for (int j = 0; j < nc; j++)
+                for (int i = 0; i < nc; i++)
+                {
+                    double x = (cx * nc + i + .5) * LocalWater.Cell, z = (cz * nc + j + .5) * LocalWater.Cell;
+                    int k = j * nc + i;
+                    floor[k] = (float)(x < 20 ? 100 - x * .02 : 99.2 - (x - 20) * .02); // a 0.4 m bank down to the river bed
+                    sink[k] = x > 20; level[k] = x > 20 ? 99.5f : float.NaN;
+                }
+            return new ChunkGround(floor, sink, level, new bool[nc * nc]); // nothing dug
+        }) { RainRate = 5e-5f };
+        w.Follow(10, 0);
+        for (int i = 0; i < 900; i++) w.Step(1 / 60f);
+        int n = nc + 1, redrawn = 0, film = 0;
+        var floorV = new float[n * n]; var depthV = new float[n * n]; var vx = new float[n * n]; var vz = new float[n * n]; var wetV = new float[n * n];
+        for (long cx = -2; cx <= 3; cx++)
+            for (long cz = -2; cz <= 2; cz++)
+            {
+                if (!w.ChunkView(cx, cz, floorV, depthV, vx, vz, wetV)) continue;
+                for (int j = 0; j < nc; j++)
+                    for (int i = 0; i < nc; i++)
+                    {
+                        double x = (cx * nc + i + .5) * LocalWater.Cell;
+                        int k = j * n + i;
+                        if (x > 20.5 && depthV[k] > .008f) redrawn++; // the view draws cells deeper than 8 mm
+                        if (x < 19 && depthV[k] > .008f) film++;
+                    }
+            }
+        T.Note($"rain on the bank: {film} wet cells drawn on the bank, {redrawn} river cells redrawn");
+        T.Check(redrawn == 0, "a thin rain film does not make the view redraw the river");
     }
 
     private static void Window()
