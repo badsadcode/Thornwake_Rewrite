@@ -56,7 +56,10 @@ public partial class WorldStreamer : Node3D
     {
         _terrain = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Terrain.gdshader") };
         _terrain.SetShaderParameter("rock_tex", RockTextureArray.Get());
-        _water = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Water.gdshader") };
+        _water = new ShaderMaterial { Shader = WaterShader() };
+        // Water style (classic / experimental): one material, the shader swapped in place, so every uniform the
+        // atmosphere sets (waves, sun, reflections) carries over and existing tiles switch at once.
+        GameSettings.Changed += s => { if (s == GameSettings.WaterStyle) _water.Shader = WaterShader(); };
         _trees = new TreeCatalog();
         _farTree = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/FarTree.gdshader") };
         _grass = Visuals.GrassMesh();
@@ -79,6 +82,9 @@ public partial class WorldStreamer : Node3D
     }
 
     public ShaderMaterial WaterMaterial => _water;
+
+    private static Shader WaterShader() => GD.Load<Shader>(GameSettings.WaterStyle.Index == 1
+        ? "res://Game/Rewrite/WaterExperimental.gdshader" : "res://Game/Rewrite/Water.gdshader");
 
     public void ShowGrid(bool show) => _terrain.SetShaderParameter("show_grid", show);
     public void ShowBiomes(bool show) => _terrain.SetShaderParameter("biome_debug", show ? 1f : 0f);
@@ -247,7 +253,13 @@ public partial class WorldStreamer : Node3D
             arrays[(int)Mesh.ArrayType.Normal] = Enumerable.Repeat(Vector3.Up, water.Vertices.Length).ToArray();
             arrays[(int)Mesh.ArrayType.Index] = water.Indices;
             var mesh = new ArrayMesh();
-            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            if (data.WaterShore is { } shore && shore.Length == water.Vertices.Length * 4)
+            {
+                arrays[(int)Mesh.ArrayType.Custom0] = shore;
+                mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays, null, null,
+                    (Mesh.ArrayFormat)((long)Mesh.ArrayCustomFormat.RgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift));
+            }
+            else mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
             root.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _water, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         }
         if (data.CollisionFaces != null)

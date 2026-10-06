@@ -59,6 +59,9 @@ public sealed class TileData
     public List<Transform3D> Reeds { get; set; } = new();
     /// <summary>Per terrain vertex: biome water tint (packed rgb, strength), copied onto the water sheet.</summary>
     public Vector2[]? WaterTint { get; set; }
+    /// <summary>Per water vertex (CUSTOM0 of the water sheet, used by the experimental water): uphill bed gradient
+    /// x, z (toward the shore; length = slope), exposure 0 sheltered … 1 open coast, fetch (m: lake size; sea 1e5).</summary>
+    public float[]? WaterShore { get; set; }
     /// <summary>Cliff dressing cards: kind 0 hanging grass, 1 roots (GroundCover.CliffDressing).</summary>
     public List<RockInstance> Drapes { get; set; } = new();
     /// <summary>Wetland plants (PlaceholderPlants.WetPlant kinds), tile-local.</summary>
@@ -241,6 +244,7 @@ public static class TileBuilder
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };
         BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater);
+        if (data.Water is { } builtWater) data.WaterShore = ShoreData(sampler, builtWater.Vertices, builtWater.Colors, heights, s2, samples, x0, z0, spacing, Side);
         var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2, biome1, props, biome3);
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
         if (key.Level == 0 && config.Grass > 0) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);
@@ -360,7 +364,10 @@ public static class TileBuilder
                 if (double.IsNaN(level)) level = data.Vertices[k].Y - 1; // unused vertex: keep it under ground
                 double ground = heights[(j + 1) * s2 + i + 1];
                 vertices[k] = new Vector3(i * (float)spacing, (float)level, j * (float)spacing);
-                colors[k] = new Color((float)DetMath.Clamp((level - ground) / 20, 0, 1), (float)kind, (float)plume, 1);
+                // Alpha: 1 on water vertices, fading over the sheet's extension under the beach (the experimental water
+                // fades its swash film out there instead of ending on the sheet's triangle edges; classic ignores it).
+                float edge = wet[k] ? 1 : under[k] == int.MaxValue ? 1 : Math.Max(0, 1 - under[k] / 3f);
+                colors[k] = new Color((float)DetMath.Clamp((level - ground) / 20, 0, 1), (float)kind, (float)plume, edge);
             }
         var indices = new List<int>();
         bool Covered(int k) => wet[k] || under[k] != int.MaxValue;
@@ -376,6 +383,37 @@ public static class TileBuilder
                 indices.Add(b); indices.Add(d); indices.Add(c);
             }
         data.Water = (vertices, colors, Flow(samples, vertices, wet, spacing, n), indices.ToArray());
+    }
+
+    /// <summary>
+    /// Shore data for the experimental water (a pure function of world position, so neighbouring tiles agree):
+    /// near the coast (sea under ~25 m deep) the bed's uphill gradient over ~8 m+ and how open the sea is around
+    /// (macro land in 8 directions at 0.6, 2 and 6 km: a straight coast is fully exposed, a bay sheltered); for lakes,
+    /// their size (fetch).
+    /// </summary>
+    private static float[] ShoreData(TerrainSampler sampler, Vector3[] water, Color[] colors, double[] heights, int s2, TerrainSample[] samples,
+        double x0, double z0, double spacing, int n)
+    {
+        var result = new float[n * n * 4];
+        var plan = sampler.Plan;
+        for (int j = 0; j < n; j++)
+            for (int i = 0; i < n; i++)
+            {
+                int k = j * n + i;
+                float kind = colors[k].G;
+                double x = x0 + i * spacing, z = z0 + j * spacing;
+                double depth = water[k].Y - heights[(j + 1) * s2 + i + 1];
+                float gx = 0, gz = 0, exposure = 1, fetch = 0;
+                if (kind < .25f)
+                {
+                    fetch = 1e5f;
+                    if (depth < 25) (gx, gz, exposure) = WaterShore.Coast(sampler, x, z, spacing);
+                }
+                else if (kind > .45f && kind < .75f && samples[k].WaterBody >= 0 && samples[k].WaterBody < plan.Hydrology.Lakes.Count)
+                    fetch = (float)Math.Sqrt(plan.Hydrology.Lakes[samples[k].WaterBody].Area);
+                result[k * 4] = gx; result[k * 4 + 1] = gz; result[k * 4 + 2] = exposure; result[k * 4 + 3] = fetch;
+            }
+        return result;
     }
 
     private static double SeaLevel(TerrainSample[] samples)

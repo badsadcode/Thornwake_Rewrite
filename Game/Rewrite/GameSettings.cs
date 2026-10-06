@@ -103,6 +103,10 @@ public static class GameSettings
         "Soft contact shadows in creases and under objects."));
     public static readonly Setting Ssil = Add(new("fx.ssil", "Lighting and effects", "Bounce light (SSIL)", 0, 1, 1, 0,
         "Screen-space indirect light: colour bleeding from sunlit surfaces. Costs some frame time."));
+    public static readonly Setting WaterStyle = Add(new("fx.water_style", "Lighting and effects", "Water", 0, 1, 1, 0,
+        "Classic: the water of build 14 (kept as it is). Experimental: rolling swells, waves that turn toward the shore and " +
+        "break in the shallows, calmer bays, smooth per-pixel wave lighting, richer foam, flow-driven rivers. Switch any time to compare.",
+        options: new[] { "classic", "experimental" }));
     public static readonly Setting WaterReflections = Add(new("fx.water_reflections", "Lighting and effects", "Water reflections", 0, 2, 1, 2,
         "Screen-space reflections of the landscape on water (sky only when off).", options: new[] { "sky only", "medium", "high" }));
     public static readonly Setting Ssr = Add(new("fx.ssr", "Lighting and effects", "Screen-space reflections (other surfaces)", 0, 1, 1, 0,

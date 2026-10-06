@@ -445,7 +445,18 @@ public partial class WorldLab : Node3D
         float simulated = _water.Sim?.SurfaceAt(x, z) ?? float.NaN;
         if (!float.IsNaN(simulated) && (double.IsNaN(level) || simulated > level)) { level = simulated; if (kind == WaterKind.None) kind = WaterKind.River; }
         if (t.Water is WaterKind.Ocean or WaterKind.Lake && !double.IsNaN(level))
-            level += _atmosphere.Waves.Height(x, z, _atmosphere.OceanTime, level - t.Height, t.Water == WaterKind.Lake);
+        {
+            // Waves in the shader's scene-local coordinates (the float origin), so the surface matches what is drawn.
+            double lx = x - _originX, lz = z - _originZ, depth = level - t.Height, time = _atmosphere.OceanTime;
+            if (GameSettings.WaterStyle.Index == 1)
+            {
+                bool sea = t.Water == WaterKind.Ocean;
+                var (gx, gz, exposure) = sea && depth < 25 ? WaterShore.Coast(_sampler, x, z) : (0f, 0f, 1f);
+                double fetch = sea ? 1e5 : t.WaterBody >= 0 && t.WaterBody < _sampler.Plan.Hydrology.Lakes.Count ? Math.Sqrt(_sampler.Plan.Hydrology.Lakes[t.WaterBody].Area) : 0;
+                level += WaterShore.Height(_atmosphere.Waves, lx, lz, time, Math.Min(depth, 20), sea, !sea, fetch, exposure, gx, gz);
+            }
+            else level += _atmosphere.Waves.Height(lx, lz, time, depth, t.Water == WaterKind.Lake);
+        }
         return level;
     }
 

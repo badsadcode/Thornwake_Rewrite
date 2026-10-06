@@ -139,6 +139,38 @@ if (pointArg != null)
     return 0;
 }
 
+// Lakes of a test profile: --lakes=<profile id>,<seed> → centre, area, level.
+string? lakesArg = args.FirstOrDefault(a => a.StartsWith("--lakes="))?[8..];
+if (lakesArg != null)
+{
+    var v = lakesArg.Split(',');
+    var s = CoreTests.Sampler(v[0], int.Parse(v[1]));
+    foreach (var lake in s.Plan.Hydrology.Lakes.OrderByDescending(l => l.Area).Take(8))
+        Console.WriteLine($"lake {lake.Id}: centre {lake.Center.X:0},{lake.Center.Z:0} area {lake.Area / 1e6:0.00} km² level {lake.Level:0.0}");
+    return 0;
+}
+
+// Steep river stretches (rapids) of a test profile: --steep-rivers=<profile id>,<seed>.
+string? steepArg = args.FirstOrDefault(a => a.StartsWith("--steep-rivers="))?[15..];
+if (steepArg != null)
+{
+    var v = steepArg.Split(',');
+    var s = CoreTests.Sampler(v[0], int.Parse(v[1]));
+    var found = new List<(double Slope, double X, double Z, double Width)>();
+    foreach (var r in s.Plan.Hydrology.Reaches)
+        for (int i = 0; i + 1 < r.Points.Length; i++)
+        {
+            int j = i; while (j + 1 < r.Points.Length && r.Along[j] - r.Along[i] < 150) j++;
+            double run = r.Along[j] - r.Along[i];
+            if (run < 100 || r.Width[i] < 8) continue;
+            found.Add(((r.Surface[i] - r.Surface[j]) / run, r.Points[i].X, r.Points[i].Z, r.Width[i]));
+        }
+    double band = v.Length > 2 ? double.Parse(v[2]) / 100 : 1;
+    foreach (var f in found.Where(f => f.Slope <= band).OrderByDescending(f => f.Slope).Where((f, k) => k % 7 == 0).Take(6))
+        Console.WriteLine($"slope {f.Slope * 100:0.0} % at {f.X:0},{f.Z:0} width {f.Width:0} m");
+    return 0;
+}
+
 // Height profile: --profile=<type id>,<km>,<seed>,<x>,<z>,<dx>,<dz>,<n> → n heights from (x,z) in steps (dx,dz).
 string? profileArg = args.FirstOrDefault(a => a.StartsWith("--profile="))?[10..];
 if (profileArg != null)
