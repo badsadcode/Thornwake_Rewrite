@@ -104,10 +104,10 @@ public static class WaterShore
         const double SRef = .03; // reference bed slope: the phase depends on depth only (see the shader)
         double d = Math.Max(depth, .05);
         double theta = -(2 * omega * Math.Sqrt(d) / (SRef * Math.Sqrt(G)) + omega * t) + 3 * Noise(lx * .004, lz * .004)
-            + (wide ? 1.5 * Noise(lx * .013 + 7.7, lz * .013 + 7.7) : 0); // experimental 2: crest segments run ahead or lag
+            + (wide ? 1.5 * Noise(lx * .013 + 7.7, lz * .013 + 7.7) + .9 * Noise(lx * .035 + 2.3, lz * .035 + 2.3) : 0); // experimental 2: crest segments run ahead or lag
         double h0 = (.12 + 1.15 * seaState) * exposure * (.75 + .5 * Noise(lx * .01 + t * .02, lz * .01 + t * .02));
         // Experimental 2: some crest segments break sooner than others (an irregular foam line).
-        double h = h0 * Math.Pow(10 / Math.Max(d, .4), .25), limit = (wide ? .62 + .3 * Noise(lx * .02 + 3.1, lz * .02 + 3.1) : .75) * d + .03;
+        double h = h0 * Math.Pow(10 / Math.Max(d, .4), .25), limit = (wide ? .62 + .2 * Noise(lx * .02 + 3.1, lz * .02 + 3.1) + .12 * Noise(lx * .06 + 9.4, lz * .06 + 9.4) : .75) * d + .03;
         double breaking = Smoothstep(.55, .95, h / limit) * active;
         h = Math.Min(h, limit);
         double amp = .5 * h * active;

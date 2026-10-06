@@ -49,6 +49,7 @@ varying float vertex_depth;
 varying float body;
 varying vec3 world_position;
 varying vec2 rest_xz;     // undisplaced world position (waves are evaluated here per pixel)
+varying float rest_level; // undisplaced water level (bed depth per pixel is measured from here)
 varying vec2 current;
 varying float plume;
 varying vec4 biome_tint;
@@ -231,14 +232,14 @@ vec3 shore_wave(vec2 p, float depth, vec2 grad, float expo, float min_lambda, fl
 	// where the slope varies — blocky patches on coarse tiles.) The wavenumber is the phase's true gradient.
 	const float S_REF = 0.03;
 	float theta = -(2.0 * omega * sqrt(d) / (S_REF * sqrt(G)) + omega * t) + 3.0 * noise(p * 0.004) // slow wobble along the coast
-		+ 1.5 * noise(p * 0.013 + 7.7); // crest segments run ahead or lag
+		+ 1.5 * noise(p * 0.013 + 7.7) + 0.9 * noise(p * 0.035 + 2.3); // crest segments run ahead or lag
 	float k = omega / sqrt(G * d) * clamp(s / S_REF, 0.15, 4.0);
 	k_out = k;
 	float lambda = PI2 / k;
 	// Height: open-coast swell, shoaling (Green's law) until it breaks at ~0.75 d.
 	float h0 = (0.12 + 1.15 * sea_state) * expo * (0.75 + 0.5 * noise(p * 0.01 + t * 0.02));
 	float h = h0 * pow(10.0 / max(d, 0.4), 0.25);
-	float limit = (0.62 + 0.3 * noise(p * 0.02 + 3.1)) * d + 0.03; // some crest segments break sooner (irregular foam line)
+	float limit = (0.62 + 0.2 * noise(p * 0.02 + 3.1) + 0.12 * noise(p * 0.06 + 9.4)) * d + 0.03; // some crest segments break sooner (irregular foam line)
 	breaking = smoothstep(0.55, 0.95, h / limit) * active;
 	h = min(h, limit);
 	float amp = 0.5 * h * active * smoothstep(min_lambda, min_lambda * 2.0, lambda);
@@ -266,6 +267,7 @@ void vertex() {
 	fetch = CUSTOM0.w;
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	rest_xz = world_position.xz;
+	rest_level = world_position.y;
 	float sea = is_sea(body), lake = is_lake(body);
 	vec3 offset = vec3(0.0);
 	wave_heads = vec4(1.0, 0.0, 1.0, 0.0); wave_norms = vec3(1.0);
@@ -384,7 +386,9 @@ void fragment() {
 	// bed is near and seen; the vertex depth elsewhere.
 	vec3 behind0 = view_from_depth(SCREEN_UV, texture(depth_tex, SCREEN_UV).r, INV_PROJECTION_MATRIX);
 	vec3 bed0 = (INV_VIEW_MATRIX * vec4(behind0, 1.0)).xyz;
-	float bed_depth = max(0.0, (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).y - bed0.y);
+	// From the rest level: the displaced surface fed the breaker's own height back into its phase, and the coarse
+	// mesh's straight edges showed as a zigzag foam line.
+	float bed_depth = max(0.0, rest_level - bed0.y);
 	// Close range only: further out the bed behind is a coarse, faceted terrain tile, and the shore-wave phase is so
 	// sensitive to depth that every facet showed as a blocky patch.
 	float use_px = smoothstep(18.0, 10.0, bed_depth) * (1.0 - smoothstep(25.0, 55.0, dist)) * step(length(behind0), 3000.0);
