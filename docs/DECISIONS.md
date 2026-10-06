@@ -585,6 +585,23 @@ scattering on canopies and plants, configurable.
   exp of an unbounded argument gave NaN sheets in testing — squares and clamped arguments now.)
 * Sky ideas for the next round: docs/SKY_IDEAS.md.
 
+## D54 — Round 16: water reflects the real sky; twilight, rainbows, halos, auroras, shooting stars (2026-10-06)
+* Tom: "that reflection is a bit boring, bland when there's a lot". The water reflected a two-colour gradient. Now
+  experimental 2 traces each reflected ray to the sky's own cirrus and main cloud layers (same texture, heights and
+  wind drift as Sky.gdshader, shared by Atmosphere.ShareClouds; cloud_state/cloud_layers globals), lit by the sun and
+  the day/night sky colours, smeared on rough water. SSR still wins where it hits the landscape.
+* Twilight from the true sun (new global sun_true; the directional light stops at −4°): a red-orange band toward the
+  sun (9° … −7°), the Belt of Venus with Earth's shadow rising under it on the opposite side (4° … −7°), the blue hour
+  (2° … −11°), and clouds lit from below (orange → pink, toward the sun most), in the sky and in the water's reflection
+  (same formulas). No sun disc below the horizon.
+* Optics: rainbows opposite the sun as rain clears (rain_wetness, storm easing, sun 0–42°): primary 40.5–42.5°,
+  secondary 50.5–53.5° reversed, Alexander's dark band, brighter inside; 22° halo and sun dogs where cirrus actually
+  is (sun dogs move out as the sun rises, red toward the sun).
+* Night: auroras (global aurora: latitude > ~50° fading in to 68°, dark clear nights, activity per night; curtains toward
+  the pole, two patchy folded curtains with irregular rays, green lower edge into violet); shooting stars (a chance every
+  6 s, under a second each).
+* GLSL lesson (also fixed in the existing Milky Way band): pow(x, 2.0) for x < 0 is undefined → squares.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -33,3 +33,6 @@ and lightning, biome sky moods, and a night sky with stars, moon phases and plan
 
 Suggested start: 1 (twilight) and 2 (rainbows, halos), which are cheap and spectacular, then 3 (cloud types and distant
 storms), then 4 (the Milky Way and auroras).
+
+**Status (build 21):** 1 (twilight), 2 (rainbows, halos, sun dogs) and the night part of 4 (auroras, shooting stars) are in;
+the water reflects the real clouds. Next: 3 (cloud types and distant storms), the Milky Way, then the cloud experiments.

@@ -78,7 +78,7 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
-## New in build 21 — rivers that flow (Noor's river notes, water style experimental 2)
+## New in build 21 — rivers that flow, a richer sky (water style experimental 2)
 * **Current across the river**: slow and lazy along the shallow edges, fastest down the deep middle.
 * **River surface**: ripples moving downstream at different speeds; in fast, shallow water **standing waves** — crests
   across the river that stay in place while the water rushes through them, with white tops; small churning ripples
@@ -90,7 +90,16 @@ milestone M6), caves.
   (in fast water).
 * **River mouths**: the river's current carries on into the lake or sea, fanning out and fading; where waves run into
   it the water gets choppy and foamy (much more in rough seas).
-* Sky ideas for next: SKY_IDEAS.txt.
+* **Water reflects the real sky** (experimental 2): the clouds overhead appear in lakes and the sea (sharp on calm
+  water, smeared when rough) instead of a plain colour gradient.
+* **Twilight**: a red-orange glow along the horizon at sunset, the pink band opposite the sun with Earth's blue
+  shadow rising under it, the deep blue hour, and clouds lit gold and pink from below after the sun has set — in the
+  sky and in the water.
+* **Rainbows** after rain when the sun breaks through (with the faint second bow), **halos and sun dogs** around the
+  sun in thin high cloud.
+* **Night**: **auroras** in the far north and south on clear dark nights (some nights strong, some quiet), and the
+  occasional **shooting star**.
+* More sky ideas: SKY_IDEAS.txt.
 
 ## New in build 20 — rivers meeting rivers
 * **No more walls of water where side rivers join a big river**: a side river crossing the big river's valley floor now
