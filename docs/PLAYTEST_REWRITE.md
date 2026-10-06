@@ -78,6 +78,20 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 21 — rivers that flow (Noor's river notes, water style experimental 2)
+* **Current across the river**: slow and lazy along the shallow edges, fastest down the deep middle.
+* **River surface**: ripples moving downstream at different speeds; in fast, shallow water **standing waves** — crests
+  across the river that stay in place while the water rushes through them, with white tops; small churning ripples
+  and bits of foam along moving edges; **wide rivers get wind waves**, choppier where the wind blows against the
+  current.
+* **Wakes**: wade or swim and you leave a wake — a V behind you when you move, a wake trailing downstream when you
+  stand in a current; it drifts with the water instead of spreading in perfect circles.
+* **Rocks in rivers** push the water up in front of them and leave a V-shaped wake with eddies and foam behind them
+  (in fast water).
+* **River mouths**: the river's current carries on into the lake or sea, fanning out and fading; where waves run into
+  it the water gets choppy and foamy (much more in rough seas).
+* Sky ideas for next: SKY_IDEAS.txt.
+
 ## New in build 20 — rivers meeting rivers
 * **No more walls of water where side rivers join a big river**: a side river crossing the big river's valley floor now
   flows at that floor and drops down to it, instead of standing 2–3 m above the dry ground beside it (terrain revision

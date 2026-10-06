@@ -45,3 +45,7 @@ Agree with all of it. Two notes:
    eddies, foam when the current is strong.
 
 Suggested start: 1 + 2 (biggest visible change, cheap), then 4 (makes the water react to the player), 3, 5.
+
+**Status (build 21):** all five steps are in, in their first version (experimental 2 water). Later: creatures, boats
+and floating debris as wake sources (Wakes.Update takes any source), wakes on the CPU surface for boats, rocks placed
+in rapids on purpose, bend asymmetry (outer bank deeper).

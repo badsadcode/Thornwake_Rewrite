@@ -564,6 +564,27 @@ scattering on canopies and plants, configurable.
   plumes and wave–current meeting zones at mouths, wakes from relative velocity (player/creatures/boats/debris), baked
   obstacle wakes.
 
+## D53 — Round 15: rivers as moving water (RIVERS_PLAN steps 1–5, experimental 2) (2026-10-06)
+* Current across the channel (TileBuilder.Flow): speed × (depth / deepest water within ~6 m)^⅔ (Manning), 0.2 … 1 —
+  lazy shallow margins, fastest over the deep line.
+* River surface: the flow pair plus a broad layer at ~0.55 × the current (different speeds and scales); standing waves
+  in fast shallow water (crests across the flow at λ = 2π v²/g that stay put, white tops, in patches); bank turbulence on
+  shallow moving margins; wind waves on wide rivers (fetch = the reach's mean width, CUSTOM0.w), steeper against the
+  current.
+* Mouths: the current continues into the lake/sea down the gradient of the river-water share (plume), speed
+  1.1 × plume^0.7, joined to the river by the smoothing; the shader blends flow ripples in by current strength, and
+  where the wind sea or the incoming shore waves run against it adds confused chop and broken foam (stronger in rough
+  seas). Foam drifts with the plume.
+* Wakes (Wakes.cs): the player leaves disturbances (every ~0.15 s; strength from the speed relative to the water =
+  velocity − local current); the shader draws each as a ring of ripples spreading at ~0.85 m/s while carried by the
+  current and fading over ~4 s, plus a splash: a moving swimmer leaves a V, someone standing in a river a downstream V,
+  without any fluid simulation. 24 points, only looked for within 45 m of the source.
+* Rocks in rivers (TileBuilder.ObstacleWakes): for river vertices around rocks whose base is under the water, the sea's
+  shore-data slots hold (downstream, across, radius); the shader draws a pressure bulge upstream, V-wake arms (narrower
+  in fast water), a turbulent core with alternating eddies, and foam in fast water. (GLSL: pow(x, 2.0) with x < 0 and
+  exp of an unbounded argument gave NaN sheets in testing — squares and clamped arguments now.)
+* Sky ideas for the next round: docs/SKY_IDEAS.md.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
