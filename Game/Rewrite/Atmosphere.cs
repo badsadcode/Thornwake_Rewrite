@@ -47,6 +47,22 @@ public partial class Atmosphere : Node3D
     /// <summary>Thunderstorm: lightning flashes.</summary>
     public bool Thunder { get; set; }
     private float Precip => Raining ? Math.Max(Precipitation, .7f) : Precipitation;
+    /// <summary>Cloud types from the weather (round 17, <see cref="Weather"/>): afternoon towers 0..1.</summary>
+    public float Cumulus { get; set; }
+    /// <summary>A thunderstorm on the horizon 0..1; upwind when it is coming, downwind when it has passed.</summary>
+    public float DistantStorm { get; set; }
+    public bool StormComing { get; set; } = true;
+    /// <summary>Mackerel sky (a front on its way) 0..1.</summary>
+    public float Mackerel { get; set; }
+    /// <summary>The highest peak around the player (world x, height, z; NaN x: none) and how far it rises above the land around (m).</summary>
+    public Vector3 Peak { get; set; } = new(float.NaN, 0, 0);
+    public float PeakRelief { get; set; }
+    /// <summary>The world's sea level (m): flat cloud bases sit at a fixed height above it.</summary>
+    public float SeaLevel { get; set; }
+    /// <summary>Screenshots: cloud types forced to (cumulus, distant storm, mackerel, lens); null = from the weather.</summary>
+    public Vector4? ForceClouds { get; set; }
+    /// <summary>Screenshots: the distant storms' bearing (rad); NaN = from the wind.</summary>
+    public float ForceStormAzimuth { get; set; } = float.NaN;
     private float _storm; // 0 fair … 1 full storm, eased
     /// <summary>The waves the water shader draws (same parameters and clock), for swimming and boats.</summary>
     public OceanWaves Waves { get; } = new();
@@ -335,6 +351,7 @@ public partial class Atmosphere : Node3D
             (float)WrapTo(cameraWorldX + _highX, highPeriod), (float)WrapTo(cameraWorldZ + _highZ, highPeriod),
             (float)WrapTo(cameraWorldX + _lowX, lowPeriod), (float)WrapTo(cameraWorldZ + _lowZ, lowPeriod)));
         UpdateMood(delta);
+        UpdateCloudTypes(delta, sky, cameraWorldX, cameraWorldZ, cameraLocal);
         UpdateMist(delta, hour, originX, originZ);
         RenderingServer.GlobalShaderParameterSet("sun_dir_world", toSun);
         // The real sun, also below the horizon (the light stops at −4°): twilight colours follow it (Sky.gdshader).
@@ -501,6 +518,67 @@ public partial class Atmosphere : Node3D
             if (t > .5) _flashTime = -1;
         }
     }
+
+    // ---- cloud types (round 17): globals for CloudShapes.gdshaderinc
+    private double _cloudTime;
+    private float _stormAzimuth = float.NaN, _lens, _farFlashTime = -1;
+    private double _nextFarFlash = 3;
+    private int _farFlashCell;
+
+    private void UpdateCloudTypes(double delta, SkyState sky, double cameraWorldX, double cameraWorldZ, Vector3 cameraLocal)
+    {
+        _cloudTime = (_cloudTime + delta) % 100000;
+        var force = ForceClouds;
+        float cumulus = force?.X ?? Cumulus * (1 - _storm);
+        float storm = force?.Y ?? DistantStorm * (1 - _storm * .9f);
+        float mackerel = force?.Z ?? Mackerel * (1 - _storm);
+        // Storms come from upwind and leave downwind; the bearing follows the wind slowly.
+        var toward = StormComing ? -Wind.Direction : Wind.Direction;
+        float az = Mathf.Atan2(toward.Y, toward.X);
+        _stormAzimuth = float.IsNaN(_stormAzimuth) || force != null ? az : Mathf.LerpAngle(_stormAzimuth, az, (float)Math.Min(1, delta / 120));
+        if (!float.IsNaN(ForceStormAzimuth)) _stormAzimuth = ForceStormAzimuth;
+        // Lightning inside the far cells: a flicker every few seconds in one of the three (visible mostly at night).
+        float flash = 0;
+        if (storm > .3f)
+        {
+            _nextFarFlash -= delta;
+            if (_nextFarFlash <= 0) { _farFlashTime = 0; _nextFarFlash = 1.5 + _flashRandom.NextDouble() * 7 / storm; _farFlashCell = _flashRandom.Next(3); }
+            if (_farFlashTime >= 0)
+            {
+                _farFlashTime += (float)delta;
+                float t = _farFlashTime;
+                flash = t < .08f ? .95f : t < .14f ? .15f : t < .24f ? .8f : t < .5f ? .8f * (1 - (t - .24f) / .26f) : 0;
+                if (t > .5f) _farFlashTime = -1;
+            }
+        }
+        if (force != null && force.Value.Y > .5f && _shotFlash) flash = .9f; // screenshots: show one
+        RenderingServer.GlobalShaderParameterSet("cloud_types", new Vector4(cumulus, storm, _stormAzimuth, _farFlashCell + Math.Min(flash, .99f)));
+        // Lenticulars: a peak well above the land around, a strong steady wind, dry stable air; not every day.
+        float lensTarget = 0;
+        if (!float.IsNaN(Peak.X))
+        {
+            double dayGate = Fract(Math.Sin(Math.Floor((double)sky.Day) * 45.164 + 3.1) * 43758.5453) < .65 ? 1 : 0;
+            lensTarget = (float)(DetMathSmooth((PeakRelief - 450) / 900) * DetMathSmooth((Wind.Speed - 6.5) / 4.5) * dayGate)
+                * Mathf.Clamp(1 - Precip * 2.5f, 0, 1) * (1 - _storm);
+        }
+        if (force != null) lensTarget = float.IsNaN(Peak.X) ? 0 : force.Value.W;
+        _lens = force != null ? lensTarget : Mathf.MoveToward(_lens, lensTarget, (float)delta / 40);
+        var lens = Vector4.Zero;
+        if (_lens > 0 && !float.IsNaN(Peak.X))
+        {
+            // Over the peak, a little downwind, ~1.6 km above its top.
+            double lx = Peak.X + Wind.Direction.X * 1500 - cameraWorldX, lz = Peak.Z + Wind.Direction.Y * 1500 - cameraWorldZ;
+            lens = new Vector4((float)lx, Peak.Y + 1600 - cameraLocal.Y, (float)lz, _lens);
+        }
+        RenderingServer.GlobalShaderParameterSet("cloud_lens", lens);
+        // Flat cloud bases ~1.5 km above the sea (never closer than 300 m above the camera on high ground).
+        float baseAbove = Mathf.Clamp(SeaLevel + 1500 - cameraLocal.Y, 300, 2200);
+        float windAngle = Mathf.Atan2(Wind.Direction.Y, Wind.Direction.X);
+        RenderingServer.GlobalShaderParameterSet("cloud_more", new Vector4(mackerel, windAngle, (float)_cloudTime, baseAbove));
+    }
+    /// <summary>Screenshots with forced storms: light one far cell.</summary>
+    public bool ShotFlash { set => _shotFlash = value; }
+    private bool _shotFlash;
 
     private DirectionalLight3D CreateFlash()
     {

@@ -125,6 +125,11 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--wet=")) { var v = arg[6..].Split(','); _shotWet = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture)); }
             // --dig=x0,z0,x1,z1,depth: a straight trench (negative depth raises a bank) for screenshots and tests
             if (arg.StartsWith("--dig=")) { var v = arg[6..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray(); _shotDigs.Add((v[0], v[1], v[2], v[3], v[4])); }
+            // --clouds=cumulus,storm,mackerel,lens: force the cloud types (0..1 each) for screenshots; --storm-at=deg: the
+            // distant storms' bearing (0 = +X, 90 = +Z); --cloud-flash: lightning in a distant cell
+            if (arg.StartsWith("--clouds=")) { var v = arg[9..].Split(',').Select(t => float.Parse(t, CultureInfo.InvariantCulture)).ToArray(); _atmosphere.ForceClouds = new Vector4(v[0], v[1], v[2], v[3]); }
+            if (arg.StartsWith("--storm-at=")) _atmosphere.ForceStormAzimuth = Mathf.DegToRad(float.Parse(arg[11..], CultureInfo.InvariantCulture));
+            if (arg == "--cloud-flash") _atmosphere.ShotFlash = true;
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--tool=")) _tools.Select(int.Parse(arg[7..], CultureInfo.InvariantCulture));
             if (arg == "--grid") { _gridShown = true; _streamer.ShowGrid(true); }
@@ -336,6 +341,42 @@ public partial class WorldLab : Node3D
         _atmosphere.Snowing = _weather.Snow;
         _atmosphere.Thunder = _weather.Thunder;
         _atmosphere.WeatherClouds = _weather.Cloudiness;
+        _atmosphere.Cumulus = _weather.Cumulus;
+        _atmosphere.DistantStorm = _weather.DistantStorm;
+        _atmosphere.StormComing = _weather.StormComing;
+        _atmosphere.Mackerel = _weather.Mackerel;
+    }
+
+    private double _peakTimer, _peakX = double.NaN, _peakZ;
+
+    /// <summary>
+    /// The highest peak within ~18 km and how far it rises above the land around the player (lenticular clouds stand
+    /// over it in strong wind): a coarse ring search every few seconds, at once after a jump.
+    /// </summary>
+    private void UpdatePeak(double delta)
+    {
+        if (_sampler == null) return;
+        _peakTimer -= delta;
+        bool jumped = double.IsNaN(_peakX) || Math.Abs(PlayerX - _peakX) + Math.Abs(PlayerZ - _peakZ) > 1500;
+        if (_peakTimer > 0 && !jumped) return;
+        _peakTimer = 4; _peakX = PlayerX; _peakZ = PlayerZ;
+        double bestH = double.MinValue, bx = 0, bz = 0, sum = 0;
+        int n = 0;
+        // (from 5 km out: a lens right overhead is just a grey ceiling; one over a peak a few kilometres away shows its shape)
+        foreach (double r in new[] { 5000.0, 8000.0, 12000.0, 17000.0, 23000.0 })
+            for (int i = 0; i < 20; i++)
+            {
+                double a = i * Math.Tau / 20 + r * 1e-4;
+                double x = PlayerX + Math.Cos(a) * r, z = PlayerZ + Math.Sin(a) * r;
+                double h = _sampler.Height(x, z, 200);
+                sum += h; n++;
+                if (h > bestH) { bestH = h; bx = x; bz = z; }
+            }
+        double around = Math.Max(sum / n, _sampler.Plan.Profile.SeaLevel);
+        _atmosphere.Peak = new Vector3((float)bx, (float)bestH, (float)bz);
+        _atmosphere.PeakRelief = (float)(bestH - around);
+        _atmosphere.SeaLevel = (float)_sampler.Plan.Profile.SeaLevel;
+        if (_shotPath != null) GD.Print($"Peak {bx:0} {bestH:0} {bz:0}, {Math.Sqrt((bx - PlayerX) * (bx - PlayerX) + (bz - PlayerZ) * (bz - PlayerZ)):0} m away, relief {bestH - around:0} m");
     }
 
     /// <summary>A biome's sky mood: tint (rgb) and haze (a) — neutral when the biome sets none.</summary>
@@ -443,6 +484,7 @@ public partial class WorldLab : Node3D
         if (_pendingHour is { } setHour) { _clock.SetHour(setHour, latitude); _pendingHour = null; }
         var sky = _clock.Advance(delta, latitude, run: _shotPath == null);
         UpdateWeather(delta, sky);
+        UpdatePeak(delta);
         if (!_timeSlider.HasFocus()) _timeSlider.SetValueNoSignal(sky.Hour);
         _atmosphere.Update(delta, sky, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
         if (GameSettings.GroundFog.Index > 0)

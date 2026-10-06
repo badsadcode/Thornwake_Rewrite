@@ -22,6 +22,10 @@ uniform float cloud_height = 1600.0;
 uniform int quality = 1;
 uniform float sun_glare = 1.0; // disc and halo strength (setting)
 uniform int sun_style = 0;     // 0 classic (build 11), 1 natural (colour, size and glow change with the sun's height)
+// Cloud types from the weather and the land (round 17): afternoon towers, distant thunderstorms, lenticulars, mackerel
+// sky — shared with the water's reflection. Its cloud_more.z is also the sky's clock (twinkling, auroras, meteors):
+// the built-in TIME would make Godot re-bake the sky's radiance map every frame.
+#include "res://Game/Rewrite/CloudShapes.gdshaderinc"
 // xy: world position of the camera plus the wind drift, wrapped to the cloud period (m); z: coverage 0..1;
 // w: storm 0..1 (rain: grey, darker sky and clouds).
 global uniform vec4 cloud_state;
@@ -188,7 +192,7 @@ vec3 night_sky_colour(vec3 dir, vec3 sun_dir, float night) {
 			float d = length(g - c);
 			float size = layer == 0 ? 0.3 : 0.24;
 			float b = smoothstep(size, 0.0, d) * pow(fract(h * 37.0), layer == 0 ? 2.0 : 4.0) * (layer == 0 ? 2.2 : 0.9);
-			b *= 0.75 + 0.25 * sin(TIME * (2.0 + 5.0 * nhash(key)) + h * 40.0); // twinkle
+			b *= 0.75 + 0.25 * sin(cloud_more.z * (2.0 + 5.0 * nhash(key)) + h * 40.0); // twinkle
 			vec3 tint = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.85, 0.7), nhash(key + 11.0));
 			col += tint * b;
 		}
@@ -371,7 +375,7 @@ void sky() {
 		float night = 1.0 - smoothstep(-0.16, 0.04, sun_dir.y);
 		if (!AT_CUBEMAP_PASS) {
 			col += night_sky_colour(dir, sun_dir, night);
-			col += (aurora_light(dir, TIME) + meteor(dir, TIME) * sky_extra.z) * night;
+			col += (aurora_light(dir, cloud_more.z) + meteor(dir, cloud_more.z) * sky_extra.z) * night;
 		}
 		vec3 disc = sun_col * smoothstep(0.99955, 0.9998, mu) * 6.0 * sun_glare;
 		if (sun_style == 1) {
@@ -394,6 +398,29 @@ void sky() {
 					+ underlight(dir) * 1.1; // high cirrus stays lit longest after sunset
 				col = mix(col, c, d);
 			}
+			// Mackerel sky before a front (4.5 km): rows of small cloudlets, lit like the main deck.
+			if (layered && cloud_more.x > 0.001) {
+				float t = 4500.0 / max(up, 0.015);
+				vec2 xz = cloud_state.xy * 0.75 + dir.xz * t;
+				float d = ct_mackerel(xz, t, up) * smoothstep(0.06, 0.3, up) * (1.0 - storm);
+				if (d > 0.0) {
+					vec4 c = layer(dir, xz, 4500.0, d, sun_dir, sun_col, day, mu, d * 0.5, 1.04);
+					col = mix(col, c.rgb, d);
+					disc *= 1.0 - d;
+				}
+			}
+		}
+		// Far clouds on and over the horizon: afternoon towers, distant thunderstorms, a lens over the mountains.
+		// Drawn after the flat layers: low in the sky they stand in front of the flat deck (whose clouds there are
+		// thin slivers, which would slice the towers into bands); higher up the deck covers them.
+		vec4 far = vec4(0.0);
+		float deck_d = 0.0;
+		if (!AT_CUBEMAP_PASS && up > -0.02) {
+			vec3 ambient = (horizon_color * 0.55 + zenith_color * 0.45) * sky_mood.rgb * (0.12 + 0.88 * day) * (1.0 - storm * 0.45);
+			ambient = mix(ambient, vec3(0.05, 0.06, 0.08) * (0.4 + 0.6 * sky_extra.w), night);
+			far = ct_far(dir, sun_dir, sun_col * (1.0 - night), ambient, col, underlight(dir), false);
+		}
+		if (up > 0.0) {
 			// Main deck: volumetric (quarter-res pass) or the flat textured layer.
 			if (quality == 2 && !AT_CUBEMAP_PASS) {
 				vec4 v = HALF_RES_COLOR;
@@ -406,7 +433,10 @@ void sky() {
 				if (d > 0.0) {
 					float toward = cloud_density(xz + normalize(sun_dir.xz + vec2(1e-4)) * 260.0, coverage);
 					vec4 c = layer(dir, xz, cloud_height, d, sun_dir, sun_col, day, mu, toward, 1.0);
+					// Cumulus afternoons: thick clouds show flat, darker bases from below.
+					c.rgb *= 1.0 - cloud_types.x * 0.32 * smoothstep(0.55, 1.0, d) * smoothstep(0.1, 0.5, up);
 					d *= smoothstep(0.015, 0.12, up);
+					deck_d = d;
 					col = mix(col, c.rgb, d);
 					disc *= 1.0 - d;
 				}
@@ -424,6 +454,11 @@ void sky() {
 				}
 			}
 		}
+		if (far.a > 0.0) {
+			float k = 1.0 - deck_d * smoothstep(0.08, 0.25, up);
+			col = col * (1.0 - far.a * k) + far.rgb * k;
+			disc *= 1.0 - far.a * k;
+		}
 		if (!AT_CUBEMAP_PASS) {
 			// Halo and sun dogs where thin cirrus crosses 22° from the sun (the sun must be up and not hidden).
 			col += halo(dir, sun_dir, sun_col, cirrus_here * 2.2 * smoothstep(-0.02, 0.05, sun_dir.y) * (1.0 - storm));
@@ -439,6 +474,12 @@ void sky() {
 		col = mix(col, horizon_color * mix(vec3(1.0), sky_mood.rgb, 0.8) * day, sky_mood.a * 0.7 * (1.0 - smoothstep(0.0, 0.6, up)));
 		// Storm: a low grey overcast.
 		vec3 overcast = mix(vec3(0.42, 0.45, 0.48), vec3(0.3, 0.32, 0.35), smoothstep(0.0, 0.5, up)) * (0.35 + 0.65 * day);
+		// Steady rain: the low grey deck has slow darker swells and paler thin parts (not a flat paint).
+		if (storm > 0.01 && up > 0.0 && !AT_CUBEMAP_PASS) {
+			vec2 xz = cloud_layers.zw + dir.xz * (700.0 / max(up, 0.03));
+			float deck = texture(cloud_tex, xz / (cloud_period * 0.7)).r * 0.65 + texture(cloud_tex, xz / (cloud_period * 0.22) + 0.4).g * 0.35;
+			overcast *= mix(1.0, 0.8 + 0.4 * deck, smoothstep(0.02, 0.2, up));
+		}
 		col = mix(col, overcast, storm * 0.85);
 		disc *= 1.0 - storm;
 		COLOR = col + disc;
