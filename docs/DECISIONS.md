@@ -454,6 +454,20 @@ scattering on canopies and plants, configurable.
 * tools/water_test.gd: a beach/lake/river harness rendering either style in seconds (a full world render takes ~5 min).
 * Details and comparison spots: docs/WATER_EXPERIMENT.md.
 
+## D48 — Water experimental 2: spectrum ocean and layered foam (2026-10-06)
+* Tom found the max sea state "big but calm" and sent Sea of Thieves references. A third opt-in style (classic and
+  experimental untouched): SpectrumWaves.cs — 32 Gerstner waves from a JONSWAP spectrum (γ 3.3), Hs 0.4 + 6.8 s^1.5 m,
+  peak wavelength 9 + 62 s^1.2 m (stylised: ~2× real storm steepness; physically scaled 200 m storm swells read as slow
+  hills), spread 0.3–0.85 rad widening for short waves and storms, swell at +0.85 rad, per-wave kA ≤ 0.3, Σqk A =
+  0.6–0.96. Wave groups: a slow noise multiplies all amplitudes (same formula on the CPU). Uniforms waves2/wave2_qp/
+  wave2_hs; Atmosphere resends all wave sets when the water style changes.
+* Whitecaps: with 32 mixed waves the Jacobian rarely folds, so high-and-steep crests are the main source; plus wind
+  lanes (anisotropic noise along the wind), storm foam fields, folds.
+* Foam layers: surface foam (cover × max(body, cell-edge lace, speckle); strong foam solid with holes, weak foam lace),
+  milky under-foam (wider, tints the water body and hides the bed), shading; anisotropic along drift; lace fades to its
+  average beyond ~35–160 m. A debug_foam uniform shows amount (red) and foam (green) for tuning.
+* Shore-wave hand-over from 19 m (experimental: 14 m), WaterShore `wide` variants for the CPU mirror.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

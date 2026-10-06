@@ -2,8 +2,8 @@
 
 An experimental alternative to the water. **Nothing replaces the current water.**
 
-* Switch: **Esc → Settings → Lighting and effects → Water**: `classic` (default, the water of build 14) or
-  `experimental`. It switches instantly, so you can flip back and forth on the same spot.
+* Switch: **Esc → Settings → Lighting and effects → Water**: `classic` (default, the water of build 14),
+  `experimental` or `experimental 2`. It switches instantly, so you can flip back and forth on the same spot.
 * Backup point: commit `3511e4b` (docs/SNAPSHOTS.md, "Water baseline"). `Game/Rewrite/Water.gdshader` and
   `OceanWaves.cs` are unchanged since then; the experiment lives in `Game/Rewrite/WaterExperimental.gdshader` plus
   extra per-vertex data that the classic shader ignores. To drop the experiment entirely: delete that shader and
@@ -49,6 +49,29 @@ fades. Not a painted outline.
 ### Light
 Fresnel reflection (look down: see into the water; look across: reflections), a tight sun glint moving over the
 waves, light through thin crests and breakers, stirred-up shallows cloudier.
+
+## Experimental 2 (round 10: Sea of Thieves references)
+Everything from experimental (shore waves, lakes, rivers, biome tint), with a livelier ocean:
+* **Many sharp waves**: 32 waves drawn from an ocean wave spectrum (JONSWAP) instead of 12 — overlapping crests in
+  mixed directions, a swell from another heading. Storms spread the directions much wider (a confused sea) and are
+  stylised steep: ~7 m seas about twice as steep as a real storm, so the maximum sea state is dramatic, not just big.
+* **Wave sets**: groups of higher waves drift through with the wind.
+* **Look**: deep saturated blue-teal, bright turquoise light through thin wave tops (strongest toward the sun, still
+  visible from the side), dense sun sparkle; storms grey and darken the sea and dull the reflections.
+* **White water**: high steep crests break white, foam spills down the backs of waves, long foam lanes run along the
+  wind in strong winds, drifting old-foam fields in storms, milky aerated crests.
+* **Foam detail** (layered): fresh foam is dense; as it thins it becomes a lace of thin bright threads around bubble
+  cells with fine speckle; a pale milky layer under the surface shines through; foam is pulled into streaks along the
+  wind or current and shaded so it is not flat white.
+* **Shore**: the hand-over from open-sea waves to waves facing the shore starts further out (from ~19 m deep), so you
+  see them swing round toward the beach.
+
+### Which way should waves go? (Tom's question)
+Out at sea, waves run with the wind, plus swells from distant storms that can come from any direction; they do not
+care where land is. Near land, as the water gets shallower, waves slow down — the part in shallower water slows first —
+so they bend (refraction) until they face the shore, and almost always arrive at a beach nearly head-on, whatever
+direction they started from. Experimental and experimental 2 imitate this: open-sea waves fade out over the shallows
+while a second set of waves, whose crests follow the depth contours, takes over and rolls straight in.
 
 ## Comparing
 Good places in the *Mountain kingdoms* preset (seed 42): a beach at −60420, 116300 (Settings → Sky → Sea state

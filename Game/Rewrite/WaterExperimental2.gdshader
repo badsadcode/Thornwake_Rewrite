@@ -430,11 +430,12 @@ void fragment() {
 		// At least ~1.6 m wide on the water (a fixed phase width became a thin drawn line where waves bunch up),
 		// tumbling: broken along and across by noise.
 		float bw = max(0.055, 1.6 * shore_k / PI2);
-		float tumble = 0.55 + 0.45 * noise(p * 0.45 + vec2(TIME * 0.4, 0.0)) + 0.25 * (noise(p * 1.3 - TIME * 0.6) - 0.5);
+		// Ragged and broken: the generous foam reveal would otherwise fill the band solid and show its smooth outline.
+		float tumble = 0.25 + 0.75 * noise(p * 0.3 + vec2(TIME * 0.4, 0.0)) + 0.4 * (noise(p * 1.1 - TIME * 0.6) - 0.5);
 		float band = exp(-(wrap / bw) * (wrap / bw)) * tumble;
 		// Trailing foam thins into lace (broken by noise) instead of a solid sheet.
 		float trail = exp(-since * 7.0) * smoothstep(0.0, 0.06, since) * smoothstep(0.35, 0.75, noise(p * 0.3 + vec2(0.0, TIME * 0.1)));
-		amount = max(amount, breaking * along * smoothstep(0.15, 0.5, px_depth) * (band * 1.0 + trail * 0.85));
+		amount = max(amount, breaking * along * smoothstep(0.15, 0.5, px_depth) * (band * 0.8 + trail * 0.7));
 		// Whitecaps where crests fold (many sharp waves: they appear from moderate seas on), the foam spilling down the
 		// back of the wave as the crest moves on.
 		float cap = smoothstep(0.22 - 0.16 * sea_state, 0.6, fold) * smoothstep(0.1, 0.45, sea_state);
