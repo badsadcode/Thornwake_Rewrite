@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 22** (round 17: cloud types from the weather and the land — afternoon cumulus towers, distant thunderstorms with anvils, rain shafts and lightning, lenticulars over peaks, mackerel sky, textured rain deck) | `66c3d89` | Thornwake-Rewrite-Preview-22 (v0.9.22) | |
 | **Build 21** (round 15–16: rivers as moving water — current profile, standing waves, wakes, mouth plumes, rock wakes; water reflects real clouds; twilight, rainbows, halos, auroras) | `27d24d0` | Thornwake-Rewrite-Preview-21 (v0.9.21) | |
 | **Build 20** (round 14: terrain revision 13 — no perched tributaries; rain films no longer redraw rivers) | `d9491a0` | Thornwake-Rewrite-Preview-20 (v0.9.20) | Revision 12 terrain = terrain-build19.json fixture |
 | **Build 19** (round 13: dug water joins rivers softly with tint; water reflects the night sky; no aliasing rings; patchy rapids) | `fd8ede8` | Thornwake-Rewrite-Preview-19 (v0.9.19) | |
