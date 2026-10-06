@@ -366,7 +366,8 @@ public static class TileBuilder
                 vertices[k] = new Vector3(i * (float)spacing, (float)level, j * (float)spacing);
                 // Alpha: 1 on water vertices, fading over the sheet's extension under the beach (the experimental water
                 // fades its swash film out there instead of ending on the sheet's triangle edges; classic ignores it).
-                float edge = wet[k] ? 1 : under[k] == int.MaxValue ? 1 : Math.Max(0, 1 - under[k] / 3f);
+                // (Corners of the last squares that are neither: 0 on the sea, 1 at lake and river banks.)
+                float edge = wet[k] ? 1 : under[k] != int.MaxValue ? Math.Max(0, 1 - under[k] / 3f) : kind < .25 ? 0 : 1;
                 colors[k] = new Color((float)DetMath.Clamp((level - ground) / 20, 0, 1), (float)kind, (float)plume, edge);
             }
         var indices = new List<int>();

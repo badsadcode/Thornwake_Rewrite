@@ -91,8 +91,9 @@ public static class WaterShore
         double active = Smoothstep(14, 8, depth) * Smoothstep(.003, .012, s) * (1 - Smoothstep(.22, .45, s));
         if (active <= 0) return 0;
         double period = 7 + 4 * seaState, omega = 2 * Math.PI / period;
-        double sc = Math.Clamp(s, .004, .25), d = Math.Max(depth, .05);
-        double theta = -(2 * omega * Math.Sqrt(d) / (sc * Math.Sqrt(G)) + omega * t) + 3 * Noise(lx * .004, lz * .004);
+        const double SRef = .03; // reference bed slope: the phase depends on depth only (see the shader)
+        double d = Math.Max(depth, .05);
+        double theta = -(2 * omega * Math.Sqrt(d) / (SRef * Math.Sqrt(G)) + omega * t) + 3 * Noise(lx * .004, lz * .004);
         double h0 = (.12 + 1.15 * seaState) * exposure * (.75 + .5 * Noise(lx * .01 + t * .02, lz * .01 + t * .02));
         double h = h0 * Math.Pow(10 / Math.Max(d, .4), .25), limit = .75 * d + .03;
         double breaking = Smoothstep(.55, .95, h / limit) * active;

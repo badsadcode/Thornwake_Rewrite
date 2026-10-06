@@ -432,6 +432,28 @@ scattering on canopies and plants, configurable.
   the build 13 biome catalogue; walkability and LOD tests leave out deliberate cliffs, spires and dunes.
 * Later: volcanoes (two-pass, before hydrology), canyons as deeper river incision in dry rock, ravines, boulder fields.
 
+## D47 — Water experiment: an opt-in alternative water (2026-10-06)
+* Tom asked for a richer, smooth, non-faceted water experiment for oceans, lakes and rivers, keeping biome tint and the
+  terrain-aware behaviour, without losing the current water. Classic water stays the default and untouched (backup
+  point 3511e4b); `WaterExperimental.gdshader` is selected by the setting fx.water_style. One material, shader swapped
+  in place, so all uniforms carry over and existing tiles switch instantly.
+* Per-pixel analytic wave normals (full Gerstner sum at the undisplaced position) instead of per-vertex normals: far,
+  coarse water shades smoothly. Geometry keeps the waves the mesh can carry (≥ 5 vertex spacings).
+* Shore waves: phase = shallow-water travel time to the point, φ = 2ω√d/(s√g) (d depth, s bed slope), so crests follow
+  depth contours and travel shoreward with the right local wavelength (T√(gd)); Green's-law shoaling capped at
+  breaking (H ≤ 0.75 d); breaking drives foam on and behind the crest. Bed gradient and coast exposure (macro land in 8
+  directions at 0.6/2/6 km) are per-vertex data (CUSTOM0), computed as pure functions of world position (no seams).
+* Lakes cut the wave set by fetch (√area); rivers get flow-advected gradient-noise ripples with along-flow smear and
+  speed/depth-driven whitewater. Wind waves: six short waves fanned around the wind with noise-warped phases and gusty
+  amplitude (value-noise slopes looked blocky; replaced by gradient noise).
+* Foam: one swirled bubbly pattern revealed by a per-source foam amount with soft edges (cell-edge patterns read as a
+  net and were dropped). Swash film alpha ramps over ~0.2 m and fades over the sheet's extension (COLOR.a), so the
+  film no longer ends on triangle edges.
+* Swimming now evaluates waves in scene-local coordinates like the shader (it used absolute ones, which drifted after
+  a float-origin shift — also for classic); experimental surface mirrored on the CPU (WaterShore.Height).
+* tools/water_test.gd: a beach/lake/river harness rendering either style in seconds (a full world render takes ~5 min).
+* Details and comparison spots: docs/WATER_EXPERIMENT.md.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

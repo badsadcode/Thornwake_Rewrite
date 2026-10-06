@@ -1,0 +1,66 @@
+# Water experiment (round 9)
+
+An experimental alternative to the water. **Nothing replaces the current water.**
+
+* Switch: **Esc → Settings → Lighting and effects → Water**: `classic` (default, the water of build 14) or
+  `experimental`. It switches instantly, so you can flip back and forth on the same spot.
+* Backup point: commit `3511e4b` (docs/SNAPSHOTS.md, "Water baseline"). `Game/Rewrite/Water.gdshader` and
+  `OceanWaves.cs` are unchanged since then; the experiment lives in `Game/Rewrite/WaterExperimental.gdshader` plus
+  extra per-vertex data that the classic shader ignores. To drop the experiment entirely: delete that shader and
+  the setting; nothing else depends on it.
+* Kept as it was: biome water tint (UV2) inside the absorption and scattering, depth colour and clarity, refraction,
+  caustics, river plumes, screen-space reflections, underwater view, the local water simulation, wind and sea state.
+
+## What the experiment changes
+
+### Smooth at every distance (no faceting)
+The big waves still move the mesh where the mesh is fine enough to carry them, but the light on every wave is
+computed per pixel from the exact wave formula. Far away, where the water mesh is coarse, the surface still shades as
+smooth rolling water instead of flat triangles.
+
+### Oceans
+* **Swells**: the same Gerstner sea as before (boats and swimming can use the same surface), plus wind waves:
+  six short travelling waves fanned around the wind, with wobbling crests and gusty patches, and fine ripples near
+  the camera. Different scales move at different speeds and headings.
+* **Shore waves**: near land, crest lines follow the depth contours, so waves always run along the shore and roll in
+  toward it, getting closer together and steeper as the water shallows, growing in height until they break (when they
+  are ~¾ of the depth) into foam that trails behind the crest. The open-sea waves fade out over the shallows.
+* **Exposure**: open coasts get the full surf, bays and coves only a fraction (measured from how much open sea lies
+  around each coast point).
+* **Rocky coasts**: steep shores churn — rough chop and foam — instead of rolling breakers.
+* **Swash**: the last of each wave runs up the beach in step with the breakers; the thin film fades softly.
+* **Storms**: bigger, longer, steeper seas, stronger wind waves, milky aerated crests, whitecaps, rougher and greyer
+  reflections, longer breakers. Calm weather: small smooth waves and glassy reflections.
+
+### Lakes
+The same wave set cut to the lake's size (fetch): small lakes only carry short ripples and stay calm, big lakes
+(tens of km) get real wind waves and approach a small sea. Calmer along the shore. Ponds stay almost still.
+
+### Rivers
+No swells. Three layers of ripples carried downstream at the current's speed and smeared along it, so the flow
+direction reads; glassy in slow pools, rough in fast reaches; whitewater patches that pulse in fast and shallow
+water (riffles and rapids); foam streaks drift with the current.
+
+### Foam
+One moving, swirled, bubbly pattern revealed by a "foam amount" from every source — breakers, crests, rocks, rapids,
+shore contact — with soft edges, so foam thickens where the source is strong and breaks into lace and holes as it
+fades. Not a painted outline.
+
+### Light
+Fresnel reflection (look down: see into the water; look across: reflections), a tight sun glint moving over the
+waves, light through thin crests and breakers, stirred-up shallows cloudier.
+
+## Comparing
+Good places in the *Mountain kingdoms* preset (seed 42): a beach at −60420, 116300 (Settings → Sky → Sea state
+0.3–0.5, then 0.9 for a storm), open sea at −66000, 115600 (fly up), a big lake at −29042, 89908. Rivers: any
+mountain river; fast ones show the whitewater.
+
+## Not done yet / later
+* Wave height near the shore for boats (the CPU mirror exists: `WaterShore.Height`; swimming already uses it).
+* Quality settings for the experiment (number of wave layers, foam detail); everything is cheap enough on desktop
+  GPUs now, the main extra cost is the per-pixel wave sum.
+* Boat wakes, storm-driven foam streaks across the sea, wave interaction with individual rocks (only steep shores
+  churn now).
+
+Test harness: `xvfb-run godot --path . -s tools/water_test.gd -- out=/tmp/w.png style=1 kind=sea|lake|river sea=0.5`
+renders a beach / lake / river with either style in seconds.
