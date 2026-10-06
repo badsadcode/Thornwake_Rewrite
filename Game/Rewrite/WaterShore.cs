@@ -74,7 +74,7 @@ public static class WaterShore
     public static double Height2(SpectrumWaves waves, double lx, double lz, double t, double depth, bool sea, bool lake,
         double fetch, double exposure, double gx, double gz, double windX, double windZ)
     {
-        double y = waves.Height(lx, lz, t, lambda => Factor(0, lambda, depth, sea, lake, fetch, exposure, wide: true), windX, windZ, lake);
+        double y = waves.Height(lx, lz, t, lambda => Factor(0, lambda, depth, sea, lake, fetch, exposure, wide: true), windX, windZ, lake, depth, gx, gz);
         if (sea) y += Shore(lx, lz, t, depth, gx, gz, exposure, waves.SeaState, wide: true);
         return y;
     }

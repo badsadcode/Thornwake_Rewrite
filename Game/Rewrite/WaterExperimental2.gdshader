@@ -59,6 +59,7 @@ varying float fetch;
 varying float edge_fade; // 1 on water, fading over the sheet's extension under the beach (COLOR.a)
 varying vec4 wave_heads;  // local headings: wind sea xy, swell zw (vary over kilometres: per vertex is enough)
 varying vec3 wave_norms;  // direction-weight renormalisation (wind sea, swell) and the crest-sharpness sum
+varying float wave_coast; // 0 open water … 1 coastal shallows: headings turned toward the shore, narrower spread
 
 const float G = 9.81;
 const float PI2 = 6.2831853;
@@ -143,39 +144,57 @@ float group(vec2 p, float t, vec2 wd) {
 	return 0.65 + (0.45 + 0.35 * sea_state) * n * 1.2 - 0.15;
 }
 
+// Coastal factor (SpectrumWaves.Coastal): 0 in open water, 1 in the coastal shallows of seas (not lakes, not steep
+// rocky coasts), from the bed depth and slope.
+float coastal(float depth, vec2 grad, float lake) {
+	float s = length(grad);
+	return (1.0 - lake) * smoothstep(20.0, 4.0, depth) * smoothstep(0.003, 0.012, s) * (1.0 - smoothstep(0.22, 0.45, s));
+}
+
+float turn_toward(float a, float target, float k) { float d = target - a; return a + atan(sin(d), cos(d)) * k; }
+
 // Local headings (SpectrumWaves.Headings): the wind turned by a slow regional field (lakes: their own valley winds),
-// and the swell's heading from far storms (independent of the wind).
-vec4 headings(vec2 p, vec2 wd, float lake) {
+// and the swell's heading from far storms (independent of the wind). Toward the coast both turn toward the shore
+// (Noor: open-water direction blended into the shore direction as the water shallows) — only wave weights change, so
+// the turn is smooth however quickly it happens.
+vec4 headings(vec2 p, vec2 wd, float lake, vec2 grad, float coast) {
 	vec2 x = p + world_origin;
 	float wind_a = atan(wd.y, wd.x);
 	float turn = lake > 0.5
 		? 2.4 * (noise(x / 3000.0 + vec2(57.1, -13.7)) - 0.5) + 0.8 * (noise(x / 900.0 + vec2(5.3, 41.9)) - 0.5)
 		: 2.0 * (noise(x / 8000.0) - 0.5) + 0.7 * (noise(x / 2500.0 + vec2(31.7, 8.9)) - 0.5);
 	float swell = 1.5 + 5.2 * (noise(x / 20000.0 + vec2(91.3, -27.1)) - 0.5);
-	return vec4(cos(wind_a + turn), sin(wind_a + turn), cos(swell), sin(swell));
+	float wa = wind_a + turn;
+	if (coast > 0.0) {
+		float shore = atan(grad.y, grad.x);
+		wa = turn_toward(wa, shore, coast * 0.85);
+		swell = turn_toward(swell, shore, coast * 0.95);
+	}
+	return vec4(cos(wa), sin(wa), cos(swell), sin(swell));
 }
 
 // Direction weight of wave i (SpectrumWaves.Weight): narrow around the heading in calm weather, wide in storms.
 // Negligible weights fade to exactly 0 (continuously), so about half the waves are skipped at every point.
-float dir_weight(int i, vec4 h, float lake) {
+float dir_weight(int i, vec4 h, float lake, float coast) {
 	vec2 d = waves2[i].xy;
 	float c = i >= 52 ? (lake > 0.5 ? 0.0 : dot(d, h.zw)) : dot(d, h.xy);
 	if (c <= 0.0) return 0.0;
-	float w = pow(c, i >= 52 ? 24.0 : 10.0 - 8.4 * sea_state);
+	// Narrower toward the coast: the waves organise into sets running toward the shore.
+	float w = pow(c, i >= 52 ? 24.0 : mix(10.0 - 8.4 * sea_state, 16.0, coast * 0.6));
 	return max(0.0, w - 0.002) / 0.998;
 }
 
 // Renormalisation of the weighted waves (same height everywhere) and the crest-sharpness sum (SpectrumWaves.Local).
-vec3 wave_norm(vec4 h, float lake) {
+vec3 wave_norm(vec4 h, float lake, float coast) {
 	float ea = 0.0, ew = 0.0, sa = 0.0, sw = 0.0;
 	for (int i = 0; i < 64; i++) {
-		float w = dir_weight(i, h, lake), a2 = waves2[i].w * waves2[i].w;
+		float w = dir_weight(i, h, lake, coast), a2 = waves2[i].w * waves2[i].w;
 		if (i < 52) { ea += a2; ew += a2 * w; } else { sa += a2; sw += a2 * w; }
 	}
 	float nw = sqrt(ea / max(ew, 1e-12)), ns = sqrt(sa / max(sw, 1e-12));
 	float crisp = 0.0;
 	for (int i = 0; i < 64; i++) {
-		float w = dir_weight(i, h, lake);
+		float w = dir_weight(i, h, lake, coast);
 		if (w <= 0.0) continue;
 		float a = waves2[i].w * sqrt(w) * (i < 52 ? nw : ns), k = waves2[i].z;
 		crisp += k * k * a * a * a;
@@ -187,7 +206,7 @@ vec3 wave_norm(vec4 h, float lake) {
 // lighting: all down to a pixel (called per pixel). Returns displacement; accumulates normal, crest height and Jacobian.
 // Choppiness goes mostly to the biggest steep waves (share ∝ k²A³): crisp crests on the waves that matter.
 vec3 gerstner(vec2 p, float depth, float sea, float lake, float fetch_m, float expo, float min_lambda, float t,
-		vec4 h, vec3 norms, inout vec3 n, inout float crest, inout vec3 jac) {
+		vec4 h, vec3 norms, float coast, inout vec3 n, inout float crest, inout vec3 jac) {
 	vec3 offset = vec3(0.0);
 	float grp = group(p, t, normalize(vec2(wind.x, wind.z) + vec2(1e-4)));
 	float chop = wave2_chop / max(grp, 1.0) / norms.z; // higher wave sets must not fold either
@@ -196,7 +215,7 @@ vec3 gerstner(vec2 p, float depth, float sea, float lake, float fetch_m, float e
 		float lambda = PI2 / k;
 		float cut = smoothstep(min_lambda, min_lambda * 2.0, lambda);
 		if (cut <= 0.0) continue;
-		float w = dir_weight(i, h, lake);
+		float w = dir_weight(i, h, lake, coast);
 		if (w <= 0.0) continue;
 		float base = waves2[i].w * sqrt(w) * (i < 52 ? norms.x : norms.y);
 		if (base <= 1e-5) continue;
@@ -270,14 +289,15 @@ void vertex() {
 	rest_level = world_position.y;
 	float sea = is_sea(body), lake = is_lake(body);
 	vec3 offset = vec3(0.0);
-	wave_heads = vec4(1.0, 0.0, 1.0, 0.0); wave_norms = vec3(1.0);
+	wave_heads = vec4(1.0, 0.0, 1.0, 0.0); wave_norms = vec3(1.0); wave_coast = 0.0;
 	if (sea + lake > 0.0) {
-		wave_heads = headings(rest_xz, normalize(vec2(wind.x, wind.z) + vec2(1e-4)), lake);
-		wave_norms = wave_norm(wave_heads, lake);
+		wave_coast = coastal(vertex_depth, bed_grad, lake);
+		wave_heads = headings(rest_xz, normalize(vec2(wind.x, wind.z) + vec2(1e-4)), lake, bed_grad, wave_coast);
+		wave_norms = wave_norm(wave_heads, lake, wave_coast);
 		// The mesh carries waves at least ~5 vertex spacings long (per-pixel lighting does the rest).
 		float spacing = max(1.0, length(world_position - CAMERA_POSITION_WORLD) / 40.0);
 		vec3 n = vec3(0.0, 1.0, 0.0); float crest = 0.0; vec3 jac = vec3(0.0);
-		offset = gerstner(rest_xz, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, 5.0 * spacing, ocean_time, wave_heads, wave_norms, n, crest, jac);
+		offset = gerstner(rest_xz, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, 5.0 * spacing, ocean_time, wave_heads, wave_norms, wave_coast, n, crest, jac);
 		if (sea > 0.5) {
 			float breaking, since, kw;
 			offset += shore_wave(rest_xz, vertex_depth, bed_grad, exposure, 5.0 * spacing, ocean_time, n, breaking, since, kw);
@@ -358,13 +378,16 @@ vec3 foam_layers(vec2 p, vec2 drift, float t, float amount, float dist) {
 	vec2 qs = vec2(dot(q, dn) / stretch, dot(q, sd));
 	float fbm = noise(qs * 0.55) * 0.5 + noise(qs * 1.6 + t * 0.1) * 0.3 + mix(0.5, noise(qs * 4.4 - t * 0.2), near) * 0.2;
 	float cover = smoothstep(1.0 - amount * 1.5, 1.0 - amount * 1.5 + 0.3, fbm);
+	// Below breaker strength, foam comes in streaks and fragments along the drift, not big continuous masses.
+	float pieces = smoothstep(0.32, 0.6, noise(vec2(qs.x * 0.22, qs.y * 1.1) + vec2(9.1, 2.7)) + 0.25 * amount);
+	cover *= mix(pieces, 1.0, max(smoothstep(0.75, 1.0, amount), smoothstep(0.7, 1.0, sea_state) * 0.6)); // storms: denser
 	// Lace: threads along the edges of bubble cells at two scales; fresh foam has wide threads that fill in.
 	float thread = mix(0.08, 0.3, amount);
 	float e1 = cells(qs * 1.5 + vec2(3.1, 0.0), t * 0.25);
 	float e2 = cells(qs * 4.0 + vec2(0.0, 7.7), t * 0.45);
 	float lace = max(1.0 - smoothstep(0.0, thread, e1), (1.0 - smoothstep(0.0, thread * 0.8, e2)) * near);
 	// Body: strong foam is mostly solid, holed where the bubble cells open up; weak foam is only lace.
-	float body_f = smoothstep(0.15, 0.6, amount) * smoothstep(0.25, 0.6, fbm + 0.3 * (1.0 - smoothstep(0.0, 0.45, e1)) - 0.1);
+	float body_f = smoothstep(0.3, 0.8, amount) * smoothstep(0.25, 0.6, fbm + 0.3 * (1.0 - smoothstep(0.0, 0.45, e1)) - 0.1);
 	float speck = smoothstep(0.78, 0.95, noise(qs * 13.0 + t)) * near;
 	float top = cover * max(max(body_f, lace * (0.55 + 0.45 * fbm)), speck * 0.6);
 	top = smoothstep(0.0, 0.7, top);
@@ -400,7 +423,7 @@ void fragment() {
 	if (sea + lake - pond > 0.5) {
 		// Waves far shorter than a pixel only add sparkle: fade them with distance.
 		float min_lambda = dist / 300.0;
-		gerstner(p, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, min_lambda, ocean_time, wave_heads, wave_norms, n, crest, jac);
+		gerstner(p, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, min_lambda, ocean_time, wave_heads, wave_norms, wave_coast, n, crest, jac);
 		if (sea > 0.5) shore_wave(p, px_depth, bed_grad, exposure, min_lambda, ocean_time, n, breaking, since, shore_k);
 	}
 	crest /= max(wave2_hs * 0.5, 0.01); // ~1 at a typical big crest
@@ -503,25 +526,32 @@ void fragment() {
 		// Trailing foam thins into lace (broken by noise) instead of a solid sheet.
 		float trail = exp(-since * 7.0) * smoothstep(0.0, 0.06, since) * smoothstep(0.35, 0.75, noise(p * 0.3 + vec2(0.0, TIME * 0.1)));
 		amount = max(amount, breaking * along * smoothstep(0.15, 0.5, px_depth) * (band * 0.8 + trail * 0.7));
-		// Whitecaps where crests fold (many sharp waves: they appear from moderate seas on), the foam spilling down the
-		// back of the wave as the crest moves on.
-		float cap = smoothstep(0.22 - 0.16 * sea_state, 0.6, fold) * smoothstep(0.1, 0.45, sea_state);
-		amount = max(amount, cap);
-		amount = max(amount, smoothstep(0.45, 1.0, crest) * smoothstep(0.35, 0.8, sea_state) * 0.6);
+		// Open-water white water follows the weather (Noor: calm → breezy → rough → storm): none when calm, a few
+		// small short-lived caps in a breeze, many in rough seas, dense only in storms. Caps form and fade (life) and
+		// break into fragments along the wind, never one continuous sheet.
+		vec2 side = vec2(-wdir.y, wdir.x);
+		vec2 wq = vec2(dot(p, wdir), dot(p, side));
+		float life = smoothstep(0.42 - 0.3 * sea_state, 0.7 - 0.2 * sea_state,
+			noise(p * 0.045 + vec2(TIME * 0.07, -TIME * 0.05)) * 0.7 + noise(wq * vec2(0.06, 0.2) - vec2(TIME * 0.25, 0.0)) * 0.3);
+		float frag = smoothstep(0.3, 0.62, noise(wq * vec2(0.12, 0.5) + vec2(-TIME * 0.3, 3.3)) + 0.3 * sea_state);
+		float whitecaps = life * mix(frag, 1.0, smoothstep(0.6, 1.0, sea_state) * 0.75);
+		// Folding crests, the foam spilling down the back of the wave as the crest moves on.
+		float cap = smoothstep(0.22 - 0.16 * sea_state, 0.6, fold) * smoothstep(0.25, 0.6, sea_state) * 0.85;
+		amount = max(amount, cap * whitecaps);
+		amount = max(amount, smoothstep(0.5, 1.0, crest) * smoothstep(0.5, 0.9, sea_state) * 0.5 * whitecaps);
 		// Breaking tops: high AND steep crests break into white water (with many mixed waves the surface rarely folds,
 		// so this is the main whitecap source); stronger inside wave groups.
 		float steep = length(-n.xz / max(n.y, 0.2));
-		float tops = smoothstep(0.35, 0.95, crest) * smoothstep(0.18 - 0.08 * sea_state, 0.5, steep) * smoothstep(0.2, 0.6, sea_state);
-		amount = max(amount, tops * (0.75 + 0.35 * sea_state));
-		// Storm foam fields: old foam drifting in broad patches over the whole sea.
-		float fields = smoothstep(0.55, 0.85, noise(p * 0.018 + wdir * TIME * 0.02) * 0.6 + noise(p * 0.07 - wdir * TIME * 0.05) * 0.4);
-		amount = max(amount, fields * smoothstep(0.65, 1.0, sea_state) * 0.55);
-		// Wind streaks: long foam lanes along the wind in strong winds and storms, thickest on the wave tops.
-		vec2 side = vec2(-wdir.y, wdir.x);
-		vec2 sq = vec2(dot(p, wdir) * 0.025, dot(p, side) * 0.35) + vec2(-TIME * 0.12, 0.0);
+		float tops = smoothstep(0.38, 0.95, crest) * smoothstep(0.2 - 0.08 * sea_state, 0.5, steep) * smoothstep(0.28, 0.65, sea_state);
+		amount = max(amount, tops * (0.55 + 0.55 * sea_state) * whitecaps);
+		// Storm foam fields: old foam drifting in broken patches (storms only).
+		float fields = smoothstep(0.58, 0.85, noise(p * 0.018 + wdir * TIME * 0.02) * 0.6 + noise(p * 0.07 - wdir * TIME * 0.05) * 0.4);
+		amount = max(amount, fields * frag * smoothstep(0.75, 1.0, sea_state) * 0.45);
+		// Wind streaks: narrow foam lanes along the wind in strong winds and storms, thickest on the wave tops.
+		vec2 sq = vec2(wq.x * 0.025, wq.y * 0.35) + vec2(-TIME * 0.12, 0.0);
 		float lanes = noise(sq) * 0.65 + noise(sq * 2.3 + 4.1) * 0.35;
-		float streaks = smoothstep(0.5, 0.78, lanes) * smoothstep(0.4, 0.9, sea_state) * (0.5 + 0.5 * smoothstep(-0.3, 0.8, crest));
-		amount = max(amount, streaks * 0.6);
+		float streaks = smoothstep(0.58, 0.8, lanes) * smoothstep(0.55, 0.95, sea_state) * (0.5 + 0.5 * smoothstep(-0.3, 0.8, crest));
+		amount = max(amount, streaks * 0.55);
 		// Rocks and steep coasts churn.
 		amount = max(amount, rocky * (0.4 + 0.5 * noise(p * 0.2 + TIME * 0.3)));
 	} else if (river > 0.5) {
@@ -548,7 +578,7 @@ void fragment() {
 
 	// Aerated crests in rough weather: milky streaks over the wave tops (softer than foam, not masked).
 	float aerated = (sea + lake * 0.4) * smoothstep(0.15, 1.0, crest + 0.4 * (noise(p * 0.12 + wdir * TIME * 0.3) - 0.5))
-		* smoothstep(0.25, 0.85, sea_state) * 0.65 * (0.55 + 0.45 * noise(p * 0.8 - TIME * 0.2)) / (1.0 + dist / 800.0);
+		* smoothstep(0.4, 0.9, sea_state) * 0.65 * (0.55 + 0.45 * noise(p * 0.8 - TIME * 0.2)) / (1.0 + dist / 800.0);
 	under_foam = max(under_foam, aerated * 1.3); // aerated crests are milky water, not surface foam
 	under_foam *= smoothstep(0.1, 0.9, edge_fade);
 

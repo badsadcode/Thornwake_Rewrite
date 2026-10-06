@@ -154,7 +154,7 @@ func _set_spectrum(mat: ShaderMaterial, s: float, _wind_angle: float) -> void:
 	# SpectrumWaves (round 11): fixed wavelengths and directions; amplitudes from the sea state.
 	var n := 64; var nw := 52
 	var hs := 0.15 + 14.1 * s * s
-	var swell_hs := 0.45 + 1.6 * s
+	var swell_hs := 0.5 + 2.0 * s
 	var lp := 9.0 + 130.0 * s * s
 	var wp := sqrt(9.81 * TAU / lp)
 	var waves := []; var phases := PackedFloat32Array(); var energy := []; var total := 0.0
@@ -162,11 +162,11 @@ func _set_spectrum(mat: ShaderMaterial, s: float, _wind_angle: float) -> void:
 		var lam := 0.0; var ang := 0.0
 		if i < nw:
 			var t := float(i) / float(nw - 1)
-			lam = 260.0 * pow(1.0 / 260.0, t) * (1.0 + 0.04 * (_hash01(i, 3) - 0.5))
+			lam = 300.0 * pow(1.0 / 300.0, t) * (1.0 + 0.04 * (_hash01(i, 3) - 0.5))
 			ang = i * 2.39996323 + 0.3 * (_hash01(i, 1) - 0.5)
 		else:
 			var j := i - nw
-			lam = 120.0 * pow(1.45, j % 3)
+			lam = 150.0 * pow(1.45, j % 3)
 			ang = j * PI / 6.0
 		var k := TAU / lam
 		waves.append(Vector4(cos(ang), sin(ang), k, 0.0)); phases.append(_hash01(i, 2) * TAU)

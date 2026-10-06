@@ -460,6 +460,12 @@ internal static class SimulationTests
         T.Check(minDot < Math.Cos(.5), "wind-sea heading varies across the ocean");
         T.Check(minLake < Math.Cos(.5), "lakes have their own wave headings");
         T.Check(minSwell < Math.Cos(1), "swells come from different directions in different seas");
+        // Coast: in the shallows the wind sea and the swell turn toward the shore (bed rising toward +z here).
+        var open = sea.Headings(0, 0, -1, 0, false);
+        var coastal = sea.Headings(0, 0, -1, 0, false, 0, .03, SpectrumWaves.Coastal(4, 0, .03, false));
+        T.Note($"heading toward the shore (+z): open sea {open.Wz:0.00}, coastal shallows {coastal.Wz:0.00}; swell {open.Sz:0.00} → {coastal.Sz:0.00}");
+        T.Check(coastal.Wz > .8 && coastal.Sz > .9, "coastal waves turn toward the shore");
+        T.Check(SpectrumWaves.Coastal(20, 0, .03, false) == 0 && SpectrumWaves.Coastal(4, 0, .03, true) == 0, "open water and lakes keep their own headings");
         // Smooth storms: a small sea-state change only nudges the surface (fixed wavelengths: no jumps).
         var a = new SpectrumWaves(.6); var b = new SpectrumWaves(.61);
         double jump = 0;
