@@ -29,12 +29,53 @@ public static class RockMeshes
     public static ArrayMesh Get(int kind)
     {
         // 3: cliff slab, 4: huge/shore boulder — chunky, flat-faced (few facets), like blocky rocks.
-        _meshes ??= new[] { Build(1, 0x51u, .22f), Build(1, 0x77u, .28f), Build(2, 0x93u, .3f), Build(0, 0xC1u, .32f), Build(0, 0xB7u, .26f) };
+        _meshes ??= new[] { Build(Kinds[0]), Build(Kinds[1]), Build(Kinds[2]), Build(Kinds[3]), Build(Kinds[4]) };
         return _meshes[Math.Clamp(kind, 0, _meshes.Length - 1)];
     }
 
-    private static ArrayMesh Build(int subdivisions, uint seed, float roughness)
+    private static readonly (int Subdivisions, uint Seed, float Roughness)[] Kinds =
+        { (1, 0x51u, .22f), (1, 0x77u, .28f), (2, 0x93u, .3f), (0, 0xC1u, .32f), (0, 0xB7u, .26f) };
+    private static readonly Vector3[]?[] Hulls = new Vector3[]?[5];
+
+    /// <summary>
+    /// The vertices of a rock kind's mesh (unit size, before the instance transform) for its collision hull, so the
+    /// player stands on the visible stone (a sphere stood well above flat rocks). Thread-safe; no rendering objects.
+    /// </summary>
+    public static Vector3[] HullPoints(int kind)
     {
+        kind = Math.Clamp(kind, 0, Kinds.Length - 1);
+        lock (Hulls) return Hulls[kind] ??= Shape(Kinds[kind], out _, out _).ToArray();
+    }
+
+    private static ArrayMesh Build((int Subdivisions, uint Seed, float Roughness) kind)
+    {
+        var v = Shape(kind, out var f, out var rng);
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+        var stone = new Color("777a72"); var dark = new Color("5d605a"); var moss = new Color("66744f");
+        foreach (var (ia, ib0, ic0) in f)
+        {
+            int a = ia, b = ib0, c = ic0;
+            var normal = (v[b] - v[a]).Cross(v[c] - v[a]).Normalized();
+            var centroid = (v[a] + v[b] + v[c]) / 3 - new Vector3(0, .12f, 0);
+            if (normal.Dot(centroid) < 0) { (b, c) = (c, b); normal = -normal; } // outward
+            float shade = rng.Randf();
+            var colour = normal.Y > .75f ? moss.Lerp(stone, .4f + .3f * shade) : stone.Lerp(dark, shade * .6f);
+            st.SetColor(colour);
+            // Godot front faces are clockwise seen from outside: a, c, b for a counter-clockwise outward face.
+            st.SetNormal(normal); st.AddVertex(v[a]); st.SetNormal(normal); st.AddVertex(v[c]); st.SetNormal(normal); st.AddVertex(v[b]);
+        }
+        var mesh = st.Commit();
+        _material ??= CreateMaterial();
+        mesh.SurfaceSetMaterial(0, _material);
+        return mesh;
+    }
+
+    /// <summary>A jittered icosphere with a flattened bottom; the generator continues into the mesh's face shading.</summary>
+    private static System.Collections.Generic.List<Vector3> Shape((int Subdivisions, uint Seed, float Roughness) kind,
+        out System.Collections.Generic.List<(int, int, int)> faces, out RandomNumberGenerator rng)
+    {
+        var (subdivisions, seed, roughness) = kind;
         // Icosahedron.
         float t = (1 + Mathf.Sqrt(5)) / 2;
         var v = new System.Collections.Generic.List<Vector3>
@@ -65,7 +106,7 @@ public static class RockMeshes
             f = next;
         }
         // Jitter radially (deterministic), flatten the bottom half so rocks sit in the ground.
-        var rng = new RandomNumberGenerator { Seed = seed };
+        rng = new RandomNumberGenerator { Seed = seed };
         for (int i = 0; i < v.Count; i++)
         {
             var n = v[i].Normalized();
@@ -74,24 +115,7 @@ public static class RockMeshes
             if (p.Y < 0) p.Y *= .45f;
             v[i] = p + new Vector3(0, .12f, 0);
         }
-        var st = new SurfaceTool();
-        st.Begin(Mesh.PrimitiveType.Triangles);
-        var stone = new Color("777a72"); var dark = new Color("5d605a"); var moss = new Color("66744f");
-        foreach (var (ia, ib0, ic0) in f)
-        {
-            int a = ia, b = ib0, c = ic0;
-            var normal = (v[b] - v[a]).Cross(v[c] - v[a]).Normalized();
-            var centroid = (v[a] + v[b] + v[c]) / 3 - new Vector3(0, .12f, 0);
-            if (normal.Dot(centroid) < 0) { (b, c) = (c, b); normal = -normal; } // outward
-            float shade = rng.Randf();
-            var colour = normal.Y > .75f ? moss.Lerp(stone, .4f + .3f * shade) : stone.Lerp(dark, shade * .6f);
-            st.SetColor(colour);
-            // Godot front faces are clockwise seen from outside: a, c, b for a counter-clockwise outward face.
-            st.SetNormal(normal); st.AddVertex(v[a]); st.SetNormal(normal); st.AddVertex(v[c]); st.SetNormal(normal); st.AddVertex(v[b]);
-        }
-        var mesh = st.Commit();
-        _material ??= CreateMaterial();
-        mesh.SurfaceSetMaterial(0, _material);
-        return mesh;
+        faces = f;
+        return v;
     }
 }

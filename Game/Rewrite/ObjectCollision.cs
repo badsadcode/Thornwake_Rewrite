@@ -5,7 +5,7 @@ namespace Thornwake.Rewrite;
 
 /// <summary>
 /// Solid scatter objects near the player (level-0 tiles): tree trunks, dead trees and cacti, stumps, logs, bushes,
-/// rocks and boulders get simple collision shapes on the tile's static body. Small stones, grass, reeds and hanging
+/// rocks and boulders get collision shapes (rocks: their own hull) on the tile's static body. Small stones, grass, reeds and hanging
 /// cliff dressing stay passable.
 /// </summary>
 public static class ObjectCollision
@@ -49,7 +49,12 @@ public static class ObjectCollision
             var b = rock.Transform.Basis;
             float size = (b.X.Length() + b.Y.Length() + b.Z.Length()) / 3;
             if (size < .45f) continue;
-            body.AddChild(new CollisionShape3D { Shape = new SphereShape3D { Radius = size * .8f }, Position = rock.Transform.Origin });
+            // The rock's own shape (its mesh's hull, scaled and tilted like the instance): a sphere around flat rocks
+            // stood the player up to a metre above the visible stone.
+            var unit = RockMeshes.HullPoints(rock.Kind);
+            var points = new Vector3[unit.Length];
+            for (int i = 0; i < unit.Length; i++) points[i] = b * unit[i];
+            body.AddChild(new CollisionShape3D { Shape = new ConvexPolygonShape3D { Points = points }, Position = rock.Transform.Origin });
         }
         foreach (var prop in data.Props)
         {
