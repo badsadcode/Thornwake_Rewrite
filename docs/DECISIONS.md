@@ -701,7 +701,12 @@ fog), and for the water also as if the game had run 35 minutes (TIME + 2100 s), 
 * **White strips along river banks**: the waterline contact foam spanned 14 cm of depth on rivers, a wide strip over
   shallow bank shelves following the terrain's triangle edges → 6 cm. Riffles fade out in the last 8–35 cm.
 * **Water body codes**: sea 0, river ⅓, lake ⅔, pond 1 (were crowded together); river samples below the sea at a mouth
-  become sea, so the seam between river and sea water is gone.
+  become sea (bank vertices too), so the seam between river and sea water is gone. The test uses the world's sea
+  level: it used the level of an ocean sample in the same tile, so a tile holding only the inner estuary kept the river
+  code and drew a seam along its edge.
+* **Verification lesson**: Godot runs the last built C# assembly; the first round of replays still ran build 25's C#
+  (terrain revision 13, old tile codes) and showed the bayou channels unchanged. Rebuild (`dotnet build
+  Thornwake.csproj`) before any replay that tests C# changes.
 * **Fog "only silhouettes… a single colour"**: Godot height fog fogs a point by its depth below FogHeight, not by its
   distance, so from a mountain a valley hundreds of metres below went solid grey. Density ÷8.5, mist ×0.75, mist
   volume and wisps thinner. The cloud base stays ≥ ~1 km above the player (the sky is drawn behind the terrain, so a

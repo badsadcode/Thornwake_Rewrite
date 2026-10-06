@@ -243,7 +243,7 @@ public static class TileBuilder
             // Full trees on the nearest levels; beyond, tree cards, then the terrain shader's forest tint.
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };
-        BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater);
+        BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater, sea);
         if (data.Water is { } builtWater) data.WaterShore = ShoreData(sampler, builtWater.Vertices, builtWater.Colors, heights, s2, samples, x0, z0, spacing, Side);
         var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2, biome1, props, biome3);
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
@@ -304,7 +304,7 @@ public static class TileBuilder
         return new Vector2(packed, strength);
     }
 
-    private static void BuildWater(TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing, int n, bool simulated)
+    private static void BuildWater(TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing, int n, bool simulated, double seaLevel)
     {
         var wet = new bool[n * n];
         bool any = false;
@@ -341,8 +341,20 @@ public static class TileBuilder
             }
             front = next;
         }
-        double sea = double.NaN; // the sea's level, if this tile has sea
-        foreach (var t in samples) if (t.Water == WaterKind.Ocean) { sea = t.WaterLevel; break; }
+        // The world's sea level, not the level of an ocean sample in this tile: a tile holding only the inner part of
+        // an estuary had none, kept the river code and drew a seam along its edge (Tom's dumps, round 20).
+        double sea = seaLevel;
+        // A river's channel continuing out to sea at sea level is the sea there, carrying the river's water (plume: its
+        // colour and current) — no river surface with rapids standing in the sea. Bank vertices take the same.
+        var bodyKind = new double[n * n];
+        var bodyPlume = new double[n * n];
+        for (int k = 0; k < n * n; k++)
+        {
+            if (!wet[k]) continue;
+            bool estuary = samples[k].Water == WaterKind.River && samples[k].Height < sea && samples[k].WaterLevel < sea + .15;
+            bodyKind[k] = estuary ? SeaCode : Kind(samples[k].Water);
+            bodyPlume[k] = estuary ? 1 : samples[k].Plume;
+        }
         for (int j = 0; j < n; j++)
             for (int i = 0; i < n; i++)
             {
@@ -350,10 +362,7 @@ public static class TileBuilder
                 double level = double.NaN, kind = 0, plume = 0;
                 if (wet[k])
                 {
-                    level = samples[k].WaterLevel; kind = Kind(samples[k].Water); plume = samples[k].Plume;
-                    // A river's channel continuing out to sea at sea level is the sea there, carrying the river's water
-                    // (plume: its colour and current) — no river surface with rapids standing in the sea.
-                    if (samples[k].Water == WaterKind.River && !double.IsNaN(sea) && samples[k].Height < sea && level < sea + .15) { kind = SeaCode; plume = 1; }
+                    level = samples[k].WaterLevel; kind = bodyKind[k]; plume = bodyPlume[k];
                 }
                 else
                 {
@@ -366,8 +375,8 @@ public static class TileBuilder
                             int x = i + a, z = j + b;
                             if (x < 0 || z < 0 || x >= n || z >= n || !wet[z * n + x]) continue;
                             sum += samples[z * n + x].WaterLevel; count++;
-                            kind = Math.Max(kind, Kind(samples[z * n + x].Water)); // (bank vertices: pond, lake, river, then sea)
-                            plume = Math.Max(plume, samples[z * n + x].Plume);
+                            kind = Math.Max(kind, bodyKind[z * n + x]); // (bank vertices: pond, lake, river, then sea)
+                            plume = Math.Max(plume, bodyPlume[z * n + x]);
                         }
                     if (count > 0) level = sum / count;
                     else if (under[k] != int.MaxValue && !dug[k]) level = SeaLevel(samples);
