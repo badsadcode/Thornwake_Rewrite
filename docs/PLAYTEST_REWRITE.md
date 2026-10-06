@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 15 — experimental water (switchable)
+* **Esc → Settings → Lighting and effects → Water: classic / experimental.** Classic (the default) is the water of
+  build 14, unchanged. Experimental is a new water look to compare; switch any time, it changes instantly.
+* Experimental water:
+  * **Oceans**: rolling swells with wind waves on top; near land the waves turn to face the shore, bunch up and
+    steepen in the shallows and break into foam; open coasts get real surf, bays stay calmer, steep rocky shores
+    churn. Storms: big steep seas, whitecaps, milky crests, grey rough reflections.
+  * **Lakes**: wind waves scaled to the lake's size — small lakes stay calm, huge lakes get proper waves.
+  * **Rivers**: ripples carried downstream showing the flow, glassy pools, whitewater in fast shallow stretches.
+  * Smooth at every distance (no faceted waves), soft moving foam, sun glints; biome water colours kept.
+* Try: *Mountain kingdoms* preset (seed 42), beach at −60420, 116300 with Settings → Sky → Sea state 0.5, then 0.9.
+  Details: WATER_EXPERIMENT.txt.
+
 ## New in build 14 — dunes, mesas, needle rocks
 * **Deserts have real dunes**: long ridges with gentle windward slopes and steep slip faces, all lined up with the
   world's prevailing wind, in dune fields and flatter sand sheets.
