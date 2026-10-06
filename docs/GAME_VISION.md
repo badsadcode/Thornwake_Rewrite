@@ -16,6 +16,18 @@ gameplay follows. Tom has far more ideas than can be built; the environment come
   interpret what happened there; the game does not explain.
 * **References for camera and feel**: Valheim, Conan Exiles, Soulmask.
 
+## The journey is the reward
+* **Multiplayer** is the goal: fully playable alone, up to ~12 players together in an enormous land and sea.
+* The views, the travel and the struggle are rewards in themselves: a caravan crossing a swamp, wheels stuck in the mud.
+* Random events on the road: bandits attack; arriving in a village whose people have their own troubles (a bandit band
+  raiding it). Helping them pays: goodwill, cheaper prices.
+* Trade quests between villages (one produces what another lacks), feeding a simple economy simulated in the background.
+* **Lore**: glimpses and hints of Thornwake's lore exist; ideally most of it is generated (in the spirit of Caves of Qud)
+  from what Tom writes.
+* **Next after the terrain**: placing premade villages and points of interest.
+* The docs were written while ideas were flowing (Noor wrote many of them down); they will be reconciled once the world
+  is clearer. Where they disagree, ask rather than assume.
+
 ## What matters most in the environment
 * **Weather and environment effects** are very important: storms, blizzards, rain, hail, snow, thunderstorms, sea
   storms, dust storms.
@@ -32,3 +44,6 @@ stutters when flying very fast in debug mode (recovers when stopping). Moving an
   shader, so boats can float on what the player sees.
 * Weather must be visible from far away (storm systems on the horizon, walls of rain at sea).
 * World generation needs hooks for randomly placed points of interest (presets) later.
+* Multiplayer: everyone must see the same world, weather and sea. The world generator is already deterministic
+  (DetMath, seeded noise); weather, wind and waves are already functions of the seed and the game clock, so a host only
+  has to share seed + time. Keep it that way: no unseeded randomness in anything that affects play.
