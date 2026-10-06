@@ -85,6 +85,18 @@ func _initialize() -> void:
 	mat.shader = load(shader_path)
 	_set_waves(mat, sea_state, 0.64)
 	_set_spectrum(mat, sea_state, 0.64)
+	if args.has("wake"):
+		# Wakes.cs as a fixed trail: wake=swim (moving at 1.8 m/s through still water) or wake=stand (in a current).
+		var pts := PackedVector4Array(); var flw := PackedVector4Array()
+		var cur := float(args.get("current", "0"))
+		for i in 24:
+			var age := i * 0.15
+			if args["wake"] == "swim":
+				pts.append(Vector4(-1.8 * age, 0.0, t - age, 0.12 + 0.45 * 1.8)); flw.append(Vector4(1.8, 0.0, 0.0, 0.0))
+			else:
+				pts.append(Vector4(0.0, 0.0, t - age, 0.12 + 0.45 * cur)); flw.append(Vector4(0.0, cur, 0.0, -cur))
+		mat.set_shader_parameter("wake_points", pts); mat.set_shader_parameter("wake_flow", flw)
+		mat.set_shader_parameter("wake_centre", Vector2.ZERO)
 	if args.has("redfoam"): mat.set_shader_parameter("foam_color", Color(1, 0, 0))
 	if args.has("amount"): mat.set_shader_parameter("debug_foam", 1)
 	mat.set_shader_parameter("sun_direction", sun.basis.z.normalized())

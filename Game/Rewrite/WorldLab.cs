@@ -372,6 +372,23 @@ public partial class WorldLab : Node3D
         _holding = true; // wait for ground collision before gravity
     }
 
+    // Wakes in the water around the player (experimental 2 draws them).
+    private readonly Wakes _wakes = new();
+    private Vector2 _wakeCurrent;
+    private double _wakeCurrentAge = 1;
+
+    private void UpdateWakes(float dt, double level)
+    {
+        if (GameSettings.WaterStyle.Index != 2) return;
+        float feet = _player.Position.Y;
+        bool inWater = !_fly && !double.IsNaN(level) && feet < level + .05 && level - feet < 2.6;
+        // The local current (a few terrain samples): refreshed a few times a second.
+        _wakeCurrentAge += dt;
+        if (inWater && _wakeCurrentAge > .2) { _wakeCurrent = Wakes.CurrentAt(_sampler!, PlayerX, PlayerZ); _wakeCurrentAge = 0; }
+        _wakes.Update(dt, _atmosphere.OceanTime, _player.Position, _player.Velocity, inWater, inWater ? _wakeCurrent : Vector2.Zero);
+        _wakes.Apply(_streamer.WaterMaterial, _player.Position);
+    }
+
     private void Rebase(double x, double z, bool force = false)
     {
         double ox = Math.Floor(x / 64) * 64, oz = Math.Floor(z / 64) * 64;
@@ -379,6 +396,7 @@ public partial class WorldLab : Node3D
         var shift = new Vector3((float)(_originX - ox), 0, (float)(_originZ - oz));
         _originX = ox; _originZ = oz;
         _player.Position += shift;
+        _wakes.Shift(shift);
         _streamer.Rebase(ox, oz);
         _water.Rebase(ox, oz);
     }
@@ -532,6 +550,7 @@ public partial class WorldLab : Node3D
         }
         _player.Velocity = velocity;
         _player.MoveAndSlide();
+        UpdateWakes(dt, level);
         // Never fall through the world if collision has not streamed in yet (e.g. after very fast flight).
         var ground = _sampler.Sample(PlayerX, PlayerZ).Height;
         if (!_noclip && _player.Position.Y < ground - .5) _player.Position = new Vector3(_player.Position.X, (float)ground + .05f, _player.Position.Z);

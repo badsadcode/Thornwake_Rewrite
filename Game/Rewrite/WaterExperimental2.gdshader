@@ -32,6 +32,9 @@ uniform float wave2_phase[64]; // per wave: phase including the float origin (Sp
 uniform float wave2_hs = 1.0; // significant wave height (m)
 uniform float wave2_chop = 0.8; // Σ q k A at a point (SpectrumWaves.Chop)
 uniform vec2 world_origin;    // world position of scene (0, 0): regional wave headings and groups are world-anchored
+uniform vec4 wake_points[24]; // wakes (Wakes.cs): scene x, z, birth time (ocean_time), strength (relative speed)
+uniform vec4 wake_flow[24];   // per wake point: velocity relative to the water x, z; the local current x, z
+uniform vec2 wake_centre = vec2(1e9); // the wakes' source now (rings are only looked for near it)
 uniform int debug_foam = 0;   // 1: show the foam amount (tests)
 uniform vec3 sss_color : source_color = vec3(0.06, 0.62, 0.56); // light scattered through thin wave tops
 uniform float wave_height = 0.3;
@@ -436,6 +439,25 @@ void fragment() {
 	float fold = 1.0 - ((1.0 - jac.x) * (1.0 - jac.y) - jac.z * jac.z);
 	vec2 slope = -n.xz / max(n.y, 0.2);
 
+	// Wakes (Noor: directional, not radial): every disturbance spreads as a ring of ripples while the current carries it
+	// downstream and it fades; a source moving relative to the water lays its rings along its path (a V-shaped wake),
+	// standing in a current the rings drift downstream (a downstream V).
+	float wake_foam = 0.0;
+	if (length(p - wake_centre) < 45.0) {
+		for (int i = 0; i < 24; i++) {
+			vec4 w = wake_points[i];
+			if (w.w <= 0.0) continue;
+			float age = ocean_time - w.z;
+			if (age < 0.0 || age > 4.5) continue;
+			vec2 d = p - (w.xy + wake_flow[i].zw * age);
+			float r = length(d), x = r - (0.25 + 0.85 * age);
+			float env = exp(-x * x / (0.12 + 0.3 * age)) * exp(-age * 0.85) * w.w;
+			if (env < 0.002) continue;
+			float k = 10.0 / (1.0 + age * 0.7);
+			slope += d / max(r, 0.05) * env * k * cos(k * x) * 0.03;
+			wake_foam = max(wake_foam, w.w * exp(-age * 2.2) * (1.0 - smoothstep(0.0, 0.45 + age * 0.9, r)));
+		}
+	}
 	vec2 big_slope = slope; // the waves without the small ripples (reflection strength, below)
 	// Small-scale detail: wind ripples on seas and lakes (stronger with wind and storms), flow ripples on rivers.
 	float bed_slope = length(bed_grad);
@@ -613,6 +635,7 @@ void fragment() {
 	} else {
 		amount = max(amount, smoothstep(0.45, 0.9, fold) * smoothstep(0.5, 0.9, sea_state) * 0.6 * lake);
 	}
+	amount = max(amount, wake_foam * 0.6); // splashes and churned water where something moves through
 	float amt = clamp(amount, 0.0, 1.0);
 	vec3 layers = foam_layers(p, drift, TIME, amt, dist);
 	float foam = layers.x, under_foam = layers.y, foam_shade = layers.z;
