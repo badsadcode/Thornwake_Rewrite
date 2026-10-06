@@ -448,12 +448,15 @@ public partial class WorldLab : Node3D
         {
             // Waves in the shader's scene-local coordinates (the float origin), so the surface matches what is drawn.
             double lx = x - _originX, lz = z - _originZ, depth = level - t.Height, time = _atmosphere.OceanTime;
-            if (GameSettings.WaterStyle.Index == 1)
+            if (GameSettings.WaterStyle.Index >= 1)
             {
                 bool sea = t.Water == WaterKind.Ocean;
                 var (gx, gz, exposure) = sea && depth < 25 ? WaterShore.Coast(_sampler, x, z) : (0f, 0f, 1f);
                 double fetch = sea ? 1e5 : t.WaterBody >= 0 && t.WaterBody < _sampler.Plan.Hydrology.Lakes.Count ? Math.Sqrt(_sampler.Plan.Hydrology.Lakes[t.WaterBody].Area) : 0;
-                level += WaterShore.Height(_atmosphere.Waves, lx, lz, time, Math.Min(depth, 20), sea, !sea, fetch, exposure, gx, gz);
+                var wind = _atmosphere.Wind.Direction;
+                level += GameSettings.WaterStyle.Index == 2
+                    ? WaterShore.Height2(_atmosphere.Spectrum, lx, lz, time, Math.Min(depth, 20), sea, !sea, fetch, exposure, gx, gz, wind.X, wind.Y)
+                    : WaterShore.Height(_atmosphere.Waves, lx, lz, time, Math.Min(depth, 20), sea, !sea, fetch, exposure, gx, gz);
             }
             else level += _atmosphere.Waves.Height(lx, lz, time, depth, t.Water == WaterKind.Lake);
         }

@@ -83,8 +83,12 @@ public partial class WorldStreamer : Node3D
 
     public ShaderMaterial WaterMaterial => _water;
 
-    private static Shader WaterShader() => GD.Load<Shader>(GameSettings.WaterStyle.Index == 1
-        ? "res://Game/Rewrite/WaterExperimental.gdshader" : "res://Game/Rewrite/Water.gdshader");
+    private static Shader WaterShader() => GD.Load<Shader>(GameSettings.WaterStyle.Index switch
+    {
+        1 => "res://Game/Rewrite/WaterExperimental.gdshader",
+        2 => "res://Game/Rewrite/WaterExperimental2.gdshader",
+        _ => "res://Game/Rewrite/Water.gdshader",
+    });
 
     public void ShowGrid(bool show) => _terrain.SetShaderParameter("show_grid", show);
     public void ShowBiomes(bool show) => _terrain.SetShaderParameter("biome_debug", show ? 1f : 0f);

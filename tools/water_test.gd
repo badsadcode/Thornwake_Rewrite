@@ -35,7 +35,7 @@ func _initialize() -> void:
 	root.add_child(sun)
 
 	# Ground: the bed rises toward +z at the given slope and becomes a beach above y = 0 (z > 0).
-	var size := 240.0
+	var size := float(args.get("size", "240"))
 	var n := int(args.get("grid", "241"))
 	var ground := _grid(size, n, func(x: float, z: float) -> float: return _bed(x, z, slope, kind))
 	var gm := StandardMaterial3D.new(); gm.albedo_color = Color(0.62, 0.56, 0.42)
@@ -48,7 +48,7 @@ func _initialize() -> void:
 	var tint := int(args.get("tint", "0"))
 	var tint_rgb := Color(0.36, 0.29, 0.18) if tint == 1 else Color(0.31, 0.62, 0.55)
 	var packed := float(int(tint_rgb.r8) * 65536 + int(tint_rgb.g8) * 256 + int(tint_rgb.b8))
-	var kind_code := 0.0 if kind == "sea" else (0.5 if kind == "lake" else 1.0)
+	var kind_code := 0.0 if kind == "sea" or kind == "deep" else (0.5 if kind == "lake" else 1.0)
 	for j in n:
 		for i in n:
 			var x := -size * 0.5 + size * i / (n - 1)
@@ -74,8 +74,15 @@ func _initialize() -> void:
 	var wmesh := ArrayMesh.new()
 	wmesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT)
 	var mat := ShaderMaterial.new()
-	mat.shader = load("res://Game/Rewrite/WaterExperimental.gdshader" if args.get("style", "1") == "1" else "res://Game/Rewrite/Water.gdshader")
+	var style: String = args.get("style", "1")
+	var shader_path := "res://Game/Rewrite/Water.gdshader"
+	if style == "1": shader_path = "res://Game/Rewrite/WaterExperimental.gdshader"
+	elif style == "2": shader_path = "res://Game/Rewrite/WaterExperimental2.gdshader"
+	mat.shader = load(shader_path)
 	_set_waves(mat, sea_state, 0.64)
+	_set_spectrum(mat, sea_state, 0.64)
+	if args.has("redfoam"): mat.set_shader_parameter("foam_color", Color(1, 0, 0))
+	if args.has("amount"): mat.set_shader_parameter("debug_foam", 1)
 	mat.set_shader_parameter("sun_direction", sun.basis.z.normalized())
 	mat.set_shader_parameter("sun_color", Color(1, 0.95, 0.85))
 	var wi := MeshInstance3D.new(); wi.mesh = wmesh; wi.material_override = mat; wi.extra_cull_margin = 50.0; root.add_child(wi)
@@ -93,6 +100,8 @@ func _bed(x: float, z: float, slope: float, kind: String) -> float:
 		return -1.6 + 1.6 * pow(abs(x) / 40.0, 2.0) # a 80 m wide channel along z
 	if kind == "lake":
 		return -3.0 + slope * (z - 20.0) * 0.5
+	if kind == "deep":
+		return -120.0
 	return slope * (z - 20.0) + 0.6 * sin(x * 0.05) * 0.3 # beach at z = 20
 
 func _grid(size: float, n: int, height: Callable) -> ArrayMesh:
@@ -130,6 +139,47 @@ func _set_waves(mat: ShaderMaterial, sea_state: float, wind_angle: float) -> voi
 	mat.set_shader_parameter("wave_q", q)
 	mat.set_shader_parameter("wave_height", total)
 	mat.set_shader_parameter("sea_state", sea_state)
+
+# SpectrumWaves.Configure in GDScript (same numbers as the C# class).
+func _hash01(i: int, salt: int) -> float:
+	# Not bit-identical to the C# hash (64-bit mixing); only the look matters here.
+	var h := hash(Vector2i(i * 7919 + salt * 104729, 12345))
+	return float(h % 1000003) / 1000003.0
+
+func _set_spectrum(mat: ShaderMaterial, s: float, wind_angle: float) -> void:
+	var n := 32
+	var hs := 0.4 + 6.8 * pow(s, 1.5)
+	var lp := 9.0 + 62.0 * pow(s, 1.2)
+	var wp := sqrt(9.81 * TAU / lp)
+	var lmax := lp * 1.8
+	var lmin := maxf(1.2, lp / 34.0)
+	var energy := []; var waves := []; var phases := []; var total := 0.0
+	for i in n:
+		var t := float(i) / float(n - 1)
+		var lam := lmax * pow(lmin / lmax, t)
+		var k := TAU / lam
+		var w := sqrt(9.81 * k)
+		var r := wp / w
+		var sig := 0.07 if w <= wp else 0.09
+		var peak := pow(3.3, exp(-(w - wp) * (w - wp) / (2.0 * sig * sig * wp * wp)))
+		var e := pow(w, -5.0) * exp(-1.25 * r * r * r * r) * peak * w
+		energy.append(e); total += e
+		var spread := (0.3 + 0.55 * s) * (0.6 + 0.9 * t)
+		var u := _hash01(i, 1) * 2.0 - 1.0
+		var ang := wind_angle + 0.85 if i == 0 else wind_angle + signf(u) * pow(absf(u), 0.8) * spread * 1.6
+		waves.append(Vector4(cos(ang), sin(ang), k, 0.0)); phases.append(_hash01(i, 2) * TAU)
+	var target := hs / 4.0 * (hs / 4.0)
+	var sum_ka := 0.0
+	for i in n:
+		var wv: Vector4 = waves[i]
+		var a := minf(sqrt(2.0 * target * float(energy[i]) / total), 0.3 / wv.z)
+		waves[i] = Vector4(wv.x, wv.y, wv.z, a); sum_ka += wv.z * a
+	var chop := 0.6 + 0.36 * s
+	var qp := PackedVector2Array()
+	for i in n: qp.append(Vector2(chop / maxf(sum_ka, 1e-6), float(phases[i])))
+	mat.set_shader_parameter("waves2", waves)
+	mat.set_shader_parameter("wave2_qp", qp)
+	mat.set_shader_parameter("wave2_hs", hs)
 
 func _process(_delta: float) -> bool:
 	_frames += 1

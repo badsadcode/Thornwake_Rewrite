@@ -39,10 +39,11 @@ public static class WaterShore
     private static readonly double[] Radii = { 600, 2000, 6000 };
 
     /// <summary>Experimental amplitude factor of Gerstner wave <paramref name="i"/> (shader wave_factor).</summary>
-    public static double Factor(int i, double lambda, double depth, bool sea, bool lake, double fetch, double exposure)
+    /// <param name="wide">Experimental 2: the hand-over to the shore waves starts at 19 m instead of 14 m.</param>
+    public static double Factor(int i, double lambda, double depth, bool sea, bool lake, double fetch, double exposure, bool wide = false)
     {
         double f = DetMath.Smooth(depth / (lambda * .12 + .3));
-        if (sea) return f * (.3 + .7 * exposure) * (.35 + .65 * Smoothstep(3, 14, depth));
+        if (sea) return f * (.3 + .7 * exposure) * (wide ? .25 + .75 * Smoothstep(4, 19, depth) : .35 + .65 * Smoothstep(3, 14, depth));
         if (!lake) return 0;
         double longest = Math.Clamp(fetch * .04, 2.5, 45);
         return f * (1 - Smoothstep(longest, longest * 1.6, lambda)) * Math.Clamp(.18 + fetch / 6000, .18, .85) * (i >= 10 ? 0 : 1)
@@ -69,6 +70,15 @@ public static class WaterShore
         return y;
     }
 
+    /// <summary>The "experimental 2" surface: the spectrum sea (with its wave groups) cut to the body, plus the shore wave.</summary>
+    public static double Height2(SpectrumWaves waves, double lx, double lz, double t, double depth, bool sea, bool lake,
+        double fetch, double exposure, double gx, double gz, double windX, double windZ)
+    {
+        double y = waves.Height(lx, lz, t, lambda => Factor(0, lambda, depth, sea, lake, fetch, exposure, wide: true), windX, windZ);
+        if (sea) y += Shore(lx, lz, t, depth, gx, gz, exposure, waves.SeaState, wide: true);
+        return y;
+    }
+
     private static (double X, double Y, double Z) Gerstner(OceanWaves waves, double x, double z, double t, double depth, bool sea, bool lake, double fetch, double exposure)
     {
         double dx = 0, dy = 0, dz = 0;
@@ -85,10 +95,10 @@ public static class WaterShore
     }
 
     /// <summary>Shore wave height (shader shore_wave, vertical part).</summary>
-    public static double Shore(double lx, double lz, double t, double depth, double gx, double gz, double exposure, double seaState)
+    public static double Shore(double lx, double lz, double t, double depth, double gx, double gz, double exposure, double seaState, bool wide = false)
     {
         double s = Math.Sqrt(gx * gx + gz * gz);
-        double active = Smoothstep(14, 8, depth) * Smoothstep(.003, .012, s) * (1 - Smoothstep(.22, .45, s));
+        double active = (wide ? Smoothstep(19, 9, depth) : Smoothstep(14, 8, depth)) * Smoothstep(.003, .012, s) * (1 - Smoothstep(.22, .45, s));
         if (active <= 0) return 0;
         double period = 7 + 4 * seaState, omega = 2 * Math.PI / period;
         const double SRef = .03; // reference bed slope: the phase depends on depth only (see the shader)

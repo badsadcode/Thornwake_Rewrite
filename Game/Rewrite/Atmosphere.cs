@@ -50,6 +50,8 @@ public partial class Atmosphere : Node3D
     private float _storm; // 0 fair … 1 full storm, eased
     /// <summary>The waves the water shader draws (same parameters and clock), for swimming and boats.</summary>
     public OceanWaves Waves { get; } = new();
+    /// <summary>The spectrum sea of the "experimental 2" water (same sea state and wind as <see cref="Waves"/>).</summary>
+    public SpectrumWaves Spectrum { get; } = new();
     /// <summary>Wave clock (s), shared with the shader through the global uniform <c>ocean_time</c>.</summary>
     public double OceanTime { get; private set; }
     private double _wavesState = -1, _wavesAngle = Math.Atan2(.6, .8);
@@ -176,7 +178,11 @@ public partial class Atmosphere : Node3D
     /// <summary>The terrain water material: reflection quality follows the settings.</summary>
     public void SetWater(ShaderMaterial water) { _water = water; _wavesState = -1; ApplyAll(); }
 
-    private void OnSetting(Setting s) => ApplyAll();
+    private void OnSetting(Setting s)
+    {
+        if (s == GameSettings.WaterStyle) _wavesState = -1; // resend every wave set to the swapped shader
+        ApplyAll();
+    }
 
     private void ApplyAll()
     {
@@ -365,6 +371,18 @@ public partial class Atmosphere : Node3D
         _water.SetShaderParameter("wave_q", q);
         _water.SetShaderParameter("wave_height", (float)Waves.WaveHeight);
         _water.SetShaderParameter("sea_state", (float)seaState);
+        Spectrum.Configure(seaState, _wavesAngle);
+        var w2 = new Godot.Collections.Array<Vector4>();
+        var qp = new Vector2[SpectrumWaves.Count];
+        for (int i = 0; i < SpectrumWaves.Count; i++)
+        {
+            var (dx, dz, k, a) = Spectrum.Waves[i];
+            w2.Add(new Vector4((float)dx, (float)dz, (float)k, (float)a));
+            qp[i] = new Vector2((float)Spectrum.QP[i].Q, (float)Spectrum.QP[i].Phase);
+        }
+        _water.SetShaderParameter("waves2", w2);
+        _water.SetShaderParameter("wave2_qp", qp);
+        _water.SetShaderParameter("wave2_hs", (float)Spectrum.Hs);
     }
 
     /// <summary>Cloud cover in effect: the setting, closing in toward overcast while it rains.</summary>
