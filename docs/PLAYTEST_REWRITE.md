@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 18 — water as a system, Noor's ground textures (switchable)
+* **Experimental 2** (Noor's review): foam follows the weather — calm: no whitecaps; breezy: a few short-lived caps;
+  rough: many; storm: dense. Whitecaps come in streaks and fragments that form and fade, not big white sheets. Broader,
+  longer swells. Near coasts the waves turn toward the shore and run in as sets. Sea state now says calm / breezy /
+  rough / storm.
+* **Esc → Settings → Lighting and effects → Ground textures: current / Noor.** Current (default) is the ground you
+  know, unchanged. Noor puts Noor's pixel-art textures on the ground: grass, sand, snow and soil keep their biome colours
+  with the texture's pattern; forest floor (leaf litter), mud (wet mud near water and in rain), gravel, moss, peat,
+  scree on mountain slopes, rocky ground and river/sea beds use Noor's art up close and fade to the usual colours in the
+  distance. Cliffs keep their rock. Switch any time to compare.
+* **Rocky patches on coasts** (the "blocky wet" ground): their edges are ragged now, following the stones, instead of
+  straight triangle edges — in both ground styles.
+
 ## New in build 17 — storms from calm to huge, waves that differ from place to place, rocks you stand on
 * **Experimental 2 sea, rebuilt** (classic and experimental unchanged; the build 16 version is kept as a snapshot):
   * **Sea state is smooth from calm to huge**: calm is a long, soft swell gently lifting the whole sea; moderate seas

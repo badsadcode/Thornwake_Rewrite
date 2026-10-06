@@ -26,6 +26,8 @@ public sealed class Setting
     public bool Rebuild { get; }
     /// <summary>Value shown as "auto" (the world recipe decides).</summary>
     public double? AutoAt { get; init; }
+    /// <summary>Optional word shown after the number (e.g. the sea state's calm / breezy / rough / storm).</summary>
+    public Func<double, string>? Describe { get; init; }
     public bool IsToggle => Options == null && Min == 0 && Max == 1 && Step == 1;
     private double _value;
 
@@ -62,6 +64,7 @@ public sealed class Setting
         if (IsToggle) return On ? "on" : "off";
         string number = Step >= 1 ? _value.ToString("0", CultureInfo.InvariantCulture)
             : Step >= .1 ? _value.ToString("0.0", CultureInfo.InvariantCulture) : _value.ToString("0.00", CultureInfo.InvariantCulture);
+        if (Describe != null) number += " " + Describe(_value);
         return Unit.Length == 0 ? number : Unit == "×" ? number + "×" : $"{number} {Unit}";
     }
 }
@@ -109,6 +112,12 @@ public static class GameSettings
         "the same, with a livelier ocean — many sharp overlapping waves, wave sets, bright light through the crests, streaky " +
         "storm foam and a far wilder storm. Switch any time to compare.",
         options: new[] { "classic", "experimental", "experimental 2" }));
+    public static readonly Setting GroundTextures = Add(new("fx.ground_textures", "Lighting and effects", "Ground textures", 0, 1, 1, 0,
+        "Current: the ground of the previous builds (kept as it is). Noor: Noor's pixel-art textures on the ground — grass, " +
+        "sand, snow and soil keep their biome colours with the texture's pattern; forest floor, mud (wet mud when it rains), " +
+        "gravel, moss, peat, scree and river/sea beds use Noor's art up close and fade to the usual colours far away. " +
+        "Cliffs keep their rock textures. Switch any time to compare.",
+        options: new[] { "current", "Noor" }));
     public static readonly Setting WaterReflections = Add(new("fx.water_reflections", "Lighting and effects", "Water reflections", 0, 2, 1, 2,
         "Screen-space reflections of the landscape on water (sky only when off).", options: new[] { "sky only", "medium", "high" }));
     public static readonly Setting Ssr = Add(new("fx.ssr", "Lighting and effects", "Screen-space reflections (other surfaces)", 0, 1, 1, 0,
@@ -150,7 +159,9 @@ public static class GameSettings
     public static readonly Setting CloudShadows = Add(new("sky.cloud_shadows", "Sky", "Cloud shadows", 0, 1, .05, .55,
         "How dark the shadows of clouds drifting over the land are.", "×"));
     public static readonly Setting SeaState = Add(new("sky.sea_state", "Sky", "Sea state", 0, 1, .05, .25,
-        "Waves on the sea and lakes: 0 calm, 0.3 moderate, 0.6 rough, 1 storm. Rain makes the sea rougher."));
+        "Waves on the sea and lakes, smoothly from calm (a long soft swell) through breezy and rough to storm (huge seas, " +
+        "experimental 2). Rain and storms make the sea rougher on top of this.")
+        { Describe = v => v < .2 ? "calm" : v < .45 ? "breezy" : v < .75 ? "rough" : "storm" });
     public static readonly Setting CloudQuality = Add(new("sky.cloud_quality", "Sky", "Cloud quality", 0, 2, 1, 1,
         "One layer; layered (high cirrus, the main clouds and low fast clouds, each with its own wind); volumetric (experimental, " +
         "lit 3D clouds — heavier on the GPU).", options: new[] { "one layer", "layered", "volumetric (experimental)" }));

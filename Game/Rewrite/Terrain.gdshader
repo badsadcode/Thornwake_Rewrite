@@ -18,11 +18,37 @@ varying flat float map_packed;
 varying vec4 biome_d; // biome rock colour, wetness
 uniform sampler2DArray rock_tex : source_color, filter_nearest_mipmap, repeat_enable; // rock looks (RockTextures order)
 uniform float biome_debug = 0.0; // 1: tint the ground with the biome map colours (F4)
+// Ground style (fx.ground_textures): 0 current, 1 Noor's pixel-art textures (GroundTextures.cs order). Sampled as raw
+// sRGB like the palette here; ground_mean = each layer's mean colour, so a texture can be detail over the biome colour.
+uniform int ground_style = 0;
+uniform sampler2DArray ground_tex : filter_nearest_mipmap, repeat_enable;
+uniform vec3 ground_mean[16];
+const int G_GRASS = 0, G_DIRT = 1, G_SAND = 2, G_ROCK = 3, G_RIVER_BED = 4, G_SEA_BED = 5, G_FOREST = 6, G_GRAVEL = 7;
+const int G_MUD = 8, G_WET_MUD = 9, G_MOSS = 10, G_SCREE = 11, G_SNOW = 12, G_PEAT = 13;
 
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float vnoise(vec2 p) {
 	vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+// A ground texture at ~8 m per tile, two differently rotated and scaled copies blended by slow noise so the tiles
+// do not repeat visibly over open ground.
+vec3 gtex(int layer, vec2 p) {
+	vec2 u1 = p / 8.0;
+	vec2 u2 = mat2(vec2(0.8, -0.6), vec2(0.6, 0.8)) * p / 7.1 + vec2(0.37, 0.71);
+	vec3 a = texture(ground_tex, vec3(u1, float(layer))).rgb;
+	vec3 b = texture(ground_tex, vec3(u2, float(layer))).rgb;
+	return mix(a, b, smoothstep(0.35, 0.65, vnoise(p * 0.045 + vec2(float(layer) * 7.3, 1.9))));
+}
+// The texture as detail over a biome colour: its light and shade around 1 (the layer's mean divided out), with only a
+// hint of its own hues (full per-channel ratios turned Noor's yellow/green grass into confetti on other biomes), and
+// its contrast eased.
+vec3 gdetail(int layer, vec2 p) {
+	vec3 t = gtex(layer, p), m = max(ground_mean[layer], vec3(0.02));
+	float shade = dot(t, vec3(0.3, 0.55, 0.15)) / max(dot(m, vec3(0.3, 0.55, 0.15)), 0.02);
+	vec3 d = mix(vec3(shade), t / m, 0.2);
+	return 1.0 + (d - 1.0) * 0.7;
 }
 
 void vertex() {
@@ -38,6 +64,10 @@ void fragment() {
 	float forest = COLOR.r, mountain = COLOR.g, wet = COLOR.b, submerged = smoothstep(0.5, 0.8, COLOR.a);
 	float slope = 1.0 - clamp(world_normal.y, 0.0, 1.0);
 	float n1 = vnoise(p * 0.012), n2 = vnoise(p * 0.21), n3 = vnoise(p * 1.7);
+	bool noor = ground_style == 1;
+	float dist = length(VERTEX);
+	float g_near = 1.0 - smoothstep(50.0, 200.0, dist);   // Noor's materials up close, the usual colours far away
+	float g_detail = 1.0 - smoothstep(150.0, 600.0, dist); // pattern over the biome colours (mipmaps average it anyway)
 
 	// Ground colours from the biome (temperate: valley 566b3f .. 7b8059 as before).
 	vec3 grass = mix(biome_a.rgb, biome_b.rgb, n1);
@@ -45,9 +75,15 @@ void fragment() {
 	// Sparse plant cover (deserts, cold deserts, tundra): bare, dry ground shows through in patches.
 	grass = mix(biome_b.rgb * vec3(1.05, 1.0, 0.92), grass, smoothstep(0.0, 1.0, biome_b.a * 1.3 + (n2 - 0.5) * 0.5));
 	vec3 woods = biome_a.rgb * vec3(0.70, 0.71, 0.69);                                     // forest floor / far canopy
+	if (noor) {
+		grass *= mix(vec3(1.0), gdetail(G_GRASS, p), 0.85 * g_detail);
+		// Forest floor: Noor's leaf litter, a little of the biome's colour kept.
+		woods = mix(woods, gtex(G_FOREST, p) * mix(vec3(1.0), woods / max(ground_mean[G_FOREST], vec3(0.02)), 0.35), 0.9 * g_near);
+	}
 	vec3 c = mix(grass, woods, smoothstep(0.15, 0.75, forest) * 0.85);
 	c = mix(c, vec3(0.470, 0.460, 0.350), smoothstep(1300.0, 2300.0, h) * 0.65 * min(1.0, biome_b.a)); // alpine meadow (where plants grow)
 	vec3 rock = mix(biome_d.rgb, biome_d.rgb * vec3(1.2, 1.18, 1.2), n2);                   // valley 77766a (biome rock)
+	float rock_relief = 0.0; // brightness of the rock texture around 1: stones show first at the rock's ragged edge
 	// All bare rock (cliffs, crags, rocky ground) uses the bitmap rock texture, projected from the two sides and from
 	// above by the surface direction (top-down UVs alone would stretch into streaks on steep faces).
 	{
@@ -63,16 +99,29 @@ void fragment() {
 			side = mix(lo, hi, smoothstep(0.3, 0.7, biome_c.b + (vnoise(p * 0.3) - 0.5) * 0.3));
 		}
 		side /= 0.5;
+		rock_relief = dot(side, vec3(0.333)) - 1.0;
 		rock = biome_d.rgb * side * (0.9 + 0.2 * vnoise(vec2(p.x + p.y, h) * 0.05));
 	}
+	// Noor: rocky ground on gentle slopes uses Noor's cobbled rock in the biome's rock colour; cliffs keep theirs.
+	if (noor) rock = mix(rock, gtex(G_ROCK, p) * biome_d.rgb / max(dot(ground_mean[G_ROCK], vec3(0.333)), 0.02),
+		(1.0 - smoothstep(0.3, 0.5, slope)) * 0.85 * g_near);
 	// Bare rock: on steep slopes everywhere, and on gentler ground in rocky biomes (patchy).
 	float exposure = biome_c.a * (0.25 + 0.75 * smoothstep(0.35, 0.75, n2 + (n1 - 0.5) * 0.4));
-	c = mix(c, rock, smoothstep(0.30, 0.52, slope + (n2 - 0.5) * 0.10 + mountain * 0.06 + exposure * 0.32));
+	// The edge follows the stones of the rock texture and a few-metre noise, not the triangles (the rock amount is
+	// per vertex: a plain threshold drew straight-edged patches, which read as blocky wet ground on coasts).
+	c = mix(c, rock, smoothstep(0.30, 0.52, slope + (n2 - 0.5) * 0.10 + mountain * 0.06 + exposure * 0.32
+		+ rock_relief * 0.16 + (vnoise(p * 0.27 + 4.1) - 0.5) * 0.12));
+	// Noor: scree on the steeper slopes of mountains, below the bare rock.
+	if (noor) c = mix(c, gtex(G_SCREE, p) * biome_d.rgb / max(dot(ground_mean[G_SCREE], vec3(0.333)), 0.02),
+		smoothstep(0.2, 0.5, mountain) * smoothstep(0.18, 0.28, slope + (n2 - 0.5) * 0.12) * (1.0 - smoothstep(0.34, 0.46, slope)) * 0.8 * g_near);
 	// Wet biomes (swamps): darker, muddier ground.
 	c = mix(c, c * vec3(0.72, 0.7, 0.62), biome_d.a * smoothstep(0.3, 0.7, n2 + 0.2));
 	vec3 sand = mix(vec3(0.800, 0.725, 0.520), vec3(0.700, 0.640, 0.470), n2);             // valley cbb984
+	if (noor) sand *= mix(vec3(1.0), gdetail(G_SAND, p), 0.9 * g_detail);
 	c = mix(c, sand, smoothstep(0.3, 0.65, wet + (n2 - 0.5) * 0.25) * (1.0 - smoothstep(0.25, 0.5, slope)));
 	vec3 bed = mix(vec3(0.360, 0.340, 0.260), vec3(0.450, 0.420, 0.330), n2);              // gravel and silt under water
+	// Noor: sea floor below sea level, river and lake beds above it.
+	if (noor) bed = mix(bed, mix(gtex(G_RIVER_BED, p), gtex(G_SEA_BED, p), smoothstep(-0.2, -1.5, h)), 0.9 * g_near);
 	// River and lake banks (not sea beaches): from the waterline to ~0.5 m above it (wide where the river has a low
 	// beach), in patches of dark mud,
 	// pale sand or gravel, and plain damp grass, varying along the shore every few tens of metres.
@@ -84,15 +133,25 @@ void fragment() {
 	vec3 mud = vec3(0.30, 0.25, 0.18) * (0.9 + 0.2 * n3);
 	vec3 shore_sand = mix(vec3(0.66, 0.60, 0.45), vec3(0.55, 0.52, 0.44), n2);
 	vec3 gravel = mix(vec3(0.52, 0.50, 0.46), vec3(0.62, 0.60, 0.55), hash(floor(p * 5.0))) * (0.9 + 0.2 * n3);
+	vec3 moss = c * vec3(0.55, 0.62, 0.45);
+	if (noor) {
+		// Mud is wet mud near the waterline and in the rain (Noor's wet variant), dry mud higher up the bank.
+		float soaked = max(rain_wetness.x, smoothstep(0.4, 0.55, COLOR.a + damp_noise));
+		mud = mix(mud, mix(gtex(G_MUD, p), gtex(G_WET_MUD, p), soaked), g_near);
+		gravel = mix(gravel, gtex(G_GRAVEL, p), g_near);
+		shore_sand *= mix(vec3(1.0), gdetail(G_SAND, p), 0.8 * g_detail);
+		moss = mix(moss, gtex(G_MOSS, p) * 0.85, g_near);
+	}
 	vec3 shore = mix(c * vec3(0.62, 0.6, 0.55) + vec3(0.03, 0.025, 0.015), mud, smoothstep(0.26, 0.36, patch_kind));
 	shore = mix(shore, gravel, smoothstep(0.46, 0.56, patch_kind));
 	shore = mix(shore, shore_sand, smoothstep(0.62, 0.72, patch_kind));
 	// Wetlands: pool margins are dark mud and wet moss rather than sand and gravel.
 	float wetland = smoothstep(0.45, 0.75, biome_d.a);
-	shore = mix(shore, mix(mud * 0.8, c * vec3(0.55, 0.62, 0.45), smoothstep(0.4, 0.7, patch_kind)), wetland);
+	shore = mix(shore, mix(mud * 0.8, moss, smoothstep(0.4, 0.7, patch_kind)), wetland);
 	c = mix(c, shore, damp);
 	// Ground the player dug or raised: bare, slightly lumpy soil.
 	vec3 soil = mix(vec3(0.36, 0.28, 0.19), vec3(0.45, 0.36, 0.25), n3);
+	if (noor) soil *= mix(vec3(1.0), gdetail(G_DIRT, p), 0.9 * g_detail);
 	c = mix(c, soil, smoothstep(0.05, 0.35, UV2.y + (n2 - 0.5) * 0.08));
 	// Wetland pool beds (swamps, marshes, fens, bayous): dark peat and silt with sunken leaves and twigs.
 	if (wetland > 0.0) {
@@ -108,17 +167,20 @@ void fragment() {
 		float along = dot(q, vec2(cos(ang), sin(ang))), across = dot(q, vec2(-sin(ang), cos(ang)));
 		float twig = step(0.6, hash(tc + 3.0)) * step(abs(across), 0.018) * step(abs(along), 0.35);
 		peat = mix(peat, vec3(0.09, 0.07, 0.05), twig);
+		if (noor) peat = mix(peat, gtex(G_PEAT, p), g_near);
 		bed = mix(bed, peat, wetland);
 	}
 	c = mix(c, bed, submerged);
 	// Snow from the biome and the cold (temperature falls with height), patchy at its edge.
 	// Snow does not hold on steep rock: faces break through (patchy edge).
 	float snow = smoothstep(0.25, 0.75, biome_a.a + (n1 - 0.5) * 0.35) * (1.0 - smoothstep(0.42, 0.62, slope + (n2 - 0.5) * 0.12));
-	c = mix(c, vec3(0.93, 0.94, 0.96), snow);
+	vec3 snow_c = vec3(0.93, 0.94, 0.96);
+	if (noor) snow_c *= mix(vec3(1.0), gdetail(G_SNOW, p), 0.7 * g_detail);
+	c = mix(c, snow_c, snow);
 	c *= 0.92 + 0.16 * n3;
 	// Close-up detail (fades out by ~45 m): pixel-stepped speckle and small clumps at 6 cm texels, in the spirit
 	// of the valley game's nearest-filtered pixel textures. Stronger on grass, finer and greyer on rock.
-	float near = 1.0 - smoothstep(15.0, 45.0, length(VERTEX));
+	float near = (1.0 - smoothstep(15.0, 45.0, dist)) * (noor ? 0.3 : 1.0); // Noor's textures bring their own detail
 	if (near > 0.0) {
 		vec2 texel = floor(p * 16.0);
 		float speck = hash(texel);

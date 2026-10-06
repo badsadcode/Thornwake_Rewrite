@@ -396,7 +396,7 @@ public partial class WorldLab : Node3D
         // Static caches of Godot resources (tree, rock and prop meshes, materials) must be freed while the engine is
         // still alive; left to the .NET finalizers at process exit they intermittently crashed on quit (as the valley
         // game already handles in Main).
-        RockMeshes.Release(); RockTextureArray.Release(); WoodlandAssets.Release(); Visuals.ReleaseMaterials();
+        RockMeshes.Release(); RockTextureArray.Release(); GroundTextures.Release(); WoodlandAssets.Release(); Visuals.ReleaseMaterials();
     }
 
     private double PlayerX => _originX + _player.Position.X;

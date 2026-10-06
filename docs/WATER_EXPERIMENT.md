@@ -66,6 +66,15 @@ Everything from experimental (shore waves, lakes, rivers, biome tint), with a li
 * **Shore**: the hand-over from open-sea waves to waves facing the shore starts further out (from ~19 m deep), so you
   see them swing round toward the beach.
 
+### Round 12 (build 18): one water, many states (Noor's review)
+* **Weather**: calm is a long soft swell with no whitecaps; breezy has a few small caps that come and go; rough has
+  many; storms are dense. Settings → Sky → Sea state now says which (calm / breezy / rough / storm).
+* **Foam in pieces**: whitecaps form and fade, and break into streaks and fragments along the wind instead of big
+  continuous white masses; only breakers, rocks and storms make dense foam.
+* **Broader swell**: the longest swells are 150–320 m, so the whole sea slowly rises and falls (boats will ride it).
+* **Coasts**: from about 20 m deep toward the shore, the waves turn to face the shore and line up into sets running in,
+  instead of the open-sea chaos all the way to the beach; the breakers take over in the last metres.
+
 ### Round 11 (build 17): storms from calm to huge, crisper crests, directions that depend on the place
 * **Smooth storm levels**: Settings → Sky → Sea state now runs smoothly from a calm sea (a long, soft swell slowly
   lifting the whole surface) through lively moderate seas to huge ~14 m storm seas at 1. Weather storms push it up on

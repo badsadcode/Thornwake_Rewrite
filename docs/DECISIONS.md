@@ -498,6 +498,33 @@ scattering on canopies and plants, configurable.
 * CPU mirror: Newton inversion with the analytic Jacobian (plain iteration crawled at Σqka ≈ 0.9), groups sampled at
   the rest position like the shader; height error ≤ 2 cm at ~14 m seas.
 
+## D50 — Round 12: experimental 2 as a system; Noor's ground textures as an option; ragged rock edges (2026-10-06)
+* Tom: "the best water so far, definitely keeping". Noor's review: foam too aggressive for normal weather, huge
+  continuous white masses, largest swell should be broader, crests should organise toward the shore near land, calm must
+  keep the quality, and "do not simplify this shader": one water, parameters by weather (calm → breezy → rough → storm)
+  and by place (deep → coastal → shallow → breaking).
+* Weather: open-water white water is gated by the sea state (caps from ~0.25, tops from ~0.3, lanes from ~0.55, foam
+  fields from ~0.75), times a "life" noise (caps form and fade over seconds) and a fragment noise along the wind (pieces,
+  not sheets); below breaker strength the foam reveal itself comes in streaks. Storms keep dense foam. Aerated crests
+  from 0.4. The sea-state setting now names its range (calm < 0.2, breezy < 0.45, rough < 0.75, storm).
+* Swell: 150/218/316 m swell waves and a 300 m longest wind wave; swell Hs 0.5 + 2 s.
+* Coast (Noor's shore_factor): coastal = smoothstep(20, 4, depth) × gentle bed slope (seas only, not rocky coasts);
+  both headings rotate toward the uphill bed direction by 0.85/0.95 × coastal and the wind-sea spread narrows
+  (m → 16). Because only wave weights change (fixed wave set), the rotation is smooth however quickly it varies; the
+  contour shore waves still take over in the last metres. CPU mirror: SpectrumWaves.Coastal / Headings(…, coast).
+* Ground textures: Noor's 16 seamless pixel-art textures (Assets/Terrain/Noor, 512 px) as a switchable ground style
+  (fx.ground_textures: current default / Noor), like the water styles. GroundTextures.cs: a Texture2DArray at 256 px
+  (art pixels ~2.5 texels, ~8 m per tile, nearest + mipmaps) and per-layer mean colours. Biome-coloured surfaces (grass,
+  sand, snow, dug soil, beach sand) use the texture as detail (texture / mean, the biome colour's average unchanged);
+  materials (forest floor, mud / wet mud, gravel, moss, peat, gentle rocky ground, mountain scree, river and sea beds)
+  use Noor's art up close, fading to the usual colours by ~200 m (far forests and coasts unchanged). Two rotated copies
+  blended by slow noise hide the tiling. Mud turns to Noor's wet mud near the waterline and in rain. Ice and volcanic
+  rock are loaded for later (frozen lakes, volcanoes). Cliffs keep the bitmap rock looks. Classic speckle detail drops
+  to 30% under Noor's textures.
+* Tom's "blocky wet ground" on his rocky coast was bare rock (rocky-shore exposure, a per-vertex amount) showing through
+  grass with triangle-straight edges. The rock threshold now also uses the rock texture's brightness (stones show
+  first) and a few-metre noise: ragged edges in both ground styles.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

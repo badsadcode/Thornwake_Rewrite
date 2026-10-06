@@ -56,10 +56,18 @@ public partial class WorldStreamer : Node3D
     {
         _terrain = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Terrain.gdshader") };
         _terrain.SetShaderParameter("rock_tex", RockTextureArray.Get());
+        // Ground style (current / Noor's textures): a uniform, switched in place.
+        _terrain.SetShaderParameter("ground_tex", GroundTextures.Get());
+        _terrain.SetShaderParameter("ground_mean", GroundTextures.Means);
+        _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
         _water = new ShaderMaterial { Shader = WaterShader() };
         // Water style (classic / experimental): one material, the shader swapped in place, so every uniform the
         // atmosphere sets (waves, sun, reflections) carries over and existing tiles switch at once.
-        GameSettings.Changed += s => { if (s == GameSettings.WaterStyle) _water.Shader = WaterShader(); };
+        GameSettings.Changed += s =>
+        {
+            if (s == GameSettings.WaterStyle) _water.Shader = WaterShader();
+            if (s == GameSettings.GroundTextures) _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
+        };
         _trees = new TreeCatalog();
         _farTree = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/FarTree.gdshader") };
         _grass = Visuals.GrassMesh();
