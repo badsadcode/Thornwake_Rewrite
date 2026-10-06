@@ -420,10 +420,23 @@ public static class TileBuilder
                 }
                 else if (kind > .45f && kind < .75f && samples[k].WaterBody >= 0 && samples[k].WaterBody < plan.Hydrology.Lakes.Count)
                     fetch = (float)Math.Sqrt(plan.Hydrology.Lakes[samples[k].WaterBody].Area);
+                // Rivers: their width (the wind's fetch across them): wide rivers get wind waves too.
+                else if (kind > .75f && samples[k].WaterBody >= 0 && samples[k].WaterBody < plan.Hydrology.Reaches.Count)
+                    fetch = RiverWidth(plan.Hydrology.Reaches[samples[k].WaterBody]);
                 result[k * 4] = gx; result[k * 4 + 1] = gz; result[k * 4 + 2] = exposure; result[k * 4 + 3] = fetch;
             }
         return result;
     }
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<RiverReach, System.Runtime.CompilerServices.StrongBox<float>> Widths = new();
+
+    /// <summary>A reach's typical width (m): its mean.</summary>
+    private static float RiverWidth(RiverReach reach) => Widths.GetValue(reach, r =>
+    {
+        double sum = 0;
+        foreach (var w in r.Width) sum += w;
+        return new System.Runtime.CompilerServices.StrongBox<float>(r.Width.Length > 0 ? (float)(sum / r.Width.Length) : 0);
+    }).Value;
 
     private static double SeaLevel(TerrainSample[] samples)
     {
@@ -484,7 +497,28 @@ public static class TileBuilder
             flow = next;
             if (pass == 0) for (int k = 0; k < n * n; k++) river[k] |= flow[k] != Vector2.Zero;
         }
-        return flow;
+        // Across the channel (round 14, Noor: "a river is water with a destination"): the speed follows the depth
+        // relative to the deepest water nearby (Manning, v ∝ depth^⅔) — slow, lazy water over the shallow margins,
+        // the fastest current over the deep line; a narrow, deep reach keeps its speed across its width.
+        int r = Math.Max(2, (int)Math.Ceiling(6 / spacing));
+        var depth = new float[n * n];
+        for (int k = 0; k < n * n; k++) depth[k] = river[k] ? Math.Max(0, water[k].Y - (float)samples[k].Height) : 0;
+        var shaped = (Vector2[])flow.Clone();
+        for (int j = 0; j < n; j++)
+            for (int i = 0; i < n; i++)
+            {
+                int k = j * n + i;
+                if (!river[k]) continue;
+                float deepest = .3f;
+                for (int b = -r; b <= r; b++)
+                    for (int a = -r; a <= r; a++)
+                    {
+                        int x = i + a, z = j + b;
+                        if (x >= 0 && z >= 0 && x < n && z < n) deepest = Math.Max(deepest, depth[z * n + x]);
+                    }
+                shaped[k] = flow[k] * Math.Clamp(MathF.Pow(depth[k] / deepest, 2f / 3), .2f, 1);
+            }
+        return shaped;
     }
 
     private static double Kind(WaterKind kind) => kind switch { WaterKind.Pond => .375, WaterKind.Lake => .5, WaterKind.River => 1, _ => 0 };

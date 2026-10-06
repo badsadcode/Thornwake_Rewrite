@@ -440,7 +440,39 @@ void fragment() {
 	// Small-scale detail: wind ripples on seas and lakes (stronger with wind and storms), flow ripples on rivers.
 	float bed_slope = length(bed_grad);
 	float rocky = sea * smoothstep(0.12, 0.35, bed_slope) * (1.0 - smoothstep(2.0, 9.0, vertex_depth)) * (0.4 + sea_state) * exposure;
-	if (river > 0.5) slope += flow_slope(p, current, TIME, dist) * (1.0 + 0.6 * sea_state);
+	float standing = 0.0, bank_foam = 0.0; // river: standing-wave crests and bank turbulence (foam, below)
+	if (river > 0.5) {
+		// Rivers are water with a destination (Noor; docs/RIVERS_PLAN.md): every layer follows the current.
+		float fs = length(current);
+		vec2 fdir = fs > 0.01 ? current / fs : wdir;
+		vec2 fside = vec2(-fdir.y, fdir.x);
+		// Flow layers at different speeds and scales (never one scrolling texture): the fine pair carried at the
+		// current's speed, a broad slow one at about half of it.
+		slope += flow_slope(p, current, TIME, dist) * (1.0 + 0.6 * sea_state);
+		slope += flow_slope(p * 0.4 + 17.0, current * 0.4 * 0.55, TIME, dist * 0.4) * 0.4 * 1.6;
+		// Standing waves in fast, shallow water (riffles, rapids): crests across the flow that stay where they are
+		// while the water runs through them, wavelength from the speed (λ = 2π v²/g), in patches.
+		float riffle = smoothstep(0.8, 2.0, fs) * (1.0 - smoothstep(0.5, 2.2, vertex_depth)) * (1.0 - smoothstep(0.6, 2.0, footprint));
+		if (riffle > 0.0) {
+			float lam = clamp(PI2 * fs * fs / G, 0.8, 4.0), kk = PI2 / lam;
+			float along = dot(p, fdir), across = dot(p, fside);
+			float th = kk * along + 3.0 * noise(vec2(along * 0.12, across * 0.3)) + 0.25 * sin(TIME * 1.7 + across * 0.5);
+			float patches = smoothstep(0.35, 0.7, noise(vec2(along * 0.07, across * 0.25) + 5.3));
+			slope += fdir * (0.22 * riffle * patches * cos(th));
+			standing = riffle * patches * smoothstep(0.55, 1.0, sin(th));
+		}
+		// Bank turbulence: shallow margins of moving water break into small irregular ripples, now and then foam.
+		float margin = (1.0 - smoothstep(0.1, 0.6, vertex_depth)) * smoothstep(0.15, 0.6, length(current))
+			* (1.0 - smoothstep(0.3, 1.0, footprint));
+		slope += gnoised(p * 2.4 - current * TIME * 0.4 + 9.0).xy * 2.4 * 0.025 * margin;
+		bank_foam = margin * smoothstep(0.55, 0.8, noise(p * 0.9 - current * TIME * 0.3));
+		// Wide rivers: wind waves too (fetch = the river's width), steeper where the wind blows against the current.
+		float wide = smoothstep(25.0, 150.0, fetch);
+		if (wide > 0.0) {
+			float against = max(0.0, -dot(wdir, fdir)) * smoothstep(0.3, 1.5, fs);
+			slope += ripple_slope(p, TIME, wdir, (0.15 + 0.2 * wind_speed + 0.6 * sea_state) * wide * (1.0 + 0.5 * against), dist, footprint);
+		}
+	}
 	else {
 		// Small lakes stay calm (little fetch for the wind to raise waves); big ones approach the sea.
 		float lake_calm = mix(1.0, clamp(0.3 + fetch / 4000.0, 0.3, 0.75), lake);
@@ -576,6 +608,8 @@ void fragment() {
 		float patches = smoothstep(0.3, 0.7, noise(p * 0.22 - current * TIME * 0.35) * 0.7 + noise(p * 0.6 + 4.2) * 0.3 + 0.15 * smoothstep(2.0, 3.5, fs));
 		amount = max(amount, rapids * pulse * patches * 0.85);
 		amount = max(amount, smoothstep(0.6, 2.2, fs) * 0.25); // streaks in moving water
+		amount = max(amount, standing * 0.7);  // white tops on the standing waves
+		amount = max(amount, bank_foam * 0.35); // bits of foam where the margins churn
 	} else {
 		amount = max(amount, smoothstep(0.45, 0.9, fold) * smoothstep(0.5, 0.9, sea_state) * 0.6 * lake);
 	}
