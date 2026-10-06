@@ -410,6 +410,28 @@ scattering on canopies and plants, configurable.
   offset as the cloud shadows) says if that air is lit; forward-scattering phase; only with broken cloud. Follows the
   moon at night (fainter, silver-blue, with its phase). Works with the sun hidden or off screen.
 
+## D46 — Round 9: biome landforms — dunes, mesas, needle spires (2026-10-06)
+* Terrain revision 12 (the default): `Terrain.Features` works for `"dunes"`, `"mesas"` and `"spires"` (strength 0 … 1,
+  spires up to 1.5), applied on top of the walking-scale detail before rivers carve (rivers cut gaps and canyons).
+  * Dunes: transverse ridges across one sand-moving wind heading per world (a varying heading rotated far-from-origin
+    coordinates into 5 m ripples), long windward slope, ~35° slip face, 4–12 m high, ~90 m apart, crests curving and
+    breaking up; dune fields and calmer sheets; other relief smoothed; fade out on tiles too coarse to carry them.
+  * Mesas: flat-topped uplands 40–110 m (noise above a threshold), stepped into 12–21 m cliff-sided tiers. Only the
+    uplift is terraced (terracing the regional slope gave contour benches). Outline noise keeps all octaves at every
+    detail level, so far mesas do not shift.
+  * Spires: needle rocks 12–55 m tall and ≥ 4.2× their radius, near-vertical walls, small scree flare, jittered 36 m
+    grid; on coarse tiles wider (stay visible from afar); height fades across the edge of spire biomes.
+  * Lake shores keep their basins (landforms fade within the 2-cell lake search).
+* Revision 12 blends biome terrain over every contributing biome (continuous); the two-strongest blend stepped where
+  the second place switched (invisible in colours, a step in landforms). Revision 11 keeps the old blend.
+* Pools (revision 12): shaping fades in with coverage (no step where coverage crosses the cut-off), edge blends
+  stretch with the height they cover, dry shore stands 4 cm clear of the water, lake fade ends inside the lake search.
+* New patch biome Needle Rocks (Thousand Needles style) inside badlands, desert and savanna; badlands get mesas and a
+  few spires; desert dunes.
+* Tests: landforms (dunes, mesas, spires where their biomes are, none elsewhere); Build 13 terrain (revision 11) with
+  the build 13 biome catalogue; walkability and LOD tests leave out deliberate cliffs, spires and dunes.
+* Later: volcanoes (two-pass, before hydrology), canyons as deeper river incision in dry rock, ravines, boulder fields.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

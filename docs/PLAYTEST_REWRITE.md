@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 14 — dunes, mesas, needle rocks
+* **Deserts have real dunes**: long ridges with gentle windward slopes and steep slip faces, all lined up with the
+  world's prevailing wind, in dune fields and flatter sand sheets.
+* **Badlands have mesas**: flat-topped table-lands 40–110 m high with stepped, cliff-sided tiers; rivers cut canyons
+  through them. A few stone needles stand among them.
+* **Needle Rocks** (new rare biome, in the spirit of Thousand Needles): a forest of stone needles 12–55 m tall rising
+  from dry ground, in patches inside badlands, deserts and savannas.
+* Swamp pools fit hilly edges better (no cliffs where a swamp only just reaches); no seams at lake shores.
+* Terrain version "current" is the new terrain; build 13 worlds look the same except in deserts, badlands and
+  needle-rock areas (and a little at swamp edges).
+
 ## New in build 13 — real swamp water, four swamp types, light beams (round 8)
 * **Real water in swamps**: pools are now real water you can wade and swim in (0.5–1.6 m deep), carved into the
   ground with a flat surface, tinted to the biome, with dark peat beds (sunken leaves and twigs) and muddy margins.

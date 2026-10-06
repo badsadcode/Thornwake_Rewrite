@@ -84,9 +84,16 @@ mountains, patch biomes keep their rarity (their `Patch.Coverage`).
 `Atmosphere.SkyTint` (hex, multiplies the sky colours; near white, e.g. `f6e8cc` dusty desert) and
 `Atmosphere.Haze` (0 … 1: horizon veil and denser distance fog). Off by default (realistic sky).
 
+### Landforms (terrain version "current")
+`Terrain.Features` with strengths (0 none … 1 full):
+* `"dunes"` — transverse sand dunes, 4–12 m high, ~90 m apart, steep slip faces (desert);
+* `"mesas"` — flat-topped uplands 40–110 m high stepped into cliff-sided tiers; rivers cut canyons through them
+  (badlands);
+* `"spires"` — needle rocks 12–55 m tall (up to 1.5 for a dense forest of needles: Needle Rocks).
+Features blend across biome borders. `Terrain.Flatten` (0 … 1) flattens the walking-scale relief.
+
 ### Defined now, used in later phases
-`Terrain` (Roughness, Flatten, Microterrain, Crags, Features such as `"dunes"`, `"spires"`, `"mesas"`,
-`"volcano"`), `Water` (Wetness, WaterTint …), `Atmosphere` (Fog, Mist, AmbientTint, Wind …), `Gameplay`
+`Terrain` (Roughness, Microterrain, Crags, Features `"volcano"`, `"canyons"`, `"ravines"`), `Water` (Wetness, WaterTint …), `Atmosphere` (Fog, Mist, AmbientTint, Wind …), `Gameplay`
 (Creatures, Monsters, Resources, SettlementAffinity, RoadAffinity, Poi), and `Vegetation` extras (Bushes, Flowers,
 Vines, Moss, AquaticPlants, DeadVegetation). Writing them now is fine; they start working as the phases land.
 
@@ -103,9 +110,10 @@ Poplar_A, Pine_A/B/C, Spruce_A/B, Willow_A, Sparse_A) and the placeholder plants
 Acacia_A, Jungle_A, Cypress_A, Shrub_Dry, Bald_Cypress_A/B). Biomes refer to sets, never to single models, so adding a
 model to a set updates every biome that uses it.
 
-## The 17 built-in biomes
+## The 18 built-in biomes
 Temperate grassland, Temperate forest, Ancient forest (patches in temperate forest and taiga), Taiga, Tundra,
 Arctic/Glacier, Alpine, Swamp (wooded), Blighted swamp (patches in swamp), Marsh (open grey bog, Dead Marshes
 style), Fen (northern bog with winding channels), Bayou (Louisiana: cypress with Spanish moss in brown water), Jungle,
-Desert, Badlands, Savanna, Volcanic (patches in mountains). Missing assets (palms, cacti, dead trees, vines, swamp plants) use the closest existing
+Desert (dunes), Badlands (mesas), Needle Rocks (patches in badlands, desert and savanna), Savanna, Volcanic (patches in
+mountains). Missing assets (palms, cacti, dead trees, vines, swamp plants) use the closest existing
 set until art exists.
