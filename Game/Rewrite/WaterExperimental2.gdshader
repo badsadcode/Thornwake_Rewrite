@@ -502,7 +502,10 @@ void fragment() {
 	vec3 sun_flat = normalize(vec3(sun_direction.x, 0.0, sun_direction.z) + 1e-4);
 	float back_lit = pow(clamp(dot(-eye_world, sun_flat), 0.0, 1.0), 2.0) * clamp(sun_direction.y * 3.0, 0.0, 1.0);
 	float thin = clamp(smoothstep(0.15, 1.1, crest) * (sea + lake * 0.3) * min(1.0, 0.35 + wave2_hs * 0.6)
-		+ breaking * exp(-pow(min(1.0 - since, since + 0.12) / 0.12, 2.0)) * 0.8, 0.0, 1.0); // glow just ahead of the crest
+		// Breakers glow just ahead of the crest: a soft, wide band that waxes and wanes along the crest (a narrow
+		// uniform band drew straight neon lines along the beach).
+		+ breaking * exp(-pow(min(1.0 - since, since + 0.2) / 0.24, 2.0)) * 0.45
+		* smoothstep(0.15, 0.75, noise(p * 0.07 + vec2(TIME * 0.04, -TIME * 0.03))), 0.0, 1.0);
 	// Light through the wave tops: strongest looking toward the sun, still clearly turquoise from the side; steep wave
 	// faces (thin water) glow more.
 	float face = clamp(1.0 - n_world.y, 0.0, 0.6) / 0.6;
