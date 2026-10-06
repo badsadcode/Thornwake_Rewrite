@@ -49,6 +49,16 @@ func _initialize() -> void:
 	RenderingServer.global_shader_parameter_set("night_sky", Vector4(md.x, md.y, md.z, 0.5))
 	RenderingServer.global_shader_parameter_set("star_rotation", Basis(Vector3.RIGHT, 0.6))
 	RenderingServer.global_shader_parameter_set("sky_extra", Vector4(10, 1, 1, 1))
+	# Cloud types (round 17): types=cumulus,storm,flash (the storms straight ahead, flash 0..1 in the middle cell),
+	# lens=x,y,z,strength relative to the camera, more=mackerel,wind_angle,time,base_above, storm_off=rad
+	var fwd := -cam.basis.z
+	var T: PackedStringArray = str(args.get("types", "0,0,0")).split(",")
+	var az := atan2(fwd.z, fwd.x) + float(args.get("storm_off", "0"))
+	RenderingServer.global_shader_parameter_set("cloud_types", Vector4(float(T[0]), float(T[1]), az, float(T[2])))
+	var LN: PackedStringArray = str(args.get("lens", "0,0,0,0")).split(",")
+	RenderingServer.global_shader_parameter_set("cloud_lens", Vector4(float(LN[0]), float(LN[1]), float(LN[2]), float(LN[3])))
+	var M: PackedStringArray = str(args.get("more", "0,0.6,100,1500")).split(",")
+	RenderingServer.global_shader_parameter_set("cloud_more", Vector4(float(M[0]), float(M[1]), float(M[2]), float(M[3])))
 
 func _process(_delta: float) -> bool:
 	_frames += 1

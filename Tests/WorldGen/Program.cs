@@ -15,6 +15,21 @@ string? filter = args.FirstOrDefault(a => a.StartsWith("--filter="))?[9..];
 string? maps = args.FirstOrDefault(a => a.StartsWith("--maps="))?[7..];
 bool record = args.Contains("--record");
 
+// Peak probe (screenshots of mountain skies): --peaks=<profile>,<seed>,<count> prints the highest points on a 4 km grid
+string? peaks = args.FirstOrDefault(a => a.StartsWith("--peaks="))?[8..];
+if (peaks != null)
+{
+    var v = peaks.Split(',');
+    var ts = CoreTests.Sampler(v[0], int.Parse(v[1]));
+    double half = ts.Plan.Profile.WorldSize / 2;
+    var found = new List<(double H, double X, double Z)>();
+    for (double x = -half; x < half; x += 4000)
+        for (double z = -half; z < half; z += 4000)
+            found.Add((ts.Height(x, z, 200) - ts.Plan.Profile.SeaLevel, x, z));
+    foreach (var f in found.OrderByDescending(f => f.H).Take(int.Parse(v[2]))) Console.WriteLine($"{f.X:0} {f.Z:0} {f.H:0} m");
+    return 0;
+}
+
 // Mouth step probe: --mouths=<type id>,<km>,<seed>,<count>,<dir> scans 1 m grids around sea/lake mouths for steps
 string? mouths = args.FirstOrDefault(a => a.StartsWith("--mouths="))?[9..];
 if (mouths != null)
