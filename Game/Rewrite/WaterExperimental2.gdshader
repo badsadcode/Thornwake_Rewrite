@@ -35,6 +35,13 @@ uniform vec2 world_origin;    // world position of scene (0, 0): regional wave h
 uniform vec4 wake_points[24]; // wakes (Wakes.cs): scene x, z, birth time (ocean_time), strength (relative speed)
 uniform vec4 wake_flow[24];   // per wake point: velocity relative to the water x, z; the local current x, z
 uniform vec2 wake_centre = vec2(1e9); // the wakes' source now (rings are only looked for near it)
+// The sky's clouds (Sky.gdshader, shared by Atmosphere.cs), so the water reflects the real sky instead of a gradient.
+uniform sampler2D cloud_tex : filter_linear_mipmap, repeat_enable;
+uniform float cloud_period = 6000.0;
+uniform float cloud_height = 1600.0;
+global uniform vec4 cloud_state;  // camera world xz + wind drift (wrapped), coverage, storm
+global uniform vec4 cloud_layers; // the cirrus and low layers' offsets
+global uniform vec4 sun_true;     // the real sun direction and elevation (deg), also below the horizon (twilight)
 uniform int debug_foam = 0;   // 1: show the foam amount (tests)
 uniform vec3 sss_color : source_color = vec3(0.06, 0.62, 0.56); // light scattered through thin wave tops
 uniform float wave_height = 0.3;
@@ -377,6 +384,71 @@ float obstacle_h(float a, float c, float fs, float t) {
 	return (bulge * 0.16 + arm * 0.09 * sin(a * 4.0 - t * 2.0) + core * 0.08 * eddy) * (1.0 - smoothstep(9.0, 13.0, a));
 }
 
+// The sky in a reflected direction (round 16, Tom: "the reflection is a bit boring, bland when there's a lot"): the
+// sky's gradient plus its high cirrus, main and low cloud layers along the ray, from where this water is (the same
+// texture, heights and drift as Sky.gdshader, so the clouds in the water are the clouds overhead), lit from the sun's
+// side and darkening at night / in storms with the sky colours (Atmosphere.UpdateWaterSky).
+float sky_cloud(vec2 xz, float coverage) {
+	vec2 uv = xz / cloud_period;
+	float n = texture(cloud_tex, uv).r * 0.8 + texture(cloud_tex, uv * 4.0 + vec2(0.31, 0.17)).g * 0.2;
+	float edge = 1.0 - coverage;
+	return smoothstep(edge - 0.05, edge + 0.2, n) * step(0.001, coverage);
+}
+// Twilight as in Sky.gdshader (same formulas): sunset band toward the sun, Belt of Venus and Earth's shadow away from
+// it, blue hour; clouds lit from below.
+vec3 twilight_sky(vec3 dir, vec3 col) {
+	float e = sun_true.w, h = max(dir.y, 0.0);
+	vec2 sd = normalize(sun_true.xz + vec2(1e-4)), dd = normalize(dir.xz + vec2(1e-4));
+	float az = dot(sd, dd);
+	float gw = smoothstep(9.0, 1.0, e) * smoothstep(-7.0, -1.0, e);
+	float band = exp(-h * h / mix(0.004, 0.02, smoothstep(-4.0, 6.0, e)));
+	col += mix(vec3(1.0, 0.62, 0.25), vec3(0.95, 0.3, 0.12), smoothstep(3.0, -3.0, e)) * band * gw * (0.08 + 0.92 * max(az, 0.0) * max(az, 0.0)) * 0.65;
+	float bw = smoothstep(4.0, 0.0, e) * smoothstep(-7.0, -2.0, e);
+	float shadow_top = clamp(-e * 0.012, 0.0, 0.09), bx = (h - shadow_top - 0.06) / 0.05;
+	col += vec3(0.62, 0.36, 0.45) * exp(-bx * bx) * bw * pow(max(-az, 0.0), 1.5) * 0.45;
+	col += vec3(0.035, 0.07, 0.17) * smoothstep(-11.0, -4.0, e) * smoothstep(2.0, -2.0, e) * (0.55 + 0.45 * smoothstep(0.0, 0.5, h));
+	return col;
+}
+vec3 cloud_underlight(vec3 dir) {
+	float e = sun_true.w, w = smoothstep(-7.0, -1.0, e) * smoothstep(10.0, 2.0, e);
+	vec2 sd = normalize(sun_true.xz + vec2(1e-4)), dd = normalize(dir.xz + vec2(1e-4));
+	float toward = dot(sd, dd) * 0.5 + 0.5;
+	return mix(vec3(1.0, 0.55, 0.25), vec3(0.95, 0.42, 0.52), smoothstep(1.0, -4.0, e)) * w * (0.25 + 0.75 * toward * toward);
+}
+vec3 reflected_sky(vec3 dir, vec2 offs, vec3 base) { // offs: this water's xz minus the camera's
+	if (dir.y <= 0.0) return base;
+	base = twilight_sky(dir, base);
+	float up = dir.y, coverage = cloud_state.z, storm = cloud_state.w;
+	float daylight = clamp(dot(sky_horizon, vec3(0.333)) / 0.72, 0.03, 1.2); // the sky colours carry day, night and storm
+	vec3 sun_tint = mix(vec3(1.0), sun_color / max(max(sun_color.r, max(sun_color.g, sun_color.b)), 0.05), 0.5);
+	vec2 to_sun = normalize(sun_direction.xz + vec2(1e-4));
+	float mu = max(dot(dir, normalize(sun_direction)), 0.0);
+	vec3 col = base;
+	// High cirrus: thin streaks.
+	{
+		vec2 xz = cloud_layers.xy + offs + dir.xz * (7000.0 / max(up, 0.015));
+		vec2 uv = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * (xz / (cloud_period * 2.5));
+		float n = texture(cloud_tex, uv * vec2(1.0, 4.5)).g * 0.7 + texture(cloud_tex, uv * vec2(3.0, 9.0) + 0.37).r * 0.3;
+		float edge = 1.0 - (0.1 + coverage * 0.45);
+		float d = smoothstep(edge, edge + 0.3, n) * 0.35 * smoothstep(0.02, 0.15, up) * (1.0 - storm);
+		col = mix(col, vec3(1.0, 0.99, 0.97) * daylight * sun_tint + cloud_underlight(dir) * 1.1, d);
+	}
+	// Main deck.
+	{
+		vec2 xz = cloud_state.xy + offs + dir.xz * (cloud_height / max(up, 0.015));
+		float d = sky_cloud(xz, coverage);
+		if (d > 0.0) {
+			float toward = sky_cloud(xz + to_sun * 260.0, coverage);
+			vec3 shade = mix(vec3(0.46, 0.5, 0.56), vec3(1.0, 0.99, 0.97), clamp(1.0 - toward * 0.65, 0.0, 1.0));
+			vec3 cloud = shade * (0.2 + 0.85 * daylight) * sun_tint + sun_color * pow(mu, 6.0) * (1.0 - d) * 0.5;
+			vec3 ul = cloud_underlight(dir);
+			cloud = cloud * (1.0 - 0.45 * clamp(dot(ul, vec3(0.5)), 0.0, 0.8)) + ul * (0.45 + 0.55 * d) * 0.9;
+			col = mix(col, cloud, d * smoothstep(0.015, 0.12, up));
+		}
+	}
+	return col;
+}
+
 // Foam reveal: a drifting, warped bubbly pattern shown where the foam amount is high, with soft edges, so foam
 // thickens where the source is strong and thins into lace and holes as it fades (never a painted outline).
 // Foam in three layers (Tom: "foam lacks detail"): x = the surface foam — dense where fresh, a lace of thin bright
@@ -710,6 +782,8 @@ void fragment() {
 	// Steep wave faces (breakers, storm crests) are rough, churned water: they reflect far less than a mirror, so the
 	// water's own colour and the light through it carry them (a mirror-bright face drew a white band on breakers).
 	float face_r = clamp(1.0 - n_world.y, 0.0, 0.5) / 0.5;
+	// Clouds mirrored crisply on calm water, smeared out on rough water (a rough surface averages many directions).
+	sky = mix(reflected_sky(ray_world, world_position.xz - CAMERA_POSITION_WORLD.xz, sky), sky, (sea + lake * 0.5) * smoothstep(0.2, 0.9, sea_state) * 0.7);
 	vec3 reflected = mix(sky, hit.rgb, hit.a) * reflection_strength * mix(1.0, 0.5, sea * smoothstep(0.4, 1.0, sea_state))
 		* mix(1.0, 0.45, face_r * sea) * mix(1.0, 0.8, sea);
 	// Light through thin crests (seas, breakers): looking toward the sun, the upper part of waves glows.

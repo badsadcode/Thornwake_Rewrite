@@ -1,5 +1,6 @@
 # Sky shader test harness: renders only the rewrite sky (no world) to a PNG in a few seconds.
-# xvfb-run godot --path . -s tools/sky_test.gd -- quality=1 out=/tmp/sky.png [debug=0] [pitch=0.4] [hour_elev=50]
+# xvfb-run godot --path . -s tools/sky_test.gd -- quality=1 out=/tmp/sky.png [debug=0] [pitch=0.4] [yaw=2.5] [hour_elev=50]
+# (hour_elev may go below the horizon for twilight: the light stops at -4 degrees as in the game, the sky sees the true sun)
 extends SceneTree
 
 var _frames := 0
@@ -28,10 +29,14 @@ func _initialize() -> void:
 	we.environment = env
 	root.add_child(we)
 	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-float(args.get("hour_elev", "50")), 0, 0)
+	var elev := float(args.get("hour_elev", "50"))
+	sun.rotation_degrees = Vector3(-maxf(elev, -4.0), 0, 0) # the game's light stops at -4 degrees
 	root.add_child(sun)
+	# The true sun for twilight (sun_true): same azimuth, real elevation.
+	var true_sun := Basis.from_euler(Vector3(deg_to_rad(-elev), 0, 0)).z
+	RenderingServer.global_shader_parameter_set("sun_true", Vector4(true_sun.x, true_sun.y, true_sun.z, elev))
 	var cam := Camera3D.new()
-	cam.rotation = Vector3(float(args.get("pitch", "0.4")), 2.5, 0)
+	cam.rotation = Vector3(float(args.get("pitch", "0.4")), float(args.get("yaw", "2.5")), 0)
 	root.add_child(cam)
 	RenderingServer.global_shader_parameter_set("cloud_state", Vector4(100, 200, 0.45, 0))
 	var L: PackedStringArray = str(args.get("layers", "300,400,500,600")).split(",")

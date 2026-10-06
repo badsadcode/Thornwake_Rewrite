@@ -176,7 +176,16 @@ public partial class Atmosphere : Node3D
     }
 
     /// <summary>The terrain water material: reflection quality follows the settings.</summary>
-    public void SetWater(ShaderMaterial water) { _water = water; _wavesState = -1; ApplyAll(); }
+    public void SetWater(ShaderMaterial water) { _water = water; _wavesState = -1; ShareClouds(); ApplyAll(); }
+
+    /// <summary>The water reflects the sky's own clouds (experimental 2): same texture, period and heights.</summary>
+    private void ShareClouds()
+    {
+        if (_water == null) return;
+        _water.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
+        _water.SetShaderParameter("cloud_period", CloudPeriod);
+        _water.SetShaderParameter("cloud_height", CloudHeight);
+    }
 
     private void OnSetting(Setting s)
     {
@@ -215,6 +224,7 @@ public partial class Atmosphere : Node3D
             _cloudPixels = pixels;
             _sky.SetShaderParameter("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(pixels == Tile ? _noise : CloudNoise(pixels, 4242))));
             _beams?.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
+            ShareClouds();
         }
         _sky.SetShaderParameter("sun_glare", GameSettings.SunGlare.F);
         _sky.SetShaderParameter("sun_style", GameSettings.SunStyle.Index);
@@ -327,6 +337,9 @@ public partial class Atmosphere : Node3D
         UpdateMood(delta);
         UpdateMist(delta, hour, originX, originZ);
         RenderingServer.GlobalShaderParameterSet("sun_dir_world", toSun);
+        // The real sun, also below the horizon (the light stops at −4°): twilight colours follow it (Sky.gdshader).
+        var trueSun = GameClock.Direction(sky.SunElevation, sky.SunAzimuth);
+        RenderingServer.GlobalShaderParameterSet("sun_true", new Vector4(trueSun.X, trueSun.Y, trueSun.Z, (float)sky.SunElevation));
         var glowColour = Sun.LightColor * Sun.LightEnergy * Mathf.Clamp(toSun.Y * 6 + .2f, 0, 1);
         RenderingServer.GlobalShaderParameterSet("sun_glow", new Vector4(glowColour.R, glowColour.G, glowColour.B, 0));
         _shafts.SetShaderParameter("sun_direction", toSun);

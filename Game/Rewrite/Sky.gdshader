@@ -34,6 +34,23 @@ global uniform vec4 sky_mood;
 global uniform vec4 night_sky;
 global uniform mat3 star_rotation;
 global uniform vec4 sky_extra;
+// The real sun (xyz) and its elevation in degrees (w), also below the horizon (the light itself stops at −4°).
+global uniform vec4 sun_true;
+
+// Twilight (round 16): how much of each twilight effect shows for the sun's true elevation e (degrees).
+float golden_w(float e) { return smoothstep(9.0, 1.0, e) * smoothstep(-7.0, -1.0, e); }  // sunset glow at the horizon
+float belt_w(float e) { return smoothstep(4.0, 0.0, e) * smoothstep(-7.0, -2.0, e); }     // Belt of Venus
+float blue_w(float e) { return smoothstep(-11.0, -4.0, e) * smoothstep(2.0, -2.0, e); }  // blue hour
+// Clouds lit from below by a sun under (or at) the horizon: orange, then pink.
+vec3 underlight(vec3 dir) {
+	float e = sun_true.w;
+	float w = smoothstep(-7.0, -1.0, e) * smoothstep(10.0, 2.0, e);
+	if (w <= 0.0) return vec3(0.0);
+	vec2 sd = normalize(sun_true.xz + vec2(1e-4)), dd = normalize(dir.xz + vec2(1e-4));
+	float toward = dot(sd, dd) * 0.5 + 0.5;
+	vec3 c = mix(vec3(1.0, 0.55, 0.25), vec3(0.95, 0.42, 0.52), smoothstep(1.0, -4.0, e));
+	return c * w * (0.25 + 0.75 * toward * toward);
+}
 
 float cloud_density(vec2 xz, float coverage) {
 	vec2 uv = xz / cloud_period;
@@ -94,7 +111,7 @@ vec3 night_sky_colour(vec3 dir, vec3 sun_dir, float night) {
 		}
 	}
 	// Milky Way: a soft band around a great circle, broken by dust.
-	float band = exp(-pow(dot(sd, normalize(vec3(0.2, 0.55, 0.81))), 2.0) * 22.0);
+	float bd = dot(sd, normalize(vec3(0.2, 0.55, 0.81))), band = exp(-bd * bd * 22.0); // (pow of a negative base is undefined)
 	float dust = nhash(floor(vec2(theta, phi) * 60.0)) * 0.4 + 0.6;
 	col += vec3(0.55, 0.6, 0.75) * band * dust * 0.06;
 	// Planets on the ecliptic (tilted 23.4°), each wandering at its own pace.
@@ -136,6 +153,31 @@ vec3 sky_colour(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu) {
 	float low = 1.0 - smoothstep(0.05, 0.45, sun_dir.y);
 	col = mix(col, col * vec3(1.25, 0.95, 0.75), low * smoothstep(0.35, 0.0, up) * (0.5 + 0.5 * max(mu, 0.0)));
 	col *= day;
+	// Twilight colours from the sun's true elevation (round 16, docs/SKY_IDEAS.md): a red-orange band along the horizon
+	// toward the sun; opposite it the pink Belt of Venus with Earth's blue-grey shadow rising underneath after sunset;
+	// then the deep blue hour.
+	{
+		float e = sun_true.w;
+		vec2 sd = normalize(sun_true.xz + vec2(1e-4)), dd = normalize(dir.xz + vec2(1e-4));
+		float az = dot(sd, dd); // 1 toward the sun's azimuth, −1 away
+		float h = max(up, 0.0);
+		float gw = golden_w(e);
+		if (gw > 0.0) {
+			float band = exp(-h * h / mix(0.004, 0.02, smoothstep(-4.0, 6.0, e)));
+			vec3 glow = mix(vec3(1.0, 0.62, 0.25), vec3(0.95, 0.3, 0.12), smoothstep(3.0, -3.0, e));
+			col += glow * band * gw * (0.08 + 0.92 * pow(max(az, 0.0), 2.0)) * 0.65 * sky_mood.rgb;
+		}
+		float bw = belt_w(e);
+		if (bw > 0.0) {
+			float shadow_top = clamp(-e * 0.012, 0.0, 0.09);           // Earth's shadow rises as the sun sinks
+			float bx = (h - shadow_top - 0.06) / 0.05, belt = exp(-bx * bx);
+			float away = pow(max(-az, 0.0), 1.5);
+			col += vec3(0.62, 0.36, 0.45) * belt * bw * away * 0.45;
+			col = mix(col, vec3(0.16, 0.2, 0.32) * 0.6, (1.0 - smoothstep(shadow_top * 0.6, shadow_top + 0.01, h)) * bw * away * step(0.001, shadow_top) * 0.6);
+		}
+		float blw = blue_w(e);
+		if (blw > 0.0) col += vec3(0.035, 0.07, 0.17) * blw * (0.55 + 0.45 * smoothstep(0.0, 0.5, h)) * sky_mood.rgb;
+	}
 	if (sun_style == 0) col += (sun_col * pow(max(mu, 0.0), 10.0) * 0.18 + sun_col * pow(max(mu, 0.0), 300.0) * 0.6) * sun_glare;
 	else {
 		// Natural: a tight white halo high up; near the horizon a wide, warm glow (sunrise, sunset).
@@ -156,6 +198,11 @@ vec4 layer(vec3 dir, vec2 origin, float h, float d, vec3 sun_dir, vec3 sun_col, 
 	float night = 1.0 - smoothstep(-0.16, 0.04, sun_dir.y);
 	vec3 moonlit = vec3(0.07, 0.08, 0.11) * (0.4 + 0.6 * sky_extra.w) * (1.0 + 2.0 * pow(max(dot(dir, night_sky.xyz), 0.0), 8.0));
 	cloud = mix(cloud, moonlit * shade, night);
+	// Sunset and twilight: clouds glow from below, toward the sun most (their white daylight shading gives way, so
+	// they turn golden and pink rather than cream).
+	vec3 ul = underlight(dir);
+	cloud *= 1.0 - 0.45 * clamp(dot(ul, vec3(0.5)), 0.0, 0.8);
+	cloud += ul * (0.45 + 0.55 * d) * 0.9;
 	cloud += sun_col * pow(max(mu, 0.0), 6.0) * (1.0 - d) * 0.8;
 	// Silver lining (Tom, round 8): in front of the sun, thick cloud is backlit and darker while its thin edges blaze
 	// (light scattered forward through the edge).
@@ -248,13 +295,15 @@ void sky() {
 			vec3 tint = mix(vec3(1.0, 0.98, 0.92), vec3(1.0, 0.45, 0.18), lowsun * lowsun);
 			disc = sun_col * tint * smoothstep(r0, r0 + 0.0002, mu) * mix(3.2, 0.95, lowsun) * sun_glare;
 		}
+		disc *= smoothstep(-0.004, 0.004, up); // a sun under the horizon shows no disc
 		bool layered = quality >= 1 && !AT_CUBEMAP_PASS;
 		if (up > 0.0) {
 			// High cirrus (7 km): thin, bright, slow, on its own heading.
 			if (layered) {
 				float t = 7000.0 / max(up, 0.015);
 				float d = cirrus_density(cloud_layers.xy + dir.xz * t, coverage) * smoothstep(0.02, 0.15, up) * (1.0 - storm);
-				vec3 c = vec3(1.0, 0.99, 0.97) * (0.3 + 0.8 * day) * mix(vec3(1.0), LIGHT0_COLOR, 0.6) + sun_col * pow(max(mu, 0.0), 8.0) * 0.5;
+				vec3 c = vec3(1.0, 0.99, 0.97) * (0.3 + 0.8 * day) * mix(vec3(1.0), LIGHT0_COLOR, 0.6) + sun_col * pow(max(mu, 0.0), 8.0) * 0.5
+					+ underlight(dir) * 1.1; // high cirrus stays lit longest after sunset
 				col = mix(col, c, d);
 			}
 			// Main deck: volumetric (quarter-res pass) or the flat textured layer.
