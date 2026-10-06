@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Water baseline** (before the water experiment: the "classic" water) | `3511e4b` | build 14 | Game/Rewrite/Water.gdshader, OceanWaves.cs, TileBuilder.BuildWater as of this commit. The experiment adds a separate shader and a setting; classic stays the default |
 | **Build 14** (round 9: dunes, mesas, needle rocks) | `68c103a` | Thornwake-Rewrite-Preview-14 (v0.9.14) | Terrain revision 12; build 13 terrain = revision 11 with fixtures/biomes-build13.json |
 | **Build 13** (round 8: real swamp water, Marsh/Fen/Bayou, light beams, silver lining) | `b53e852` | Thornwake-Rewrite-Preview-13 (v0.9.13) | Terrain revision 11; build 12 terrain = revision 10 (fixture terrain-build12.json) |
 | **Build 12** (round 7: time, weather, wind, night sky, rock looks, map, collision, lake fix) | `aab8f0c` | Thornwake-Rewrite-Preview-12 (v0.9.12) | Terrain version "Build 9" for the old terrain; weather off, sun classic for the build 11 look |
