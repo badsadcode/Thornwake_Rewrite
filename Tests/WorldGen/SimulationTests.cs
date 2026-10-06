@@ -25,6 +25,7 @@ internal static class SimulationTests
         T.Run("Edits: a trench dug along a river bank fills from the river", BankTrench, filter);
         T.Run("Tools: strength, hardness, budget, flatten, directional cut", Tools, filter);
         T.Run("Waves: heights match the displaced surface; sea states; shallows", Waves, filter);
+        T.Run("Spectrum waves (experimental 2): steepness caps, heights match the surface, calm vs storm", Spectrum, filter);
     }
 
     private static Func<long, long, ChunkGround> Ground(Func<double, double, double> height, Func<double, double, bool>? sink = null) => (cx, cz) =>
@@ -406,6 +407,35 @@ internal static class SimulationTests
         var storm = new OceanWaves(1);
         T.Check(Math.Abs(storm.Height(10, 20, 5, .5)) < .1 * storm.WaveHeight, "waves die out in shallow water");
         T.Check(Math.Abs(storm.Height(10, 20, 5, 1000, lake: true)) < .4 * storm.WaveHeight, "lakes carry only small waves");
+    }
+
+    private static void Spectrum()
+    {
+        Func<double, double> full = _ => 1;
+        foreach (double state in new[] { 0.0, .5, 1.0 })
+        {
+            var w = new SpectrumWaves(state, .64);
+            double sumQka = 0, sumA2 = 0;
+            foreach (var (_, _, k, a) in w.Waves) { sumA2 += a * a; T.Check(k * a <= .341, "no single wave steeper than the cap"); }
+            for (int i = 0; i < SpectrumWaves.Count; i++) sumQka += w.QP[i].Q * w.Waves[i].K * w.Waves[i].A;
+            T.Check(sumQka < 1, "crests sharpen but never loop over");
+            var rng = new Random(3);
+            double worst = 0, peak = 0;
+            for (int i = 0; i < 400; i++)
+            {
+                double x = (rng.NextDouble() - .5) * 1e4, z = (rng.NextDouble() - .5) * 1e4, t = rng.NextDouble() * 1000;
+                double g = SpectrumWaves.Group(x, z, t, .8, -.6, state);
+                var d = w.Displacement(x, z, t, full, g);
+                // Group is sampled at the query point; stay close to the particle so it barely changes.
+                double h = w.Height(x + d.X, z + d.Z, t, full, .8, -.6);
+                if (Math.Abs(SpectrumWaves.Group(x + d.X, z + d.Z, t, .8, -.6, state) - g) < .01) worst = Math.Max(worst, Math.Abs(h - d.Y));
+                peak = Math.Max(peak, d.Y);
+            }
+            T.Note($"spectrum sea state {state:0.0}: Hs {w.Hs:0.0} m (from amplitudes {4 * Math.Sqrt(sumA2 / 2):0.0} m), crests up to {peak:0.00} m, height error {worst * 1000:0.0} mm");
+            T.Check(worst < .05, "Height() inverts the spectrum sea's motion");
+            if (state == 0) T.Check(peak < .6, "calm spectrum sea is calm");
+            if (state == 1) T.Check(peak > 4, "storm spectrum sea is big");
+        }
     }
 
     private static void Cost()

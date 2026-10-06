@@ -54,7 +54,7 @@ waves, light through thin crests and breakers, stirred-up shallows cloudier.
 Everything from experimental (shore waves, lakes, rivers, biome tint), with a livelier ocean:
 * **Many sharp waves**: 32 waves drawn from an ocean wave spectrum (JONSWAP) instead of 12 — overlapping crests in
   mixed directions, a swell from another heading. Storms spread the directions much wider (a confused sea) and are
-  stylised steep: ~7 m seas about twice as steep as a real storm, so the maximum sea state is dramatic, not just big.
+  stylised steep: ~8 m seas about twice as steep as a real storm, so the maximum sea state is dramatic, not just big.
 * **Wave sets**: groups of higher waves drift through with the wind.
 * **Look**: deep saturated blue-teal, bright turquoise light through thin wave tops (strongest toward the sun, still
   visible from the side), dense sun sparkle; storms grey and darken the sea and dull the reflections.

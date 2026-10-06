@@ -5,7 +5,7 @@ namespace Thornwake.WorldGen;
 /// <summary>
 /// Ocean waves for the "experimental 2" water (round 10, Tom's Sea of Thieves references): 32 Gerstner waves drawn from a
 /// JONSWAP spectrum (energy peaked around one wavelength, sharp peak enhancement, ω⁻⁵ tail) instead of 12 hand-placed
-/// waves. Significant wave height grows steeply with the sea state (0.4 m calm … ~7 m storm, steep), directions fan out around
+/// waves. Significant wave height grows steeply with the sea state (0.4 m calm … ~8.5 m storm, steep), directions fan out around
 /// the wind — wider for short waves and much wider in storms (confused, chaotic seas) — and a swell runs in from another
 /// heading. Crests are sharp (Gerstner choppiness up to ~0.95 of folding). The water shader evaluates exactly these waves
 /// (uniforms waves2 / wave2_qp) with the same group modulation, so swimming and boats can use <see cref="Height"/>.
@@ -58,7 +58,7 @@ public sealed class SpectrumWaves
             Waves[i] = (Math.Cos(angle), Math.Sin(angle), k, 0);
             QP[i] = (0, Hash(i, 2) * 2 * Math.PI);
         }
-        // Scale amplitudes so that Hs = 4 √(Σ A²/2); cap each wave's steepness (kA ≤ 0.3).
+        // Scale amplitudes so that Hs = 4 √(Σ A²/2); cap each wave's steepness (kA ≤ 0.34).
         double target = Hs / 4 * (Hs / 4);
         double choppy = .6 + .36 * s;
         for (int i = 0; i < Count; i++)
