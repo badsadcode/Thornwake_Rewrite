@@ -387,7 +387,8 @@ vec3 foam_layers(vec2 p, vec2 drift, float t, float amount, float dist) {
 	float e2 = cells(qs * 4.0 + vec2(0.0, 7.7), t * 0.45);
 	float lace = max(1.0 - smoothstep(0.0, thread, e1), (1.0 - smoothstep(0.0, thread * 0.8, e2)) * near);
 	// Body: strong foam is mostly solid, holed where the bubble cells open up; weak foam is only lace.
-	float body_f = smoothstep(0.3, 0.8, amount) * smoothstep(0.25, 0.6, fbm + 0.3 * (1.0 - smoothstep(0.0, 0.45, e1)) - 0.1);
+	float storm_f = smoothstep(0.7, 1.0, sea_state); // storms: solid white water again
+	float body_f = smoothstep(mix(0.3, 0.12, storm_f), mix(0.8, 0.55, storm_f), amount) * smoothstep(0.25, 0.6, fbm + 0.3 * (1.0 - smoothstep(0.0, 0.45, e1)) - 0.1);
 	float speck = smoothstep(0.78, 0.95, noise(qs * 13.0 + t)) * near;
 	float top = cover * max(max(body_f, lace * (0.55 + 0.45 * fbm)), speck * 0.6);
 	top = smoothstep(0.0, 0.7, top);
@@ -536,14 +537,14 @@ void fragment() {
 		float frag = smoothstep(0.3, 0.62, noise(wq * vec2(0.12, 0.5) + vec2(-TIME * 0.3, 3.3)) + 0.3 * sea_state);
 		float whitecaps = life * mix(frag, 1.0, smoothstep(0.6, 1.0, sea_state) * 0.75);
 		// Folding crests, the foam spilling down the back of the wave as the crest moves on.
-		float cap = smoothstep(0.22 - 0.16 * sea_state, 0.6, fold) * smoothstep(0.25, 0.6, sea_state) * 0.85;
+		float cap = smoothstep(0.22 - 0.16 * sea_state, 0.6, fold) * smoothstep(0.25, 0.6, sea_state) * (0.85 + 0.3 * smoothstep(0.7, 1.0, sea_state));
 		amount = max(amount, cap * whitecaps);
 		amount = max(amount, smoothstep(0.5, 1.0, crest) * smoothstep(0.5, 0.9, sea_state) * 0.5 * whitecaps);
 		// Breaking tops: high AND steep crests break into white water (with many mixed waves the surface rarely folds,
 		// so this is the main whitecap source); stronger inside wave groups.
 		float steep = length(-n.xz / max(n.y, 0.2));
 		float tops = smoothstep(0.38, 0.95, crest) * smoothstep(0.2 - 0.08 * sea_state, 0.5, steep) * smoothstep(0.28, 0.65, sea_state);
-		amount = max(amount, tops * (0.55 + 0.55 * sea_state) * whitecaps);
+		amount = max(amount, tops * (0.55 + 0.55 * sea_state + 0.35 * smoothstep(0.7, 1.0, sea_state)) * whitecaps);
 		// Storm foam fields: old foam drifting in broken patches (storms only).
 		float fields = smoothstep(0.58, 0.85, noise(p * 0.018 + wdir * TIME * 0.02) * 0.6 + noise(p * 0.07 - wdir * TIME * 0.05) * 0.4);
 		amount = max(amount, fields * frag * smoothstep(0.75, 1.0, sea_state) * 0.45);
