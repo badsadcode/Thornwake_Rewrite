@@ -78,6 +78,20 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 17 — storms from calm to huge, waves that differ from place to place, rocks you stand on
+* **Experimental 2 sea, rebuilt** (classic and experimental unchanged; the build 16 version is kept as a snapshot):
+  * **Sea state is smooth from calm to huge**: calm is a long, soft swell gently lifting the whole sea; moderate seas
+    are lively; sea state 1 is ~14 m storm seas. Raising it — or a storm rolling in — grows the waves gradually,
+    nothing jumps.
+  * **Crisper crests** on the big waves.
+  * **Directions depend on where you are**: the wind waves follow a local wind that turns from region to region, each
+    lake has its own, and swells from distant storms come from their own directions across the oceans.
+  * **Shores**: waves arrive at varied angles instead of all perfectly parallel to the beach, and break raggedly.
+  * The sea no longer jumps when the world re-centres as you travel.
+* **Rocks**: you now stand on the stone itself (you used to float above flat rocks).
+* Try: *Mountain kingdoms* (seed 42), open sea at −66000, 115600: Sea state 0 → 0.5 → 1 (fly a few metres up at
+  1, the waves are taller than the player); fly high to see different wave directions across the sea.
+
 ## New in build 16 — "experimental 2" water (Sea of Thieves references)
 * **Esc → Settings → Lighting and effects → Water** now has three choices: classic (default, unchanged), experimental
   (build 15, unchanged) and **experimental 2**. All three switch instantly on the spot, so you can compare.

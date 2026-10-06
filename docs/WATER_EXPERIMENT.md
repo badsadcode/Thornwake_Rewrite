@@ -66,6 +66,24 @@ Everything from experimental (shore waves, lakes, rivers, biome tint), with a li
 * **Shore**: the hand-over from open-sea waves to waves facing the shore starts further out (from ~19 m deep), so you
   see them swing round toward the beach.
 
+### Round 11 (build 17): storms from calm to huge, crisper crests, directions that depend on the place
+* **Smooth storm levels**: Settings → Sky → Sea state now runs smoothly from a calm sea (a long, soft swell slowly
+  lifting the whole surface) through lively moderate seas to huge ~14 m storm seas at 1. Weather storms push it up on
+  top. Changing it, or a storm rolling in, grows the waves gradually; nothing pops or jumps any more.
+* **Crisper crests**: the biggest waves now get most of the sharpening, so the main ridges come to sharp peaks instead
+  of rounded humps.
+* **Directions differ from place to place**: the waves follow the local wind, and the wind is turned by the land and
+  the weather differently in different parts of the sea (often ~30°, up to ~70° either way, changing over kilometres). Each lake has its own
+  valley wind. Swells from far-away storms come from their own directions, which change slowly across the oceans, so
+  in one sea the swell may cross the wind waves and in another run with them. The wave height stays the same; only
+  the directions change.
+* **Shores** (thanks to Noor's notes): the open-sea waves keep their own angle further into the shallows while the
+  shore waves build up facing the beach, so waves arrive at an angle, not all perfectly parallel; parts of a crest run
+  ahead or lag, and some break sooner than others, so the foam line is ragged.
+* Waves no longer jump when the game re-centres the world as you travel (every 1.5 km).
+* Rocks: you stand on the stone itself now (collision used to be a ball around each rock, so you floated above flat
+  rocks).
+
 ### Which way should waves go? (Tom's question)
 Out at sea, waves run with the wind, plus swells from distant storms that can come from any direction; they do not
 care where land is. Near land, as the water gets shallower, waves slow down — the part in shallower water slows first —
@@ -87,5 +105,5 @@ mountain river; fast ones show the whitewater.
 * Boat wakes, wave interaction with individual rocks (only steep shores
   churn now).
 
-Test harness: `xvfb-run godot --path . -s tools/water_test.gd -- out=/tmp/w.png style=1 kind=sea|lake|river sea=0.5`
+Test harness: `xvfb-run godot --path . -s tools/water_test.gd -- out=/tmp/w.png style=1|2 kind=sea|lake|river|deep sea=0.5`
 renders a beach / lake / river with either style in seconds.

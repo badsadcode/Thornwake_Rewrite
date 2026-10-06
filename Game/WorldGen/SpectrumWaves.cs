@@ -136,9 +136,10 @@ public sealed class SpectrumWaves
     public double Weight(int i, (double Wx, double Wz, double Sx, double Sz) h, bool lake)
     {
         var w = Waves[i];
-        if (i >= WindCount) return lake ? 0 : Math.Pow(Math.Max(0, w.Dx * h.Sx + w.Dz * h.Sz), 24);
-        double m = 10 - 8.4 * SeaState;
-        return Math.Pow(Math.Max(0, w.Dx * h.Wx + w.Dz * h.Wz), m);
+        double c = i >= WindCount ? (lake ? 0 : w.Dx * h.Sx + w.Dz * h.Sz) : w.Dx * h.Wx + w.Dz * h.Wz;
+        if (c <= 0) return 0;
+        double weight = Math.Pow(c, i >= WindCount ? 24 : 10 - 8.4 * SeaState);
+        return Math.Max(0, weight - .002) / .998; // negligible weights fade to exactly 0: about half the waves are skipped
     }
 
     /// <summary>

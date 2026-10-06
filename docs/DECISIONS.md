@@ -468,6 +468,36 @@ scattering on canopies and plants, configurable.
   average beyond ~35–160 m. A debug_foam uniform shows amount (red) and foam (green) for tuning.
 * Shore-wave hand-over from 19 m (experimental: 14 m), WaterShore `wide` variants for the CPU mirror.
 
+## D49 — Round 11: rock collision hulls; experimental 2 sea rebuilt (smooth storms, regional directions) (2026-10-06)
+* Tom (build 16): standing on rocks he floated above them — rock collision was a sphere of 0.8 × the mean scale, much
+  taller than the flattened rocks. Now each rock gets a convex hull of its own mesh vertices through the instance basis
+  (RockMeshes.HullPoints, thread-safe, no rendering objects).
+* Tom: storms not big enough, wanted "different levels of storm, preferably smooth, from calm water to huge waves",
+  crisper crests, and "waves on all water bodies go in the same direction". Noor's notes (open sea follows wind/swell,
+  shore waves turn gradually and not every crest hugs the beach, calm = long soft swell, storm = big swell plus chop,
+  lakes gentle, rivers follow the flow) agree and were folded in. Done in experimental 2 itself (Tom asked for these
+  fixes there); build 16 (`defef2c`, docs/SNAPSHOTS.md) keeps the previous experimental 2, classic and experimental
+  are untouched.
+* SpectrumWaves: 64 fixed waves — 52 wind-sea waves on a fixed wavelength ladder 1–260 m with golden-angle directions
+  (the whole compass) and 12 swell waves 30° apart at 120/174/252 m. Only amplitudes depend on the sea state: re-picking
+  wavelengths for each sea state shifted every phase (a 1% wavenumber change at 1 km is ~1 rad), so storms popped
+  instead of growing; now a sea-state step only rescales (tested: ≤ 15 cm for 0.01). Wind sea Hs 0.15 + 14.1 s² m, swell
+  Hs 0.45 + 1.6 s m (calm = long soft swell), peak wavelength 9 + 130 s² m, choppiness 0.62 + 0.3 s.
+* Regional headings: weight cos^m(angle to the local heading), m = 10 − 8.4 s (narrow calm, confused storm); local
+  heading = wind + regional turn (sea: noise over 8 and 2.5 km, ±~1 rad; lakes: their own field over 3 km and 0.9 km);
+  swell weight cos^24 to a swell heading field over 20 km, independent of the wind. Amplitudes renormalised per point
+  (wind sea and swell separately), so Hs is the same everywhere (tested). Headings and norms are per-vertex varyings.
+  The shader follows the live wind, so wind turns no longer reconfigure the waves.
+* Crisp crests: choppiness share ∝ k²A³ (mostly to the biggest steep waves), Σ q k A = chop, divided by the group
+  factor where groups raise the waves (before, high wave sets could fold).
+* World anchored: phases include k·d·origin (mod 2π, in double on the CPU), regional fields and groups use world
+  coordinates (world_origin uniform), so the sea no longer jumps when the scene re-centres every 1.5 km.
+* Shore (Noor: no perfect conformity): open-sea waves keep 40% (was 25%) into the shallows at their own angle over the
+  shore-facing waves; extra crest-phase noise so segments lead or lag; breaking depth ratio 0.62–0.92 by noise, so the
+  foam line is irregular.
+* CPU mirror: Newton inversion with the analytic Jacobian (plain iteration crawled at Σqka ≈ 0.9), groups sampled at
+  the rest position like the shader; height error ≤ 2 cm at ~14 m seas.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
