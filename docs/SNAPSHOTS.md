@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 20** (round 14: terrain revision 13 — no perched tributaries; rain films no longer redraw rivers) | `d9491a0` | Thornwake-Rewrite-Preview-20 (v0.9.20) | Revision 12 terrain = terrain-build19.json fixture |
 | **Build 19** (round 13: dug water joins rivers softly with tint; water reflects the night sky; no aliasing rings; patchy rapids) | `fd8ede8` | Thornwake-Rewrite-Preview-19 (v0.9.19) | |
 | **Build 18** (round 12: experimental 2 as a system — weather-scaled foam, broader swell, coastal turn; Noor's ground textures switchable; ragged rock edges) | `5f1282e` | Thornwake-Rewrite-Preview-18 (v0.9.18) | Settings → Ground textures: current / Noor |
 | **Build 17** (round 11: experimental 2 sea rebuilt — smooth calm→huge storms, regional wave directions; rock collision hulls) | `614db3a` | Thornwake-Rewrite-Preview-17 (v0.9.17) | Experimental 2 of build 16 = `defef2c` |
