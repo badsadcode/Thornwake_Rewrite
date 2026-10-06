@@ -837,10 +837,12 @@ void fragment() {
 	bool flowing = river > 0.5 || plume_flow > 0.01;
 	vec3 layers = flowing ? foam_flow(p, drift, TIME, amt, dist) : foam_layers(p, drift, TIME, amt, dist);
 	float foam = layers.x, under_foam = layers.y, foam_shade = layers.z;
-	if (river > 0.5 && length(current) > 0.3) {
-		// Streaks along the current: the same foam smeared downstream.
+	if (river > 0.5 && length(current) > 0.15) {
+		// Streaks along the current: the same foam smeared downstream (faded in with the speed: a hard switch drew a
+		// straight foam edge along the triangles where the current crossed the threshold).
 		vec2 fdir = normalize(current);
-		foam = (foam + foam_flow(p - fdir * 2.4, drift, TIME, amt, dist).x) * 0.5 * 1.25;
+		float smear = smoothstep(0.15, 0.5, length(current));
+		foam = mix(foam, (foam + foam_flow(p - fdir * 2.4, drift, TIME, amt, dist).x) * 0.5 * 1.25, smear);
 	}
 	foam = foam * (1.0 / (1.0 + dist / 400.0) * 0.5 + 0.5) * smoothstep(0.2, 0.9, edge_fade)
 		* smoothstep(0.01, 0.12, contact_depth); // the thinnest swash film carries no solid foam

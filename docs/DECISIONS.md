@@ -683,6 +683,38 @@ scattering on canopies and plants, configurable.
 * Bug found on the way: the mountain base lowering applied everywhere, so over the sea the base fell to ~175 m and every
   cloud became a tall plume. The base now only comes down where the land holds cloud.
 
+## D59 — Round 20: Tom's debug dumps (rivers, fog, wetlands) (2026-10-06)
+Tom sent 14 F9 dumps from build 25. Each was replayed from its Reproduce line (weather forced off for water, on for
+fog), and for the water also as if the game had run 35 minutes (TIME + 2100 s), because that is what Tom sees.
+* **River "circles… not moving"**: one bug class, three instances. An expression mixing a direction or scale that
+  changes from place to place with a large number (scene position, TIME) winds into arcs and stripes:
+  * standing waves `kk * dot(p, fdir)` → evaluated in 20 m local frames blended between grid corners;
+  * every river noise scrolled by `current * TIME` (foam patches, pulses, bank turbulence, mouths, rock wakes) →
+    `flow_noise`/`flow_gnoise`/`foam_flow`: two copies scrolled over a short cycle and cross-faded (the method
+    flow_slope already used). At TIME + 2100 s the old foam was a field of hairy arcs; the new one is drifting patches;
+  * river foam was pulled into streaks in the local current's frame (`dot(q, dn)` with q ≈ position + drift·TIME) →
+    unrotated; streaks come from a second tap up the current. The sea keeps the rotated streaks (the wind is one
+    direction everywhere).
+  Rule for later shaders: never multiply a varying direction/speed by TIME or by a scene position.
+* **Rock wakes** now carry a weight per vertex (fades at the wake's ends and where a second rock is close; only rocks
+  breaking the surface count) instead of hard-edged per-triangle wedges.
+* **White strips along river banks**: the waterline contact foam spanned 14 cm of depth on rivers, a wide strip over
+  shallow bank shelves following the terrain's triangle edges → 6 cm. Riffles fade out in the last 8–35 cm.
+* **Water body codes**: sea 0, river ⅓, lake ⅔, pond 1 (were crowded together); river samples below the sea at a mouth
+  become sea, so the seam between river and sea water is gone.
+* **Fog "only silhouettes… a single colour"**: Godot height fog fogs a point by its depth below FogHeight, not by its
+  distance, so from a mountain a valley hundreds of metres below went solid grey. Density ÷8.5, mist ×0.75, mist
+  volume and wisps thinner. The cloud base stays ≥ ~1 km above the player (the sky is drawn behind the terrain, so a
+  base just overhead on a mountain made a grey lid and a cloud wall at the horizon).
+* **Bayou/marsh "straight channels" (terrain revision 14)**: two causes. (1) The pool size varies across biome
+  borders, and noise at position / size races through its pattern far from the origin (~4 cycles/m at 236 km): hair-
+  thin parallel stripes. Now evaluated at fixed sizes on a half-octave ladder and blended. (2) Near the shore the bed
+  was within cm of the water, so the eroded relief (parallel gullies downhill) decided what was water. The relief now
+  fades at the shore and pools start 12 cm deep. As the whole mask is now water, the cover padding drops from ×1.3 to
+  ×1.15 (marsh 55 %, bayou 41 %, fen 9 % in the test squares). Build 25 terrain stays reproducible (revision 13 +
+  fixtures `*-build25.json`).
+* Not changed: river connections (Tom: they look good).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

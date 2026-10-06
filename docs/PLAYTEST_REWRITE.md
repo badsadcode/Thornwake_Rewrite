@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 26 — fixes from your debug dumps
+* **River "circles"** gone: the foam and ripples on rivers were scrolled in a way that slowly wound them into frozen
+  arcs the longer the game ran (that is why they barely moved). Foam now drifts with the current in patches, and the
+  standing waves in rapids stay short crests across the flow. Rocks in the current: softer wakes that fade out instead
+  of white wedges; no more white strip along the water's edge on shallow banks.
+* **Fog and mist**: much gentler. From a mountain, valleys below no longer turn into one flat grey colour; mist is
+  thinner overall. Clouds stay at least ~1 km above you, so on high ground they no longer press down as a grey lid.
+* **Bayou, marsh and fen** (new terrain, revision 14): the long straight parallel channels are gone (two causes: the
+  wetland noise raced through its pattern far from the world's centre, and small eroded gullies decided what became
+  water). Pools are now winding, connected and a little deeper at the edge. Wetlands hold a bit less water than build 25.
+  The build 25 terrain stays reproducible from its snapshot (docs/SNAPSHOTS.md).
+* **Sea and river seams** at river mouths gone (river water below sea level is now drawn as sea).
+
 ## New in build 25 — weather you can see coming (Noor's cloud list)
 * **Rain fronts on the horizon**: when rain is on its way, a dark storm bank with billowing tops appears upwind up to
   ~70 km away, with a grey wall of rain hanging under it, and it closes in as the rain approaches. Strong fronts tower
