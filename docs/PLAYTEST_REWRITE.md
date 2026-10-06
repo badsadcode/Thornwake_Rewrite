@@ -83,7 +83,8 @@ milestone M6), caves.
   river softly instead of showing square, stepped edges.
 * **Water at night** is dark and reflects the night sky (and the moon) instead of glowing as if it were day — in all
   three water styles. Sunsets warm the reflections; storms grey them.
-* **Windy lakes**: the hard white reflection streaks are gone; the ripples still sparkle in the sun.
+* **Windy lakes**: the hard white reflection streaks and the rings / fine lines around you (shimmering moiré on low
+  views over water) are gone; the ripples still sparkle in the sun.
 * **Fast rivers** foam in patches that drift with the current, not one white sheet.
 
 ## New in build 18 — water as a system, Noor's ground textures (switchable)

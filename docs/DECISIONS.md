@@ -539,6 +539,9 @@ scattering on canopies and plants, configurable.
   mirrored the bright sky as hard white streaks. Experimental 2's Fresnel now uses a softened normal (big waves plus 45%
   of the ripples); glints and refraction keep the full normal. Ripple and chop wind response lowered (0.35 → 0.22,
   0.08 → 0.05); far chop fades (it only shimmered at the horizon).
+* Aliasing: Tom's "annoying" pattern was mostly moiré — at grazing angles one pixel spans metres of water along the view,
+  and short waves aliased into rings and bands around the camera. Experimental 2's cut-offs (spectrum waves, ripples,
+  chop) now use the pixel footprint along the view (dist × 1.2 mrad / grazing), not distance alone.
 * Rivers: rapids come in patches drifting with the current instead of one white sheet over a whole fast river; the
   general moving-water streaks are lighter.
 
