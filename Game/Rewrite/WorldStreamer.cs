@@ -62,6 +62,7 @@ public partial class WorldStreamer : Node3D
         _terrain.SetShaderParameter("ground_mean", GroundTextures.Means);
         _terrain.SetShaderParameter("ground_variety", GameSettings.GroundVariety.F);
         _terrain.SetShaderParameter("ground_relief", GameSettings.GroundRelief.F);
+        _terrain.SetShaderParameter("ground_parallax", GameSettings.GroundParallax.F);
         _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
         _terrain.SetShaderParameter("flora_tint", GameSettings.GrassStyle.Index == 1 ? 1f : 0f);
         _water = new ShaderMaterial { Shader = WaterShader() };
@@ -73,6 +74,7 @@ public partial class WorldStreamer : Node3D
             if (s == GameSettings.GroundTextures) _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
             if (s == GameSettings.GroundVariety) _terrain.SetShaderParameter("ground_variety", GameSettings.GroundVariety.F);
             if (s == GameSettings.GroundRelief) _terrain.SetShaderParameter("ground_relief", GameSettings.GroundRelief.F);
+            if (s == GameSettings.GroundParallax) _terrain.SetShaderParameter("ground_parallax", GameSettings.GroundParallax.F);
         };
         _trees = new TreeCatalog();
         _farTree = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/FarTree.gdshader") };
@@ -103,6 +105,7 @@ public partial class WorldStreamer : Node3D
         2 => "res://Game/Rewrite/WaterExperimental2.gdshader",
         3 => RenderingServer.GetRenderingDevice() != null ? "res://Game/Rewrite/WaterExperimental3.gdshader" : "res://Game/Rewrite/WaterExperimental2.gdshader",
         4 => RenderingServer.GetRenderingDevice() != null ? "res://Game/Rewrite/WaterExperimental3A.gdshader" : "res://Game/Rewrite/WaterExperimental2.gdshader",
+        5 => RenderingServer.GetRenderingDevice() != null ? "res://Game/Rewrite/WaterExperimental4.gdshader" : "res://Game/Rewrite/WaterExperimental2.gdshader",
         _ => "res://Game/Rewrite/Water.gdshader",
     });
 

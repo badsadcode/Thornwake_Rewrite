@@ -1076,8 +1076,19 @@ void fragment() {
 	sky = mix(reflected_sky(ray_world, world_position.xz - CAMERA_POSITION_WORLD.xz, sky), sky, (sea + lake * 0.5) * smoothstep(0.2, 0.9, sea_state) * 0.7);
 #ifdef EXP3A
 	// (3A: rough water still mirrors much of the sky — the storm sea looked matte)
+#ifdef EXP4
+	// Experimental 4 (round 26, Tom: "during a storm water is less reflective"): from a fresh breeze up, the rough,
+	// spray-streaked surface breaks the mirror — the screen-space reflection fades and everything reflected dims, and
+	// the water's own colour carries more (calm water keeps 3A's reflections exactly).
+	float storm_r = smoothstep(0.3, 0.9, sea_state) * clamp(sea + lake * 0.7 + river * 0.5, 0.0, 1.0);
+	hit.a *= 1.0 - 0.6 * storm_r;
+	fresnel *= mix(1.0, 0.7, storm_r);
+#endif
 	vec3 reflected = mix(sky, hit.rgb, hit.a) * reflection_strength * mix(1.0, 0.75, sea * smoothstep(0.4, 1.0, sea_state))
 		* mix(1.0, 0.65, face_r * sea) * mix(1.0, 0.9, sea);
+#ifdef EXP4
+	reflected *= mix(1.0, 0.6, storm_r);
+#endif
 #else
 	vec3 reflected = mix(sky, hit.rgb, hit.a) * reflection_strength * mix(1.0, 0.5, sea * smoothstep(0.4, 1.0, sea_state))
 		* mix(1.0, 0.45, face_r * sea) * mix(1.0, 0.8, sea);
@@ -1118,6 +1129,9 @@ void fragment() {
 	// (round 25: the engine's own specular adds the plain sky's reflection on top of ours; where the screen-space
 	// reflection found the shore or mountains it painted them over with sky — Tom's alpine lake mirrored nothing)
 	SPECULAR = 0.5 * (1.0 - fo) * (1.0 - 0.9 * hit.a);
+#ifdef EXP4
+	SPECULAR *= mix(1.0, 0.5, storm_r);
+#endif
 	ROUGHNESS = mix(mix(0.02, 0.08, sea_state), 0.6, fo);
 #else
 	ALBEDO = mix(scatter * murk * (1.0 - fresnel) + milky * 0.45 * (1.0 - fresnel), foam_color * foam_shade, foam);

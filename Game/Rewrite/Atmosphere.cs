@@ -309,10 +309,13 @@ public partial class Atmosphere : Node3D
         if (vp != null)
         {
             vp.Msaa3D = Viewport.Msaa.Disabled; // the water's screen reads break with MSAA (see WorldLab)
-            vp.ScreenSpaceAA = GameSettings.AntiAliasing.Index == 1 ? Viewport.ScreenSpaceAAEnum.Fxaa : Viewport.ScreenSpaceAAEnum.Disabled;
-            vp.UseTaa = GameSettings.AntiAliasing.Index == 2;
+            int aa = GameSettings.AntiAliasing.Index;
+            vp.ScreenSpaceAA = aa switch { 1 => Viewport.ScreenSpaceAAEnum.Fxaa, 3 => Viewport.ScreenSpaceAAEnum.Smaa, _ => Viewport.ScreenSpaceAAEnum.Disabled };
+            vp.UseTaa = aa == 2;
             float scale = GameSettings.RenderScale.F;
-            vp.Scaling3DMode = scale < .999f ? Viewport.Scaling3DModeEnum.Fsr : Viewport.Scaling3DModeEnum.Bilinear;
+            // FSR 2 is temporal anti-aliasing and upscaling in one (at scale 1 it only smooths); otherwise FSR 1 upscales.
+            vp.Scaling3DMode = aa == 4 ? Viewport.Scaling3DModeEnum.Fsr2
+                : scale < .999f ? Viewport.Scaling3DModeEnum.Fsr : Viewport.Scaling3DModeEnum.Bilinear;
             vp.Scaling3DScale = scale;
             if (vp.GetCamera3D() is { } camera)
             {
@@ -507,7 +510,7 @@ public partial class Atmosphere : Node3D
             }
         }
         else if (!fft && Ocean != null) { Ocean.Dispose(); Ocean = null; }
-        if (Ocean != null) Ocean.CarriedFoam = GameSettings.WaterStyle.Index == 4;
+        if (Ocean != null) Ocean.CarriedFoam = GameSettings.WaterStyle.Index >= 4; // 3A and 4
         Ocean?.Configure(seaState, _wavesAngle);
         _water.SetShaderParameter("fft_crest_scale", (float)(Spectrum.Hs / Math.Sqrt(Spectrum.Hs * Spectrum.Hs + Spectrum.SwellHs * Spectrum.SwellHs)));
         SendSpectrumOrigin();
@@ -831,6 +834,7 @@ public partial class Atmosphere : Node3D
             }
             e.VolumetricFogEnabled = GameSettings.VolumetricFog.On || patches;
             e.VolumetricFogTemporalReprojectionEnabled = !StillShot;
+            e.VolumetricFogTemporalReprojectionAmount = GameSettings.FogSmoothing.F;
             e.VolumetricFogDensity = GameSettings.VolumetricFog.On ? (Natural ? .002f : .0035f) : 0;
         }
     }

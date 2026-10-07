@@ -126,15 +126,16 @@ public static class GameSettings
         "Soft contact shadows in creases and under objects."));
     public static readonly Setting Ssil = Add(new("fx.ssil", "Lighting and effects", "Bounce light (SSIL)", 0, 1, 1, 0,
         "Screen-space indirect light: colour bleeding from sunlit surfaces. Costs some frame time."));
-    public static readonly Setting WaterStyle = Add(new("fx.water_style", "Lighting and effects", "Water", 0, 4, 1, 0,
+    public static readonly Setting WaterStyle = Add(new("fx.water_style", "Lighting and effects", "Water", 0, 5, 1, 0,
         "Classic: the water of build 14 (kept as it is). Experimental: rolling swells, waves that turn toward the shore and " +
         "break in the shallows, calmer bays, smooth per-pixel wave lighting, richer foam, flow-driven rivers. Experimental 2: " +
         "the same, with a livelier ocean — many sharp overlapping waves, wave sets, bright light through the crests, streaky " +
         "storm foam and a far wilder storm. Experimental 3: experimental 2 with a GPU-simulated ocean (FFT) — choppy, crisp " +
         "crests that pinch and fold, whitecaps born where they fold and trailing behind them (falls back to experimental 2 " +
         "on the old-PC renderer). Experimental 3A: experimental 3's waves with foam that is born on breaking crests and " +
-        "drifts away with the wind, breaking up into streaks; glassier, deeper water; livelier far sea. Switch any time to compare.",
-        options: new[] { "classic", "experimental", "experimental 2", "experimental 3", "experimental 3A" }));
+        "drifts away with the wind, breaking up into streaks; glassier, deeper water; livelier far sea. Experimental 4: 3A, but " +
+        "rough and stormy water reflects less (calm water is the same as 3A). Switch any time to compare.",
+        options: new[] { "classic", "experimental", "experimental 2", "experimental 3", "experimental 3A", "experimental 4" }));
     public static readonly Setting GroundTextures = Add(new("fx.ground_textures", "Lighting and effects", "Ground textures", 0, 1, 1, 0,
         "Current: the ground of the previous builds (kept as it is). Noor: Noor's pixel-art textures on the ground — grass, " +
         "sand, snow and soil keep their biome colours with the texture's pattern; forest floor, mud (wet mud when it rains), " +
@@ -147,6 +148,9 @@ public static class GameSettings
     public static readonly Setting GroundRelief = Add(new("fx.ground_relief", "Lighting and effects", "Ground relief", 0, 1, .05, 1,
         "With Noor ground textures: small bumps from the textures up close (grass, soil, forest floor, rock catch the light), " +
         "each ground its own roughness, darker crevices. 0 = build 33.", "×"));
+    public static readonly Setting GroundParallax = Add(new("fx.ground_parallax", "Lighting and effects", "Ground parallax", 0, 1, .05, 1,
+        "With Noor ground textures: within ~30 m the ground's textures get real-looking depth (dark gaps sink a few " +
+        "centimetres and shift as you move). 0 = build 34.", "×"));
     public static readonly Setting WaterReflections = Add(new("fx.water_reflections", "Lighting and effects", "Water reflections", 0, 2, 1, 2,
         "Screen-space reflections of the landscape on water (sky only when off).", options: new[] { "sky only", "medium", "high" }));
     public static readonly Setting Ssr = Add(new("fx.ssr", "Lighting and effects", "Screen-space reflections (other surfaces)", 0, 1, 1, 0,
@@ -244,8 +248,14 @@ public static class GameSettings
 
     // ---- camera and performance (live)
     public static readonly Setting Fov = Add(new("view.fov", "Camera and performance", "Field of view", 50, 110, 1, 70, "Vertical field of view.", "°"));
-    public static readonly Setting AntiAliasing = Add(new("perf.aa", "Camera and performance", "Anti-aliasing", 0, 2, 1, 1,
-        "Edge smoothing. (MSAA is not offered: it breaks the water's screen reads.)", options: new[] { "off", "FXAA", "TAA" }));
+    public static readonly Setting AntiAliasing = Add(new("perf.aa", "Camera and performance", "Anti-aliasing", 0, 4, 1, 1,
+        "Edge smoothing. TAA is the smoothest but blends past frames: moving waves and the character can leave a faint " +
+        "ghost (the water has no motion data). SMAA: sharp, no ghosting. FSR 2: temporal like TAA, sharper, and upscales " +
+        "with Render scale below 1. (MSAA is not offered: it breaks the water's screen reads.)",
+        options: new[] { "off", "FXAA", "TAA", "SMAA", "FSR 2" }));
+    public static readonly Setting FogSmoothing = Add(new("perf.fog_smoothing", "Camera and performance", "Fog smoothing over time", .5, .95, .05, .9,
+        "How much the volumetric fog blends with past frames: high = smooth but may trail behind moving things, low = " +
+        "no trails but grainier fog. 0.9 = build 34.", "×"));
     public static readonly Setting RenderScale = Add(new("perf.scale", "Camera and performance", "Render scale", .5, 1, .05, 1,
         "Render the 3D view at a lower resolution and upscale (AMD FSR) for more frames per second.", "×"));
     public static readonly Setting VSync = Add(new("perf.vsync", "Camera and performance", "V-Sync", 0, 1, 1, 1, "Synchronise to the monitor (no tearing)."));

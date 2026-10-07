@@ -32,6 +32,7 @@ uniform sampler2DArray ground_tex_lin : filter_linear_mipmap, repeat_enable;
 // terrain"), both 0 = build 33, Noor ground style only:
 uniform float ground_variety = 1.0; // bare-ground patches in the biome's character + warm/cool tint patches
 uniform float ground_relief = 1.0;  // close-up bump relief, per-material roughness and darker crevices
+uniform float ground_parallax = 1.0; // round 26: close-up parallax depth from the textures (0 = build 34)
 uniform vec3 ground_mean[16];
 const int G_GRASS = 0, G_DIRT = 1, G_SAND = 2, G_ROCK = 3, G_RIVER_BED = 4, G_SEA_BED = 5, G_FOREST = 6, G_GRAVEL = 7;
 const int G_MUD = 8, G_WET_MUD = 9, G_MOSS = 10, G_SCREE = 11, G_SNOW = 12, G_PEAT = 13;
@@ -71,6 +72,16 @@ float gheight(int layer, vec2 p) {
 	return mix(a, b, smoothstep(0.35, 0.65, vnoise(p * 0.045 + vec2(float(layer) * 7.3, 1.9)))) / m - 1.0;
 }
 
+// gheight at an explicit mip level (for loops that may stop at different steps per pixel).
+float gheight_lod(int layer, vec2 p, float lod) {
+	vec2 u1 = p / 8.0;
+	vec2 u2 = mat2(vec2(0.8, -0.6), vec2(0.6, 0.8)) * p / 7.1 + vec2(0.37, 0.71);
+	float m = max(dot(ground_mean[layer], vec3(0.333)), 0.02);
+	float a = dot(textureLod(ground_tex_lin, vec3(u1, float(layer)), lod).rgb, vec3(0.333));
+	float b = dot(textureLod(ground_tex_lin, vec3(u2, float(layer)), lod).rgb, vec3(0.333));
+	return mix(a, b, smoothstep(0.35, 0.65, vnoise(p * 0.045 + vec2(float(layer) * 7.3, 1.9)))) / m - 1.0;
+}
+
 void vertex() {
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	world_height = (MODEL_MATRIX * vec4(VERTEX, 1.0)).y;
@@ -85,6 +96,31 @@ void fragment() {
 	float cover = UV2.x;
 	float forest = COLOR.r, mountain = COLOR.g, wet = COLOR.b, submerged = smoothstep(0.5, 0.8, COLOR.a);
 	float slope = 1.0 - clamp(world_normal.y, 0.0, 1.0);
+	// Ground parallax (round 26, Tom: "parallax on ground — cheap depth"): within ~30 m on gentle, dry ground, the
+	// textures' dark parts sink a few centimetres — the lookup steps along the view ray until it meets the height
+	// field (grass, or soil where the variety pass will lay bare ground), and everything below reads the shifted spot.
+	if (ground_style == 1 && ground_parallax > 0.0) {
+		float fade = (1.0 - smoothstep(12.0, 30.0, length(VERTEX))) * (1.0 - smoothstep(0.2, 0.4, slope))
+			* (1.0 - smoothstep(0.45, 0.6, COLOR.a));
+		// (mip level from the unshifted lookup, outside the per-pixel branch; the loop samples with explicit levels)
+		vec2 dp = max(abs(dFdx(p)), abs(dFdy(p)));
+		float lod = max(0.0, log2(max(dp.x, dp.y) * 256.0 / 8.0));
+		if (fade > 0.001) {
+			vec3 v = normalize((INV_VIEW_MATRIX * vec4(VIEW, 0.0)).xyz); // toward the camera, world space
+			vec2 shift = -v.xz / max(v.y, 0.25) * 0.05 * ground_parallax * fade; // at the deepest layer (5 cm)
+			float bare0 = smoothstep(0.62, 0.76, vnoise(p * 0.028 + vec2(3.0, 7.0)) * 0.5 + vnoise(p * 0.13 + vec2(8.0, 1.0)) * 0.3
+				+ vnoise(p * 1.7) * 0.2 + (0.55 - cover) * 0.35 + (0.7 - biome_b.a) * 0.35) * ground_variety;
+			const int LAYERS = 8;
+			vec2 q = p;
+			for (int i = 0; i <= LAYERS; i++) {
+				float layer = float(i) / float(LAYERS);
+				q = p + shift * layer;
+				float gh = mix(gheight_lod(G_GRASS, q, lod), gheight_lod(G_DIRT, q, lod), bare0);
+				if (layer >= 1.0 - clamp(0.5 + gh * 0.8, 0.0, 1.0)) break; // reached the surface
+			}
+			p = q;
+		}
+	}
 	float n1 = vnoise(p * 0.012), n2 = vnoise(p * 0.21), n3 = vnoise(p * 1.7);
 	bool noor = ground_style == 1;
 	float dist = length(VERTEX);
