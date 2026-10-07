@@ -104,6 +104,14 @@ public partial class WorldLab : Node3D
         foreach (string arg in OS.GetCmdlineUserArgs())
         {
             if (arg.StartsWith("--preset=")) preset = arg[9..];
+            // --type-file=<json>: a player's own world type (from a debug dump), added to the list for this run.
+            if (arg.StartsWith("--type-file="))
+            {
+                var type = WorldRecipe.FromJson(File.ReadAllText(arg[12..]));
+                _recipes = _recipes.Where(r => r.Id != type.Id).Append(type).ToList();
+                _profileList.Clear();
+                foreach (var r in _recipes) _profileList.AddItem(r.Name);
+            }
             if (arg.StartsWith("--seed=")) seed = int.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--world-smoke=")) _smokeDirectory = arg[14..];
             // Single screenshot: --world-shot=<png> --at=x,z [--view=yaw,pitch,zoom] [--msaa=0|2|4] [--fly-height=m] [--hour=h] [--menu=tab]
@@ -855,6 +863,15 @@ public partial class WorldLab : Node3D
         sb.AppendLine();
         // The same scene for the developer's screenshot tool (view: yaw, pitch, zoom; weather follows day + hour).
         string settings = string.Join(" ", GameSettings.All.Select(g => $"--set={g.Key}={g.Value.ToString("R", c)}"));
+        // A player's own world type is only on their PC: the dump carries it (replayed with --type-file).
+        var recipeNow = _recipes[Math.Max(0, _profileList.Selected)];
+        if (recipeNow.Custom)
+        {
+            sb.AppendLine("World type file:");
+            sb.AppendLine(recipeNow.ToJson());
+            sb.AppendLine("End of world type file");
+            sb.AppendLine();
+        }
         sb.AppendLine("Reproduce:");
         sb.AppendLine($"  {_worldArgs} --at={F(PlayerX)},{F(PlayerZ)} --view={F(_yaw)},{F(_pitch)},{F(_zoom)} --day={_clock.Day} --hour={F(_clock.Hour)}" +
             (_fly ? $" --fly-height={F(fly)}" : "") + (_rain ? " --rain" : "") + $" {settings}");
