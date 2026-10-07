@@ -763,6 +763,46 @@ Noor's plan (docs/design-inbox/NOOR_VEGETATION_POPULATIONS.md) with her and Tom'
   per 64 m tile with Tom's 0.6× scatter distance (42 m) switched a whole seagrass bed off when turning the camera
   (it orbits the player) moved it ~7 m (dumps 20261007-122642/122651). Lake plants stay ~0.5 m deeper (wind waves).
 
+## D62 — Round 23: colour and lighting pass, the "Look" setting (2026-10-07)
+Tom: "the game in general sometimes feels very washed out … do you think HDR would help with blinding and spilling
+light?" The engine already renders in HDR; what washed it out was the mapping to the screen and the extras on top
+(soft-light glow over everything, strong bounce light and sky ambient filling the shade, aerial haze).
+* **Setting "Look"**: natural (default) / classic (= build 29, unchanged).
+* **Natural**: ACES tone mapping (white 6, exposure ×1.15) with saturation ×1.08 and contrast 1.06; glow only above an
+  HDR threshold of 1.3, added (not soft-light) at ~55 % strength and without bloom over the whole image (no spilling
+  light); bounce light (SSIL) .55 instead of .8; sky ambient .42 instead of .55 (shade reads as shade); aerial haze,
+  base fog and volumetric fog densities ~25–40 % lower. Meadow test (dump 214248) against classic: same brightness,
+  saturation +11 %, contrast (value spread) +22 %, a bluer, less milky sky.
+* **Tried and dropped**: AgX tone mapping (Godot 4.5's AgX desaturates: the meadow lost 27 % of its colour and some
+  contrast — the opposite of the goal); eye adaptation (auto exposure lifted the overcast meadow by ~25 % and washed
+  it out again). Eye adaptation may come back later with tighter limits, tested in game rather than in stills.
+
+## D63 — Round 23: water experimental 3, a GPU FFT ocean (2026-10-07)
+Tom (with a Blender ocean-modifier render): "I like the choppiness of these waves, they are kind of crisp … aiming for
+Sea of Thieves water style." Experimental 2's 64 summed waves cannot get there: summed sines stay smooth and a sharp
+crest needs hundreds of them.
+* **Tessendorf FFT** on the GPU (Game/Rewrite/Ocean): three cascades of 256² (480 m, 59 m, 7.9 m tiles, carrying
+  480–12 m, 12–1.6 m and 1.6–0.25 m waves: no wave counted twice), compute shaders for the spectrum at time t, a
+  shared-memory inverse FFT along rows then columns, and an assembly pass writing displacement (λDx, Dy, λDz, foam)
+  and slopes (dDy/dx, dDy/dz, λdDx/dx, λdDz/dz) as texture arrays sampled by the water shader.
+* **Same sea**: JONSWAP spectrum (γ 3.3) on experimental 2's sea state (Hs, peak wavelength, swell height), a
+  cos^2s spread (wider in storms) along the wind, plus a narrow 220 m swell 40° off it. Random amplitudes from a fixed
+  seed (deterministic); frequencies rounded to multiples of 2π/600 s so the sea loops exactly every 10 minutes and the
+  time can wrap without a jump (float precision). Re-weighting on a sea-state or wind change keeps the same random
+  numbers, so the waves change without popping.
+* **Choppy**: horizontal displacement +i k/|k| h pinches the crests (λ = 0.8 + 0.4 × sea state). Foam is born where
+  the Jacobian drops below 0.55 (the surface about to fold) and fades over ~4 s, so whitecaps trail behind the crests
+  (task 68, storm foam on the crests).
+* **Shared code**: experimental 2's shader body moved to WaterSea.gdshaderinc; experimental 3 only defines FFT_OCEAN,
+  which swaps the wave function for three texture reads (cheaper than the 64-wave loop). Shore waves, rivers, foam,
+  lighting and reflections are the same code. The crest glow is ×0.45 in experimental 3 (its crests are broader).
+* **Fading**: the 59 m and 7.9 m cascades fade once their longest waves are a few pixels (vertices) long; the big
+  waves die toward the shore (the shore waves take over) and lakes carry only the short cascades by fetch.
+* **Swimming and boats**: the CPU sums cascade 0's waves longer than ~20 m (displacement undone by fixed-point steps)
+  with the shader's depth and exposure weights.
+* **Fallback**: the Compatibility renderer (Run (old or office PCs).cmd) has no compute shaders: experimental 3 shows
+  experimental 2 there.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

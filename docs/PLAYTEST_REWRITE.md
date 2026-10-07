@@ -78,6 +78,15 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 30 — colour and lighting, choppy sea
+* **Less washed out** (*Settings → Lighting and effects → Look*: natural, the new default): richer colour and more
+  contrast, real shade, glow only from genuinely bright things (no light spilling over the whole picture), less grey
+  haze. *Classic* is exactly the build 29 look, to compare.
+* **Water experimental 3** (*Settings → Water*): the sea simulated on the graphics card, like Blender's ocean
+  modifier — choppy, crisp crests that pinch and can fold, whitecaps born where they fold and trailing behind them for
+  a few seconds. Shore waves, rivers and the lighting are experimental 2's. Try it calm, fresh and in a storm (*Sky →
+  Sea state*). On *Run (old or office PCs)* it falls back to experimental 2.
+
 ## New in build 29 — plant fixes from your testing
 * **Underwater plants no longer vanish** when you turn the camera (a whole bed was switched off at once).
 * **Fuller tufts** from above (three leaning planes instead of two flat ones).
