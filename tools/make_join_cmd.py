@@ -1,6 +1,6 @@
 """Write a self-checking JOIN.cmd next to split build parts (25 MB parts for Tom's downloads).
 
-Usage: python3 tools/make_join_cmd.py <parts dir> <zip name> <zip size> <exe size>
+Usage: python3 tools/make_join_cmd.py <parts dir> <zip name> <zip size> <exe size> [<pck size>]
 The script checks every part's size before joining (a missing or half-downloaded part gave a cut-off Thornwake.exe,
 whose packed game data is at its end: "missing pck file", build 27), checks the joined zip and the extracted exe, and
 adds two fallback launchers (DirectX 12; simpler graphics for old or office PCs).
@@ -9,6 +9,7 @@ import os
 import sys
 
 folder, zip_name, zip_size, exe_size = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+pck_size = sys.argv[5] if len(sys.argv) > 5 else None
 parts = sorted((f for f in os.listdir(folder) if f.startswith(zip_name + ".part")), key=lambda f: int(f.rsplit("part", 1)[1]))
 L = ["@echo off", "setlocal", 'cd /d "%~dp0"', f"echo Checking the {len(parts)} downloaded parts...", "set BAD=0"]
 for n in parts:
@@ -24,6 +25,8 @@ L += ['if "%BAD%"=="1" (echo. & echo Some parts are missing or incomplete. Downl
       f"tar -xf {out}",
       "if errorlevel 1 (echo Extracting failed. Right-click the .zip, choose Extract All, then run Thornwake.exe from the extracted folder. & pause & exit /b 1)",
       f'for %%A in ("Thornwake-Rewrite-Preview\\Thornwake.exe") do if not "%%~zA"=="{exe_size}" (echo Thornwake.exe has the wrong size: %%~zA bytes, should be {exe_size}. Antivirus may have changed or blocked it. & pause & exit /b 1)',
+      *([f'if not exist "Thornwake-Rewrite-Preview\\Thornwake.pck" (echo Thornwake.pck is missing next to Thornwake.exe. Antivirus may have removed it. & pause & exit /b 1)',
+         f'for %%A in ("Thornwake-Rewrite-Preview\\Thornwake.pck") do if not "%%~zA"=="{pck_size}" (echo Thornwake.pck has the wrong size: %%~zA bytes, should be {pck_size}. & pause & exit /b 1)'] if pck_size else []),
       '> "Thornwake-Rewrite-Preview\\Run (DirectX 12).cmd" echo @start "" "%%~dp0Thornwake.exe" --rendering-driver d3d12',
       '> "Thornwake-Rewrite-Preview\\Run (old or office PCs).cmd" echo @start "" "%%~dp0Thornwake.exe" --rendering-method gl_compatibility',
       "echo.",
