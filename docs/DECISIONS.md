@@ -857,6 +857,25 @@ Tom and Noor (docs/design-inbox/THORNWAKE_EXPERIMENTAL3A_PROMPT.md, dumps 202610
 * **Debug dumps** now carry a custom world type (replayed with --type-file=): Tom's WAYFARER world could not be
   rebuilt from his dumps.
 
+## D66 — Round 25: test sliders for view range and terrain detail, plant shadows, god ray contrast (2026-10-07)
+Tom asked for smooth sliders to benchmark on his GPU (this machine renders on the CPU, so it cannot judge frame
+rates), plus grass shadows and more visible god rays.
+* **Terrain detail range** (×1–×4, whole steps): the hole radius of every LOD ring (k tiles; level 0 spans
+  (4k+2) × 64 m). Whole steps because the rings nest on even tile boundaries. ×1 = build 32. At ×3 and above the detail
+  rings outgrow the outermost ring, which then drops; the next ring covers farther, so the view gets a little longer.
+  Checked headless: the streamer settles at every value (×1: 19 s, ×2 with ultra mesh: 100 s on this CPU).
+* **Terrain mesh detail** (normal/high/ultra): cells per tile beyond level 0 ×1/×2/×4, capped at 128; skirts still
+  hide the seams (render at ×2 ultra: no cracks).
+* Grass and flora are still built on every level-0 tile and culled by visibility range, so a wider detail range
+  also builds more plants (2.6× instances at ×2). Kept: building grass only near the player would leave tiles bare
+  when walked into (tiles are not rebuilt by distance). Noted for Tom's benchmark.
+* **Grass and plant shadows**: an option, off by default (shadow cost scales with the instance count).
+* **God ray contrast** (0 = build 32): a first try gathered farther with a slower falloff, and the bright sky around
+  the sun added up into the round 24 blob again (render). Now contrast, not light: the sun shafts compare each
+  pixel's path with its neighbours rotated ±1.5° around the sun (brighter gaps, darker lanes; an open sky is
+  unchanged), and the light beams subtract more of the even haze and boost the rest. It also raises the sun's
+  volumetric fog energy (1→3) and anisotropy (.65→.85). Strength ceilings raised: sun shafts 3, beams 4.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

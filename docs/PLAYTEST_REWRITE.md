@@ -78,6 +78,26 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 33 — test sliders for view range, plant shadows, god rays
+Everything new is off or at build 32's value by default; turn it up to test and benchmark.
+* **Terrain detail range** (*Settings → View distance*, ×1–×4): every terrain detail ring reaches farther, so the
+  full-detail ground (and with it grass, 3D trees and the coarser rings) moves out. ×1 = build 32. ×2 builds about
+  2.5× as many tiles; grass and plants are built over the whole nearest ring too (only drawn within the grass
+  distance), so expect more memory and longer loading as well as frame time.
+* **Terrain mesh detail** (normal / high / ultra): ground triangles beyond the nearest ring at 4 m (build 32), 2 m or
+  1 m. Ultra at range ×2 is heavy (here: 19 million terrain triangles, 0.4 s per tile build, against 0.9 million).
+* **Wider view sliders**: terrain to ~80 km, detailed trees to ~6.4 km, tree cards to ~48 km, grass to 400 m,
+  rocks/bushes/logs ×4.
+* **Grass and plant shadows** (*Lighting and effects*, off by default): grass, flowers, reeds and shore plants
+  cast shadows.
+* **God ray contrast** (*Lighting and effects*, 0 = build 32): sun shafts and the light beams under clouds stand out
+  more — brighter rays through gaps, darker lanes behind clouds, ridges and trees — without making the sun bigger.
+  With volumetric fog on it also strengthens the shafts through trees and fog. **Sun shafts** now go up to 3 and
+  **Light beams under clouds** up to 4.
+
+**Please benchmark**: FPS and stutter while flying, for Terrain detail range ×1/×2/×3/×4, each with mesh
+normal/high/ultra; then plant shadows on/off; then god ray contrast 0/0.5/1 at sunrise with broken cloud.
+
 ## New in build 32 — your and Noor's notes
 * **Water experimental 3A** (*Settings → Water*, Noor's brief): experimental 3's waves with foam born on breaking crests
   that drifts away with the wind and breaks up, fading — no more paint blobs or streaks swinging in place; foam with
