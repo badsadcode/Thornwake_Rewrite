@@ -147,7 +147,7 @@ void fragment() {
 			vec3 bed = cam + ray * dist;
 			float d = max(surface_depth - ray.y * dist, 0.0);
 			float net = light_pattern(bed.xz + refr.xz / refr.y * d, d, dist * 0.01);
-			c += textureLod(screen_tex, uv, 0.0).rgb * transmit * exp(-sigma * d / refr.y) * max(net - 0.7, 0.0) * 0.9 * sun_up * shaft_strength;
+			c += textureLod(screen_tex, uv, 0.0).rgb * transmit * exp(-sigma * d / refr.y) * max(net - 0.6, 0.0) * 2.2 * sun_up * shaft_strength; // (0.9 above 0.7: barely visible on sand)
 		} else {
 			// The sun seen through the surface from below (inside Snell's window): a bright, flickering spot.
 			float spot = pow(clamp(dot(ray, refr), 0.0, 1.0), 400.0) * (0.7 + 0.3 * vnoise(ray.xz * 80.0 + t * 3.0));
