@@ -129,8 +129,8 @@ public static class GameSettings
     public static readonly Setting Ssr = Add(new("fx.ssr", "Lighting and effects", "Screen-space reflections (other surfaces)", 0, 1, 1, 0,
         "Godot's SSR for shiny opaque surfaces (rocks, wet ground). Mostly subtle."));
     public static readonly Setting Look = Add(new("fx.look", "Lighting and effects", "Look", 0, 1, 1, 1,
-        "Natural: AgX tone mapping (richer colour in bright light, softer highlights), deeper shade, glow only on real " +
-        "highlights, mild eye adaptation, less grey haze. Classic: the look of build 29.",
+        "Natural: stronger colour and contrast (ACES tone mapping), deeper shade, glow only on real highlights (no " +
+        "spilling light), less grey haze. Classic: the look of build 29.",
         options: new[] { "classic", "natural" }));
     public static readonly Setting Glow = Add(new("fx.glow", "Lighting and effects", "Glow (bloom)", 0, 1.5, .05, .6,
         "Bright sky, sun reflections and foam bleed softly into their surroundings.", "×"));
