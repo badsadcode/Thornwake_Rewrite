@@ -133,7 +133,7 @@ void fragment() {
 			vec3 p = cam + ray * st;
 			float d = max(surface_depth - ray.y * st, 0.0); // depth below the surface here
 			vec2 entry = p.xz + refr.xz / refr.y * d;          // where this light came through the surface
-			float light = light_pattern(entry, d, st * 0.025); // farther samples see a blurrier pattern (bigger pixels)
+			float light = light_pattern(entry, d, st * 0.008); // farther samples see a blurrier pattern (bigger pixels)
 			vec3 atten = exp(-sigma * (st + d / refr.y));
 			shafts += atten * (light - 0.55) * step_len;       // the shafts: the focused light minus the even glow
 		}
