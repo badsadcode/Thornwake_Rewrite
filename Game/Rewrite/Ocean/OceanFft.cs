@@ -18,7 +18,7 @@ namespace Thornwake.Rewrite;
 /// </summary>
 public sealed class OceanFft : IDisposable
 {
-    public const int N = 256, Log2N = 8;
+    public const int N = 256, Log2N = 8, Mips = Log2N + 1;
     /// <summary>The sea repeats every Period seconds (frequencies rounded to multiples of 2π/Period, Tessendorf).</summary>
     public const double Period = 600;
     public static readonly float[] Sizes = { 480f, 59f, 7.9f };
@@ -30,6 +30,8 @@ public sealed class OceanFft : IDisposable
     private Rid _h0, _spec, _disp, _deriv;
     private Rid _specShader, _fftShader, _assembleShader, _specPipe, _fftPipe, _assemblePipe;
     private Rid _specSet, _fftSet, _assembleSet;
+    private Rid _mipShader, _mipPipe;
+    private Rid[] _dispMip = Array.Empty<Rid>(), _derivMip = Array.Empty<Rid>(), _mipSets = Array.Empty<Rid>();
     private readonly int _seed;
     private double _state = -1, _angle;
     private float[]? _pendingH0;
@@ -67,13 +69,52 @@ public sealed class OceanFft : IDisposable
         (_assembleShader, _assemblePipe) = Pipeline("ocean_assemble");
         _h0 = Texture(RenderingDevice.DataFormat.R32G32B32A32Sfloat, 3, 16);
         _spec = Texture(RenderingDevice.DataFormat.R32G32B32A32Sfloat, 6, 16);
-        _disp = Texture(RenderingDevice.DataFormat.R16G16B16A16Sfloat, 3, 8);
-        _deriv = Texture(RenderingDevice.DataFormat.R16G16B16A16Sfloat, 3, 8);
         _specSet = Set(_specShader, _h0, _spec);
         _fftSet = Set(_fftShader, _spec);
-        _assembleSet = Set(_assembleShader, _spec, _disp, _deriv);
+        // Displacement and slopes with mipmaps (distant water: band-limited, no shimmer), each level written through
+        // its own view; without array views (older drivers) a single level, as before.
+        if (!MipmappedOutputs())
+        {
+            _disp = Texture(RenderingDevice.DataFormat.R16G16B16A16Sfloat, 3, 8);
+            _deriv = Texture(RenderingDevice.DataFormat.R16G16B16A16Sfloat, 3, 8);
+            _dispMip = new[] { _disp }; _derivMip = new[] { _deriv };
+        }
+        _assembleSet = Set(_assembleShader, _spec, _dispMip[0], _derivMip[0]);
         Displacement.TextureRdRid = _disp;
         Derivatives.TextureRdRid = _deriv;
+    }
+
+    private bool MipmappedOutputs()
+    {
+        try
+        {
+            (_mipShader, _mipPipe) = Pipeline("ocean_mip");
+            _disp = Texture(RenderingDevice.DataFormat.R16G16B16A16Sfloat, 3, 8, Mips);
+            _deriv = Texture(RenderingDevice.DataFormat.R16G16B16A16Sfloat, 3, 8, Mips);
+            _dispMip = new Rid[Mips]; _derivMip = new Rid[Mips];
+            for (int m = 0; m < Mips; m++)
+            {
+                // (TEXTURE_SLICE_2D_ARRAY: all layers of one level; not named in the C# enum)
+                _dispMip[m] = _rd.TextureCreateSharedFromSlice(new RDTextureView(), _disp, 0, (uint)m, 1, (RenderingDevice.TextureSliceType)3);
+                _derivMip[m] = _rd.TextureCreateSharedFromSlice(new RDTextureView(), _deriv, 0, (uint)m, 1, (RenderingDevice.TextureSliceType)3);
+                if (!_dispMip[m].IsValid || !_derivMip[m].IsValid) throw new InvalidOperationException("no array mip views");
+            }
+            _mipSets = new Rid[Mips - 1];
+            for (int m = 1; m < Mips; m++) _mipSets[m - 1] = Set(_mipShader, _dispMip[m - 1], _dispMip[m], _derivMip[m - 1], _derivMip[m]);
+            return true;
+        }
+        catch (Exception e)
+        {
+            GD.PushWarning($"FFT ocean without mipmaps: {e.Message}");
+            foreach (var r in _mipSets) if (r.IsValid) _rd.FreeRid(r);
+            foreach (var r in _dispMip) if (r.IsValid) _rd.FreeRid(r);
+            foreach (var r in _derivMip) if (r.IsValid) _rd.FreeRid(r);
+            if (_disp.IsValid) _rd.FreeRid(_disp);
+            if (_deriv.IsValid) _rd.FreeRid(_deriv);
+            if (_mipShader.IsValid) _rd.FreeRid(_mipShader);
+            _mipSets = Array.Empty<Rid>(); _disp = _deriv = _mipShader = _mipPipe = new Rid();
+            return false;
+        }
     }
 
     private (Rid Shader, Rid Pipe) Pipeline(string name)
@@ -86,17 +127,19 @@ public sealed class OceanFft : IDisposable
         return (shader, _rd.ComputePipelineCreate(shader));
     }
 
-    private Rid Texture(RenderingDevice.DataFormat format, int layers, int bytesPerTexel)
+    private Rid Texture(RenderingDevice.DataFormat format, int layers, int bytesPerTexel, int mips = 1)
     {
         var fmt = new RDTextureFormat
         {
-            Format = format, Width = N, Height = N, ArrayLayers = (uint)layers,
+            Format = format, Width = N, Height = N, ArrayLayers = (uint)layers, Mipmaps = (uint)mips,
             TextureType = RenderingDevice.TextureType.Type2DArray,
             UsageBits = RenderingDevice.TextureUsageBits.StorageBit | RenderingDevice.TextureUsageBits.SamplingBit
                 | RenderingDevice.TextureUsageBits.CanUpdateBit | RenderingDevice.TextureUsageBits.CanCopyFromBit,
         };
         var data = new Godot.Collections.Array<byte[]>();
-        for (int i = 0; i < layers; i++) data.Add(new byte[N * N * bytesPerTexel]); // zero (no foam yet)
+        int bytes = 0;
+        for (int m = 0; m < mips; m++) bytes += (N >> m) * (N >> m) * bytesPerTexel;
+        for (int i = 0; i < layers; i++) data.Add(new byte[bytes]); // zero (no foam yet)
         var rid = _rd.TextureCreate(fmt, new RDTextureView(), data);
         if (!rid.IsValid) throw new InvalidOperationException($"texture {format} not created");
         return rid;
@@ -168,6 +211,20 @@ public sealed class OceanFft : IDisposable
         // Foam: born where the Jacobian drops below .55 (the surface pinching toward a fold), fading over ~4 s.
         Push(list, chop, chop, chop * .9f, dt, .55f, 1.6f, .3f, N);
         _rd.ComputeListDispatch(list, N / 16, N / 16, 3);
+        if (_mipSets.Length > 0)
+        {
+            _rd.ComputeListAddBarrier(list);
+            _rd.ComputeListBindComputePipeline(list, _mipPipe);
+            for (int m = 1; m < Mips; m++)
+            {
+                uint size = (uint)(N >> m);
+                _rd.ComputeListBindUniformSet(list, _mipSets[m - 1], 0);
+                var p = new uint[] { size, 0, 0, 0 };
+                _rd.ComputeListSetPushConstant(list, MemoryMarshal.AsBytes(p.AsSpan()), 16);
+                _rd.ComputeListDispatch(list, Math.Max(1, (size + 7) / 8), Math.Max(1, (size + 7) / 8), 3);
+                _rd.ComputeListAddBarrier(list);
+            }
+        }
         _rd.ComputeListEnd();
     }
 
@@ -308,7 +365,11 @@ public sealed class OceanFft : IDisposable
     {
         _modes.Clear();
         var rd = _rd;
-        var rids = new[] { _specSet, _fftSet, _assembleSet, _specPipe, _fftPipe, _assemblePipe, _specShader, _fftShader, _assembleShader, _h0, _spec, _disp, _deriv };
+        var rids = new List<Rid> { _specSet, _fftSet, _assembleSet };
+        rids.AddRange(_mipSets);
+        rids.AddRange(new[] { _specPipe, _fftPipe, _assemblePipe, _mipPipe, _specShader, _fftShader, _assembleShader, _mipShader });
+        if (_mipSets.Length > 0) { rids.AddRange(_dispMip); rids.AddRange(_derivMip); }
+        rids.AddRange(new[] { _h0, _spec, _disp, _deriv });
         Displacement.TextureRdRid = new Rid();
         Derivatives.TextureRdRid = new Rid();
         RenderingServer.CallOnRenderThread(Callable.From(() =>

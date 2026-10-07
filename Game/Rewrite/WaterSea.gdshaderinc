@@ -219,19 +219,27 @@ vec3 wave_norm(vec4 h, float lake, float coast) {
 // displacement pinches the crests (it may fold: that is where foam is born), and a lingering foam field (whitecaps that
 // stay and trail behind the crests) comes with each cascade. Same outputs as gerstner() below, so the rest of the water
 // (shore waves, rivers, foam, lighting) is shared with experimental 2.
-uniform sampler2DArray fft_disp : filter_linear, repeat_enable;  // per cascade: λDx, Dy, λDz, foam
-uniform sampler2DArray fft_deriv : filter_linear, repeat_enable; // per cascade: dDy/dx, dDy/dz, λdDx/dx, λdDz/dz
+uniform sampler2DArray fft_disp : filter_linear_mipmap, repeat_enable;  // per cascade: λDx, Dy, λDz, foam (mipmapped)
+uniform sampler2DArray fft_deriv : filter_linear_mipmap, repeat_enable; // per cascade: dDy/dx, dDy/dz, λdDx/dx, λdDz/dz
 uniform vec3 fft_size = vec3(480.0, 59.0, 7.9);
 uniform vec3 fft_longest = vec3(480.0, 12.0, 1.6); // longest wavelength each cascade carries (fades when under a pixel)
 uniform vec3 fft_offset_x; // the float origin modulo each tile (double precision on the CPU): world-anchored waves
 uniform vec3 fft_offset_z;
 uniform float fft_crest_scale = 1.0; // wind-sea Hs / total Hs: the crest measure (glow, foam) is scaled by the wind sea
 
-void fft_cascade(float layer, vec2 p, float size, float ox, float oz, float amp,
+// spacing > 0 (vertices): the mipmap level for that vertex spacing; 0 (pixels): the hardware picks it.
+void fft_cascade(float layer, vec2 p, float size, float ox, float oz, float amp, float spacing,
 		inout vec3 offset, inout vec4 deriv, inout float foam) {
 	vec3 uv = vec3((p + vec2(ox, oz)) / size + 0.5 / 256.0, layer); // (texel centres)
-	vec4 d = texture(fft_disp, uv);
-	vec4 g = texture(fft_deriv, uv);
+	vec4 d, g;
+	if (spacing > 0.0) {
+		float lod = log2(max(spacing * 256.0 / size, 1.0));
+		d = textureLod(fft_disp, uv, lod);
+		g = textureLod(fft_deriv, uv, lod);
+	} else {
+		d = texture(fft_disp, uv);
+		g = texture(fft_deriv, uv);
+	}
 	offset += d.xyz * amp;
 	deriv += g * amp;
 	foam = max(foam, d.w * min(amp, 1.0));
@@ -251,9 +259,11 @@ vec3 gerstner(vec2 p, float depth, float sea, float lake, float fetch_m, float e
 	vec3 offset = vec3(0.0);
 	vec4 deriv = vec4(0.0); // dDy/dx, dDy/dz, dDx/dx, dDz/dz (choppiness included)
 	float foam = 0.0;
-	if (a0 > 0.0) fft_cascade(0.0, p, fft_size.x, fft_offset_x.x, fft_offset_z.x, a0, offset, deriv, foam);
-	if (a1 > 0.0) fft_cascade(1.0, p, fft_size.y, fft_offset_x.y, fft_offset_z.y, a1, offset, deriv, foam);
-	if (a2 > 0.0) fft_cascade(2.0, p, fft_size.z, fft_offset_x.z, fft_offset_z.z, a2, offset, deriv, foam);
+	// The vertex pass calls this with min_lambda = 5 × spacing; the pixel pass lets the texture unit pick the level.
+	float spacing = t < 0.0 ? min_lambda * 0.2 : 0.0; // (t < 0: the vertex pass, see vertex())
+	if (a0 > 0.0) fft_cascade(0.0, p, fft_size.x, fft_offset_x.x, fft_offset_z.x, a0, spacing, offset, deriv, foam);
+	if (a1 > 0.0) fft_cascade(1.0, p, fft_size.y, fft_offset_x.y, fft_offset_z.y, a1, spacing, offset, deriv, foam);
+	if (a2 > 0.0) fft_cascade(2.0, p, fft_size.z, fft_offset_x.z, fft_offset_z.z, a2, spacing, offset, deriv, foam);
 	// Slopes of the displaced surface (the chop compresses the crests: steeper there).
 	float sx = 1.0 + deriv.z, sz = 1.0 + deriv.w;
 	n.x -= deriv.x / max(sx, 0.25);
@@ -357,7 +367,12 @@ void vertex() {
 		// The mesh carries waves at least ~5 vertex spacings long (per-pixel lighting does the rest).
 		float spacing = max(1.0, length(world_position - CAMERA_POSITION_WORLD) / 40.0);
 		vec3 n = vec3(0.0, 1.0, 0.0); float crest = 0.0; vec3 jac = vec3(0.0);
-		offset = gerstner(rest_xz, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, 5.0 * spacing, ocean_time, wave_heads, wave_norms, wave_coast, n, crest, jac);
+#ifdef FFT_OCEAN
+		float wave_t = -1.0; // (the FFT sea has no clock here; a negative time marks the vertex pass: explicit mip level)
+#else
+		float wave_t = ocean_time;
+#endif
+		offset = gerstner(rest_xz, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, 5.0 * spacing, wave_t, wave_heads, wave_norms, wave_coast, n, crest, jac);
 		if (sea > 0.5) {
 			float breaking, since, kw;
 			offset += shore_wave(rest_xz, vertex_depth, bed_grad, exposure, 5.0 * spacing, ocean_time, n, breaking, since, kw);

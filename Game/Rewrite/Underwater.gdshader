@@ -63,9 +63,9 @@ float light_pattern(vec2 s, float d) {
 	} else {
 		// Without the simulated surface: drifting noise lenses of the same scales.
 		float t = ocean_time;
-		vec2 q = s * (0.45 / (1.0 + d * 0.06));
-		float n = vnoise(q + vec2(t * 0.21, t * 0.13)) + vnoise(q * 1.9 - vec2(t * 0.17, -t * 0.27)) * 0.6;
-		lap = (n - 0.8) * 1.6;
+		vec2 q = s * (1.3 / (1.0 + d * 0.05));
+		float n = vnoise(q + vec2(t * 0.31, t * 0.19)) + vnoise(q * 2.1 - vec2(t * 0.23, -t * 0.37)) * 0.6;
+		lap = (n - 0.8) * 4.0; // (blobs a few metres wide drew soft clouds, not shafts)
 	}
 	// Focusing with depth (thin-lens: the light from a curved patch converges ~1/(curvature·(1-1/1.33)) below it).
 	float focus = 1.0 + lap * d * 0.25;
@@ -117,7 +117,8 @@ void fragment() {
 		vec3 refr = normalize(vec3(sun_flat.x, sqrt(max(1.0 - dot(sun_flat, sun_flat), 0.05)), sun_flat.y)); // toward the sun, in water
 		vec3 cam = CAMERA_POSITION_WORLD;
 		float reach = min(dist, 70.0);
-		float jitter = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))) + float(int(t * 60.0) % 16) * 0.618);
+		// (white noise: the interleaved-gradient pattern drew a fine diagonal hatching through the shafts)
+		float jitter = hash(FRAGCOORD.xy * 0.731 + fract(t * 7.13) * 91.7);
 		float step_len = reach / float(shaft_steps);
 		vec3 sigma = absorption + density;
 		vec3 shafts = vec3(0.0);
@@ -133,7 +134,7 @@ void fragment() {
 			vec3 atten = exp(-sigma * (st + d / refr.y));
 			shafts += atten * (light - 0.55) * step_len;       // the shafts: the focused light minus the even glow
 		}
-		c += max(shafts, vec3(0.0)) * density * phase * sun_light * sun_up * shaft_strength * 1.6;
+		c += max(shafts, vec3(0.0)) * density * phase * sun_light * sun_up * shaft_strength * 2.0;
 		// The bed: the same lenses draw a dancing net of light on it.
 		if (to_surface >= scene_dist) {
 			vec3 bed = cam + ray * dist;

@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://t32skra2teqc"
+path="res://.godot/imported/ocean_mip.glsl-c8ab6c58a1fe4671c8a195adf9195b12.res"
+
+[deps]
+
+source_file="res://Game/Rewrite/Ocean/ocean_mip.glsl"
+dest_files=["res://.godot/imported/ocean_mip.glsl-c8ab6c58a1fe4671c8a195adf9195b12.res"]
+
+[params]
+
