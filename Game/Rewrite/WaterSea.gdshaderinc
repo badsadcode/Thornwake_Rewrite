@@ -657,6 +657,19 @@ void fragment() {
 		woff = gerstner(p, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, min_lambda, ocean_time, heads, wave_norms, wave_coast, n, crest, jac);
 		if (sea > 0.5) shore_wave(p, px_depth, bed_grad, exposure, min_lambda, ocean_time, n, breaking, since, shore_k);
 	}
+#ifdef FFT_OCEAN
+	else if (river > 0.5 && fetch > 40.0) {
+		// Wide rivers get the simulated lake chop too, by their width (round 24, Tom's dump 172621: in a storm a broad
+		// river lay dark and glassy between choppy, whitecapped water — the wind sea of lakes and the sea stopped at
+		// the river's edge). Normals and foam only: the river surface itself stays where the current puts it.
+		float wide = smoothstep(40.0, 250.0, fetch);
+		float min_lambda = max(dist / 300.0, footprint * 2.5);
+		vec3 rn = vec3(0.0, 1.0, 0.0); float rc = 0.0; vec3 rj = vec3(0.0);
+		gerstner(p, vertex_depth, 0.0, wide, fetch, 1.0, min_lambda, ocean_time, vec4(1.0, 0.0, 1.0, 0.0), vec3(1.0), 0.0, rn, rc, rj);
+		n += vec3(rn.x, 0.0, rn.z);
+		jac += rj * vec3(1.0, 1.0, 0.7);
+	}
+#endif
 	crest /= max(wave2_hs * 0.5, 0.01); // ~1 at a typical big crest
 #ifdef EXP3A
 	float fold = 1.0 - (1.0 - jac.x) * (1.0 - jac.y);
@@ -933,6 +946,7 @@ void fragment() {
 		amount = max(amount, standing * 0.7);  // white tops on the standing waves
 		amount = max(amount, bank_foam * 0.6);    // foam where the margins churn
 		amount = max(amount, obstacle_foam);     // around and behind rocks in the current
+		amount = max(amount, smoothstep(0.45, 0.9, fold) * smoothstep(0.5, 0.9, sea_state) * 0.5); // wind-sea caps on wide rivers (FFT styles)
 	} else {
 		amount = max(amount, smoothstep(0.45, 0.9, fold) * smoothstep(0.5, 0.9, sea_state) * 0.6 * lake);
 	}
