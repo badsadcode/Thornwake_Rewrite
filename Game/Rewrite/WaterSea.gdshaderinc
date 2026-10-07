@@ -900,10 +900,10 @@ void fragment() {
 	vec3 ray = normalize(reflect(VERTEX, n_soft));
 	vec4 hit = vec4(0.0);
 	// (round 25, Tom: mountains across an alpine lake were not reflected — the march reached only ~280 m (high) or
-	// ~180 m (medium) and fell back to the sky; now ~8 km in 48 steps or ~2.4 km in 24, with a short refinement on a hit)
+	// ~180 m (medium) and fell back to the sky; now ~16 km in 48 steps or ~2.4 km in 24, with a short refinement on a hit)
 	int steps = ssr_steps <= 16 ? 24 : 48;
 	float step_length = ssr_steps <= 16 ? 0.4 : 0.25;
-	float growth = ssr_steps <= 16 ? 1.38 : 1.2;
+	float growth = ssr_steps <= 16 ? 1.38 : 1.22;
 	vec3 march = VERTEX + ray * 0.1;
 	for (int i = 0; i < steps && ssr_steps > 0; i++) {
 		vec3 before = march;
@@ -927,9 +927,10 @@ void fragment() {
 			}
 			vec4 bc = PROJECTION_MATRIX * vec4(b, 1.0);
 			if (bc.w > 1e-4) uv = clamp(bc.xy / bc.w * 0.5 + 0.5, 0.0, 1.0);
-			vec2 edge = smoothstep(vec2(0.0), vec2(0.08), uv) * smoothstep(vec2(0.0), vec2(0.08), 1.0 - uv);
-			// Fade only the last few steps (the old linear fade left distant mountains at a fifth of their strength).
-			hit = vec4(textureLod(screen_tex, uv, 0.0).rgb, edge.x * edge.y * (1.0 - smoothstep(0.8, 1.0, float(i) / float(steps))));
+			vec2 edge = smoothstep(vec2(0.0), vec2(0.18), uv) * smoothstep(vec2(0.0), vec2(0.18), 1.0 - uv);
+			// No fade with distance (a fade over the step count dimmed the far shore, hit in the last steps, to nothing:
+			// the debug render of Tom's alpine lake), only at the screen edges.
+			hit = vec4(textureLod(screen_tex, uv, 0.0).rgb, edge.x * edge.y);
 			break;
 		}
 	}
@@ -1114,13 +1115,15 @@ void fragment() {
 	ALBEDO = mix(scatter * murk * (1.0 - fresnel) * 0.75 + milky * 0.45 * (1.0 - fresnel), foam_col, fo);
 	EMISSION = (transmitted * (1.0 - fresnel) + reflected * fresnel + glow * (1.0 - fresnel) + sun_color * glint * 3.0
 		+ sss_color * sun_color * under_foam * 0.12) * (1.0 - fo);
-	SPECULAR = 0.5 * (1.0 - fo);
+	// (round 25: the engine's own specular adds the plain sky's reflection on top of ours; where the screen-space
+	// reflection found the shore or mountains it painted them over with sky — Tom's alpine lake mirrored nothing)
+	SPECULAR = 0.5 * (1.0 - fo) * (1.0 - 0.9 * hit.a);
 	ROUGHNESS = mix(mix(0.02, 0.08, sea_state), 0.6, fo);
 #else
 	ALBEDO = mix(scatter * murk * (1.0 - fresnel) + milky * 0.45 * (1.0 - fresnel), foam_color * foam_shade, foam);
 	EMISSION = (transmitted * (1.0 - fresnel) + reflected * fresnel + glow * (1.0 - fresnel) + sun_color * glint * 3.0
 		+ sss_color * sun_color * under_foam * 0.12) * (1.0 - foam);
-	SPECULAR = 0.3 * (1.0 - foam);
+	SPECULAR = 0.3 * (1.0 - foam) * (1.0 - 0.9 * hit.a);
 	ROUGHNESS = mix(mix(0.03, 0.12, sea_state), 0.6, foam);
 #endif
 	METALLIC = 0.0;
