@@ -250,7 +250,9 @@ vec3 gerstner(vec2 p, float depth, float sea, float lake, float fetch_m, float e
 	// Big waves die toward the shore (the shore waves take over) and in sheltered bays; lakes carry only the short
 	// cascades, scaled by their fetch.
 	float a0 = sea * mix(0.25, 1.0, expo) * smoothstep(0.5, 14.0, depth);
-	float lake_amp = lake * clamp(fetch_m / 1500.0, 0.15, 0.75);
+	// Lakes: fetch-limited chop, growing with the wind (only the sea's short waves reach them, and those barely grow
+	// with the sea state: a windy lake looked like a calm one).
+	float lake_amp = lake * clamp(fetch_m / 1500.0, 0.15, 0.75) * (0.6 + 2.4 * pow(sea_state, 1.5));
 	float a1 = sea * mix(0.5, 1.0, expo) * smoothstep(0.2, 3.0, depth) + lake_amp;
 	float a2 = sea * smoothstep(0.05, 1.0, depth) + lake_amp;
 	// A cascade fades once its longest waves are only a few pixels (vertices) long: its detail would only shimmer.
