@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 31** (round 24, water focus: underwater light shafts and caustics; experimental 3 without far shimmer, smooth wind changes, windy lakes) | `63c8738` | Thornwake-Rewrite-Preview-31 (v0.9.31) | Underwater light: off = build 30 underwater |
 | **Build 30** (round 23: natural look — richer colour, real shade, no spilling glow; water experimental 3 — GPU FFT ocean, choppy crests, fold foam) | `ecb25b8` | Thornwake-Rewrite-Preview-30 (v0.9.30) | Look: classic = build 29 look; Water: experimental 2 = build 29 sea |
 | **Build 29** (round 22 follow-ups: underwater plants no longer vanish, fuller tufts, sprite wetlands) | `f24d2f0` | Thornwake-Rewrite-Preview-29 (v0.9.29) | |
 | **Build 28** (round 22: plants as populations — patches and communities, reeds, lilies, underwater plants; Noor's sprites) | `40e0752` | Thornwake-Rewrite-Preview-28 (v0.9.28) | Grass and plants: classic tufts = build 27 grass |
