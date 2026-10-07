@@ -61,11 +61,15 @@ float light_pattern(vec2 s, float d, float blur) {
 		float far = fft_curvature(1.0, s, fft_size.y, fft_offset_x.y, fft_offset_z.y, e * 2.5);
 		lap = mix(near, far, smoothstep(1.0, 8.0, d)) * fft_amp;
 	} else {
-		// Without the simulated surface: drifting noise lenses of the same scales.
+		// Without the simulated surface: a drifting caustic net (ridged noise: thin bright lines where two ridge
+		// fields cross), coarser and fainter deeper down, so it projects into shafts along the light.
 		float t = ocean_time;
-		vec2 q = s * (1.3 / (1.0 + d * 0.05 + blur * 0.5));
-		float n = vnoise(q + vec2(t * 0.31, t * 0.19)) + vnoise(q * 2.1 - vec2(t * 0.23, -t * 0.37)) * 0.6;
-		lap = (n - 0.8) * 4.0; // (blobs a few metres wide drew soft clouds, not shafts)
+		vec2 q = s * (0.9 / (1.0 + d * 0.04 + blur * 0.3));
+		q += vec2(vnoise(q * 0.5 + t * 0.05), vnoise(q * 0.5 + 7.3 - t * 0.05)) * 1.5;
+		float r1 = 1.0 - abs(2.0 * vnoise(q + vec2(t * 0.31, t * 0.19)) - 1.0);
+		float r2 = 1.0 - abs(2.0 * vnoise(q * 1.7 - vec2(t * 0.23, -t * 0.37)) - 1.0);
+		float ridge = pow(r1 * r2, 4.0);
+		return 0.5 + ridge * 3.0 * mix(1.0, 0.4, smoothstep(2.0, 25.0, d)) / (1.0 + blur);
 	}
 	// Focusing with depth (thin-lens: the light from a curved patch converges ~1/(curvature·(1-1/1.33)) below it).
 	float focus = 1.0 + lap * d * 0.25;
