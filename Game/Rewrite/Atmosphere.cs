@@ -728,7 +728,7 @@ public partial class Atmosphere : Node3D
             e.FogEnabled = true;
             e.FogHeight = _mistGround - 4;
             // With mist patches the volume carries the shape (banks, billows); the even height fog only fills in.
-            e.FogHeightDensity = .0035f * _mistAmount * _mistAmount * (mode == 2 ? .45f : 1);
+            e.FogHeightDensity = .0035f * _mistAmount * _mistAmount * (mode == 2 ? .3f : 1);
         }
         else e.FogHeightDensity = 0;
         // Patches: a volumetric fog box around the player (volumetric fog on for it, no global density).

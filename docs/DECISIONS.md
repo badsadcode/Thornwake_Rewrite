@@ -720,6 +720,19 @@ fog), and for the water also as if the game had run 35 minutes (TIME + 2100 s), 
   fixtures `*-build25.json`).
 * Not changed: river connections (Tom: they look good).
 
+## D60 — Round 21: rolling ground mist (2026-10-07)
+Tom: "currently it had the same density everywhere… maybe some rolling slow turbulence would help."
+* The mist patch volume (Mist.gdshader, a 420 m fog box following the player) now samples the tiling 3D cloud noise:
+  ~150 m **banks** drifting with the wind and slowly forming/dissolving, a per-bank **depth** of 3–18 m with a lumpy top,
+  ~20 m **billows** warped by a slow 90 m flow, drifting faster than the banks and rising/sinking (rolling), and fine
+  detail fraying thin edges. The even height fog drops to 30 % when mist patches are on (it only fills in).
+* The 3D noise channels sit in a narrow band (Perlin-Worley 5–95 % = 0.45–0.77); thresholds over 0–1 gave one even
+  block of mist. Every use is remapped to the measured band.
+* Bug: the mist volume followed the ground with an 8 s lag even across teleports, so after map travel it stayed buried
+  or hanging at the old height for a long time (in replays it was 130 m underground). Jumps over 60 m now snap.
+* Fog voxel grid 64³ → 96³ (finer billows near the camera; small GPU cost).
+* Scripted screenshots switch off temporal fog smoothing (at ~1 FPS it was still fading in when captured).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

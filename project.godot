@@ -2,7 +2,7 @@ config_version=5
 
 [application]
 config/name="Thornwake"
-config/version="0.9.26"
+config/version="0.9.27"
 run/main_scene="res://Game/Launcher.tscn"
 config/features=PackedStringArray("4.5", "C#", "Forward Plus")
 config/description="A life at the edge of the wild. First playable prototype."
@@ -25,6 +25,8 @@ renderer/rendering_method.mobile="mobile"
 textures/default_filters/use_nearest_mipmap_filter=false
 anti_aliasing/quality/msaa_3d=2
 environment/defaults/default_clear_color=Color(0.13,0.18,0.19,1)
+environment/volumetric_fog/volume_size=96
+environment/volumetric_fog/volume_depth=96
 
 [environment]
 defaults/default_clear_color=Color(0.13,0.18,0.19,1)

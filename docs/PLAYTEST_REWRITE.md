@@ -78,6 +78,12 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 27 — rolling mist
+* **Ground mist with shape** (Ground fog: valleys + mist patches): mist now lies in banks with clear air between them,
+  each bank with its own depth and a lumpy top; inside, the mist rolls and churns slowly and drifts with the wind. The
+  even grey layer underneath is much weaker.
+* **Mist after teleporting** no longer stays at the old height (it was buried in the ground or hanging in the air).
+
 ## New in build 26 — fixes from your debug dumps
 * **River "circles"** gone: the foam and ripples on rivers were scrolled in a way that slowly wound them into frozen
   arcs the longer the game ran (that is why they barely moved). Foam now drifts with the current in patches, and the
