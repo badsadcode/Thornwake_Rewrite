@@ -247,8 +247,8 @@ public partial class Atmosphere : Node3D
         // Look (round 23, Tom: "the game in general sometimes feels very washed out"): classic = build 29.
         bool natural = Natural;
         e.TonemapMode = natural ? Godot.Environment.ToneMapper.Aces : Godot.Environment.ToneMapper.Filmic;
-        e.TonemapWhite = natural ? LookTest(0, 6f) : 1;
-        e.TonemapExposure = .95f * GameSettings.Exposure.F * (natural ? LookTest(1, 1.25f) : 1);
+        e.TonemapWhite = natural ? 6 : 1;
+        e.TonemapExposure = .95f * GameSettings.Exposure.F * (natural ? 1.15f : 1);
         e.SsilIntensity = natural ? .55f : .8f;
         e.GlowHdrThreshold = natural ? 1.3f : 1.05f;
         e.GlowBloom = natural ? 0 : .04f;
@@ -256,7 +256,7 @@ public partial class Atmosphere : Node3D
         if (natural) e.GlowIntensity = GameSettings.Glow.F * .55f;
         e.AdjustmentContrast = natural ? 1.06f : 1;
         e.FogAerialPerspective = Math.Clamp((natural ? .26f : .35f) * GameSettings.Haze.F, 0, 1);
-        e.AdjustmentSaturation = GameSettings.Saturation.F * (natural ? LookTest(2, 1f) : 1);
+        e.AdjustmentSaturation = GameSettings.Saturation.F * (natural ? 1.08f : 1);
         RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
         _sky.SetShaderParameter("quality", GameSettings.CloudQuality.Index);
@@ -298,13 +298,8 @@ public partial class Atmosphere : Node3D
                 attributes.DofBlurFarDistance = dof == 1 ? 160 : 70;
                 attributes.DofBlurFarTransition = dof == 1 ? 300 : 140;
                 attributes.DofBlurAmount = dof == 1 ? .05f : .1f;
-                // Natural look: mild eye adaptation (about ±0.7 stops around the set exposure). Scripted screenshots
-                // adapt at once (a handful of frames).
-                attributes.AutoExposureEnabled = Natural && LookTest(3, 0) > .5f;
-                attributes.AutoExposureMinSensitivity = 60;
-                attributes.AutoExposureMaxSensitivity = 160;
-                attributes.AutoExposureScale = .4f;
-                attributes.AutoExposureSpeed = StillShot ? 30 : .6f;
+                // (No eye adaptation: tried for the natural look, it lifted overcast scenes and washed them out.)
+                attributes.AutoExposureEnabled = false;
                 camera.Attributes = attributes;
             }
         }
@@ -728,12 +723,6 @@ public partial class Atmosphere : Node3D
     private double _mistDriftX, _mistDriftZ;
     private FogVolume? _mistVolume;
     private static bool Natural => GameSettings.Look.Index == 1;
-    // TEMP look tuning: THORN_LOOK="white,exposure,saturation"
-    private static float LookTest(int i, float fallback)
-    {
-        var v = System.Environment.GetEnvironmentVariable("THORN_LOOK")?.Split(',');
-        return v != null && v.Length > i && float.TryParse(v[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var f) ? f : fallback;
-    }
     /// <summary>Scripted screenshots (a few frames at ~1 FPS): no temporal fog smoothing, which would still be fading in.</summary>
     public bool StillShot { get; set; }
     private ImageTexture3D? _cloudNoise;
