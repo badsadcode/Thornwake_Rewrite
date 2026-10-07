@@ -293,6 +293,11 @@ public partial class Atmosphere : Node3D
         _sky.SetShaderParameter("sun_glare", GameSettings.SunGlare.F);
         _sky.SetShaderParameter("sun_style", GameSettings.SunStyle.Index);
         _shafts.SetShaderParameter("intensity", GameSettings.SunShafts.F);
+        _shafts.SetShaderParameter("reach", GameSettings.SunShaftReach.F);
+        // Reach also feeds the volumetric fog: brighter, more forward scattering, so shafts through trees and fog stand
+        // out (build 32 at 0: Godot's energy 1 and anisotropy .65).
+        Sun.LightVolumetricFogEnergy = 1 + 2 * GameSettings.SunShaftReach.F;
+        Environment.VolumetricFogAnisotropy = .65f + .2f * GameSettings.SunShaftReach.F;
         if (_shaftQuad != null) _shaftQuad.Visible = GameSettings.SunShafts.Value > 0;
         _beams?.SetShaderParameter("intensity", GameSettings.LightBeams.F);
         if (_beamQuad != null) _beamQuad.Visible = GameSettings.LightBeams.Value > 0 && GameSettings.Clouds.Value > 0;

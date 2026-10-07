@@ -9,8 +9,11 @@ uniform sampler2D depth_tex : hint_depth_texture, filter_nearest, repeat_disable
 uniform vec3 sun_direction = vec3(0.0, 1.0, 0.0); // world space, toward the sun
 uniform vec3 sun_color : source_color = vec3(1.0, 0.95, 0.85);
 uniform float intensity = 0.6;
-
-const int SAMPLES = 32;
+// Build 33 (Tom: "make god rays stand out a bit more without losing what we have"): 0 = the build 32 rays exactly;
+// toward 1 the rays carry farther from the sun (slower falloff, longer march, more samples) and stay bright away from
+// the sun, so they read as streaks across the scene instead of a glow around the disc. The per-sample cap is kept,
+// so the sun itself does not grow into a blob.
+uniform float reach = 0.0;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -28,11 +31,13 @@ void fragment() {
 	float on_screen = 1.0 - smoothstep(0.0, 0.45, length(off));
 	if (on_screen <= 0.0) discard;
 
+	int samples = reach > 0.0 ? 48 : 32;
+	float decay = mix(0.955, 0.984, reach);
 	vec2 uv = SCREEN_UV;
-	vec2 delta = (sun_uv - uv) / float(SAMPLES) * 0.85;
+	vec2 delta = (sun_uv - uv) / float(samples) * mix(0.85, 1.0, reach);
 	uv += delta * hash(FRAGCOORD.xy); // dither: no banding
 	float light = 0.0, weight = 1.0;
-	for (int i = 0; i < SAMPLES; i++) {
+	for (int i = 0; i < samples; i++) {
 		uv += delta;
 		if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) break;
 		float depth = textureLod(depth_tex, uv, 0.0).r;
@@ -45,11 +50,15 @@ void fragment() {
 			// each sample capped)
 			light += min(max(0.0, dot(c, vec3(0.3, 0.59, 0.11)) - 1.8), 3.0) * weight;
 		}
-		weight *= 0.955;
+		weight *= decay;
 	}
-	light /= float(SAMPLES);
+	light /= float(samples);
+	// The slower falloff gathers more in total; scale it back so reach lengthens the rays rather than just
+	// brightening the whole screen (weight sums: 32 samples at 0.955 ~ 16.9, 48 at 0.984 ~ 33.4).
+	light *= mix(1.0, 0.75, reach);
 	// Stronger toward the sun, and only while the sun is above the horizon.
 	float near_sun = 1.0 - smoothstep(0.0, 0.9, distance(SCREEN_UV, sun_uv));
 	float elevation = smoothstep(-0.02, 0.12, sun_direction.y);
-	ALBEDO = sun_color * light * intensity * on_screen * elevation * (0.6 + 1.4 * near_sun) * 2.6;
+	float spread = mix(0.6, 1.1, reach); // reach: the rays keep more of their strength away from the sun
+	ALBEDO = sun_color * light * intensity * on_screen * elevation * (spread + (2.0 - spread) * near_sun) * 2.6;
 }

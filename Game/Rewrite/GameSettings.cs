@@ -161,8 +161,11 @@ public static class GameSettings
         options: new[] { "classic", "natural" }));
     public static readonly Setting SunGlare = Add(new("fx.sun_glare", "Lighting and effects", "Sun glare", 0, 1.5, .05, 1,
         "Brightness of the sun disc and its halo in the sky (1 = build 11).", "×"));
-    public static readonly Setting SunShafts = Add(new("fx.sun_shafts", "Lighting and effects", "Sun shafts", 0, 1.5, .05, .6,
-        "Light rays from the sun through clouds, trees and over ridges (screen-space).", "×"));
+    public static readonly Setting SunShafts = Add(new("fx.sun_shafts", "Lighting and effects", "Sun shafts", 0, 3, .05, .6,
+        "Light rays from the sun through clouds, trees and over ridges (screen-space). Up to 3 since build 33.", "×"));
+    public static readonly Setting SunShaftReach = Add(new("fx.sun_shaft_reach", "Lighting and effects", "Sun shaft reach", 0, 1, .05, 0,
+        "How far the sun shafts stretch across the scene and how strongly they show away from the sun. 0 = build 32. " +
+        "With volumetric fog on, also strengthens the real shafts through trees and fog.", "×"));
     public static readonly Setting LightBeams = Add(new("fx.light_beams", "Lighting and effects", "Light beams under clouds", 0, 2, .05, 1,
         "Beams of sunlight (or moonlight) falling through gaps in broken cloud, visible from the side even when the sun " +
         "is hidden. 0 = off.", "×"));
