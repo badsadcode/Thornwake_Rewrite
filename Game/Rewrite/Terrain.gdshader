@@ -26,6 +26,12 @@ uniform float sea_level = 0.0;
 uniform float flora_tint = 1.0; // ground under the plant patches: richer where grass is dense (0: classic grass)
 varying float world_height;
 uniform sampler2DArray ground_tex : filter_nearest_mipmap, repeat_enable;
+// The same textures filtered smoothly: heights for the relief (nearest texels would give stair-step bumps).
+uniform sampler2DArray ground_tex_lin : filter_linear_mipmap, repeat_enable;
+// Round 25 (Tom: "biome = one ground texture… mix some dirt/soil with grass… some tint on patches… no materials on
+// terrain"), both 0 = build 33, Noor ground style only:
+uniform float ground_variety = 1.0; // bare-ground patches in the biome's character + warm/cool tint patches
+uniform float ground_relief = 1.0;  // close-up bump relief, per-material roughness and darker crevices
 uniform vec3 ground_mean[16];
 const int G_GRASS = 0, G_DIRT = 1, G_SAND = 2, G_ROCK = 3, G_RIVER_BED = 4, G_SEA_BED = 5, G_FOREST = 6, G_GRAVEL = 7;
 const int G_MUD = 8, G_WET_MUD = 9, G_MOSS = 10, G_SCREE = 11, G_SNOW = 12, G_PEAT = 13;
@@ -53,6 +59,16 @@ vec3 gdetail(int layer, vec2 p) {
 	float shade = dot(t, vec3(0.3, 0.55, 0.15)) / max(dot(m, vec3(0.3, 0.55, 0.15)), 0.02);
 	vec3 d = mix(vec3(shade), t / m, 0.2);
 	return 1.0 + (d - 1.0) * 0.7;
+}
+
+// Height of a ground texture around 0 (its brightness against the layer's mean), sampled like gtex.
+float gheight(int layer, vec2 p) {
+	vec2 u1 = p / 8.0;
+	vec2 u2 = mat2(vec2(0.8, -0.6), vec2(0.6, 0.8)) * p / 7.1 + vec2(0.37, 0.71);
+	float m = max(dot(ground_mean[layer], vec3(0.333)), 0.02);
+	float a = dot(texture(ground_tex_lin, vec3(u1, float(layer))).rgb, vec3(0.333));
+	float b = dot(texture(ground_tex_lin, vec3(u2, float(layer))).rgb, vec3(0.333));
+	return mix(a, b, smoothstep(0.35, 0.65, vnoise(p * 0.045 + vec2(float(layer) * 7.3, 1.9)))) / m - 1.0;
 }
 
 void vertex() {
@@ -84,6 +100,31 @@ void fragment() {
 	// so the patch pattern reads to the horizon (beyond the grass sprites) and lines up with them up close.
 	grass = mix(grass, mix(grass * vec3(1.03, 1.01, 0.94), biome_a.rgb * vec3(0.84, 0.9, 0.8), smoothstep(0.2, 0.9, cover)),
 		0.4 * flora_tint * biome_b.a);
+	// Ground variety (round 25): bare patches and tint patches, so a biome is not one ground everywhere.
+	float bare = 0.0;
+	if (noor && ground_variety > 0.0) {
+		// Warm and cool patches tens of metres across (sun-dried and lusher grass), subtle.
+		float hue = vnoise(p * 0.017 + vec2(11.0, 5.0)) * 0.7 + vnoise(p * 0.06 + vec2(2.0, 9.0)) * 0.3;
+		grass *= mix(vec3(1.0), mix(vec3(0.9, 1.0, 0.95), vec3(1.08, 1.03, 0.86), smoothstep(0.3, 0.7, hue)), 0.7 * ground_variety);
+		// Bare ground where the plants thin out (the plant fields' cover and the biome's plant amount), in patches
+		// from a few metres to ~40 m with ragged edges; not on cliffs (rock) or under water.
+		float patches = vnoise(p * 0.028 + vec2(3.0, 7.0)) * 0.5 + vnoise(p * 0.13 + vec2(8.0, 1.0)) * 0.3 + n3 * 0.2;
+		bare = smoothstep(0.58, 0.72, patches + (0.55 - cover) * 0.35 + (0.7 - biome_b.a) * 0.35)
+			* ground_variety * (1.0 - smoothstep(0.35, 0.5, slope)) * (1.0 - submerged);
+		{ // (no per-pixel branch: textures and derivatives must run in uniform control flow)
+			// The biome's character picks the bare ground: soil, gravel up in cold mountains, sand where it is dry,
+			// moss where it is wet; tinted toward the biome's dry colour.
+			float dryness = 1.0 - clamp(biome_b.a, 0.0, 1.0);
+			float cold = clamp(mountain * 1.4 + biome_a.a * 1.5, 0.0, 1.0);
+			vec3 dirt = gtex(G_DIRT, p);
+			vec3 b = mix(dirt, gtex(G_GRAVEL, p), smoothstep(0.35, 0.8, cold) * 0.75);
+			b = mix(b, gtex(G_SAND, p), smoothstep(0.55, 0.95, dryness) * 0.55);
+			b = mix(b, gtex(G_MOSS, p) * 0.9, smoothstep(0.3, 0.7, biome_d.a) * 0.6);
+			float lb = max(dot(biome_b.rgb, vec3(0.333)), 0.02);
+			b = mix(b, b * mix(vec3(1.0), biome_b.rgb / lb, 0.5), 0.6);
+			grass = mix(grass, b, bare);
+		}
+	}
 	vec3 woods = biome_a.rgb * vec3(0.70, 0.71, 0.69);                                     // forest floor / far canopy
 	if (noor) {
 		grass *= mix(vec3(1.0), gdetail(G_GRASS, p), 0.85 * g_detail);
@@ -119,8 +160,9 @@ void fragment() {
 	float exposure = biome_c.a * (0.25 + 0.75 * smoothstep(0.35, 0.75, n2 + (n1 - 0.5) * 0.4));
 	// The edge follows the stones of the rock texture and a few-metre noise, not the triangles (the rock amount is
 	// per vertex: a plain threshold drew straight-edged patches, which read as blocky wet ground on coasts).
-	c = mix(c, rock, smoothstep(0.30, 0.52, slope + (n2 - 0.5) * 0.10 + mountain * 0.06 + exposure * 0.32
-		+ rock_relief * 0.16 + (vnoise(p * 0.27 + 4.1) - 0.5) * 0.12));
+	float rocky = smoothstep(0.30, 0.52, slope + (n2 - 0.5) * 0.10 + mountain * 0.06 + exposure * 0.32
+		+ rock_relief * 0.16 + (vnoise(p * 0.27 + 4.1) - 0.5) * 0.12);
+	c = mix(c, rock, rocky);
 	// Noor: scree on the steeper slopes of mountains, below the bare rock.
 	if (noor) c = mix(c, gtex(G_SCREE, p) * biome_d.rgb / max(dot(ground_mean[G_SCREE], vec3(0.333)), 0.02),
 		smoothstep(0.2, 0.5, mountain) * smoothstep(0.18, 0.28, slope + (n2 - 0.5) * 0.12) * (1.0 - smoothstep(0.34, 0.46, slope)) * 0.8 * g_near);
@@ -216,8 +258,33 @@ void fragment() {
 	float puddle_noise = vnoise(p * 0.21) * 0.65 + vnoise(p * 0.93 + 7.1) * 0.35;
 	float puddle = smoothstep(0.64, 0.7, puddle_noise) * flat_ground * rain_wetness.y * (1.0 - submerged) * (1.0 - snow) * (1.0 - 0.6 * forest);
 	c *= mix(1.0, 0.7, wetness);
+	// Ground relief (round 25): the textures' light and dark read as small bumps up close (derivative bump mapping on
+	// a smooth copy of the textures), each ground its own roughness, crevices a little darker.
+	float base_rough = 0.95;
+	if (noor && ground_relief > 0.0) {
+		float soft = 1.0 - smoothstep(25.0, 70.0, dist);
+		float on_grass = (1.0 - rocky) * (1.0 - snow) * (1.0 - submerged) * (1.0 - smoothstep(0.15, 0.75, forest) * 0.85);
+		float on_bare = bare * on_grass;
+		base_rough = mix(0.95, 0.86, on_grass - on_bare) - 0.12 * rocky;
+		{
+			float hgt = 0.0;
+			hgt += on_grass * (1.0 - bare) * gheight(G_GRASS, p) * 0.035;
+			hgt += on_bare * gheight(G_DIRT, p) * 0.05;
+			hgt += rocky * (1.0 - snow) * rock_relief * 0.08;
+			hgt += smoothstep(0.15, 0.75, forest) * 0.85 * (1.0 - rocky) * gheight(G_FOREST, p) * 0.04;
+			hgt *= ground_relief * soft;
+			vec3 dpdx = dFdx(VERTEX), dpdy = dFdy(VERTEX);
+			float dhx = dFdx(hgt), dhy = dFdy(hgt);
+			vec3 r1 = cross(dpdy, NORMAL), r2 = cross(NORMAL, dpdx);
+			float det = dot(dpdx, r1);
+			vec3 grad = sign(det) * (dhx * r1 + dhy * r2);
+			NORMAL = normalize(abs(det) * NORMAL - grad);
+			c *= 1.0 + clamp(hgt * 4.0, -0.15, 0.08); // crevices darker
+		}
+		base_rough = mix(0.95, base_rough, ground_relief);
+	}
 	ALBEDO = mix(pow(c, vec3(2.2)), vec3(0.025, 0.03, 0.035), puddle * 0.85);
-	ROUGHNESS = mix(mix(mix(0.95, 0.55, snow), 0.45, wetness * 0.7), 0.04, puddle);
+	ROUGHNESS = mix(mix(mix(base_rough, 0.55, snow), 0.45, wetness * 0.7), 0.04, puddle);
 	ROUGHNESS = mix(ROUGHNESS, 0.55, damp * wetland * 0.7); // glistening mud at wetland pool margins
 	SPECULAR = mix(0.5, 0.9, puddle);
 }

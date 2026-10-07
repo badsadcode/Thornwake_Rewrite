@@ -58,7 +58,10 @@ public partial class WorldStreamer : Node3D
         _terrain.SetShaderParameter("rock_tex", RockTextureArray.Get());
         // Ground style (current / Noor's textures): a uniform, switched in place.
         _terrain.SetShaderParameter("ground_tex", GroundTextures.Get());
+        _terrain.SetShaderParameter("ground_tex_lin", GroundTextures.Get());
         _terrain.SetShaderParameter("ground_mean", GroundTextures.Means);
+        _terrain.SetShaderParameter("ground_variety", GameSettings.GroundVariety.F);
+        _terrain.SetShaderParameter("ground_relief", GameSettings.GroundRelief.F);
         _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
         _terrain.SetShaderParameter("flora_tint", GameSettings.GrassStyle.Index == 1 ? 1f : 0f);
         _water = new ShaderMaterial { Shader = WaterShader() };
@@ -68,6 +71,8 @@ public partial class WorldStreamer : Node3D
         {
             if (s == GameSettings.WaterStyle) _water.Shader = WaterShader();
             if (s == GameSettings.GroundTextures) _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
+            if (s == GameSettings.GroundVariety) _terrain.SetShaderParameter("ground_variety", GameSettings.GroundVariety.F);
+            if (s == GameSettings.GroundRelief) _terrain.SetShaderParameter("ground_relief", GameSettings.GroundRelief.F);
         };
         _trees = new TreeCatalog();
         _farTree = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/FarTree.gdshader") };

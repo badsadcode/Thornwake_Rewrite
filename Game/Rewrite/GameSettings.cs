@@ -141,6 +141,12 @@ public static class GameSettings
         "gravel, moss, peat, scree and river/sea beds use Noor's art up close and fade to the usual colours far away. " +
         "Cliffs keep their rock textures. Switch any time to compare.",
         options: new[] { "current", "Noor" }));
+    public static readonly Setting GroundVariety = Add(new("fx.ground_variety", "Lighting and effects", "Ground variety", 0, 1, .05, 1,
+        "With Noor ground textures: patches of bare ground where plants thin out, in the biome's character (soil; gravel in " +
+        "cold mountains; sand where it is dry; moss where it is wet), and warm/cool tint patches in the grass. 0 = build 33.", "×"));
+    public static readonly Setting GroundRelief = Add(new("fx.ground_relief", "Lighting and effects", "Ground relief", 0, 1, .05, 1,
+        "With Noor ground textures: small bumps from the textures up close (grass, soil, forest floor, rock catch the light), " +
+        "each ground its own roughness, darker crevices. 0 = build 33.", "×"));
     public static readonly Setting WaterReflections = Add(new("fx.water_reflections", "Lighting and effects", "Water reflections", 0, 2, 1, 2,
         "Screen-space reflections of the landscape on water (sky only when off).", options: new[] { "sky only", "medium", "high" }));
     public static readonly Setting Ssr = Add(new("fx.ssr", "Lighting and effects", "Screen-space reflections (other surfaces)", 0, 1, 1, 0,
