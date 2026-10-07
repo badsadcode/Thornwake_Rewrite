@@ -294,12 +294,18 @@ public partial class WorldStreamer : Node3D
         {
             // Land grass, shore plants, floating leaves and underwater plants: one draw each, all sprites in one array.
             float grass = GameSettings.GrassDistance.F, scatter = GameSettings.ScatterDistance.F;
-            var groups = data.Flora.GroupBy(f => f.Species <= Flora.WheatGolden ? 0 : f.Species <= Flora.Flowering ? 1 : Flora.All[f.Species].Form == Flora.Form.Floating ? 2 : 3);
-            foreach (var group in groups)
+            // Floating and underwater plants in 32 m quarters: a visibility range is measured from the node, so one
+            // node per 64 m tile switched a whole lake bed off at once (Tom, build 28: "in the lake they disappear").
+            int Kind(FloraInstance f) => f.Species <= Flora.WheatGolden ? 0 : f.Species <= Flora.Flowering ? 1 : Flora.All[f.Species].Form == Flora.Form.Floating ? 2 : 3;
+            int Quarter(FloraInstance f) => Kind(f) < 2 ? 0 : (f.Transform.Origin.X >= 32 ? 1 : 0) + (f.Transform.Origin.Z >= 32 ? 2 : 0);
+            foreach (var group in data.Flora.GroupBy(f => (Kind(f), Quarter(f))))
             {
                 var items = group.ToArray();
-                float range = group.Key switch { 0 => grass, 1 => grass * 1.3f, 2 => 160 * scatter, _ => 70 * scatter };
-                root.AddChild(MultiFlora(group.Key == 2 ? Flora.Flat() : Flora.Upright(), items, group.Key == 3 ? 2 : group.Key == 2 ? 0 : 1, range));
+                int kind = group.Key.Item1;
+                // (floors: at view.scatter 0.6 the underwater range was 42 m, and turning the camera, which orbits
+                // the player, moved it across that line — Tom's dumps 20261007-122642/122651)
+                float range = kind switch { 0 => grass, 1 => grass * 1.3f, 2 => Math.Max(100, 180 * scatter), _ => Math.Max(70, 110 * scatter) };
+                root.AddChild(MultiFlora(kind == 2 ? Flora.Flat() : Flora.Upright(), items, kind == 3 ? 2 : kind == 2 ? 0 : 1, range));
             }
             GrassCommitted += data.Flora.Count;
         }

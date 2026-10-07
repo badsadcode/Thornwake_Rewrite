@@ -73,21 +73,24 @@ public static class Flora
     }
 
     /// <summary>
-    /// Upright plants: two crossed 1 m quads standing on the origin. Normals lean up (0.7) so both faces light like a
-    /// soft tuft, not like a card (a card's back face went dark against the sun).
+    /// Upright plants: three 1 m quads crossing at 60° on the origin, their tops leaning ~14° outward so a tuft still
+    /// shows some body from above (two flat crossed cards read as thin lines from a high camera). Normals lean up (0.7)
+    /// so both faces light like a soft tuft, not like a card (a card's back face went dark against the sun).
     /// </summary>
     public static ArrayMesh Upright()
     {
         if (_upright != null) return _upright;
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
-        for (int q = 0; q < 2; q++)
+        for (int q = 0; q < 3; q++)
         {
-            float a = q * Mathf.Pi / 2 + .35f;
+            float a = q * Mathf.Pi / 3 + .35f;
             var side = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * .5f;
             var face = new Vector3(-side.Z, 0, side.X).Normalized();
             var n = (face * .3f + Vector3.Up * .7f).Normalized();
-            Vector3 p0 = -side, p1 = side, p2 = side + Vector3.Up, p3 = -side + Vector3.Up;
+            // Alternate planes lean to opposite sides (the top edge shifted along the plane's normal).
+            var lean = face * (q % 2 == 0 ? .24f : -.24f);
+            Vector3 p0 = -side, p1 = side, p2 = side + Vector3.Up * .97f + lean, p3 = -side + Vector3.Up * .97f + lean;
             void V(Vector3 p, float u, float v) { st.SetNormal(n); st.SetUV(new Vector2(u, v)); st.AddVertex(p); }
             V(p0, 0, 1); V(p1, 1, 1); V(p2, 1, 0);
             V(p0, 0, 1); V(p2, 1, 0); V(p3, 0, 0);

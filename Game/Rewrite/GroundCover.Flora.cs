@@ -190,7 +190,7 @@ public static partial class GroundCover
             weights[2] = 1 + 3 * lush;
             weights[3] = .8f * (1 - forest) * (1 - wetness);
             weights[4] = .8f + 2 * lush + 3 * near;
-            weights[5] = 4 * wetness + 4 * near;
+            weights[5] = 6 * wetness + 4 * near; // wetlands: sedge and rush meadows (replacing the placeholder bog shrubs)
             var c = LandCommunities[Pick(weights, Hashing.Unit(cell))];
             if (Unit(h, 1) > density * c.Density * habitat) return;
             ulong cellH = Hashing.Mix(cell);
@@ -325,7 +325,8 @@ public static partial class GroundCover
             var sp = Flora.All[species];
             float size = sp.MinHeight + (sp.MaxHeight - sp.MinHeight) * Unit(h, 4);
             // Below the surface with room to spare: at sea the wave troughs dip ~0.5 m (tips stuck out of the water).
-            double room = t.Water == WaterKind.Ocean ? (depth - .7) * .75 : depth - .25;
+            // (lakes: wind waves too, a few tenths of a metre)
+            double room = t.Water == WaterKind.Ocean ? (depth - .7) * .75 : t.Water == WaterKind.Lake ? (depth - .5) * .85 : depth - .25;
             if (room < .3) return;
             size = (float)Math.Min(size, room);
             result.Add(new FloraInstance(species, PlantTransform(h, size, new Vector3((float)x, bed - .05f, (float)z), .1f), new Color(1, 1, 1) * (.9f + .15f * Unit(h, 5))));

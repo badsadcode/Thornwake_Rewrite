@@ -381,8 +381,8 @@ public static partial class GroundCover
         var result = new List<RockInstance>();
         var g = grid;
         float a = (float)amount;
-        // Shrubs and grass clumps on dry ground.
-        Cells(key, 2.4, seed ^ 0xB06UL, (x, z, h) =>
+        // Shrubs and grass clumps on dry ground (plant populations: sprite communities instead, up close).
+        if (floating || key.Level > 0) Cells(key, 2.4, seed ^ 0xB06UL, (x, z, h) =>
         {
             if (g.Wetness(x, z) < .4f || g.Edited(x, z)) return;
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .85f || height - sea < .8) return;

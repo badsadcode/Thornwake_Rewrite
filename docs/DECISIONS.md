@@ -757,6 +757,11 @@ Noor's plan (docs/design-inbox/NOOR_VEGETATION_POPULATIONS.md) with her and Tom'
   the saturation setting): albedo × 0.64, a quarter desaturated, weaker translucency glow.
 * **Count**: fewer instances than the classic tufts at the same setting (a meadow: 315k vs 440k), 4 triangles each.
 * **Setting** "Grass and plants": plant populations (default) / classic tufts (the old look, for comparison).
+* **Build 29 follow-ups**: tufts are three planes at 60° leaning ~14° out (two flat cards read as lines from a high
+  camera); the placeholder bog shrubs give way to sprite sedge/rush meadows up close; floating and underwater plants
+  are drawn in 32 m quarters with range floors (100 m / 70 m). A visibility range is measured from the node: one node
+  per 64 m tile with Tom's 0.6× scatter distance (42 m) switched a whole seagrass bed off when turning the camera
+  (it orbits the player) moved it ~7 m (dumps 20261007-122642/122651). Lake plants stay ~0.5 m deeper (wind waves).
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder

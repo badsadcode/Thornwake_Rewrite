@@ -78,6 +78,11 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 29 — plant fixes from your testing
+* **Underwater plants no longer vanish** when you turn the camera (a whole bed was switched off at once).
+* **Fuller tufts** from above (three leaning planes instead of two flat ones).
+* **Bogs and swamps**: sedge and rush meadows replace the old dark-green shrub models up close.
+
 ## New in build 28 — plants as populations (Noor's plan, your sprite packs)
 * **Grass grows in patches**: lush stretches and sparse ones, clumps of all sizes with gaps between, and each patch
   has its own character — short grass with the odd tall tuft, thick lush grass, a stand of tall grass, grass with wild
