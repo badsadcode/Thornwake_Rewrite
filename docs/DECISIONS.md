@@ -733,6 +733,31 @@ Tom: "currently it had the same density everywhere… maybe some rolling slow tu
 * Fog voxel grid 64³ → 96³ (finer billows near the camera; small GPU cost).
 * Scripted screenshots switch off temporal fog smoothing (at ~1 FPS it was still fading in when captured).
 
+## D61 — Round 22: vegetation as populations (2026-10-07)
+Noor's plan (docs/design-inbox/NOOR_VEGETATION_POPULATIONS.md) with her and Tom's sprite packs.
+* **Assets**: 28 pixel-art sprites in `Assets/Flora` (12 grass/tall grass/wild wheat, 8 shore and floating plants,
+  8 underwater plants), cropped to the plant, bottom-aligned on a square, 1254 → 256 px; one Texture2DArray, one
+  shader (Flora.gdshader): crossed quads (upright, underwater) or a flat quad (floating), per-instance tint and
+  custom data (layer, motion, phase). Grass, shore plants, floating leaves and underwater plants: one draw each per tile.
+* **Placement** (GroundCover.Flora): the existing hard rules decide where plants may grow; three noise scales decide
+  how many: macro lushness (~170 m), a domain-warped patch field (7 m or 24 m clumps, the scale itself chosen by a
+  ~90 m region noise and blended, never a varying wavelength), and the candidate's own scatter. Between patches the
+  cover stays sparse-to-normal (never a bare lawn); dense patches keep holes.
+* **Patch identity**: each patch (a warped 8 m or 22 m cell) draws a community by habitat: sparse short grass;
+  short grass with odd tall tufts; thick lush grass; grass with wild wheat (patches ripen green or golden); a stand of
+  tall grass; wet meadow (near water / wet biomes). Reed beds, cattail stands and rushes with flowers along still and
+  slow water, clumped (squared clump field), standing into the shallows.
+* **Water plants** in fuzzy depth bands: lily pads, water lilies and duckweed rafts on ponds and lakes (0.2–3 m);
+  submerged plants on lake, pond and river beds (shallow vs deep sets; rivers: eelgrass, algae on rocks); sea:
+  seagrass meadows (0.5–6 m), kelp forests (2.5–20 m, more on rocky beds, capped below the surface), seaweed on rocks.
+* **Ground**: the terrain's UV2.x now carries the same grass cover (the height above sea comes from the world
+  position), so the ground under dense patches is richer and under sparse ones a touch drier — the patch pattern
+  continues past the grass draw distance and lines up with the sprites up close.
+* **Look**: the painted sprites were brighter and more saturated than the terrain (lime grass, orange cattails under
+  the saturation setting): albedo × 0.64, a quarter desaturated, weaker translucency glow.
+* **Count**: fewer instances than the classic tufts at the same setting (a meadow: 315k vs 440k), 4 triangles each.
+* **Setting** "Grass and plants": plant populations (default) / classic tufts (the old look, for comparison).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

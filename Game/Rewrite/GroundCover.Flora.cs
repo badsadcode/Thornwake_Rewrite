@@ -324,7 +324,10 @@ public static partial class GroundCover
             if (Unit(h, 1) > chance) return;
             var sp = Flora.All[species];
             float size = sp.MinHeight + (sp.MaxHeight - sp.MinHeight) * Unit(h, 4);
-            size = (float)Math.Min(size, Math.Max(.3, (depth - .15) * (species == Flora.Kelp ? .85 : 1)));
+            // Below the surface with room to spare: at sea the wave troughs dip ~0.5 m (tips stuck out of the water).
+            double room = t.Water == WaterKind.Ocean ? (depth - .7) * .75 : depth - .25;
+            if (room < .3) return;
+            size = (float)Math.Min(size, room);
             result.Add(new FloraInstance(species, PlantTransform(h, size, new Vector3((float)x, bed - .05f, (float)z), .1f), new Color(1, 1, 1) * (.9f + .15f * Unit(h, 5))));
         });
         return result;

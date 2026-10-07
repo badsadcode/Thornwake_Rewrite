@@ -82,8 +82,8 @@ void fragment() {
 	grass = mix(biome_b.rgb * vec3(1.05, 1.0, 0.92), grass, smoothstep(0.0, 1.0, biome_b.a * 1.3 + (n2 - 0.5) * 0.5));
 	// Plant patches (round 22): dense grass shades and enriches the ground under it, sparse ground is a little drier,
 	// so the patch pattern reads to the horizon (beyond the grass sprites) and lines up with them up close.
-	grass = mix(grass, mix(biome_b.rgb * vec3(1.04, 1.0, 0.9), biome_a.rgb * vec3(0.84, 0.9, 0.8), smoothstep(0.2, 0.9, cover)),
-		0.45 * flora_tint * biome_b.a);
+	grass = mix(grass, mix(grass * vec3(1.03, 1.01, 0.94), biome_a.rgb * vec3(0.84, 0.9, 0.8), smoothstep(0.2, 0.9, cover)),
+		0.4 * flora_tint * biome_b.a);
 	vec3 woods = biome_a.rgb * vec3(0.70, 0.71, 0.69);                                     // forest floor / far canopy
 	if (noor) {
 		grass *= mix(vec3(1.0), gdetail(G_GRASS, p), 0.85 * g_detail);
