@@ -247,7 +247,7 @@ public partial class Atmosphere : Node3D
         // Look (round 23, Tom: "the game in general sometimes feels very washed out"): classic = build 29.
         bool natural = Natural;
         e.TonemapMode = natural ? Godot.Environment.ToneMapper.Aces : Godot.Environment.ToneMapper.Filmic;
-        e.TonemapWhite = natural ? LookTest(0, 4f) : 1;
+        e.TonemapWhite = natural ? LookTest(0, 6f) : 1;
         e.TonemapExposure = .95f * GameSettings.Exposure.F * (natural ? LookTest(1, 1.25f) : 1);
         e.SsilIntensity = natural ? .55f : .8f;
         e.GlowHdrThreshold = natural ? 1.3f : 1.05f;
@@ -300,7 +300,7 @@ public partial class Atmosphere : Node3D
                 attributes.DofBlurAmount = dof == 1 ? .05f : .1f;
                 // Natural look: mild eye adaptation (about ±0.7 stops around the set exposure). Scripted screenshots
                 // adapt at once (a handful of frames).
-                attributes.AutoExposureEnabled = Natural;
+                attributes.AutoExposureEnabled = Natural && LookTest(3, 0) > .5f;
                 attributes.AutoExposureMinSensitivity = 60;
                 attributes.AutoExposureMaxSensitivity = 160;
                 attributes.AutoExposureScale = .4f;
