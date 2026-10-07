@@ -80,6 +80,8 @@ public partial class Atmosphere : Node3D
     public Wind Wind { get; } = new();
     private float _wetness, _puddles; // cosmetic rain wetness of the ground and puddles (0..1)
     private ShaderMaterial? _water;
+    /// <summary>The GPU FFT sea of the "experimental 3" water (null with other styles, or without compute shaders).</summary>
+    public OceanFft? Ocean { get; private set; }
 
     public override void _Ready()
     {
@@ -133,7 +135,12 @@ public partial class Atmosphere : Node3D
         ApplyAll();
     }
 
-    public override void _ExitTree() => GameSettings.Changed -= OnSetting;
+    public override void _ExitTree()
+    {
+        GameSettings.Changed -= OnSetting;
+        Ocean?.Dispose();
+        Ocean = null;
+    }
 
     /// <summary>Attach the full-screen sun-shaft pass to the camera.</summary>
     public void AttachCamera(Camera3D camera)
@@ -237,7 +244,17 @@ public partial class Atmosphere : Node3D
         e.FogDensity = .00009f * GameSettings.Haze.F;
         e.FogAerialPerspective = Math.Clamp(.35f * GameSettings.Haze.F, 0, 1);
         e.FogEnabled = GameSettings.Haze.Value > 0;
-        e.TonemapExposure = .95f * GameSettings.Exposure.F;
+        // Look (round 23, Tom: "the game in general sometimes feels very washed out"): classic = build 29.
+        bool natural = Natural;
+        e.TonemapMode = natural ? Godot.Environment.ToneMapper.Agx : Godot.Environment.ToneMapper.Filmic;
+        e.TonemapExposure = .95f * GameSettings.Exposure.F * (natural ? 1.12f : 1);
+        e.SsilIntensity = natural ? .55f : .8f;
+        e.GlowHdrThreshold = natural ? 1.3f : 1.05f;
+        e.GlowBloom = natural ? 0 : .04f;
+        e.GlowBlendMode = natural ? Godot.Environment.GlowBlendModeEnum.Additive : Godot.Environment.GlowBlendModeEnum.Softlight;
+        if (natural) e.GlowIntensity = GameSettings.Glow.F * .55f;
+        e.AdjustmentContrast = natural ? 1.06f : 1;
+        e.FogAerialPerspective = Math.Clamp((natural ? .26f : .35f) * GameSettings.Haze.F, 0, 1);
         e.AdjustmentSaturation = GameSettings.Saturation.F;
         RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
@@ -280,6 +297,13 @@ public partial class Atmosphere : Node3D
                 attributes.DofBlurFarDistance = dof == 1 ? 160 : 70;
                 attributes.DofBlurFarTransition = dof == 1 ? 300 : 140;
                 attributes.DofBlurAmount = dof == 1 ? .05f : .1f;
+                // Natural look: mild eye adaptation (about ±0.7 stops around the set exposure). Scripted screenshots
+                // adapt at once (a handful of frames).
+                attributes.AutoExposureEnabled = Natural;
+                attributes.AutoExposureMinSensitivity = 60;
+                attributes.AutoExposureMaxSensitivity = 160;
+                attributes.AutoExposureScale = .4f;
+                attributes.AutoExposureSpeed = StillShot ? 30 : .6f;
                 camera.Attributes = attributes;
             }
         }
@@ -318,6 +342,7 @@ public partial class Atmosphere : Node3D
         if (originX != Spectrum.OriginX || originZ != Spectrum.OriginZ) { Spectrum.SetOrigin(originX, originZ); SendSpectrumOrigin(); }
         double windAngle = Math.Atan2(Wind.Direction.Y, Wind.Direction.X);
         if (Math.Abs(seaState - _wavesState) > .004 || Math.Abs(Mathf.AngleDifference((float)windAngle, (float)_wavesAngle)) > .14) { _wavesAngle = windAngle; UpdateWaves(seaState); }
+        Ocean?.Update(OceanTime);
         // Overcast without rain also changes the mood (Noor: "proper overcast where the whole lighting mood changes"):
         // weaker, flatter sunlight, greyer and hazier air.
         float overcast = Mathf.SmoothStep(.7f, .95f, Coverage);
@@ -325,10 +350,11 @@ public partial class Atmosphere : Node3D
         Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, gloom);
         _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, gloom);
         UpdateWaterSky(elevation);
-        Environment.FogDensity = .00009f * GameSettings.Haze.F * Mathf.Lerp(1, 4, Math.Max(_storm, overcast * .45f));
+        Environment.FogDensity = (Natural ? .00007f : .00009f) * GameSettings.Haze.F * Mathf.Lerp(1, 4, Math.Max(_storm, overcast * .45f));
         Environment.FogEnabled = GameSettings.Haze.Value > 0 || _storm > 0;
         // The sky's radiance map is not re-baked for the storm (global uniform), so dim the ambient light directly.
-        Environment.AmbientLightEnergy = Mathf.Lerp(.55f, .38f, gloom);
+        // (natural look: less sky light in the shade, so lit and shaded ground differ)
+        Environment.AmbientLightEnergy = Natural ? Mathf.Lerp(.42f, .3f, gloom) : Mathf.Lerp(.55f, .38f, gloom);
         UpdateCoverage();
         if (_rainParticles != null)
         {
@@ -440,6 +466,20 @@ public partial class Atmosphere : Node3D
         _water.SetShaderParameter("waves2", w2);
         _water.SetShaderParameter("wave2_hs", (float)Spectrum.Hs);
         _water.SetShaderParameter("wave2_chop", (float)Spectrum.Chop);
+        // Experimental 3: the FFT sea, made on first use and freed when another style is chosen.
+        bool fft = GameSettings.WaterStyle.Index == 3 && RenderingServer.GetRenderingDevice() != null;
+        if (fft && Ocean == null)
+        {
+            Ocean = OceanFft.Create(77);
+            if (Ocean != null)
+            {
+                _water.SetShaderParameter("fft_disp", Ocean.Displacement);
+                _water.SetShaderParameter("fft_deriv", Ocean.Derivatives);
+                _water.SetShaderParameter("fft_size", new Vector3(OceanFft.Sizes[0], OceanFft.Sizes[1], OceanFft.Sizes[2]));
+            }
+        }
+        else if (!fft && Ocean != null) { Ocean.Dispose(); Ocean = null; }
+        Ocean?.Configure(seaState, _wavesAngle);
         SendSpectrumOrigin();
     }
 
@@ -474,6 +514,9 @@ public partial class Atmosphere : Node3D
         for (int i = 0; i < phases.Length; i++) phases[i] = (float)Spectrum.ShiftedPhase[i];
         _water.SetShaderParameter("wave2_phase", phases);
         _water.SetShaderParameter("world_origin", new Vector2((float)Spectrum.OriginX, (float)Spectrum.OriginZ));
+        var (ox, oz) = OceanFft.Offsets(Spectrum.OriginX, Spectrum.OriginZ);
+        _water.SetShaderParameter("fft_offset_x", ox);
+        _water.SetShaderParameter("fft_offset_z", oz);
     }
 
     /// <summary>Cloud cover in effect: the setting, closing in toward overcast while it rains.</summary>
@@ -683,6 +726,7 @@ public partial class Atmosphere : Node3D
     private float _mistGround = float.NaN, _mistGroundTarget, _mistBiome, _mistWater, _mistAmount;
     private double _mistDriftX, _mistDriftZ;
     private FogVolume? _mistVolume;
+    private static bool Natural => GameSettings.Look.Index == 1;
     /// <summary>Scripted screenshots (a few frames at ~1 FPS): no temporal fog smoothing, which would still be fading in.</summary>
     public bool StillShot { get; set; }
     private ImageTexture3D? _cloudNoise;
@@ -757,7 +801,7 @@ public partial class Atmosphere : Node3D
             }
             e.VolumetricFogEnabled = GameSettings.VolumetricFog.On || patches;
             e.VolumetricFogTemporalReprojectionEnabled = !StillShot;
-            e.VolumetricFogDensity = GameSettings.VolumetricFog.On ? .0035f : 0;
+            e.VolumetricFogDensity = GameSettings.VolumetricFog.On ? (Natural ? .002f : .0035f) : 0;
         }
     }
 

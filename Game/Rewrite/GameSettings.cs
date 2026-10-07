@@ -110,12 +110,14 @@ public static class GameSettings
         "Soft contact shadows in creases and under objects."));
     public static readonly Setting Ssil = Add(new("fx.ssil", "Lighting and effects", "Bounce light (SSIL)", 0, 1, 1, 0,
         "Screen-space indirect light: colour bleeding from sunlit surfaces. Costs some frame time."));
-    public static readonly Setting WaterStyle = Add(new("fx.water_style", "Lighting and effects", "Water", 0, 2, 1, 0,
+    public static readonly Setting WaterStyle = Add(new("fx.water_style", "Lighting and effects", "Water", 0, 3, 1, 0,
         "Classic: the water of build 14 (kept as it is). Experimental: rolling swells, waves that turn toward the shore and " +
         "break in the shallows, calmer bays, smooth per-pixel wave lighting, richer foam, flow-driven rivers. Experimental 2: " +
         "the same, with a livelier ocean — many sharp overlapping waves, wave sets, bright light through the crests, streaky " +
-        "storm foam and a far wilder storm. Switch any time to compare.",
-        options: new[] { "classic", "experimental", "experimental 2" }));
+        "storm foam and a far wilder storm. Experimental 3: experimental 2 with a GPU-simulated ocean (FFT) — choppy, crisp " +
+        "crests that pinch and fold, whitecaps born where they fold and trailing behind them (falls back to experimental 2 " +
+        "on the old-PC renderer). Switch any time to compare.",
+        options: new[] { "classic", "experimental", "experimental 2", "experimental 3" }));
     public static readonly Setting GroundTextures = Add(new("fx.ground_textures", "Lighting and effects", "Ground textures", 0, 1, 1, 0,
         "Current: the ground of the previous builds (kept as it is). Noor: Noor's pixel-art textures on the ground — grass, " +
         "sand, snow and soil keep their biome colours with the texture's pattern; forest floor, mud (wet mud when it rains), " +
@@ -126,6 +128,10 @@ public static class GameSettings
         "Screen-space reflections of the landscape on water (sky only when off).", options: new[] { "sky only", "medium", "high" }));
     public static readonly Setting Ssr = Add(new("fx.ssr", "Lighting and effects", "Screen-space reflections (other surfaces)", 0, 1, 1, 0,
         "Godot's SSR for shiny opaque surfaces (rocks, wet ground). Mostly subtle."));
+    public static readonly Setting Look = Add(new("fx.look", "Lighting and effects", "Look", 0, 1, 1, 1,
+        "Natural: AgX tone mapping (richer colour in bright light, softer highlights), deeper shade, glow only on real " +
+        "highlights, mild eye adaptation, less grey haze. Classic: the look of build 29.",
+        options: new[] { "classic", "natural" }));
     public static readonly Setting Glow = Add(new("fx.glow", "Lighting and effects", "Glow (bloom)", 0, 1.5, .05, .6,
         "Bright sky, sun reflections and foam bleed softly into their surroundings.", "×"));
     public static readonly Setting SunStyle = Add(new("fx.sun_style", "Lighting and effects", "Sun", 0, 1, 1, 0,
