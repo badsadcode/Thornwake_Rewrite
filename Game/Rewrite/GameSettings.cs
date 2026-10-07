@@ -87,6 +87,10 @@ public static class GameSettings
     // (New world tab), never switched by a graphics option.
     public static readonly Setting GrassDensity = Add(new("detail.grass_density", "Detail", "Grass density", 0, 3, .05, 1,
         "Grass tufts per square metre (1 = default; 0 = no grass).", "×", rebuild: true));
+    public static readonly Setting GrassStyle = Add(new("detail.grass_style", "Detail", "Grass and plants", 0, 1, 1, 1,
+        "Plant populations: grass, tall grass, wild wheat, reeds, water lilies and underwater plants in patches and " +
+        "communities (Noor's sprites). Classic: the earlier evenly spread grass tufts.",
+        options: new[] { "classic tufts", "plant populations" }, rebuild: true));
     public static readonly Setting GrassDistance = Add(new("detail.grass_distance", "Detail", "Grass distance", 40, 150, 5, 120,
         "How far away grass is drawn.", "m", rebuild: true));
     // ---- view distance (tiles rebuild)

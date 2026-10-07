@@ -60,6 +60,7 @@ public partial class WorldStreamer : Node3D
         _terrain.SetShaderParameter("ground_tex", GroundTextures.Get());
         _terrain.SetShaderParameter("ground_mean", GroundTextures.Means);
         _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
+        _terrain.SetShaderParameter("flora_tint", GameSettings.GrassStyle.Index == 1 ? 1f : 0f);
         _water = new ShaderMaterial { Shader = WaterShader() };
         // Water style (classic / experimental): one material, the shader swapped in place, so every uniform the
         // atmosphere sets (waves, sun, reflections) carries over and existing tiles switch at once.
@@ -108,6 +109,8 @@ public partial class WorldStreamer : Node3D
         _tiles.Clear(); _tileTriangles.Clear(); _tileRevision.Clear(); _failed.Clear(); _desired.Clear();
         _config = DetailConfig.For(sampler); Levels = 7 + GameSettings.TerrainDistance.Index;
         _sampler = sampler; _originX = originX; _originZ = originZ; Triangles = 0; Built = 0; MaxCommitMs = 0;
+        _terrain.SetShaderParameter("sea_level", (float)sampler.Plan.Profile.SeaLevel);
+        _terrain.SetShaderParameter("flora_tint", GameSettings.GrassStyle.Index == 1 ? 1f : 0f);
     }
 
     /// <summary>
@@ -287,6 +290,19 @@ public partial class WorldStreamer : Node3D
             root.AddChild(Multi(_grass, data.Grass.ToArray(), GeometryInstance3D.ShadowCastingSetting.Off, GameSettings.GrassDistance.F));
         if (data.Reeds.Count > 0)
             root.AddChild(Multi(_grass, data.Reeds.ToArray(), GeometryInstance3D.ShadowCastingSetting.Off, GameSettings.GrassDistance.F * 1.3f));
+        if (data.Flora.Count > 0)
+        {
+            // Land grass, shore plants, floating leaves and underwater plants: one draw each, all sprites in one array.
+            float grass = GameSettings.GrassDistance.F, scatter = GameSettings.ScatterDistance.F;
+            var groups = data.Flora.GroupBy(f => f.Species <= Flora.WheatGolden ? 0 : f.Species <= Flora.Flowering ? 1 : Flora.All[f.Species].Form == Flora.Form.Floating ? 2 : 3);
+            foreach (var group in groups)
+            {
+                var items = group.ToArray();
+                float range = group.Key switch { 0 => grass, 1 => grass * 1.3f, 2 => 160 * scatter, _ => 70 * scatter };
+                root.AddChild(MultiFlora(group.Key == 2 ? Flora.Flat() : Flora.Upright(), items, group.Key == 3 ? 2 : group.Key == 2 ? 0 : 1, range));
+            }
+            GrassCommitted += data.Flora.Count;
+        }
         foreach (var kind in data.Drapes.GroupBy(d => d.Kind))
             root.AddChild(Multi(PlaceholderPlants.Drape(kind.Key), kind.Select(d => d.Transform).ToArray(), GeometryInstance3D.ShadowCastingSetting.Off,
                 160 * GameSettings.ScatterDistance.F));
@@ -332,6 +348,25 @@ public partial class WorldStreamer : Node3D
         // Render layer 2: objects (tool previews project onto the terrain only, layer 1).
         var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows, Position = centre, Layers = 2 };
         if (visibleTo > 0) { node.VisibilityRangeEnd = visibleTo; node.VisibilityRangeEndMargin = 15; node.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self; }
+        return node;
+    }
+
+    /// <summary>Plant sprites with per-instance tint (colour) and custom data (texture layer, motion kind, phase).</summary>
+    private static MultiMeshInstance3D MultiFlora(Mesh mesh, FloraInstance[] items, int motion, float visibleTo)
+    {
+        var centre = Vector3.Zero;
+        foreach (var f in items) centre += f.Transform.Origin;
+        centre /= items.Length;
+        var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, UseCustomData = true, Mesh = mesh, InstanceCount = items.Length };
+        for (int i = 0; i < items.Length; i++)
+        {
+            multi.SetInstanceTransform(i, items[i].Transform.Translated(-centre));
+            multi.SetInstanceColor(i, items[i].Tint);
+            float phase = (float)Hashing.Unit(Hashing.Mix((ulong)i * 2654435761UL + (ulong)items[i].Species));
+            multi.SetInstanceCustomData(i, new Color(items[i].Species, motion, phase, 0));
+        }
+        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Position = centre, Layers = 2 };
+        if (visibleTo > 0) { node.VisibilityRangeEnd = visibleTo; node.VisibilityRangeEndMargin = 12; node.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self; }
         return node;
     }
 

@@ -19,7 +19,7 @@ public readonly record struct RockInstance(int Kind, Transform3D Transform, Colo
 /// cards far away. Every item sits on a world-aligned cell, so it does not move when a tile changes level.
 /// Heights are interpolated exactly like the rendered triangles, so nothing floats or sinks.
 /// </summary>
-public static class GroundCover
+public static partial class GroundCover
 {
     public const int Stone = 0, Rock = 1, Boulder = 2, CliffSlab = 3, BigBoulder = 4;
     public const int Bush = 0, BerryBush = 1, Stump = 2, Log = 3;
@@ -34,8 +34,11 @@ public static class GroundCover
         /// <summary>Per vertex 0.5 + depth below the nearest water surface / 2 m (0.5 = waterline), as in the tile colours.</summary>
         public readonly float[] Shore;
         public Grid(Vector3[] vertices, Vector3[] normals, double[] forest, TerrainSample[] samples, double spacing, double x0, double z0, int side, float[] shore,
-            Vector2[]? uv2 = null, float[]? biome1 = null, float[]? props = null, float[]? biome3 = null)
-        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; EditedAmount = uv2; Biome1 = biome1; PropScale = props; Biome3 = biome3; }
+            Vector2[]? uv2 = null, float[]? biome1 = null, float[]? props = null, float[]? biome3 = null, float[]? biome0 = null)
+        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; EditedAmount = uv2; Biome1 = biome1; PropScale = props; Biome3 = biome3; Biome0 = biome0; }
+
+        /// <summary>Per vertex biome data (rgb grass colour, a = snow), as on the terrain mesh.</summary>
+        public readonly float[]? Biome0;
 
         /// <summary>Per vertex biome data (rgb rock colour, a = wetness), as on the terrain mesh.</summary>
         public readonly float[]? Biome3;
@@ -373,7 +376,7 @@ public static class GroundCover
     /// biome (Vegetation.Shrubs, ShrubKind, FloatingPlants, AquaticPlants). Kinds are <see cref="PlaceholderPlants"/>
     /// wetland plant kinds.
     /// </summary>
-    public static List<RockInstance> WetPlants(TileKey key, in Grid grid, double sea, ulong seed, BiomeMap biomes, double amount = 1)
+    public static List<RockInstance> WetPlants(TileKey key, in Grid grid, double sea, ulong seed, BiomeMap biomes, double amount = 1, bool floating = true)
     {
         var result = new List<RockInstance>();
         var g = grid;
@@ -399,6 +402,7 @@ public static class GroundCover
             var (ba, bb, share) = biomes.Sample(g.X0 + x, g.Z0 + z);
             var v = (Unit(h, 6) < share ? biomes.Pool[ba] : biomes.Pool[bb]).Def.Vegetation;
             if (v.FloatingPlants <= 0) return;
+            if (!floating && v.AquaticPlants != "Hyacinth") return; // plant populations draw lily pads and duckweed (water hyacinth stays)
             ulong raft = Hashing.Lattice((long)Math.Floor((x + key.MinX) / 11), (long)Math.Floor((z + key.MinZ) / 11), seed ^ 0x4AF7UL);
             if (Hashing.Unit(raft) > .3 + .5 * v.FloatingPlants || Unit(h, 1) > v.FloatingPlants * a) return;
             int kind = v.AquaticPlants == "Hyacinth" ? PlaceholderPlants.Hyacinth : PlaceholderPlants.LilyPads;

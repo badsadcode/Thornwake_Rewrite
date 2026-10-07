@@ -22,13 +22,13 @@ public readonly record struct TreeInstance(int Species, Transform3D Transform);
 /// logs are world objects, not decoration); grass and the draw distances come from the player's settings.
 /// </summary>
 public readonly record struct DetailConfig(double Grass, double ForestCover, double ForestDensity, double Rocks, double Props,
-    int TreeLevels, int FarTreeLevels, bool SimulatedWater = true)
+    int TreeLevels, int FarTreeLevels, bool SimulatedWater = true, int GrassStyle = 1)
 {
     public static DetailConfig For(TerrainSampler sampler)
     {
         var style = sampler.Plan.Style;
         return new(GameSettings.GrassDensity.Value, style.ForestCover, style.ForestDensity, style.RockAmount, style.PropAmount,
-            2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index, GameSettings.WaterSimulation.On);
+            2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index, GameSettings.WaterSimulation.On, GameSettings.GrassStyle.Index);
     }
 }
 
@@ -57,6 +57,8 @@ public sealed class TileData
     public List<TreeInstance> Trees { get; init; } = new();
     public List<Transform3D> Grass { get; set; } = new();
     public List<Transform3D> Reeds { get; set; } = new();
+    /// <summary>Plant sprites (grass style "plant populations"): land and water plants, tile-local.</summary>
+    public List<FloraInstance> Flora { get; set; } = new();
     /// <summary>Per terrain vertex: biome water tint (packed rgb, strength), copied onto the water sheet.</summary>
     public Vector2[]? WaterTint { get; set; }
     /// <summary>Per water vertex (CUSTOM0 of the water sheet, used by the experimental water): uphill bed gradient
@@ -116,6 +118,7 @@ public static class TileBuilder
         // neighbouring level): interpolates to exactly 0.5 at the waterline, so the tint follows the real shoreline
         // instead of colouring whole triangles.
         var submerged = new float[Side * Side];
+        ulong floraSeed = GroundCover.FloraSeed(Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL));
         for (int j = 0; j < Side; j++)
             for (int i = 0; i < Side; i++)
             {
@@ -166,7 +169,9 @@ public static class TileBuilder
                 uv[k] = new Vector2((float)Fold(x0 + i * spacing), (float)Fold(z0 + j * spacing));
                 // UV2.y: how much the player has dug or raised here (bare soil in the shader).
                 double edited = Math.Abs(sampler.Edits.Delta(x0 + i * spacing, z0 + j * spacing));
-                uv2[k] = new Vector2((float)(h - sea), (float)Math.Min(1, edited * 2));
+                // UV2.x: grass cover from the plant fields (the shader takes the height above sea from the position).
+                uv2[k] = new Vector2((float)GroundCover.FloraCover(x0 + i * spacing, z0 + j * spacing, floraSeed, spacing * 2, out _, out _, out _, out _),
+                    (float)Math.Min(1, edited * 2));
                 // Biome colours, blended between the two best-fitting biomes; snow from the biome and the cold.
                 double wx = x0 + i * spacing, wz = z0 + j * spacing;
                 var (ba, bb, share) = biomes.Sample(wx, wz);
@@ -245,16 +250,22 @@ public static class TileBuilder
         };
         BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater, sea);
         if (data.Water is { } builtWater) data.WaterShore = ShoreData(sampler, builtWater.Vertices, builtWater.Colors, heights, s2, samples, x0, z0, spacing, Side);
-        var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2, biome1, props, biome3);
+        var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2, biome1, props, biome3, biome0);
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
-        if (key.Level == 0 && config.Grass > 0) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);
-        if (key.Level == 0 && config.Grass > 0) data.Reeds = GroundCover.Reeds(key, grid, sea, coverSeed, config.Grass);
+        bool populations = config.GrassStyle == 1;
+        if (key.Level == 0 && config.Grass > 0 && populations)
+        {
+            data.Flora = GroundCover.LandFlora(key, grid, sea, coverSeed, config.Grass);
+            data.Flora.AddRange(GroundCover.WaterFlora(key, grid, sea, coverSeed, biomes, Math.Min(1.5, config.Grass)));
+        }
+        if (key.Level == 0 && config.Grass > 0 && !populations) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);
+        if (key.Level == 0 && config.Grass > 0 && !populations) data.Reeds = GroundCover.Reeds(key, grid, sea, coverSeed, config.Grass);
         if (key.Level == 0 && config.Props > 0) data.Drapes = GroundCover.CliffDressing(key, grid, sea, coverSeed);
         if (key.Level <= 2 && config.Rocks > 0) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed, config.Rocks);
         if (data.Water is { } riverWater && data.WaterShore is { } shore && data.Rocks is { Count: > 0 } rocks)
             ObstacleWakes(riverWater.Vertices, riverWater.Colors, riverWater.Flow, shore, rocks);
         if (key.Level <= 1 && config.Props > 0) data.Props = GroundCover.Props(key, grid, sea, coverSeed, config.Props);
-        if (key.Level <= 1 && config.Grass > 0) data.WetPlants = GroundCover.WetPlants(key, grid, sea, coverSeed, biomes, Math.Min(1.5, config.Grass));
+        if (key.Level <= 1 && config.Grass > 0) data.WetPlants = GroundCover.WetPlants(key, grid, sea, coverSeed, biomes, Math.Min(1.5, config.Grass), floating: !populations || key.Level > 0);
         if (key.Level >= config.TreeLevels && key.Level <= config.FarTreeLevels)
             data.FarTrees = GroundCover.FarTrees(key, grid, sea, coverSeed, config.ForestDensity);
         data.BuildMs = timer.Elapsed.TotalMilliseconds;

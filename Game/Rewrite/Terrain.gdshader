@@ -1,5 +1,6 @@
 // Rewrite world terrain. Palette taken from the Harthwood valley game (sRGB values, converted to linear below).
-// Vertex data: UV = world xz folded to a 4 km period (noise), UV2.x = height above sea level, UV2.y = terrain edit
+// Vertex data: UV = world xz folded to a 4 km period (noise), UV2.x = grass cover from the plant fields (round 22;
+// the height above sea comes from the world position), UV2.y = terrain edit
 // amount (0 untouched … 1 = 0.5 m or more dug/raised),
 // COLOR = (forest cover, mountain share, beach, submerged bed: 0.5 + depth below water / 2 m).
 shader_type spatial;
@@ -21,6 +22,9 @@ uniform float biome_debug = 0.0; // 1: tint the ground with the biome map colour
 // Ground style (fx.ground_textures): 0 current, 1 Noor's pixel-art textures (GroundTextures.cs order). Sampled as raw
 // sRGB like the palette here; ground_mean = each layer's mean colour, so a texture can be detail over the biome colour.
 uniform int ground_style = 0;
+uniform float sea_level = 0.0;
+uniform float flora_tint = 1.0; // ground under the plant patches: richer where grass is dense (0: classic grass)
+varying float world_height;
 uniform sampler2DArray ground_tex : filter_nearest_mipmap, repeat_enable;
 uniform vec3 ground_mean[16];
 const int G_GRASS = 0, G_DIRT = 1, G_SAND = 2, G_ROCK = 3, G_RIVER_BED = 4, G_SEA_BED = 5, G_FOREST = 6, G_GRAVEL = 7;
@@ -53,6 +57,7 @@ vec3 gdetail(int layer, vec2 p) {
 
 void vertex() {
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+	world_height = (MODEL_MATRIX * vec4(VERTEX, 1.0)).y;
 	biome_a = CUSTOM0; biome_b = CUSTOM1; biome_c = CUSTOM2; biome_d = CUSTOM3;
 	rock_pair = vec2(mod(CUSTOM2.g, 8.0), floor(CUSTOM2.g / 8.0 + 0.01));
 	map_packed = CUSTOM2.r;
@@ -60,7 +65,8 @@ void vertex() {
 
 void fragment() {
 	vec2 p = UV;
-	float h = UV2.x;
+	float h = world_height - sea_level;
+	float cover = UV2.x;
 	float forest = COLOR.r, mountain = COLOR.g, wet = COLOR.b, submerged = smoothstep(0.5, 0.8, COLOR.a);
 	float slope = 1.0 - clamp(world_normal.y, 0.0, 1.0);
 	float n1 = vnoise(p * 0.012), n2 = vnoise(p * 0.21), n3 = vnoise(p * 1.7);
@@ -74,6 +80,10 @@ void fragment() {
 	grass = mix(grass, biome_b.rgb * vec3(1.08, 1.04, 0.95), smoothstep(0.6, 0.95, n2) * 0.35); // dry patches
 	// Sparse plant cover (deserts, cold deserts, tundra): bare, dry ground shows through in patches.
 	grass = mix(biome_b.rgb * vec3(1.05, 1.0, 0.92), grass, smoothstep(0.0, 1.0, biome_b.a * 1.3 + (n2 - 0.5) * 0.5));
+	// Plant patches (round 22): dense grass shades and enriches the ground under it, sparse ground is a little drier,
+	// so the patch pattern reads to the horizon (beyond the grass sprites) and lines up with them up close.
+	grass = mix(grass, mix(biome_b.rgb * vec3(1.04, 1.0, 0.9), biome_a.rgb * vec3(0.84, 0.9, 0.8), smoothstep(0.2, 0.9, cover)),
+		0.45 * flora_tint * biome_b.a);
 	vec3 woods = biome_a.rgb * vec3(0.70, 0.71, 0.69);                                     // forest floor / far canopy
 	if (noor) {
 		grass *= mix(vec3(1.0), gdetail(G_GRASS, p), 0.85 * g_detail);
