@@ -920,6 +920,9 @@ void fragment() {
 	// faces (thin water) glow more.
 	float face = clamp(1.0 - n_world.y, 0.0, 0.6) / 0.6;
 	vec3 glow = sss_color * sun_color * (back_lit * 2.2 + 0.3 + face * 0.5) * thin * 0.8;
+#ifdef FFT_OCEAN
+	glow *= 0.45; // the FFT crests are broader and higher than the spectrum's (half the sea glowed neon)
+#endif
 	// Sun glints: a tight highlight that moves over the waves (the engine's specular adds the broad sheen).
 	vec3 half_v = normalize(normalize(sun_direction) + eye_world);
 	float glint = pow(clamp(dot(n_world, half_v), 0.0, 1.0), 1200.0) * clamp(sun_direction.y * 4.0, 0.0, 1.0) * (1.0 - sea_state * 0.45) * 1.6;
