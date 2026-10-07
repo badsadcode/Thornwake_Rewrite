@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://d001wrqq8bamd"
+path="res://.godot/imported/ocean_fft.glsl-a5b912a4df126ccb421a7503543b30b9.res"
+
+[deps]
+
+source_file="res://Game/Rewrite/Ocean/ocean_fft.glsl"
+dest_files=["res://.godot/imported/ocean_fft.glsl-a5b912a4df126ccb421a7503543b30b9.res"]
+
+[params]
+

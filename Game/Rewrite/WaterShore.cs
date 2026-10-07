@@ -107,6 +107,18 @@ public static class WaterShore
         return y;
     }
 
+    /// <summary>
+    /// The "experimental 3" surface: the FFT sea's long waves with the shader's depth and exposure weights (cascade 0 in
+    /// gerstner(), WaterSea.gdshaderinc), plus the shore wave; lakes carry only short chop (centimetres: left out).
+    /// </summary>
+    public static double Height3(OceanFft ocean, double worldX, double worldZ, double lx, double lz, double t, double depth,
+        bool sea, double exposure, double gx, double gz, double seaState)
+    {
+        if (!sea) return 0;
+        double y = ocean.Height(worldX, worldZ, t) * (.25 + .75 * exposure) * Smoothstep(.5, 14, depth);
+        return y + Shore(lx, lz, t, depth, gx, gz, exposure, seaState, wide: true);
+    }
+
     private static (double X, double Y, double Z) Gerstner(OceanWaves waves, double x, double z, double t, double depth, bool sea, bool lake, double fetch, double exposure)
     {
         double dx = 0, dy = 0, dz = 0;

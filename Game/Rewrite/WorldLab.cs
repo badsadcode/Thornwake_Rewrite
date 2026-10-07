@@ -459,7 +459,7 @@ public partial class WorldLab : Node3D
 
     private void UpdateWakes(float dt, double level)
     {
-        if (GameSettings.WaterStyle.Index != 2) return;
+        if (GameSettings.WaterStyle.Index < 2) return;
         float feet = _player.Position.Y;
         bool inWater = !_fly && !double.IsNaN(level) && feet < level + .05 && level - feet < 2.6;
         // The local current (a few terrain samples): refreshed a few times a second.
@@ -554,7 +554,9 @@ public partial class WorldLab : Node3D
                 var (gx, gz, exposure) = sea ? WaterShore.CoastAt(_sampler, x, z, depth) : (0f, 0f, 1f);
                 double fetch = sea ? 1e5 : t.WaterBody >= 0 && t.WaterBody < _sampler.Plan.Hydrology.Lakes.Count ? Math.Sqrt(_sampler.Plan.Hydrology.Lakes[t.WaterBody].Area) : 0;
                 var wind = _atmosphere.Wind.Direction;
-                level += GameSettings.WaterStyle.Index == 2
+                level += GameSettings.WaterStyle.Index == 3 && _atmosphere.Ocean != null
+                    ? WaterShore.Height3(_atmosphere.Ocean, x, z, lx, lz, time, Math.Min(depth, 20), sea, exposure, gx, gz, _atmosphere.Spectrum.SeaState)
+                    : GameSettings.WaterStyle.Index >= 2
                     ? WaterShore.Height2(_atmosphere.Spectrum, lx, lz, time, Math.Min(depth, 20), sea, !sea, fetch, exposure, gx, gz, wind.X, wind.Y)
                     : WaterShore.Height(_atmosphere.Waves, lx, lz, time, Math.Min(depth, 20), sea, !sea, fetch, exposure, gx, gz);
             }

@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://drenuc4wq7xea"
+path="res://.godot/imported/ocean_assemble.glsl-bce990ae86dadc393e1cd7313991d0ea.res"
+
+[deps]
+
+source_file="res://Game/Rewrite/Ocean/ocean_assemble.glsl"
+dest_files=["res://.godot/imported/ocean_assemble.glsl-bce990ae86dadc393e1cd7313991d0ea.res"]
+
+[params]
+
