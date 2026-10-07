@@ -109,25 +109,29 @@ void fragment() {
 		// Bare ground where the plants thin out (the plant fields' cover and the biome's plant amount), in patches
 		// from a few metres to ~40 m with ragged edges; not on cliffs (rock) or under water.
 		float patches = vnoise(p * 0.028 + vec2(3.0, 7.0)) * 0.5 + vnoise(p * 0.13 + vec2(8.0, 1.0)) * 0.3 + n3 * 0.2;
-		bare = smoothstep(0.58, 0.72, patches + (0.55 - cover) * 0.35 + (0.7 - biome_b.a) * 0.35)
+		bare = smoothstep(0.62, 0.76, patches + (0.55 - cover) * 0.35 + (0.7 - biome_b.a) * 0.35)
 			* ground_variety * (1.0 - smoothstep(0.35, 0.5, slope)) * (1.0 - submerged);
 		{ // (no per-pixel branch: textures and derivatives must run in uniform control flow)
 			// The biome's character picks the bare ground: soil, gravel up in cold mountains, sand where it is dry,
 			// moss where it is wet; tinted toward the biome's dry colour.
 			float dryness = 1.0 - clamp(biome_b.a, 0.0, 1.0);
 			float cold = clamp(mountain * 1.4 + biome_a.a * 1.5, 0.0, 1.0);
-			vec3 dirt = gtex(G_DIRT, p);
-			vec3 b = mix(dirt, gtex(G_GRAVEL, p), smoothstep(0.35, 0.8, cold) * 0.75);
-			b = mix(b, gtex(G_SAND, p), smoothstep(0.55, 0.95, dryness) * 0.55);
-			b = mix(b, gtex(G_MOSS, p) * 0.9, smoothstep(0.3, 0.7, biome_d.a) * 0.6);
-			float lb = max(dot(biome_b.rgb, vec3(0.333)), 0.02);
-			b = mix(b, b * mix(vec3(1.0), biome_b.rgb / lb, 0.5), 0.6);
+			float w_gravel = smoothstep(0.35, 0.8, cold) * 0.75, w_sand = smoothstep(0.55, 0.95, dryness) * 0.55;
+			float w_moss = smoothstep(0.3, 0.7, biome_d.a) * 0.6;
+			// Muted earthy colours (the raw textures with the biome tint came out rust-orange — first render), with
+			// the textures as light and shade only, like the grass and sand above.
+			vec3 base = mix(vec3(0.40, 0.33, 0.25), biome_b.rgb * vec3(0.8, 0.76, 0.7), 0.3);
+			vec3 detail = gdetail(G_DIRT, p);
+			base = mix(base, vec3(0.50, 0.48, 0.45), w_gravel); detail = mix(detail, gdetail(G_GRAVEL, p), w_gravel);
+			base = mix(base, vec3(0.70, 0.63, 0.48), w_sand);   detail = mix(detail, gdetail(G_SAND, p), w_sand);
+			base = mix(base, vec3(0.28, 0.33, 0.19), w_moss);   detail = mix(detail, gdetail(G_MOSS, p), w_moss);
+			vec3 b = base * mix(vec3(1.0), detail, 0.9) * (0.92 + 0.16 * n3);
 			grass = mix(grass, b, bare);
 		}
 	}
 	vec3 woods = biome_a.rgb * vec3(0.70, 0.71, 0.69);                                     // forest floor / far canopy
 	if (noor) {
-		grass *= mix(vec3(1.0), gdetail(G_GRASS, p), 0.85 * g_detail);
+		grass *= mix(vec3(1.0), gdetail(G_GRASS, p), 0.85 * g_detail * (1.0 - bare)); // (bare patches have their own)
 		// Forest floor: Noor's leaf litter, a little of the biome's colour kept.
 		woods = mix(woods, gtex(G_FOREST, p) * mix(vec3(1.0), woods / max(ground_mean[G_FOREST], vec3(0.02)), 0.35), 0.9 * g_near);
 	}
