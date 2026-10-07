@@ -614,10 +614,17 @@ vec2 foam3a(vec2 q, vec2 dn, float t, float amount, float fresh, float footprint
 	float edge = 1.0 - amount * 1.15;
 	float mask = smoothstep(edge, edge + 0.1, fbm);                   // where there is foam at all: ragged patches
 	float sc = 1.0 / max(1.0, footprint * 2.0);                       // coarser lace far away (no aliasing, no smear)
-	float e1 = cells(qs * 1.1 * sc + vec2(3.1, 0.0), t * 0.2);
-	float e2 = cells(qs * 2.9 * sc + vec2(0.0, 7.7), t * 0.35);
-	float thread = mix(0.09, 0.32, fresh) * (1.0 + 0.6 * (1.0 - sc));
-	float lace = max(1.0 - smoothstep(0.0, thread, e1), (1.0 - smoothstep(0.0, thread * 0.8, e2)) * 0.75);
+	// Cells on warped coordinates of varying size, threads broken into fragments and of varying width, dense parts
+	// filled with bubble clumps: an even cell net read as fishing nets lying on the water (round 24 renders).
+	vec2 cw = vec2(noise(qs * 0.5 + 2.3), noise(qs * 0.5 + 8.1)) - 0.5;
+	float e1 = cells((qs + cw * 2.5) * 1.1 * sc + vec2(3.1, 0.0), t * 0.2);
+	float e2 = cells((qs - cw * 1.5) * 2.9 * sc + vec2(0.0, 7.7), t * 0.35);
+	float vary = 0.55 + 0.9 * noise(qs * 0.9 + 4.4);
+	float thread = mix(0.09, 0.32, fresh) * (1.0 + 0.6 * (1.0 - sc)) * vary;
+	float broken = smoothstep(0.28, 0.55, noise(qs * 1.6 + 11.7)); // gaps in the threads
+	float lace = max(1.0 - smoothstep(0.0, thread, e1), (1.0 - smoothstep(0.0, thread * 0.8, e2)) * 0.75) * mix(0.25, 1.0, broken);
+	float clump = smoothstep(edge + 0.12, edge + 0.32, fbm) * smoothstep(0.45, 0.75, noise(qs * 1.3 + 6.6)) * 0.85;
+	lace = max(lace, clump * (0.6 + 0.4 * smoothstep(0.0, 0.3, e1)));
 	float core = smoothstep(0.35, 0.85, fresh) * smoothstep(edge + 0.06, edge + 0.3, fbm); // fresh: solid inside
 	// Structure: the threads, plus the bubble cells showing faintly through even a solid core, plus a slow blotchy
 	// density variation (thick and thin foam).
@@ -999,7 +1006,7 @@ void fragment() {
 		vec2 fd = wdir * (0.25 + 0.25 * wind_speed);
 		vec2 fq = pq + fd * TIME;
 		vec2 lip2 = foam3a(fq, wdir, TIME, max(cap * 0.95, fresh * 0.8), max(cap, fresh), footprint);
-		vec2 streak2 = foam3a(fq * 0.85 + vec2(37.1, 11.3), wdir, TIME, old * 0.55, 0.0, footprint);
+		vec2 streak2 = foam3a(fq * 0.85 + vec2(37.1, 11.3), wdir, TIME, old * 0.72, 0.0, footprint);
 		float lip = lip2.x;
 		float top = max(lip, streak2.x * 0.85);
 		float structure = lip2.x >= streak2.x * 0.85 ? lip2.y : streak2.y;
