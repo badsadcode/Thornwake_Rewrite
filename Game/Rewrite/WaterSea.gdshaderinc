@@ -967,11 +967,11 @@ void fragment() {
 		//   old foam — thin, fragmented streaks pulled out along the wind, translucent, fading.
 		vec2 pq = p + woff.xz;
 		float cap = smoothstep(0.32, 0.8, fold) * smoothstep(0.15, 0.5, sea_state) * smoothstep(0.25, 0.6, field_foam + 0.3);
-		float fresh = smoothstep(0.45, 0.95, field_foam);
-		float old = smoothstep(0.03, 0.45, field_foam) * (1.0 - fresh);
+		float fresh = smoothstep(0.35, 0.85, field_foam);
+		float old = smoothstep(0.03, 0.4, field_foam) * (1.0 - fresh);
 		vec2 fd = wdir * (0.25 + 0.25 * wind_speed);
-		vec3 lip = foam_at(pq + fd * TIME, wdir, 1.2, TIME, max(cap * 0.95, fresh * 0.75), dist);
-		vec3 streak = foam_at(pq * 0.8 + fd * TIME + vec2(37.1, 11.3), wdir, 3.6, TIME, old * 0.55, dist);
+		vec3 lip = foam_at(pq + fd * TIME, wdir, 1.2, TIME, max(cap * 0.95, fresh * 0.8), dist);
+		vec3 streak = foam_at(pq * 0.8 + fd * TIME + vec2(37.1, 11.3), wdir, 3.6, TIME, old * 0.65, dist);
 		float top = max(lip.x, streak.x * 0.8);
 		// Older foam is a thin film of bubbles: it lets the water's colour through (not paint on the surface).
 		float age_mix = clamp(max(cap, fresh) * 1.3, 0.0, 1.0);
