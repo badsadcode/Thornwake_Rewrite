@@ -206,7 +206,7 @@ public partial class Atmosphere : Node3D
         _underwater.SetShaderParameter("water_color", color);
         _underwater.SetShaderParameter("density", density);
         // Light shafts and the caustic net on the bed: from the simulated sea in experimental 3, else drifting noise.
-        _underwater.SetShaderParameter("shaft_steps", GameSettings.UnderwaterLight.Index switch { 0 => 0, 1 => 12, _ => 24 });
+        _underwater.SetShaderParameter("shaft_steps", GameSettings.UnderwaterLight.Index switch { 0 => 0, 1 => 14, _ => 32 });
         _underwater.SetShaderParameter("sun_light", new Vector3(Sun.LightColor.R, Sun.LightColor.G, Sun.LightColor.B) * Sun.LightEnergy);
         bool fft = Ocean != null && kind == WorldGen.WaterKind.Ocean;
         _underwater.SetShaderParameter("use_fft", fft ? 1f : 0f);

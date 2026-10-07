@@ -53,17 +53,17 @@ float fft_curvature(float layer, vec2 s, float size, float ox, float oz, float e
 
 // How much sunlight reaches depth d below the surface point s where it came in (1 = flat water): a wave crest is a
 // converging lens (∇²h < 0), bright lines form beneath it. Fine ripples focus near the surface, longer waves deeper.
-float light_pattern(vec2 s, float d) {
+float light_pattern(vec2 s, float d, float blur) {
 	float lap;
 	if (use_fft > 0.5) {
-		float e = 0.12 + d * 0.03;
+		float e = 0.12 + d * 0.03 + blur;
 		float near = fft_curvature(2.0, s, fft_size.z, fft_offset_x.z, fft_offset_z.z, e);
 		float far = fft_curvature(1.0, s, fft_size.y, fft_offset_x.y, fft_offset_z.y, e * 2.5);
 		lap = mix(near, far, smoothstep(1.0, 8.0, d)) * fft_amp;
 	} else {
 		// Without the simulated surface: drifting noise lenses of the same scales.
 		float t = ocean_time;
-		vec2 q = s * (1.3 / (1.0 + d * 0.05));
+		vec2 q = s * (1.3 / (1.0 + d * 0.05 + blur * 0.5));
 		float n = vnoise(q + vec2(t * 0.31, t * 0.19)) + vnoise(q * 2.1 - vec2(t * 0.23, -t * 0.37)) * 0.6;
 		lap = (n - 0.8) * 4.0; // (blobs a few metres wide drew soft clouds, not shafts)
 	}
@@ -118,19 +118,22 @@ void fragment() {
 		vec3 cam = CAMERA_POSITION_WORLD;
 		float reach = min(dist, 70.0);
 		// (white noise: the interleaved-gradient pattern drew a fine diagonal hatching through the shafts)
-		float jitter = hash(FRAGCOORD.xy * 0.731 + fract(t * 7.13) * 91.7);
-		float step_len = reach / float(shaft_steps);
+		// (partial jitter: full white noise left heavy grain in a single frame; none at all drew bands)
+		float jitter = 0.2 + 0.6 * hash(FRAGCOORD.xy * 0.731 + fract(t * 7.13) * 91.7);
 		vec3 sigma = absorption + density;
 		vec3 shafts = vec3(0.0);
 		// Henyey–Greenstein forward scattering (g 0.75) plus a little isotropic light.
 		float cos_t = dot(ray, refr);
 		float phase = 0.0119 / pow(1.5625 - 1.5 * cos_t, 1.5) * 4.0 + 0.15;
 		for (int i = 0; i < shaft_steps; i++) {
-			float st = (float(i) + jitter) * step_len;
+			// Samples crowd near the camera (most of what reaches the eye scatters there): st ∝ u².
+			float u = (float(i) + jitter) / float(shaft_steps);
+			float st = reach * u * u;
+			float step_len = reach * 2.0 * u / float(shaft_steps);
 			vec3 p = cam + ray * st;
 			float d = max(surface_depth - ray.y * st, 0.0); // depth below the surface here
 			vec2 entry = p.xz + refr.xz / refr.y * d;          // where this light came through the surface
-			float light = light_pattern(entry, d);
+			float light = light_pattern(entry, d, st * 0.025); // farther samples see a blurrier pattern (bigger pixels)
 			vec3 atten = exp(-sigma * (st + d / refr.y));
 			shafts += atten * (light - 0.55) * step_len;       // the shafts: the focused light minus the even glow
 		}
@@ -139,7 +142,7 @@ void fragment() {
 		if (to_surface >= scene_dist) {
 			vec3 bed = cam + ray * dist;
 			float d = max(surface_depth - ray.y * dist, 0.0);
-			float net = light_pattern(bed.xz + refr.xz / refr.y * d, d);
+			float net = light_pattern(bed.xz + refr.xz / refr.y * d, d, dist * 0.01);
 			c += textureLod(screen_tex, uv, 0.0).rgb * transmit * exp(-sigma * d / refr.y) * max(net - 0.7, 0.0) * 0.9 * sun_up * shaft_strength;
 		} else {
 			// The sun seen through the surface from below (inside Snell's window): a bright, flickering spot.
