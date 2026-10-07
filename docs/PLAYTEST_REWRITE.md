@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 31 — water: under the surface, calmer far sea
+* **Underwater light** (dive with C): sunlight shafts fanning down from the moving surface, brightest looking toward
+  the sun; a dancing net of light on the sea and lake bed; the sun's bright spot when you look up. With water
+  experimental 3 the shafts come from the real waves above you. *Lighting and effects → Underwater light*: full,
+  simple (for the office PC) or off.
+* **Experimental 3**: no shimmer or checker patterns on the far sea; wind and sea-state changes fade in smoothly;
+  windy lakes get proper chop.
+* Please tell me how experimental 3 and the underwater light run on both PCs (FPS with and without), and whether
+  experimental 3 should become the default water.
+
 ## New in build 30 — colour and lighting, choppy sea
 * **Less washed out** (*Settings → Lighting and effects → Look*: natural, the new default): richer colour and more
   contrast, real shade, glow only from genuinely bright things (no light spilling over the whole picture), less grey

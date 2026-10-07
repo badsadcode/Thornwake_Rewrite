@@ -802,6 +802,29 @@ crest needs hundreds of them.
   with the shader's depth and exposure weights.
 * **Fallback**: the Compatibility renderer (Run (old or office PCs).cmd) has no compute shaders: experimental 3 shows
   experimental 2 there.
+* **Round 24 polish**: mipmapped displacement and slope textures (a compute pass writes each level through its own
+  array view; vertices pick the level from their spacing): distant sea band-limited — from 260 m up experimental 2
+  showed a checkerboard interference, experimental 3 none. Sea-state and wind changes fade in over 4 s (previous and
+  new spectrum blended on the GPU; the CPU height blends alike) and the spectrum is rebuilt only on real changes
+  (sea state ±.02, wind ±.1 rad). Lake chop grows with the wind (×0.6 at calm … ×3 in a storm): only the sea's short
+  waves reach lakes, and those barely grew with the sea state.
+
+## D64 — Round 24: underwater light — shafts and caustics (2026-10-07)
+Tom (five diving photos): "do you think this will be possible to achieve? Those underwater shafts?" Tom then asked to
+finish water before anything else (water focus: underwater light → experimental 3 polish → his notes → final style).
+* **Shafts** (Underwater.gdshader): each pixel marches its view ray through the water (32 samples on "full", 14 on
+  "simple", crowding near the camera: st ∝ u²). At each sample it follows the refracted sun ray (Snell, n 1.33) up to
+  the surface and asks how much light that surface point focuses down to this depth. Henyey–Greenstein forward
+  scattering (g .75): the fan is brightest looking toward the sun. Absorbed along both paths (red first).
+* **Light pattern**: experimental 3 uses the real surface: the curvature ∇²h of the 7.9 m cascade (near the surface)
+  blending into the 59 m one (deeper), a thin-lens focus 1/(1 + ∇²h·d/4). Crests are converging lenses, so the
+  shafts move with the waves overhead. Other water styles: a drifting ridged-noise caustic net (thin bright lines).
+* **The bed**: the same pattern at the bed depth draws the dancing caustic net on the ground seen under water; looking
+  up inside Snell's window, the sun is a bright flickering spot.
+* **Noise**: one frame, no history — interleaved-gradient jitter drew a diagonal hatching, white noise heavy grain;
+  partial white-noise jitter, near-weighted samples and a pattern that blurs a little with distance settle it.
+* **Setting** "Underwater light": off / simple / full (default full; the office PC's integrated GPU may want simple).
+* **Not yet**: shadows of cliffs, overhangs or boats in the shafts (the terrain is a heightfield: no caves yet).
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
