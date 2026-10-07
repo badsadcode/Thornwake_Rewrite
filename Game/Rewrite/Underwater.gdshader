@@ -15,12 +15,62 @@ uniform vec3 water_color : source_color = vec3(0.05, 0.25, 0.30); // in-scattere
 uniform vec3 absorption = vec3(0.45, 0.12, 0.09); // per metre (red is absorbed first)
 uniform float density = 0.06;          // scattering per metre (turbidity)
 uniform float daylight = 1.0;          // sun/sky brightness
+// Light shafts and caustics (round 24, Tom's diving photos): sunlight enters through the moving surface, each wave a
+// lens that focuses it into bright lines; seen through the water those lines are shafts fanning down from the
+// surface (brightest looking toward the sun: water scatters light mostly forward) and a dancing net on the bed.
+uniform int shaft_steps = 24;          // 0: off
+uniform float shaft_strength = 1.0;
+uniform vec3 sun_light = vec3(1.0);    // sun colour × energy
+global uniform vec3 sun_dir_world;
+global uniform float ocean_time;
+// Experimental 3: the light pattern comes from the simulated surface itself (OceanFft: slopes per cascade).
+uniform float use_fft = 0.0;
+uniform sampler2DArray fft_deriv : filter_linear, repeat_enable;
+uniform vec3 fft_size = vec3(480.0, 59.0, 7.9);
+uniform vec3 fft_offset_x;
+uniform vec3 fft_offset_z;
+uniform float fft_amp = 1.0;           // the sea's wave height share here (sheltered water: weaker lenses)
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
 }
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+float vnoise(vec2 p) {
+	vec2 i = floor(p), f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+// Curvature (∇²h) of one FFT cascade at s, over a footprint e (wider deeper down: a lens's focus blurs with depth).
+float fft_curvature(float layer, vec2 s, float size, float ox, float oz, float e) {
+	vec2 uv = (s + vec2(ox, oz)) / size + 0.5 / 256.0;
+	float d = e / size;
+	float gx = texture(fft_deriv, vec3(uv + vec2(d, 0.0), layer)).x - texture(fft_deriv, vec3(uv - vec2(d, 0.0), layer)).x;
+	float gz = texture(fft_deriv, vec3(uv + vec2(0.0, d), layer)).y - texture(fft_deriv, vec3(uv - vec2(0.0, d), layer)).y;
+	return (gx + gz) / (2.0 * e);
+}
+
+// How much sunlight reaches depth d below the surface point s where it came in (1 = flat water): a wave crest is a
+// converging lens (∇²h < 0), bright lines form beneath it. Fine ripples focus near the surface, longer waves deeper.
+float light_pattern(vec2 s, float d) {
+	float lap;
+	if (use_fft > 0.5) {
+		float e = 0.12 + d * 0.03;
+		float near = fft_curvature(2.0, s, fft_size.z, fft_offset_x.z, fft_offset_z.z, e);
+		float far = fft_curvature(1.0, s, fft_size.y, fft_offset_x.y, fft_offset_z.y, e * 2.5);
+		lap = mix(near, far, smoothstep(1.0, 8.0, d)) * fft_amp;
+	} else {
+		// Without the simulated surface: drifting noise lenses of the same scales.
+		float t = ocean_time;
+		vec2 q = s * (0.45 / (1.0 + d * 0.06));
+		float n = vnoise(q + vec2(t * 0.21, t * 0.13)) + vnoise(q * 1.9 - vec2(t * 0.17, -t * 0.27)) * 0.6;
+		lap = (n - 0.8) * 1.6;
+	}
+	// Focusing with depth (thin-lens: the light from a curved patch converges ~1/(curvature·(1-1/1.33)) below it).
+	float focus = 1.0 + lap * d * 0.25;
+	return clamp(1.0 / max(focus, 0.2), 0.0, 4.0);
+}
 
 void fragment() {
 	if (active < 0.5) discard;
@@ -59,6 +109,43 @@ void fragment() {
 	// Along the ray: light is absorbed (per channel) and replaced by the water's own scattered colour.
 	vec3 transmit = exp(-(absorption + density) * dist);
 	c = c * transmit + deep * (1.0 - transmit);
+	// Sunlight in the water: refracted into it (Snell), fading with the path it travelled down.
+	vec3 sun = normalize(sun_dir_world);
+	float sun_up = clamp(sun.y * 4.0, 0.0, 1.0) * daylight;
+	if (shaft_steps > 0 && sun_up > 0.0) {
+		vec2 sun_flat = sun.xz / 1.33;                          // horizontal part shrinks by the refractive index
+		vec3 refr = normalize(vec3(sun_flat.x, sqrt(max(1.0 - dot(sun_flat, sun_flat), 0.05)), sun_flat.y)); // toward the sun, in water
+		vec3 cam = CAMERA_POSITION_WORLD;
+		float reach = min(dist, 70.0);
+		float jitter = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715))) + float(int(t * 60.0) % 16) * 0.618);
+		float step_len = reach / float(shaft_steps);
+		vec3 sigma = absorption + density;
+		vec3 shafts = vec3(0.0);
+		// Henyey–Greenstein forward scattering (g 0.75) plus a little isotropic light.
+		float cos_t = dot(ray, refr);
+		float phase = 0.0119 / pow(1.5625 - 1.5 * cos_t, 1.5) * 4.0 + 0.15;
+		for (int i = 0; i < shaft_steps; i++) {
+			float st = (float(i) + jitter) * step_len;
+			vec3 p = cam + ray * st;
+			float d = max(surface_depth - ray.y * st, 0.0); // depth below the surface here
+			vec2 entry = p.xz + refr.xz / refr.y * d;          // where this light came through the surface
+			float light = light_pattern(entry, d);
+			vec3 atten = exp(-sigma * (st + d / refr.y));
+			shafts += atten * (light - 0.55) * step_len;       // the shafts: the focused light minus the even glow
+		}
+		c += max(shafts, vec3(0.0)) * density * phase * sun_light * sun_up * shaft_strength * 1.6;
+		// The bed: the same lenses draw a dancing net of light on it.
+		if (to_surface >= scene_dist) {
+			vec3 bed = cam + ray * dist;
+			float d = max(surface_depth - ray.y * dist, 0.0);
+			float net = light_pattern(bed.xz + refr.xz / refr.y * d, d);
+			c += textureLod(screen_tex, uv, 0.0).rgb * transmit * exp(-sigma * d / refr.y) * max(net - 0.7, 0.0) * 0.9 * sun_up * shaft_strength;
+		} else {
+			// The sun seen through the surface from below (inside Snell's window): a bright, flickering spot.
+			float spot = pow(clamp(dot(ray, refr), 0.0, 1.0), 400.0) * (0.7 + 0.3 * vnoise(ray.xz * 80.0 + t * 3.0));
+			c += sun_light * spot * 3.0 * sun_up * transmit;
+		}
+	}
 	c += (hash(FRAGCOORD.xy + t) - 0.5) / 255.0; // dither
 	ALBEDO = c;
 	ALPHA = 1.0;
