@@ -603,9 +603,10 @@ vec3 foam_at(vec2 q, vec2 dn, float stretch, float t, float amount, float dist) 
 // Open-sea foam pattern of experimental 3A (round 24; Tom: the smeared, combed patches "look weird"): broken patches
 // whose inside is made of bubble-cell threads (lace), a solid core only in fresh foam. No soft far-away cover (it
 // smudged into paint strokes from 35 m on) and no wide stretching: the lace gets coarser with the pixel footprint
-// instead, so it stays texture, not a smear. Returns coverage 0..1.
-float foam3a(vec2 q, vec2 dn, float t, float amount, float fresh, float footprint) {
-	if (amount <= 0.001) return 0.0;
+// instead, so it stays texture, not a smear. Returns (coverage 0..1, structure 0..1: bubble threads bright, cell
+// centres dim — the inside of the foam is never one flat white, Tom: "like a blob of paint").
+vec2 foam3a(vec2 q, vec2 dn, float t, float amount, float fresh, float footprint) {
+	if (amount <= 0.001) return vec2(0.0);
 	vec2 sd = vec2(-dn.y, dn.x);
 	q += (vec2(noise(q * 0.13), noise(q * 0.13 + 5.7)) - 0.5) * 5.0; // warp: no straight edges
 	vec2 qs = vec2(dot(q, dn) / 1.6, dot(q, sd));                     // a little longer along the drift
@@ -618,7 +619,11 @@ float foam3a(vec2 q, vec2 dn, float t, float amount, float fresh, float footprin
 	float thread = mix(0.09, 0.32, fresh) * (1.0 + 0.6 * (1.0 - sc));
 	float lace = max(1.0 - smoothstep(0.0, thread, e1), (1.0 - smoothstep(0.0, thread * 0.8, e2)) * 0.75);
 	float core = smoothstep(0.35, 0.85, fresh) * smoothstep(edge + 0.06, edge + 0.3, fbm); // fresh: solid inside
-	return mask * max(core, lace);
+	// Structure: the threads, plus the bubble cells showing faintly through even a solid core, plus a slow blotchy
+	// density variation (thick and thin foam).
+	float cellsc = smoothstep(0.0, 0.45, e1);                         // 0 on threads, 1 in cell centres
+	float structure = clamp(lace * 0.6 + (1.0 - cellsc) * 0.25 + noise(qs * 0.6 + 9.3) * 0.35, 0.0, 1.0);
+	return vec2(mask * max(core, lace), structure);
 }
 #endif
 // Foam drifting with one even drift (the wind over open water): carried and pulled into streaks along it.
@@ -993,15 +998,21 @@ void fragment() {
 		float old = smoothstep(0.03, 0.4, field_foam) * (1.0 - fresh);
 		vec2 fd = wdir * (0.25 + 0.25 * wind_speed);
 		vec2 fq = pq + fd * TIME;
-		float lip = foam3a(fq, wdir, TIME, max(cap * 0.95, fresh * 0.8), max(cap, fresh), footprint);
-		float streak = foam3a(fq * 0.85 + vec2(37.1, 11.3), wdir, TIME, old * 0.55, 0.0, footprint);
-		float top = max(lip, streak * 0.85);
+		vec2 lip2 = foam3a(fq, wdir, TIME, max(cap * 0.95, fresh * 0.8), max(cap, fresh), footprint);
+		vec2 streak2 = foam3a(fq * 0.85 + vec2(37.1, 11.3), wdir, TIME, old * 0.55, 0.0, footprint);
+		float lip = lip2.x;
+		float top = max(lip, streak2.x * 0.85);
+		float structure = lip2.x >= streak2.x * 0.85 ? lip2.y : streak2.y;
 		float age_mix = clamp(max(cap, fresh) * 1.3, 0.0, 1.0);
 		foam = max(foam, top);
-		foam_opacity = mix(foam_opacity, mix(0.85, 0.97, age_mix), step(layers.x, top));
+		// Partly see-through: the water shows between the bubbles (fresh crest foam nearly opaque, older foam thin),
+		// and thinner where the structure is thin.
+		float see = mix(mix(0.55, 0.92, age_mix), 1.0, structure * 0.35);
+		foam_opacity = mix(foam_opacity, see, step(layers.x, top));
 		// Bubbles under the breaking crest only (old foam drew a milky smear around itself).
 		under_foam = max(under_foam, lip * max(cap, fresh) * 0.6);
-		foam_shade = mix(foam_shade, mix(0.84, 0.97, age_mix), step(layers.x, top));
+		// Shading inside the foam: brighter threads and thick foam, dimmer cell centres (definition, not flat white).
+		foam_shade = mix(foam_shade, mix(0.7, 1.0, structure) * mix(0.9, 1.0, age_mix), step(layers.x, top));
 	}
 #endif
 	if (river > 0.5 && length(current) > 0.15) {
