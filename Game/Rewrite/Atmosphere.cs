@@ -92,7 +92,8 @@ public partial class Atmosphere : Node3D
         _sky.SetShaderParameter("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(_noise)));
         _sky.SetShaderParameter("cloud_period", CloudPeriod);
         _sky.SetShaderParameter("cloud_height", CloudHeight);
-        _sky.SetShaderParameter("cloud_noise", CloudNoise3D.Create()); // volumetric clouds: 3D billows and detail
+        _cloudNoise = CloudNoise3D.Create();
+        _sky.SetShaderParameter("cloud_noise", _cloudNoise); // volumetric clouds: 3D billows and detail (and the mist's)
         Environment = new Godot.Environment
         {
             BackgroundMode = Godot.Environment.BGMode.Sky,
@@ -682,6 +683,9 @@ public partial class Atmosphere : Node3D
     private float _mistGround = float.NaN, _mistGroundTarget, _mistBiome, _mistWater, _mistAmount;
     private double _mistDriftX, _mistDriftZ;
     private FogVolume? _mistVolume;
+    /// <summary>Scripted screenshots (a few frames at ~1 FPS): no temporal fog smoothing, which would still be fading in.</summary>
+    public bool StillShot { get; set; }
+    private ImageTexture3D? _cloudNoise;
     private ShaderMaterial? _mistMaterial;
 
     /// <summary>From the player's surroundings: ground height (scene y), biome mist (0..1), water nearby (0..1).</summary>
@@ -711,7 +715,9 @@ public partial class Atmosphere : Node3D
         _mistAmount = Mathf.MoveToward(_mistAmount, target, (float)delta / 6);
         if (float.IsNaN(_mistGround)) return;
         // Follow the ground slowly, so walking down into a valley wades into its mist before it settles around you.
-        _mistGround = Mathf.Lerp(_mistGround, _mistGroundTarget, 1 - Mathf.Exp(-(float)delta / 8));
+        // (a jump — teleport, map travel — snaps: the mist stayed at the old height, buried or hanging in the air)
+        _mistGround = Mathf.Abs(_mistGroundTarget - _mistGround) > 60 ? _mistGroundTarget
+            : Mathf.Lerp(_mistGround, _mistGroundTarget, 1 - Mathf.Exp(-(float)delta / 8));
         var e = Environment;
         if (_mistAmount > .005f)
         {
@@ -721,7 +727,8 @@ public partial class Atmosphere : Node3D
             // single colour"): gentle density, a depth of ~150 m reaches only ~40 %.
             e.FogEnabled = true;
             e.FogHeight = _mistGround - 4;
-            e.FogHeightDensity = .0035f * _mistAmount * _mistAmount;
+            // With mist patches the volume carries the shape (banks, billows); the even height fog only fills in.
+            e.FogHeightDensity = .0035f * _mistAmount * _mistAmount * (mode == 2 ? .45f : 1);
         }
         else e.FogHeightDensity = 0;
         // Patches: a volumetric fog box around the player (volumetric fog on for it, no global density).
@@ -729,6 +736,7 @@ public partial class Atmosphere : Node3D
         if (patches && _mistVolume == null)
         {
             _mistMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Mist.gdshader") };
+            _mistMaterial.SetShaderParameter("noise3d", _cloudNoise);
             _mistVolume = new FogVolume { Size = new Vector3(420, 70, 420), Material = _mistMaterial, Shape = RenderingServer.FogVolumeShape.Box };
             AddChild(_mistVolume);
         }
@@ -748,6 +756,7 @@ public partial class Atmosphere : Node3D
                 _mistMaterial.SetShaderParameter("drift", new Vector2((float)_mistDriftX, (float)_mistDriftZ));
             }
             e.VolumetricFogEnabled = GameSettings.VolumetricFog.On || patches;
+            e.VolumetricFogTemporalReprojectionEnabled = !StillShot;
             e.VolumetricFogDensity = GameSettings.VolumetricFog.On ? .0035f : 0;
         }
     }
