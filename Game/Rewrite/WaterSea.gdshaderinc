@@ -971,11 +971,11 @@ void fragment() {
 		float old = smoothstep(0.03, 0.4, field_foam) * (1.0 - fresh);
 		vec2 fd = wdir * (0.25 + 0.25 * wind_speed);
 		vec3 lip = foam_at(pq + fd * TIME, wdir, 1.2, TIME, max(cap * 0.95, fresh * 0.8), dist);
-		vec3 streak = foam_at(pq * 0.8 + fd * TIME + vec2(37.1, 11.3), wdir, 3.6, TIME, old * 0.65, dist);
+		vec3 streak = foam_at(pq * 0.8 + fd * TIME + vec2(37.1, 11.3), wdir, 3.6, TIME, old * 0.5, dist);
 		float top = max(lip.x, streak.x * 0.8);
 		// Older foam is a thin film of bubbles: it lets the water's colour through (not paint on the surface).
 		float age_mix = clamp(max(cap, fresh) * 1.3, 0.0, 1.0);
-		float opacity = mix(0.55, 0.96, age_mix);
+		float opacity = mix(0.42, 0.96, age_mix);
 		foam = max(foam, top);
 		foam_opacity = mix(foam_opacity, opacity, step(layers.x, top));
 		under_foam = max(under_foam, max(lip.y, streak.y * 0.5) * 0.8);

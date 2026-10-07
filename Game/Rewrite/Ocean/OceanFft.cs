@@ -214,7 +214,7 @@ public sealed class OceanFft : IDisposable
         // a breeze makes a few short-lived caps), the ripples' cascade hardly makes any, and it drifts with the wind.
         float s = (float)_state;
         var foam = CarriedFoam
-            ? new FoamParams(Mathf.Lerp(.42f, .78f, s * s), Mathf.Lerp(.5f, .12f, s), new Vector3(1.7f, .55f, .2f), FoamDrift * dt)
+            ? new FoamParams(Mathf.Lerp(.42f, .67f, s * s), Mathf.Lerp(.5f, .22f, s), new Vector3(1.5f, .55f, .2f), FoamDrift * dt)
             : new FoamParams(.55f, .3f, new Vector3(1.6f, 1.6f, 1.6f), Vector2.Zero);
         RenderingServer.CallOnRenderThread(Callable.From(() => Run(h0, (float)t, dt, chop, blend, foam)));
     }
