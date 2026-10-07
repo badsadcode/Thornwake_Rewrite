@@ -91,19 +91,31 @@ public static class GameSettings
         "Plant populations: grass, tall grass, wild wheat, reeds, water lilies and underwater plants in patches and " +
         "communities (Noor's sprites). Classic: the earlier evenly spread grass tufts.",
         options: new[] { "classic tufts", "plant populations" }, rebuild: true));
-    public static readonly Setting GrassDistance = Add(new("detail.grass_distance", "Detail", "Grass distance", 40, 150, 5, 120,
-        "How far away grass is drawn.", "m", rebuild: true));
+    public static readonly Setting GrassDistance = Add(new("detail.grass_distance", "Detail", "Grass distance", 40, 400, 5, 120,
+        "How far away grass and plants are drawn. Beyond ~150 m only with a wider Terrain detail range (grass grows on " +
+        "the nearest terrain ring only). Heavy: test and benchmark.", "m", rebuild: true));
     // ---- view distance (tiles rebuild)
-    public static readonly Setting TerrainDistance = Add(new("view.terrain", "View distance", "Terrain", 0, 2, 1, 1,
-        "How far the terrain reaches before the horizon fog.", options: new[] { "~10 km", "~20 km", "~40 km" }, rebuild: true));
-    public static readonly Setting TreeDistance = Add(new("view.trees", "View distance", "Detailed trees", 0, 2, 1, 1,
-        "Distance up to which full 3D trees are drawn.", options: new[] { "~400 m", "~800 m", "~1.6 km" }, rebuild: true));
-    public static readonly Setting FarTreeDistance = Add(new("view.far_trees", "View distance", "Distant tree cards", 0, 2, 1, 1,
-        "Distance up to which forests are drawn as simple tree cards.", options: new[] { "~3 km", "~6 km", "~12 km" }, rebuild: true));
-    public static readonly Setting ScatterDistance = Add(new("view.scatter", "View distance", "Rocks, bushes and logs", .5, 2, .1, 1,
+    public static readonly Setting TerrainDistance = Add(new("view.terrain", "View distance", "Terrain", 0, 3, 1, 1,
+        "How far the terrain reaches before the horizon fog. ~80 km is for testing (more distant tiles to build).",
+        options: new[] { "~10 km", "~20 km", "~40 km", "~80 km" }, rebuild: true));
+    // Round 25 (Tom: "the loss of detail is pretty near, still visible — a slider so I can benchmark it").
+    public static readonly Setting TerrainDetail = Add(new("view.terrain_detail", "View distance", "Terrain detail range", 1, 4, 1, 1,
+        "How far each terrain detail level reaches: the full-detail ground, grass, 3D trees and every coarser ring move " +
+        "out together (×2 ≈ 1.7× farther, ×3 ≈ 2.3×, ×4 ≈ 3×; build 32 = ×1). Many more tiles to build and draw: benchmark it.",
+        "×", rebuild: true));
+    public static readonly Setting TreeDistance = Add(new("view.trees", "View distance", "Detailed trees", 0, 4, 1, 1,
+        "Distance up to which full 3D trees are drawn (at Terrain detail range ×1; farther with a wider range).",
+        options: new[] { "~400 m", "~800 m", "~1.6 km", "~3.2 km", "~6.4 km" }, rebuild: true));
+    public static readonly Setting FarTreeDistance = Add(new("view.far_trees", "View distance", "Distant tree cards", 0, 4, 1, 1,
+        "Distance up to which forests are drawn as simple tree cards (at Terrain detail range ×1).",
+        options: new[] { "~3 km", "~6 km", "~12 km", "~24 km", "~48 km" }, rebuild: true));
+    public static readonly Setting ScatterDistance = Add(new("view.scatter", "View distance", "Rocks, bushes and logs", .5, 4, .1, 1,
         "Multiplier on how far small objects stay visible.", "×", rebuild: true));
 
     // ---- lighting and effects (live)
+    public static readonly Setting PlantShadows = Add(new("fx.plant_shadows", "Lighting and effects", "Grass and plant shadows", 0, 1, 1, 0,
+        "Grass, flowers, reeds and shore plants cast shadows (cut out by their sprites, swaying with them). Off: as in " +
+        "build 32. Costly with dense grass: benchmark it.", options: new[] { "off", "on" }, rebuild: true));
     public static readonly Setting Shadows = Add(new("fx.shadows", "Lighting and effects", "Shadows", 0, 3, 1, 2,
         "Sun shadow quality and distance.", options: OffLowMediumHigh));
     public static readonly Setting Ssao = Add(new("fx.ssao", "Lighting and effects", "Ambient occlusion (SSAO)", 0, 1, 1, 1,

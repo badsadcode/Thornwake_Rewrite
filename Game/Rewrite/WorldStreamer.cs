@@ -215,6 +215,9 @@ public partial class WorldStreamer : Node3D
         double size = TileBuilder.BaseTile * (1L << top);
         long cx = (long)Math.Floor(px / size), cz = (long)Math.Floor(pz / size);
         long x0 = cx - TopRadius, x1 = cx + TopRadius, z0 = cz - TopRadius, z1 = cz + TopRadius;
+        // The hole each level leaves for the next finer one: ±1 tile (build 32) up to ±4 (Terrain detail range): a
+        // finer level then covers (4k+2)² children instead of 6×6, so every detail level reaches farther.
+        int k = Math.Clamp((int)Math.Round(GameSettings.TerrainDetail.Value), 1, 4);
         for (int level = top; level >= 0; level--)
         {
             size = TileBuilder.BaseTile * (1L << level);
@@ -222,11 +225,11 @@ public partial class WorldStreamer : Node3D
             for (long z = z0; z <= z1; z++)
                 for (long x = x0; x <= x1; x++)
                 {
-                    bool hole = level > 0 && Math.Abs(x - cx) <= 1 && Math.Abs(z - cz) <= 1;
+                    bool hole = level > 0 && Math.Abs(x - cx) <= k && Math.Abs(z - cz) <= k;
                     if (!hole) _desired.Add(new TileKey(level, x, z));
                 }
             // Next finer level covers this level's hole exactly.
-            x0 = 2 * (cx - 1); x1 = 2 * (cx + 1) + 1; z0 = 2 * (cz - 1); z1 = 2 * (cz + 1) + 1;
+            x0 = 2 * (cx - k); x1 = 2 * (cx + k) + 1; z0 = 2 * (cz - k); z1 = 2 * (cz + k) + 1;
         }
     }
 
@@ -288,10 +291,13 @@ public partial class WorldStreamer : Node3D
         }
         if (data.Trees.Count > 0) _trees.Instance(root, data.Trees, key.Level >= 2 ? 2 : 1, key.Level == 0 && GameSettings.Shadows.Index > 0);
         GrassCommitted += data.Grass.Count; RocksCommitted += data.Rocks.Count; PropsCommitted += data.Props.Count; FarTreesCommitted += data.FarTrees.Count;
+        // Grass and plant shadows (option): only where the sun casts any.
+        var plantShadows = GameSettings.PlantShadows.On && GameSettings.Shadows.Index > 0
+            ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
         if (data.Grass.Count > 0)
-            root.AddChild(Multi(_grass, data.Grass.ToArray(), GeometryInstance3D.ShadowCastingSetting.Off, GameSettings.GrassDistance.F));
+            root.AddChild(Multi(_grass, data.Grass.ToArray(), plantShadows, GameSettings.GrassDistance.F));
         if (data.Reeds.Count > 0)
-            root.AddChild(Multi(_grass, data.Reeds.ToArray(), GeometryInstance3D.ShadowCastingSetting.Off, GameSettings.GrassDistance.F * 1.3f));
+            root.AddChild(Multi(_grass, data.Reeds.ToArray(), plantShadows, GameSettings.GrassDistance.F * 1.3f));
         if (data.Flora.Count > 0)
         {
             // Land grass, shore plants, floating leaves and underwater plants: one draw each, all sprites in one array.
@@ -307,7 +313,8 @@ public partial class WorldStreamer : Node3D
                 // (floors: at view.scatter 0.6 the underwater range was 42 m, and turning the camera, which orbits
                 // the player, moved it across that line — Tom's dumps 20261007-122642/122651)
                 float range = kind switch { 0 => grass, 1 => grass * 1.3f, 2 => Math.Max(100, 180 * scatter), _ => Math.Max(70, 110 * scatter) };
-                root.AddChild(MultiFlora(kind == 2 ? Flora.Flat() : Flora.Upright(), items, kind == 3 ? 2 : kind == 2 ? 0 : 1, range));
+                root.AddChild(MultiFlora(kind == 2 ? Flora.Flat() : Flora.Upright(), items, kind == 3 ? 2 : kind == 2 ? 0 : 1, range,
+                    kind < 2 ? plantShadows : GeometryInstance3D.ShadowCastingSetting.Off));
             }
             GrassCommitted += data.Flora.Count;
         }
@@ -360,7 +367,8 @@ public partial class WorldStreamer : Node3D
     }
 
     /// <summary>Plant sprites with per-instance tint (colour) and custom data (texture layer, motion kind, phase).</summary>
-    private static MultiMeshInstance3D MultiFlora(Mesh mesh, FloraInstance[] items, int motion, float visibleTo)
+    private static MultiMeshInstance3D MultiFlora(Mesh mesh, FloraInstance[] items, int motion, float visibleTo,
+        GeometryInstance3D.ShadowCastingSetting shadows = GeometryInstance3D.ShadowCastingSetting.Off)
     {
         var centre = Vector3.Zero;
         foreach (var f in items) centre += f.Transform.Origin;
@@ -373,7 +381,7 @@ public partial class WorldStreamer : Node3D
             float phase = (float)Hashing.Unit(Hashing.Mix((ulong)i * 2654435761UL + (ulong)items[i].Species));
             multi.SetInstanceCustomData(i, new Color(items[i].Species, motion, phase, 0));
         }
-        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Position = centre, Layers = 2 };
+        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows, Position = centre, Layers = 2 };
         if (visibleTo > 0) { node.VisibilityRangeEnd = visibleTo; node.VisibilityRangeEndMargin = 12; node.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self; }
         return node;
     }
