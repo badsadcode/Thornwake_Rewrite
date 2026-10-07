@@ -895,6 +895,19 @@ rates), plus grass shadows and more visible god rays.
 * Note for later renders: replay `--fly-height` is above the bed — over a 110 m deep lake the camera was underwater
   (black frames), not a shader fault.
 
+## D68 — Round 26: ghosting, experimental 4 water, ground parallax (2026-10-07)
+* **Ghosting**: TAA reprojects with motion vectors; the water is transparent (no motion vectors, vertex-animated),
+  so storm crests smear, and the volumetric fog's temporal reprojection trails behind moving things. Not fixable
+  inside TAA, so choices: SMAA (Godot 4.5, spatial, no history) and FSR 2 (Godot's Scaling3DMode.Fsr2: temporal AA +
+  upscaling); and the fog's reprojection amount as a setting (0.5–0.95, 0.9 = before).
+* **Experimental 4** (a test, as Tom asked): EXP3A plus EXP4 — from sea state ~0.3 to 0.9 the screen-space hit
+  weakens (×0.4), Fresnel ×0.7, the reflected light ×0.6 and the engine specular ×0.5; calm water identical to 3A.
+  Render on Tom's storm dump: the silvery sheen gives way to the water's colour (−15 % brightness), shallows unchanged.
+* **Ground parallax**: steep parallax (8 layers, 5 cm) on the grass texture, or soil where the variety pass lays bare
+  ground (its weight estimated before the shift), within 12–30 m on gentle dry ground; the whole terrain pass then
+  reads the shifted coordinate. The loop samples at an explicit mip (derivatives of the unshifted lookup, taken
+  outside the per-pixel branch).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

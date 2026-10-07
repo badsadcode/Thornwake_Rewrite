@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 35 — less ghosting, experimental 4 water, ground parallax
+* **Ghosting** on storm waves and behind the character comes from TAA (it blends past frames; the water has no
+  motion data) and from the volumetric fog's own blending. New choices: *Anti-aliasing → SMAA* (sharp, no ghosting —
+  try this first) and *FSR 2* (temporal like TAA but sharper; also upscales with Render scale below 1), and *Fog
+  smoothing over time* (lower = no fog trails, grainier fog; 0.9 = build 34).
+* **Water → experimental 4**: 3A, but rough and stormy water reflects less — the mirror breaks up and dims and the
+  water's own colour carries the storm. Calm water is the same as 3A.
+* **Ground parallax** (*Lighting and effects*, Noor ground textures, default 1; 0 = build 34): within ~30 m the
+  ground textures get depth — dark gaps sink a few centimetres and shift as you move. Best judged while walking.
+
 ## New in build 34 — mirrored lakes, fuller alpine slopes, varied ground
 * **Lakes mirror the shore and mountains.** Three things hid them: reflections reached only ~280 m, hits far away
   were faded out, and the engine's own plain-sky reflection was painted on top of them. Now ~16 km (high) / ~2.4 km
