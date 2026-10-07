@@ -40,7 +40,10 @@ void fragment() {
 			vec3 c = textureLod(screen_tex, uv, 0.0).rgb;
 			// Only very bright sky casts rays: the sun disc, its halo and sunlit cloud edges. Clouds (dimmer) block it,
 			// so the sun breaks through gaps in rays; a clear sky gives rays past trees and mountains.
-			light += max(0.0, dot(c, vec3(0.3, 0.59, 0.11)) - 0.9) * weight;
+			// (round 24: relative to the threshold 0.9, a hazy low-sun sky was "bright" for a quarter of the screen and
+			// gathered into a huge white disc — Tom: "the sun is like a huge blob"; now only the disc and the inner halo,
+			// each sample capped)
+			light += min(max(0.0, dot(c, vec3(0.3, 0.59, 0.11)) - 1.8), 3.0) * weight;
 		}
 		weight *= 0.955;
 	}

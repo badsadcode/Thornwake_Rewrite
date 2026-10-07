@@ -267,6 +267,11 @@ public partial class Atmosphere : Node3D
         e.GlowBloom = natural ? 0 : .04f;
         e.GlowBlendMode = natural ? Godot.Environment.GlowBlendModeEnum.Additive : Godot.Environment.GlowBlendModeEnum.Softlight;
         if (natural) e.GlowIntensity = GameSettings.Glow.F * .55f;
+        // Natural: glow from small blur levels only, and no single pixel brighter than 6 feeding it (round 24, Tom's
+        // dumps 174752/174828: a hazy low sun bloomed into a white blob over half the screen through the widest level).
+        e.GlowHdrLuminanceCap = natural ? 6 : 12;
+        for (int level = 0; level < 7; level++)
+            e.SetGlowLevel(level, natural ? level switch { 0 => .6f, 1 => .8f, 2 => 1, 3 => .5f, 4 => .15f, _ => 0 } : level is 2 or 4 ? 1 : 0);
         e.AdjustmentContrast = natural ? 1.06f : 1;
         e.FogAerialPerspective = Math.Clamp((natural ? .26f : .35f) * GameSettings.Haze.F, 0, 1);
         e.AdjustmentSaturation = GameSettings.Saturation.F * (natural ? 1.08f : 1);
@@ -351,7 +356,12 @@ public partial class Atmosphere : Node3D
         if (originX != Spectrum.OriginX || originZ != Spectrum.OriginZ) { Spectrum.SetOrigin(originX, originZ); SendSpectrumOrigin(); }
         double windAngle = Math.Atan2(Wind.Direction.Y, Wind.Direction.X);
         if (Math.Abs(seaState - _wavesState) > .004 || Math.Abs(Mathf.AngleDifference((float)windAngle, (float)_wavesAngle)) > .14) { _wavesAngle = windAngle; UpdateWaves(seaState); }
-        Ocean?.Update(OceanTime);
+        if (Ocean != null)
+        {
+            // Foam drifts with the wind at a few per cent of its speed (3A carries it; 3 ignores this).
+            Ocean.FoamDrift = Wind.Direction * Wind.Speed * .03f;
+            Ocean.Update(OceanTime);
+        }
         // Overcast without rain also changes the mood (Noor: "proper overcast where the whole lighting mood changes"):
         // weaker, flatter sunlight, greyer and hazier air.
         float overcast = Mathf.SmoothStep(.7f, .95f, Coverage);
@@ -476,7 +486,7 @@ public partial class Atmosphere : Node3D
         _water.SetShaderParameter("wave2_hs", (float)Spectrum.Hs);
         _water.SetShaderParameter("wave2_chop", (float)Spectrum.Chop);
         // Experimental 3: the FFT sea, made on first use and freed when another style is chosen.
-        bool fft = GameSettings.WaterStyle.Index == 3 && RenderingServer.GetRenderingDevice() != null;
+        bool fft = GameSettings.WaterStyle.Index >= 3 && RenderingServer.GetRenderingDevice() != null;
         if (fft && Ocean == null)
         {
             Ocean = OceanFft.Create(77);
@@ -488,6 +498,7 @@ public partial class Atmosphere : Node3D
             }
         }
         else if (!fft && Ocean != null) { Ocean.Dispose(); Ocean = null; }
+        if (Ocean != null) Ocean.CarriedFoam = GameSettings.WaterStyle.Index == 4;
         Ocean?.Configure(seaState, _wavesAngle);
         _water.SetShaderParameter("fft_crest_scale", (float)(Spectrum.Hs / Math.Sqrt(Spectrum.Hs * Spectrum.Hs + Spectrum.SwellHs * Spectrum.SwellHs)));
         SendSpectrumOrigin();

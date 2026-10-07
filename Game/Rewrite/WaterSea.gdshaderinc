@@ -219,8 +219,14 @@ vec3 wave_norm(vec4 h, float lake, float coast) {
 // displacement pinches the crests (it may fold: that is where foam is born), and a lingering foam field (whitecaps that
 // stay and trail behind the crests) comes with each cascade. Same outputs as gerstner() below, so the rest of the water
 // (shore waves, rivers, foam, lighting) is shared with experimental 2.
+#ifdef EXP3A
+// (anisotropic: low over the water a pixel is long and thin; isotropic mipmaps blurred the far sea flat)
+uniform sampler2DArray fft_disp : filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2DArray fft_deriv : filter_linear_mipmap_anisotropic, repeat_enable;
+#else
 uniform sampler2DArray fft_disp : filter_linear_mipmap, repeat_enable;  // per cascade: λDx, Dy, λDz, foam (mipmapped)
 uniform sampler2DArray fft_deriv : filter_linear_mipmap, repeat_enable; // per cascade: dDy/dx, dDy/dz, λdDx/dx, λdDz/dz
+#endif
 uniform vec3 fft_size = vec3(480.0, 59.0, 7.9);
 uniform vec3 fft_longest = vec3(480.0, 12.0, 1.6); // longest wavelength each cascade carries (fades when under a pixel)
 uniform vec3 fft_offset_x; // the float origin modulo each tile (double precision on the CPU): world-anchored waves
@@ -256,8 +262,14 @@ vec3 gerstner(vec2 p, float depth, float sea, float lake, float fetch_m, float e
 	float a1 = sea * mix(0.5, 1.0, expo) * smoothstep(0.2, 3.0, depth) + lake_amp;
 	float a2 = sea * smoothstep(0.05, 1.0, depth) + lake_amp;
 	// A cascade fades once its longest waves are only a few pixels (vertices) long: its detail would only shimmer.
+#ifdef EXP3A
+	// (later: the mipmaps already band-limit the detail; the far sea went smooth too soon — Noor)
+	a1 *= smoothstep(fft_longest.y * 1.2, fft_longest.y * 0.5, min_lambda);
+	a2 *= smoothstep(fft_longest.z * 1.2, fft_longest.z * 0.5, min_lambda);
+#else
 	a1 *= smoothstep(fft_longest.y * 0.5, fft_longest.y * 0.25, min_lambda);
 	a2 *= smoothstep(fft_longest.z * 0.5, fft_longest.z * 0.25, min_lambda);
+#endif
 	vec3 offset = vec3(0.0);
 	vec4 deriv = vec4(0.0); // dDy/dx, dDy/dz, dDx/dx, dDz/dz (choppiness included)
 	float foam = 0.0;
@@ -271,8 +283,22 @@ vec3 gerstner(vec2 p, float depth, float sea, float lake, float fetch_m, float e
 	n.x -= deriv.x / max(sx, 0.25);
 	n.z -= deriv.y / max(sz, 0.25);
 	crest += offset.y * fft_crest_scale; // (the swell lifts the whole surface: a calm sea glowed everywhere)
+#ifdef EXP3A
+	// The foam field is read where the water is shown (rest position + displacement), not at its rest position: the
+	// field drifts with the wind on the GPU, and read at the rest position it swung back and forth with every wave
+	// (Tom and Noor: "streaks oscillate around the same place"). At a crest the horizontal displacement is ~0, so
+	// foam born there still sits on the crest. jac.z carries it to the fragment (fold uses x and y only).
+	if (t < 0.0) { jac += vec3(-deriv.z, -deriv.w, 0.0); return offset; } // (vertex pass: no foam)
+	vec2 q = p + offset.xz;
+	float f = 0.0;
+	if (a0 > 0.0) f = max(f, texture(fft_disp, vec3((q + vec2(fft_offset_x.x, fft_offset_z.x)) / fft_size.x + 0.5 / 256.0, 0.0)).w * min(a0, 1.0));
+	if (a1 > 0.0) f = max(f, texture(fft_disp, vec3((q + vec2(fft_offset_x.y, fft_offset_z.y)) / fft_size.y + 0.5 / 256.0, 1.0)).w * min(a1, 1.0));
+	if (a2 > 0.0) f = max(f, texture(fft_disp, vec3((q + vec2(fft_offset_x.z, fft_offset_z.z)) / fft_size.z + 0.5 / 256.0, 2.0)).w * min(a2, 1.0) * 0.5);
+	jac += vec3(-deriv.z, -deriv.w, f);
+#else
 	// As gerstner(): fold = 1 - Jacobian; the lingering foam joins it (whitecaps trailing behind the crests).
 	jac += vec3(-deriv.z + foam * 0.9, -deriv.w, 0.0);
+#endif
 	return offset;
 }
 #else
@@ -619,6 +645,7 @@ void fragment() {
 	// Per-pixel wave normal from the full wave sum (smooth at every distance).
 	vec3 n = vec3(0.0, 1.0, 0.0); float crest = 0.0; vec3 jac = vec3(0.0);
 	float breaking = 0.0, since = 1.0, shore_k = 1.0;
+	vec3 woff = vec3(0.0); // (3A: the open-water displacement here: foam patterns are drawn where the water is shown)
 	if (sea + lake - pond > 0.5) {
 		// Waves far shorter than a pixel only add sparkle: fade them with distance.
 		// Nyquist on the pixel footprint along the view, not just distance: low over the water a pixel spans metres,
@@ -627,11 +654,16 @@ void fragment() {
 		// Interpolated headings shrink between vertices that differ: back to unit length (the weights are powers of the
 		// cosine, so a shorter vector would fade every wave there).
 		vec4 heads = vec4(normalize(wave_heads.xy + vec2(1e-5)), normalize(wave_heads.zw + vec2(1e-5)));
-		gerstner(p, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, min_lambda, ocean_time, heads, wave_norms, wave_coast, n, crest, jac);
+		woff = gerstner(p, vertex_depth, sea, lake, fetch, sea > 0.5 ? exposure : 1.0, min_lambda, ocean_time, heads, wave_norms, wave_coast, n, crest, jac);
 		if (sea > 0.5) shore_wave(p, px_depth, bed_grad, exposure, min_lambda, ocean_time, n, breaking, since, shore_k);
 	}
 	crest /= max(wave2_hs * 0.5, 0.01); // ~1 at a typical big crest
+#ifdef EXP3A
+	float fold = 1.0 - (1.0 - jac.x) * (1.0 - jac.y);
+	float field_foam = jac.z; // the simulated foam (1 just born … fading toward 0), drifting with the wind
+#else
 	float fold = 1.0 - ((1.0 - jac.x) * (1.0 - jac.y) - jac.z * jac.z);
+#endif
 	vec2 slope = -n.xz / max(n.y, 0.2);
 
 	// Wakes (Noor: directional, not radial): every disturbance spreads as a ring of ripples while the current carries it
@@ -745,6 +777,9 @@ void fragment() {
 		vec2 side = vec2(-wdir.y, wdir.x);
 		vec3 c1 = gnoised(p * 0.07 + wdir * TIME * 0.25);
 		vec3 c2 = gnoised(p * 0.17 - (wdir * 0.6 + side * 0.4) * TIME * 0.4 + 3.7);
+#ifdef EXP3A
+		chop *= 1.0 - 0.6 * sea; // (the simulated waves carry the sea's detail; the drawn chop only blurred it)
+#endif
 		slope += (c1.xy * 0.07 + c2.xy * 0.17 * 0.6) / 0.15 * chop;
 		// River mouths (RIVERS_PLAN step 3): the river's current fans out into the lake or sea and weakens; its
 		// flow-carried ripples blend in by the current's strength, and where waves run against the outgoing current
@@ -768,7 +803,12 @@ void fragment() {
 	vec3 to_eye = normalize(-VERTEX);
 	// Reflection strength from a softened normal (half the small ripples): ripple facets turned toward the horizon
 	// mirrored the bright sky as hard white streaks all over windy lakes. Glints and refraction keep the full normal.
-	vec3 n_soft = normalize((VIEW_MATRIX * vec4(normalize(vec3(-mix(big_slope, slope, 0.45).x, 1.0, -mix(big_slope, slope, 0.45).y)), 0.0)).xyz);
+#ifdef EXP3A
+	const float RIPPLE_REFLECT = 0.7; // (3A: small facets catch more of the sky — less matte)
+#else
+	const float RIPPLE_REFLECT = 0.45;
+#endif
+	vec3 n_soft = normalize((VIEW_MATRIX * vec4(normalize(vec3(-mix(big_slope, slope, RIPPLE_REFLECT).x, 1.0, -mix(big_slope, slope, RIPPLE_REFLECT).y)), 0.0)).xyz);
 	float fresnel = 0.02 + 0.98 * pow(1.0 - clamp(dot(n_soft, to_eye), 0.0, 1.0), 5.0);
 
 	// Behind the surface (depth buffer), refracted; never pull in things above water.
@@ -788,7 +828,11 @@ void fragment() {
 	vec3 ground = textureLod(screen_tex, ruv, 0.0).rgb;
 	float caustic = caustics(bottom_world.xz * 0.6, TIME * 1.3) * smoothstep(0.0, 0.1, depth_below) * exp(-depth_below * 0.35);
 	ground += caustic * caustic_strength * 0.3 * vec3(1.0, 0.97, 0.85) * (0.4 + ground);
+#ifdef EXP3A
+	vec3 transmittance = exp(-absorption * path * mix(1.0, 2.2, river) * mix(1.0, 0.8, sea)); // (clearer sea shallows)
+#else
 	vec3 transmittance = exp(-absorption * path * mix(1.0, 2.2, river));
+#endif
 	vec3 scatter = mix(sea * sea_scatter + lake * lake_scatter + river * river_scatter, river_scatter * vec3(1.15, 1.1, 0.9), plume * 0.85);
 	transmittance = mix(transmittance, exp(-absorption * path * 2.2), plume * 0.6);
 	// Sea of Thieves palette: deep saturated blue-teal open sea, greyer and darker in storms.
@@ -846,6 +890,7 @@ void fragment() {
 		// Trailing foam thins into lace (broken by noise) instead of a solid sheet.
 		float trail = exp(-since * 7.0) * smoothstep(0.0, 0.06, since) * smoothstep(0.35, 0.75, noise(p * 0.3 + vec2(0.0, TIME * 0.1)));
 		amount = max(amount, breaking * along * smoothstep(0.15, 0.5, px_depth) * (band * 0.8 + trail * 0.7));
+#ifndef EXP3A
 		// Open-water white water follows the weather (Noor: calm → breezy → rough → storm): none when calm, a few
 		// small short-lived caps in a breeze, many in rough seas, dense only in storms. Caps form and fade (life) and
 		// break into fragments along the wind, never one continuous sheet.
@@ -872,6 +917,7 @@ void fragment() {
 		float lanes = noise(sq) * 0.65 + noise(sq * 2.3 + 4.1) * 0.35;
 		float streaks = smoothstep(0.58, 0.8, lanes) * smoothstep(0.55, 0.95, sea_state) * (0.5 + 0.5 * smoothstep(-0.3, 0.8, crest));
 		amount = max(amount, streaks * 0.55);
+#endif
 		// Rocks and steep coasts churn.
 		amount = max(amount, rocky * (0.4 + 0.5 * noise(p * 0.2 + TIME * 0.3)));
 	} else if (river > 0.5) {
@@ -897,6 +943,31 @@ void fragment() {
 	bool flowing = river > 0.5 || plume_flow > 0.01;
 	vec3 layers = flowing ? foam_flow(p, drift, TIME, amt, dist) : foam_layers(p, drift, TIME, amt, dist);
 	float foam = layers.x, under_foam = layers.y, foam_shade = layers.z;
+	float foam_opacity = 1.0;
+#ifdef EXP3A
+	if (sea > 0.5) {
+		// Open-sea foam from the simulated surface (Noor's life cycle: crest forms → cap → breaks → fresh foam spreads →
+		// fragments → stretched streaks → fades), drawn where the water is shown and carried by the wind:
+		//   the breaking lip — bright and nearly solid, on the folding crest itself;
+		//   fresh foam — irregular patches the crest leaves behind;
+		//   old foam — thin, fragmented streaks pulled out along the wind, translucent, fading.
+		vec2 pq = p + woff.xz;
+		float cap = smoothstep(0.32, 0.8, fold) * smoothstep(0.15, 0.5, sea_state) * smoothstep(0.25, 0.6, field_foam + 0.3);
+		float fresh = smoothstep(0.45, 0.95, field_foam);
+		float old = smoothstep(0.03, 0.45, field_foam) * (1.0 - fresh);
+		vec2 fd = wdir * (0.25 + 0.25 * wind_speed);
+		vec3 lip = foam_at(pq + fd * TIME, wdir, 1.2, TIME, max(cap * 0.95, fresh * 0.75), dist);
+		vec3 streak = foam_at(pq * 0.8 + fd * TIME + vec2(37.1, 11.3), wdir, 3.6, TIME, old * 0.55, dist);
+		float top = max(lip.x, streak.x * 0.8);
+		// Older foam is a thin film of bubbles: it lets the water's colour through (not paint on the surface).
+		float age_mix = clamp(max(cap, fresh) * 1.3, 0.0, 1.0);
+		float opacity = mix(0.55, 0.96, age_mix);
+		foam = max(foam, top);
+		foam_opacity = mix(foam_opacity, opacity, step(layers.x, top));
+		under_foam = max(under_foam, max(lip.y, streak.y * 0.5) * 0.8);
+		foam_shade = mix(foam_shade, mix(streak.z, lip.z, age_mix), step(layers.x, top));
+	}
+#endif
 	if (river > 0.5 && length(current) > 0.15) {
 		// Streaks along the current: the same foam smeared downstream (faded in with the speed: a hard switch drew a
 		// straight foam edge along the triangles where the current crossed the threshold).
@@ -904,12 +975,19 @@ void fragment() {
 		float smear = smoothstep(0.15, 0.5, length(current));
 		foam = mix(foam, (foam + foam_flow(p - fdir * 2.4, drift, TIME, amt, dist).x) * 0.5 * 1.25, smear);
 	}
+#ifdef EXP3A
+	foam = foam * (1.0 / (1.0 + dist / 1500.0) * 0.4 + 0.6) * smoothstep(0.2, 0.9, edge_fade) // (whitecaps stay readable far out)
+#else
 	foam = foam * (1.0 / (1.0 + dist / 400.0) * 0.5 + 0.5) * smoothstep(0.2, 0.9, edge_fade)
+#endif
 		* smoothstep(0.01, 0.12, contact_depth); // the thinnest swash film carries no solid foam
 
 	// Aerated crests in rough weather: milky streaks over the wave tops (softer than foam, not masked).
 	float aerated = (sea + lake * 0.4) * smoothstep(0.15, 1.0, crest + 0.4 * (noise(p * 0.12 + wdir * TIME * 0.3) - 0.5))
 		* smoothstep(0.4, 0.9, sea_state) * 0.65 * (0.55 + 0.45 * noise(p * 0.8 - TIME * 0.2)) / (1.0 + dist / 800.0);
+#ifdef EXP3A
+	aerated *= 0.6;
+#endif
 	under_foam = max(under_foam, aerated * 1.3); // aerated crests are milky water, not surface foam
 	under_foam *= smoothstep(0.1, 0.9, edge_fade);
 
@@ -923,8 +1001,14 @@ void fragment() {
 	float face_r = clamp(1.0 - n_world.y, 0.0, 0.5) / 0.5;
 	// Clouds mirrored crisply on calm water, smeared out on rough water (a rough surface averages many directions).
 	sky = mix(reflected_sky(ray_world, world_position.xz - CAMERA_POSITION_WORLD.xz, sky), sky, (sea + lake * 0.5) * smoothstep(0.2, 0.9, sea_state) * 0.7);
+#ifdef EXP3A
+	// (3A: rough water still mirrors much of the sky — the storm sea looked matte)
+	vec3 reflected = mix(sky, hit.rgb, hit.a) * reflection_strength * mix(1.0, 0.75, sea * smoothstep(0.4, 1.0, sea_state))
+		* mix(1.0, 0.65, face_r * sea) * mix(1.0, 0.9, sea);
+#else
 	vec3 reflected = mix(sky, hit.rgb, hit.a) * reflection_strength * mix(1.0, 0.5, sea * smoothstep(0.4, 1.0, sea_state))
 		* mix(1.0, 0.45, face_r * sea) * mix(1.0, 0.8, sea);
+#endif
 	// Light through thin crests (seas, breakers): looking toward the sun, the upper part of waves glows.
 	vec3 eye_world = normalize(CAMERA_POSITION_WORLD - world_position);
 	vec3 sun_flat = normalize(vec3(sun_direction.x, 0.0, sun_direction.z) + 1e-4);
@@ -944,13 +1028,29 @@ void fragment() {
 	// Sun glints: a tight highlight that moves over the waves (the engine's specular adds the broad sheen).
 	vec3 half_v = normalize(normalize(sun_direction) + eye_world);
 	float glint = pow(clamp(dot(n_world, half_v), 0.0, 1.0), 1200.0) * clamp(sun_direction.y * 4.0, 0.0, 1.0) * (1.0 - sea_state * 0.45) * 1.6;
+#ifdef EXP3A
+	// Small facets catching the sun: a broader sheen under the tight glints (not glitter).
+	glint = glint * (1.0 + 0.35 * sea_state) + pow(clamp(dot(n_world, half_v), 0.0, 1.0), 220.0) * clamp(sun_direction.y * 4.0, 0.0, 1.0) * 0.12;
+#endif
 	// Milky under-foam: pale turquoise-white in the water body, lit a little from inside.
 	vec3 milky = vec3(0.55, 0.75, 0.74) * under_foam;
+#ifdef EXP3A
+	// Less diffuse "paint" in the water body (it is lit through, not on); foam lets some water through, thin foam a
+	// little bluish (bubbles over water).
+	float fo = foam * foam_opacity;
+	vec3 foam_col = foam_color * foam_shade * mix(vec3(0.82, 0.93, 0.96), vec3(1.0), foam_opacity);
+	ALBEDO = mix(scatter * murk * (1.0 - fresnel) * 0.75 + milky * 0.45 * (1.0 - fresnel), foam_col, fo);
+	EMISSION = (transmitted * (1.0 - fresnel) + reflected * fresnel + glow * (1.0 - fresnel) + sun_color * glint * 3.0
+		+ sss_color * sun_color * under_foam * 0.12) * (1.0 - fo);
+	SPECULAR = 0.5 * (1.0 - fo);
+	ROUGHNESS = mix(mix(0.02, 0.08, sea_state), 0.6, fo);
+#else
 	ALBEDO = mix(scatter * murk * (1.0 - fresnel) + milky * 0.45 * (1.0 - fresnel), foam_color * foam_shade, foam);
 	EMISSION = (transmitted * (1.0 - fresnel) + reflected * fresnel + glow * (1.0 - fresnel) + sun_color * glint * 3.0
 		+ sss_color * sun_color * under_foam * 0.12) * (1.0 - foam);
 	SPECULAR = 0.3 * (1.0 - foam);
 	ROUGHNESS = mix(mix(0.03, 0.12, sea_state), 0.6, foam);
+#endif
 	METALLIC = 0.0;
 	// The swash film running up the beach thins out softly (a hard 4 cm ramp drew its triangle-edged outline).
 	float film = sea > 0.5 ? mix(0.22, 0.04, smoothstep(0.3, 1.5, vertex_depth)) : 0.04;

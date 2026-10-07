@@ -29,7 +29,8 @@ public sealed class OceanFft : IDisposable
     private readonly RenderingDevice _rd;
     private Rid _h0, _spec, _disp, _deriv;
     private Rid _specShader, _fftShader, _assembleShader, _specPipe, _fftPipe, _assemblePipe;
-    private Rid _specSet, _fftSet, _assembleSet;
+    private Rid _specSet, _fftSet, _assembleSet, _assembleSet2, _foamA, _foamB;
+    private bool _flip; // which foam texture holds last frame's foam
     private Rid _mipShader, _mipPipe;
     private Rid[] _dispMip = Array.Empty<Rid>(), _derivMip = Array.Empty<Rid>(), _mipSets = Array.Empty<Rid>();
     private readonly int _seed;
@@ -46,6 +47,13 @@ public sealed class OceanFft : IDisposable
     public Texture2DArrayRD Derivatives { get; } = new();
     /// <summary>Horizontal displacement scale (choppiness) per cascade, by sea state.</summary>
     public float Choppiness { get; private set; } = 1;
+    /// <summary>
+    /// Experimental 3A (round 24, Noor's brief): foam carried by the wind drift and longer-lived in strong wind, born
+    /// mostly on the big waves' folds; false: experimental 3's foam (in place).
+    /// </summary>
+    public bool CarriedFoam { get; set; }
+    /// <summary>Foam drift over the water (m/s, world x/z): a few per cent of the wind speed.</summary>
+    public Vector2 FoamDrift { get; set; }
 
     private OceanFft(RenderingDevice rd, int seed)
     {
@@ -81,7 +89,10 @@ public sealed class OceanFft : IDisposable
             _deriv = Texture(RenderingDevice.DataFormat.R16G16B16A16Sfloat, 3, 8);
             _dispMip = new[] { _disp }; _derivMip = new[] { _deriv };
         }
-        _assembleSet = Set(_assembleShader, _spec, _dispMip[0], _derivMip[0]);
+        _foamA = Texture(RenderingDevice.DataFormat.R16Sfloat, 3, 2);
+        _foamB = Texture(RenderingDevice.DataFormat.R16Sfloat, 3, 2);
+        _assembleSet = Set(_assembleShader, _spec, _dispMip[0], _derivMip[0], _foamA, _foamB);
+        _assembleSet2 = Set(_assembleShader, _spec, _dispMip[0], _derivMip[0], _foamB, _foamA);
         Displacement.TextureRdRid = _disp;
         Derivatives.TextureRdRid = _deriv;
     }
@@ -198,12 +209,21 @@ public sealed class OceanFft : IDisposable
         var h0 = _pendingH0;
         _pendingH0 = null;
         float chop = Choppiness;
-        RenderingServer.CallOnRenderThread(Callable.From(() => Run(h0, (float)t, dt, chop, blend)));
+        // Foam: experimental 3 — born where the Jacobian drops below .55 (pinching toward a fold), fading over ~4 s,
+        // in place. 3A — the threshold and the lifetime grow with the sea state (whitecaps linger and trail in a gale,
+        // a breeze makes a few short-lived caps), the ripples' cascade hardly makes any, and it drifts with the wind.
+        float s = (float)_state;
+        var foam = CarriedFoam
+            ? new FoamParams(Mathf.Lerp(.42f, .62f, s), Mathf.Lerp(.5f, .16f, s), new Vector3(1.3f, .9f, .25f), FoamDrift * dt)
+            : new FoamParams(.55f, .3f, new Vector3(1.6f, 1.6f, 1.6f), Vector2.Zero);
+        RenderingServer.CallOnRenderThread(Callable.From(() => Run(h0, (float)t, dt, chop, blend, foam)));
     }
 
     private static double Loop(double t) => t - Math.Floor(t / Period) * Period;
 
-    private void Run(float[]? h0, float t, float dt, float chop, float blend)
+    private readonly record struct FoamParams(float Threshold, float Fade, Vector3 Gain, Vector2 Shift);
+
+    private void Run(float[]? h0, float t, float dt, float chop, float blend, FoamParams foam)
     {
         if (h0 != null)
         {
@@ -227,9 +247,13 @@ public sealed class OceanFft : IDisposable
             _rd.ComputeListAddBarrier(list);
         }
         _rd.ComputeListBindComputePipeline(list, _assemblePipe);
-        _rd.ComputeListBindUniformSet(list, _assembleSet, 0);
-        // Foam: born where the Jacobian drops below .55 (the surface pinching toward a fold), fading over ~4 s.
-        Push(list, chop, chop, chop * .9f, dt, .55f, 1.6f, .3f, N);
+        _rd.ComputeListBindUniformSet(list, _flip ? _assembleSet2 : _assembleSet, 0);
+        _flip = !_flip;
+        // The drift in texels of each cascade's tile.
+        Push(list, chop, chop, chop * .9f, dt, foam.Threshold, 0, foam.Fade, N,
+            foam.Gain.X, foam.Gain.Y, foam.Gain.Z, 0,
+            foam.Shift.X * N / Sizes[0], foam.Shift.Y * N / Sizes[0], foam.Shift.X * N / Sizes[1], foam.Shift.Y * N / Sizes[1],
+            foam.Shift.X * N / Sizes[2], foam.Shift.Y * N / Sizes[2], 0, 0);
         _rd.ComputeListDispatch(list, N / 16, N / 16, 3);
         if (_mipSets.Length > 0)
         {
@@ -391,11 +415,11 @@ public sealed class OceanFft : IDisposable
     {
         _modes.Clear(); _oldModes.Clear();
         var rd = _rd;
-        var rids = new List<Rid> { _specSet, _fftSet, _assembleSet };
+        var rids = new List<Rid> { _specSet, _fftSet, _assembleSet, _assembleSet2 };
         rids.AddRange(_mipSets);
         rids.AddRange(new[] { _specPipe, _fftPipe, _assemblePipe, _mipPipe, _specShader, _fftShader, _assembleShader, _mipShader });
         if (_mipSets.Length > 0) { rids.AddRange(_dispMip); rids.AddRange(_derivMip); }
-        rids.AddRange(new[] { _h0, _spec, _disp, _deriv });
+        rids.AddRange(new[] { _h0, _spec, _disp, _deriv, _foamA, _foamB });
         Displacement.TextureRdRid = new Rid();
         Derivatives.TextureRdRid = new Rid();
         RenderingServer.CallOnRenderThread(Callable.From(() =>

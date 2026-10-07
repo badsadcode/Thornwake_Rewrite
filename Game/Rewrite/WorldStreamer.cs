@@ -97,6 +97,7 @@ public partial class WorldStreamer : Node3D
         1 => "res://Game/Rewrite/WaterExperimental.gdshader",
         2 => "res://Game/Rewrite/WaterExperimental2.gdshader",
         3 => RenderingServer.GetRenderingDevice() != null ? "res://Game/Rewrite/WaterExperimental3.gdshader" : "res://Game/Rewrite/WaterExperimental2.gdshader",
+        4 => RenderingServer.GetRenderingDevice() != null ? "res://Game/Rewrite/WaterExperimental3A.gdshader" : "res://Game/Rewrite/WaterExperimental2.gdshader",
         _ => "res://Game/Rewrite/Water.gdshader",
     });
 
