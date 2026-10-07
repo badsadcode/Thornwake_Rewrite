@@ -10,11 +10,11 @@ uniform vec3 sun_direction = vec3(0.0, 1.0, 0.0); // world space, toward the sun
 uniform vec3 sun_color : source_color = vec3(1.0, 0.95, 0.85);
 uniform float intensity = 0.6;
 // Build 33 (Tom: "make god rays stand out a bit more without losing what we have"): 0 = the build 32 rays exactly.
-// Reach adds contrast, not light: each pixel's path to the sun is compared with the paths of its neighbours rotated a
+// Contrast (setting "God ray contrast") adds no light: each pixel's path to the sun is compared with the paths of its neighbours rotated a
 // little around the sun. Clear gaps get brighter and the shadow lanes behind clouds, ridges and trees get darker, while
 // an open sky (no occluders: every path alike) stays as it was. (A first try gathered farther with a slower falloff:
 // the bright sky around the sun added up into the blob of round 24 again.)
-uniform float reach = 0.0;
+uniform float contrast = 0.0;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -57,15 +57,15 @@ void fragment() {
 
 	float jitter = hash(FRAGCOORD.xy);
 	float light = gather(SCREEN_UV, sun_uv, 32, 0.955, jitter);
-	if (reach > 0.0) {
+	if (contrast > 0.0) {
 		// Neighbours rotated about 1.5 degrees either way around the sun (in pixels, so the rotation is round).
 		vec2 px = vec2(VIEWPORT_SIZE.x / VIEWPORT_SIZE.y, 1.0);
 		vec2 v = (SCREEN_UV - sun_uv) * px;
 		vec2 side = vec2(-v.y, v.x) * 0.026 / px;
 		float here = gather(SCREEN_UV, sun_uv, 16, 0.92, jitter);
 		float around = 0.5 * (gather(SCREEN_UV + side, sun_uv, 16, 0.92, jitter) + gather(SCREEN_UV - side, sun_uv, 16, 0.92, jitter));
-		float contrast = (here - around) / (here + around + 0.02); // -1 (in a shadow lane) .. 1 (in a gap)
-		light *= clamp(1.0 + reach * 3.0 * contrast, 0.0, 1.0 + 1.5 * reach);
+		float lane = (here - around) / (here + around + 0.02); // -1 (in a shadow lane) .. 1 (in a gap)
+		light *= clamp(1.0 + contrast * 3.0 * lane, 0.0, 1.0 + 1.5 * contrast);
 	}
 	// Stronger toward the sun, and only while the sun is above the horizon.
 	float near_sun = 1.0 - smoothstep(0.0, 0.9, distance(SCREEN_UV, sun_uv));

@@ -16,6 +16,9 @@ uniform vec3 light_direction = vec3(0.0, 1.0, 0.0); // world space, toward the s
 uniform vec3 light_color : source_color = vec3(1.0, 0.95, 0.85); // includes the light's strength
 uniform float intensity = 0.7;
 uniform float max_distance = 7000.0;
+// Build 33, setting "God ray contrast" (0 = build 32): more of the even haze is taken away and the rest boosted, so the
+// lit air under the gaps and the shaded lanes between them separate more.
+uniform float contrast = 0.0;
 global uniform vec4 cloud_state;
 
 const int STEPS = 40;
@@ -78,7 +81,7 @@ void fragment() {
 		total += haze * dt;
 	}
 	// Only the contrast between lit and shaded air reads as beams; the even part is the scene's own haze.
-	float beams = max(0.0, lit - total * (1.0 - 0.92 * coverage) * 0.75);
-	float strength = beams / 1200.0 * phase * intensity * broken * smoothstep(0.03, 0.1, l.y);
+	float beams = max(0.0, lit - total * (1.0 - 0.92 * coverage) * mix(0.75, 0.9, contrast));
+	float strength = beams / 1200.0 * phase * intensity * broken * smoothstep(0.03, 0.1, l.y) * (1.0 + 1.6 * contrast);
 	ALBEDO = light_color * strength;
 }
