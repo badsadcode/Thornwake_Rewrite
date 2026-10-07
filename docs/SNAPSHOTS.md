@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 34** (round 25b: lakes mirror shores and mountains; fuller alpine slopes; ground variety and ground relief options) | `0ba99ba` | Thornwake-Rewrite-Preview-34 (v0.9.34) | Ground variety/relief 0 = build 33 ground |
 | **Build 33** (round 25: test sliders — terrain detail range ×1–×4, terrain mesh detail, wider view ranges; grass and plant shadows; god ray contrast) | `5c59a60` | Thornwake-Rewrite-Preview-33 (v0.9.33) | All new options default to build 32 |
 | **Build 32** (round 24: water experimental 3A — carried foam with a life cycle, glassier water; no sun blob; alpine trees and grass; seabed digging fixed) | `f3f0ab8` | Thornwake-Rewrite-Preview-32 (v0.9.32) | Water: experimental 3 = build 31 sea |
 | **Build 31** (round 24, water focus: underwater light shafts and caustics; experimental 3 without far shimmer, smooth wind changes, windy lakes) | `63c8738` | Thornwake-Rewrite-Preview-31 (v0.9.31) | Underwater light: off = build 30 underwater |
