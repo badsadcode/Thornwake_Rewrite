@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 34 — mirrored lakes, fuller alpine slopes, varied ground
+* **Lakes mirror the shore and mountains.** Three things hid them: reflections reached only ~280 m, hits far away
+  were faded out, and the engine's own plain-sky reflection was painted on top of them. Now ~16 km (high) / ~2.4 km
+  (medium), following the smoothed surface, so wind ripples break the mirror up instead of hiding it
+  (experimental 2, 3 and 3A).
+* **Alpine** has meadows up to ~−6 °C (was −3 °C), trees to ~−2.5 °C (was −1 °C), and denser alpine forest and
+  grass.
+* **Ground variety** (*Lighting and effects*, Noor ground textures, default 1; 0 = build 33): bare patches where
+  plants thin out, in the biome's character — soil, gravel in cold mountains, sand where dry, moss where wet — and
+  warm/cool tint patches in the grass.
+* **Ground relief** (same place, default 1; 0 = build 33): small bumps from the textures up close (grass, soil,
+  forest floor, rock catch the light), each ground its own roughness, darker crevices.
+
 ## New in build 33 — test sliders for view range, plant shadows, god rays
 Everything new is off or at build 32's value by default; turn it up to test and benchmark.
 * **Terrain detail range** (*Settings → View distance*, ×1–×4): every terrain detail ring reaches farther, so the

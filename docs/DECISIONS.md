@@ -876,6 +876,25 @@ rates), plus grass shadows and more visible god rays.
   unchanged), and the light beams subtract more of the even haze and boost the rest. It also raises the sun's
   volumetric fog energy (1→3) and anisotropy (.65→.85). Strength ceilings raised: sun shafts 3, beams 4.
 
+## D67 — Round 25b: lake reflections, alpine cover, ground variety and relief (2026-10-07)
+* **Reflections** (Tom: alpine lake mirrored nothing, even close to the cliff). Debug renders (exit reason, hit
+  colour) found three causes: the march (32 steps ×1.18) ended at ~280 m; a fade over the step count dimmed hits in
+  the last steps (the far shore) to nothing; and the material's SPECULAR made Godot add the plain sky's radiance on
+  top, washing out what the screen-space reflection found. Now 48 steps ×1.22 (~16 km; medium 24 ×1.38, ~2.4 km),
+  4-step refinement on a hit, fade only at screen edges, engine specular ×(1 − 0.9·hit), and the ray follows the
+  softened normal (as the reflection strength) so wind ripples break the mirror instead of sending rays skyward.
+  Classic and experimental 1 keep their own (backup) shaders.
+* **Alpine**: grass with the cold from 0 to −6 °C (was +1 to −3), tree line +1.5 to −2.5 °C (was +2 to −1); the
+  Alpine biome's TreeDensity 0.25 → 0.45 and Grass 0.85 → 1. Vegetation only — terrain fingerprints unchanged.
+* **Ground variety / relief** (options, Noor ground only, default on; 0 = build 33). Bare patches come from data
+  already per vertex (plant-field cover, the biome's plant amount, mountain share, snow, wetness), so no new vertex
+  channel: soil, gravel when cold, sand when dry, moss when wet, tinted toward the biome's dry colour. Relief is
+  derivative bump mapping from a linear-filtered copy of Noor's textures (the nearest-filtered one gives stair-step
+  bumps), within ~25–70 m, plus roughness per ground and darker crevices. Textures and derivatives run in uniform
+  control flow (no per-pixel branches), and the bumped normal is guarded against a zero vector.
+* Note for later renders: replay `--fly-height` is above the bed — over a 110 m deep lake the camera was underwater
+  (black frames), not a shader fault.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
