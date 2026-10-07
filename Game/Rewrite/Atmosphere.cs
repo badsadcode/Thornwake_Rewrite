@@ -263,13 +263,16 @@ public partial class Atmosphere : Node3D
         e.TonemapWhite = natural ? 6 : 1;
         e.TonemapExposure = .95f * GameSettings.Exposure.F * (natural ? 1.15f : 1);
         e.SsilIntensity = natural ? .55f : .8f;
-        e.GlowHdrThreshold = natural ? 1.3f : 1.05f;
+        // Natural: only the sun disc and real highlights glow (round 24, Tom's dumps 174752/174828: at 1.3 the bright sky
+        // and sunlit clouds around a low sun all glowed and merged into a white blob over half the screen).
+        e.GlowHdrThreshold = natural ? 2.6f : 1.05f;
+        e.GlowHdrScale = natural ? 1.2f : 2f;
         e.GlowBloom = natural ? 0 : .04f;
         e.GlowBlendMode = natural ? Godot.Environment.GlowBlendModeEnum.Additive : Godot.Environment.GlowBlendModeEnum.Softlight;
         if (natural) e.GlowIntensity = GameSettings.Glow.F * .55f;
         // Natural: glow from small blur levels only, and no single pixel brighter than 6 feeding it (round 24, Tom's
         // dumps 174752/174828: a hazy low sun bloomed into a white blob over half the screen through the widest level).
-        e.GlowHdrLuminanceCap = natural ? 6 : 12;
+        e.GlowHdrLuminanceCap = natural ? 4 : 12;
         for (int level = 0; level < 7; level++)
             e.SetGlowLevel(level, natural ? level switch { 0 => .6f, 1 => .8f, 2 => 1, 3 => .5f, 4 => .15f, _ => 0 } : level is 2 or 4 ? 1 : 0);
         e.AdjustmentContrast = natural ? 1.06f : 1;
