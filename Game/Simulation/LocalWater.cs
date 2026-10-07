@@ -6,7 +6,7 @@ namespace Thornwake.Hydraulics;
 
 /// <summary>Ground for one simulation chunk: floor height per cell (absolute metres) and whether the cell lies in a
 /// generated water body (river, lake, sea), which absorbs any simulated water that reaches it.</summary>
-public readonly record struct ChunkGround(float[] Floor, bool[] Sink, float[]? Level = null, bool[]? Edited = null);
+public readonly record struct ChunkGround(float[] Floor, bool[] Sink, float[]? Level = null, bool[]? Edited = null, bool[]? Sea = null);
 
 /// <summary>
 /// Local shallow-water simulation around the player (milestone M6), ported from GangTheGAME's WaterField
@@ -41,6 +41,9 @@ public sealed class LocalWater
     // Ground the player dug: the only place a river/lake/sea feeds water out to (generated banks are consistent by
     // construction; at 0.5 m they can still dip a hair below the water and would leak).
     private bool[] _edited = new bool[Side * Side];
+    // Sea cells: the sea's own surface (waves) covers holes dug in its floor; this simulation never draws over it
+    // (round 24, Tom: digging the seabed in a storm laid a flat, calm sheet over the waves along the dug path).
+    private bool[] _sea = new bool[Side * Side];
     private int _feedMinX, _feedMaxX = -1, _feedMinZ, _feedMaxZ = -1;
     private float[] _shown = new float[Side * Side];
     // Ground that held water stays dark for a few minutes (1 = wet now, fades to 0), as in GangTheGAME.
@@ -93,17 +96,20 @@ public sealed class LocalWater
         double x0 = chunkX * ChunkSize, z0 = chunkZ * ChunkSize;
         var height = new double[vertices * vertices];
         var level = new double[vertices * vertices];
+        var oceanAt = new bool[vertices * vertices];
         for (int j = 0; j < vertices; j++)
             for (int i = 0; i < vertices; i++)
             {
                 var t = sampler.Sample(x0 + i * MeshSpacing, z0 + j * MeshSpacing, MeshSpacing * 2);
                 height[j * vertices + i] = t.Height;
                 level[j * vertices + i] = t.Water != WaterKind.None ? t.WaterLevel : double.NaN;
+                oceanAt[j * vertices + i] = t.Water == WaterKind.Ocean;
             }
         var floor = new float[ChunkCells * ChunkCells];
         var sink = new bool[ChunkCells * ChunkCells];
         var surface = new float[ChunkCells * ChunkCells];
         var edited = new bool[ChunkCells * ChunkCells];
+        var sea = new bool[ChunkCells * ChunkCells];
         for (int cz = 0; cz < ChunkCells; cz++)
             for (int cx = 0; cx < ChunkCells; cx++)
             {
@@ -121,8 +127,9 @@ public sealed class LocalWater
                 if (!double.IsNaN(l)) l = Mean(level[a], level[b], level[c], level[d]);
                 surface[cz * ChunkCells + cx] = double.IsNaN(l) ? float.NaN : (float)l;
                 edited[cz * ChunkCells + cx] = sampler.Edits.Delta(x0 + (cx + .5) * Cell, z0 + (cz + .5) * Cell) < -.02;
+                sea[cz * ChunkCells + cx] = sink[cz * ChunkCells + cx] && (oceanAt[a] || oceanAt[b] || oceanAt[c] || oceanAt[d]);
             }
-        return new ChunkGround(floor, sink, surface, edited);
+        return new ChunkGround(floor, sink, surface, edited, sea);
 
         static double Mean(params double[] v)
         {
@@ -151,7 +158,7 @@ public sealed class LocalWater
 
     private void MoveTo(long ox, long oz)
     {
-        var floor = new float[Side * Side]; var depth = new float[Side * Side]; var sink = new bool[Side * Side]; var level = new float[Side * Side]; var edited = new bool[Side * Side];
+        var floor = new float[Side * Side]; var depth = new float[Side * Side]; var sink = new bool[Side * Side]; var level = new float[Side * Side]; var edited = new bool[Side * Side]; var seaCells = new bool[Side * Side];
         var left = new float[Side * Side]; var right = new float[Side * Side]; var up = new float[Side * Side]; var down = new float[Side * Side];
         var shown = new float[Side * Side]; var wet = new float[Side * Side]; var wetShown = new float[Side * Side]; var soil = new float[Side * Side];
         // Chunks leaving the window go dormant (if wet).
@@ -188,7 +195,7 @@ public sealed class LocalWater
                         if (kept)
                         {
                             int o = Index((int)px * ChunkCells + i, (int)pz * ChunkCells + j);
-                            floor[n] = _floor[o]; depth[n] = _depth[o]; sink[n] = _sink[o]; shown[n] = _shown[o]; level[n] = _level[o]; edited[n] = _edited[o];
+                            floor[n] = _floor[o]; depth[n] = _depth[o]; sink[n] = _sink[o]; shown[n] = _shown[o]; level[n] = _level[o]; edited[n] = _edited[o]; seaCells[n] = _sea[o];
                             wet[n] = _wet[o]; wetShown[n] = _wetShown[o]; soil[n] = _soil[o];
                             left[n] = _left[o]; right[n] = _right[o]; up[n] = _up[o]; down[n] = _down[o];
                         }
@@ -198,6 +205,7 @@ public sealed class LocalWater
                             sink[n] = ground.Value.Sink[j * ChunkCells + i];
                             level[n] = ground.Value.Level?[j * ChunkCells + i] ?? float.NaN;
                             edited[n] = ground.Value.Edited?[j * ChunkCells + i] ?? true;
+                            seaCells[n] = ground.Value.Sea?[j * ChunkCells + i] ?? false;
                             depth[n] = resumed?[j * ChunkCells + i] ?? 0;
                             wet[n] = depth[n] > WetThreshold ? 1 : 0;
                             soil[n] = depth[n] > 0 ? SoilCapacity : 0;
@@ -205,7 +213,7 @@ public sealed class LocalWater
                     }
                 if (!kept && resumed != null) _dirty.Add((gx, gz));
             }
-        _floor = floor; _depth = depth; _sink = sink; _level = level; _edited = edited; _shown = shown; _wet = wet; _wetShown = wetShown; _soil = soil; _left = left; _right = right; _up = up; _down = down;
+        _floor = floor; _depth = depth; _sink = sink; _level = level; _edited = edited; _sea = seaCells; _shown = shown; _wet = wet; _wetShown = wetShown; _soil = soil; _left = left; _right = right; _up = up; _down = down;
         OriginChunkX = ox; OriginChunkZ = oz; _placed = true;
         RecomputeBounds();
         RecomputeFeeders();
@@ -262,6 +270,7 @@ public sealed class LocalWater
                         _sink[n] = ground.Sink[j * ChunkCells + i];
                         _level[n] = ground.Level?[j * ChunkCells + i] ?? float.NaN;
                         _edited[n] = ground.Edited?[j * ChunkCells + i] ?? true;
+                        _sea[n] = ground.Sea?[j * ChunkCells + i] ?? false;
                         if (_depth[n] > Dry) Grow(bx + i, bz + j);
                     }
                 _dirty.Add((gx, gz));
@@ -508,7 +517,7 @@ public sealed class LocalWater
                 // sheets join without a gap.
                 if (_sink[c] && !float.IsNaN(_level[c]))
                 {
-                    float near = _edited[c] && _floor[c] < _level[c] ? 0 : SimWaterDistance(x, z);
+                    float near = _sea[c] ? float.MaxValue : _edited[c] && _floor[c] < _level[c] ? 0 : SimWaterDistance(x, z);
                     if (near <= 3)
                     {
                         depth[k] = Math.Max(0, _level[c] - _floor[c]);
