@@ -103,6 +103,10 @@ public static class GameSettings
         "How far each terrain detail level reaches: the full-detail ground, grass, 3D trees and every coarser ring move " +
         "out together (×2 ≈ 1.7× farther, ×3 ≈ 2.3×, ×4 ≈ 3×; build 32 = ×1). Many more tiles to build and draw: benchmark it.",
         "×", rebuild: true));
+    public static readonly Setting TerrainMesh = Add(new("view.terrain_mesh", "View distance", "Terrain mesh detail", 0, 2, 1, 0,
+        "Ground triangles beyond the nearest ring: normal (4 m, then coarser; build 32), high (2 m) or ultra (1 m — the " +
+        "same as the nearest ring). Shapes, ridges and river banks keep their detail farther out. 4× / 16× the triangles " +
+        "of those tiles: benchmark it.", options: new[] { "normal", "high", "ultra" }, rebuild: true));
     public static readonly Setting TreeDistance = Add(new("view.trees", "View distance", "Detailed trees", 0, 4, 1, 1,
         "Distance up to which full 3D trees are drawn (at Terrain detail range ×1; farther with a wider range).",
         options: new[] { "~400 m", "~800 m", "~1.6 km", "~3.2 km", "~6.4 km" }, rebuild: true));

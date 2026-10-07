@@ -22,13 +22,14 @@ public readonly record struct TreeInstance(int Species, Transform3D Transform);
 /// logs are world objects, not decoration); grass and the draw distances come from the player's settings.
 /// </summary>
 public readonly record struct DetailConfig(double Grass, double ForestCover, double ForestDensity, double Rocks, double Props,
-    int TreeLevels, int FarTreeLevels, bool SimulatedWater = true, int GrassStyle = 1)
+    int TreeLevels, int FarTreeLevels, bool SimulatedWater = true, int GrassStyle = 1, int MeshDetail = 1)
 {
     public static DetailConfig For(TerrainSampler sampler)
     {
         var style = sampler.Plan.Style;
         return new(GameSettings.GrassDensity.Value, style.ForestCover, style.ForestDensity, style.RockAmount, style.PropAmount,
-            2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index, GameSettings.WaterSimulation.On, GameSettings.GrassStyle.Index);
+            2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index, GameSettings.WaterSimulation.On, GameSettings.GrassStyle.Index,
+            1 << GameSettings.TerrainMesh.Index);
     }
 }
 
@@ -85,7 +86,12 @@ public static class TileBuilder
     public const double BaseTile = 64;
     public const int Cells = 32, Side = Cells + 1;
     /// <summary>Cells across a tile: the nearest level is twice as fine (1 m vertices: smoother shorelines, small creeks).</summary>
-    public static int CellsFor(int level) => level == 0 ? 64 : Cells;
+    /// <summary>
+    /// Grid cells per tile side: 1 m at level 0; coarser levels 32 cells (4 m, 8 m … — build 32) or, with the Terrain
+    /// mesh detail option, 64 or 128 (the first ring 2 m or 1 m: the step from 1 m to 4 m showed as a near loss of
+    /// detail). Skirts hide the cracks between neighbours of any resolution.
+    /// </summary>
+    public static int CellsFor(int level, int meshDetail = 1) => level == 0 ? 64 : Math.Min(128, Cells * meshDetail);
 
     private static (float R, float G, float B) Mix((float R, float G, float B) a, (float R, float G, float B) b, float sa, float sb, float scale) =>
         ((a.R * sa + b.R * sb) * scale, (a.G * sa + b.G * sb) * scale, (a.B * sa + b.B * sb) * scale);
@@ -96,7 +102,7 @@ public static class TileBuilder
     }
     public static TileData Build(TerrainSampler sampler, TileKey key, DetailConfig config)
     {
-        int Cells = CellsFor(key.Level), Side = Cells + 1;
+        int Cells = CellsFor(key.Level, config.MeshDetail), Side = Cells + 1;
         var timer = System.Diagnostics.Stopwatch.StartNew();
         double size = key.Size, spacing = size / Cells, x0 = key.MinX, z0 = key.MinZ;
         double minWavelength = spacing * 2;
