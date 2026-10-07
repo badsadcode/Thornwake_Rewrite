@@ -246,8 +246,9 @@ public partial class Atmosphere : Node3D
         e.FogEnabled = GameSettings.Haze.Value > 0;
         // Look (round 23, Tom: "the game in general sometimes feels very washed out"): classic = build 29.
         bool natural = Natural;
-        e.TonemapMode = natural ? Godot.Environment.ToneMapper.Agx : Godot.Environment.ToneMapper.Filmic;
-        e.TonemapExposure = .95f * GameSettings.Exposure.F * (natural ? 1.12f : 1);
+        e.TonemapMode = natural ? Godot.Environment.ToneMapper.Aces : Godot.Environment.ToneMapper.Filmic;
+        e.TonemapWhite = natural ? LookTest(0, 4f) : 1;
+        e.TonemapExposure = .95f * GameSettings.Exposure.F * (natural ? LookTest(1, 1.25f) : 1);
         e.SsilIntensity = natural ? .55f : .8f;
         e.GlowHdrThreshold = natural ? 1.3f : 1.05f;
         e.GlowBloom = natural ? 0 : .04f;
@@ -255,7 +256,7 @@ public partial class Atmosphere : Node3D
         if (natural) e.GlowIntensity = GameSettings.Glow.F * .55f;
         e.AdjustmentContrast = natural ? 1.06f : 1;
         e.FogAerialPerspective = Math.Clamp((natural ? .26f : .35f) * GameSettings.Haze.F, 0, 1);
-        e.AdjustmentSaturation = GameSettings.Saturation.F;
+        e.AdjustmentSaturation = GameSettings.Saturation.F * (natural ? LookTest(2, 1f) : 1);
         RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
         _sky.SetShaderParameter("quality", GameSettings.CloudQuality.Index);
@@ -727,6 +728,12 @@ public partial class Atmosphere : Node3D
     private double _mistDriftX, _mistDriftZ;
     private FogVolume? _mistVolume;
     private static bool Natural => GameSettings.Look.Index == 1;
+    // TEMP look tuning: THORN_LOOK="white,exposure,saturation"
+    private static float LookTest(int i, float fallback)
+    {
+        var v = System.Environment.GetEnvironmentVariable("THORN_LOOK")?.Split(',');
+        return v != null && v.Length > i && float.TryParse(v[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var f) ? f : fallback;
+    }
     /// <summary>Scripted screenshots (a few frames at ~1 FPS): no temporal fog smoothing, which would still be fading in.</summary>
     public bool StillShot { get; set; }
     private ImageTexture3D? _cloudNoise;
