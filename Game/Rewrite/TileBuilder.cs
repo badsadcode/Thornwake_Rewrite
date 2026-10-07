@@ -189,8 +189,9 @@ public static class TileBuilder
                 double plants = A.Def.Vegetation.Grass * share + B.Def.Vegetation.Grass * (1 - share);
                 Put(biome0, k, Mix(A.Grass, B.Grass, sa, sb, dark), snow);
                 // With biomes the grass line follows the cold too (alpine meadows reach above the trees, thinning out
-                // from +1 °C to −3 °C), carried in the plant cover; GroundCover then drops its fixed 1.7 km line.
-                if (climate.Settings.Biomes) plants *= DetMath.Smooth((temperature + 3) / 4);
+                // from 0 °C to −6 °C; round 25, Tom: "alpine feels a bit empty" — was +1 to −3), carried in the plant
+                // cover; GroundCover then drops its fixed 1.7 km line.
+                if (climate.Settings.Biomes) plants *= DetMath.Smooth((temperature + 6) / 6);
                 Put(biome1, k, Mix(A.Dry, B.Dry, sa, sb, dark), Math.Min(1, plants));
                 // CUSTOM2: r = map colour packed (debug view), g = the two rock looks (lo + 8·hi), b = weight of hi,
                 // a = rock exposure. Looks are ordered so neighbouring vertices across a border agree on the pair.

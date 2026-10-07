@@ -63,7 +63,7 @@
     "Description": "High rocky slopes with sparse trees, mountain meadows and snow higher up; cliffs are common.",
     "Placement": { "Weight": 1.6, "Temperature": [-12, 12], "Elevation": [1500, 9000], "Mountain": [0.3, 1], "RegionSize": [10, 200] },
     "Appearance": { "Ground": "AlpineGround", "RockExposure": 0.55, "MapColor": "a49a86" },
-    "Vegetation": { "Trees": { "AlpineTrees": 1 }, "TreeDensity": 0.25, "Grass": 0.85 },
+    "Vegetation": { "Trees": { "AlpineTrees": 1 }, "TreeDensity": 0.45, "Grass": 1.0 },
     "Props": { "Rocks": 1.8 },
     "Terrain": { "Crags": 1.3 },
     "Atmosphere": { "SkyTint": "e8f0ff", "Haze": 0 },

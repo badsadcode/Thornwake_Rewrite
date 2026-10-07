@@ -897,10 +897,14 @@ void fragment() {
 	// Screen-space reflection, sky as fallback (rougher, flatter sky in storms).
 	vec3 ray = normalize(reflect(VERTEX, n_view));
 	vec4 hit = vec4(0.0);
+	// (round 25, Tom: mountains across an alpine lake were not reflected — the march reached only ~280 m (high) or
+	// ~180 m (medium) and fell back to the sky; now ~8 km in 48 steps or ~2.4 km in 24, with a short refinement on a hit)
+	int steps = ssr_steps <= 16 ? 24 : 48;
 	float step_length = ssr_steps <= 16 ? 0.4 : 0.25;
-	float growth = ssr_steps <= 16 ? 1.38 : 1.18;
+	float growth = ssr_steps <= 16 ? 1.38 : 1.2;
 	vec3 march = VERTEX + ray * 0.1;
-	for (int i = 0; i < ssr_steps; i++) {
+	for (int i = 0; i < steps && ssr_steps > 0; i++) {
+		vec3 before = march;
 		march += ray * step_length;
 		step_length *= growth;
 		vec4 clip = PROJECTION_MATRIX * vec4(march, 1.0);
@@ -910,8 +914,19 @@ void fragment() {
 		float scene_z = view_from_depth(uv, texture(depth_tex, uv).r, INV_PROJECTION_MATRIX).z;
 		float gap = scene_z - march.z;
 		if (gap > 0.0 && gap < step_length * 2.5 + 0.3) {
+			// Refine between the last two points (long steps far out would otherwise smear the shoreline).
+			vec3 a = before, b = march;
+			for (int r = 0; r < 4; r++) {
+				vec3 m = 0.5 * (a + b);
+				vec4 mc = PROJECTION_MATRIX * vec4(m, 1.0);
+				vec2 muv = clamp(mc.xy / mc.w * 0.5 + 0.5, 0.0, 1.0);
+				if (view_from_depth(muv, texture(depth_tex, muv).r, INV_PROJECTION_MATRIX).z > m.z) b = m; else a = m;
+			}
+			vec4 bc = PROJECTION_MATRIX * vec4(b, 1.0);
+			uv = clamp(bc.xy / bc.w * 0.5 + 0.5, 0.0, 1.0);
 			vec2 edge = smoothstep(vec2(0.0), vec2(0.08), uv) * smoothstep(vec2(0.0), vec2(0.08), 1.0 - uv);
-			hit = vec4(textureLod(screen_tex, uv, 0.0).rgb, edge.x * edge.y * (1.0 - float(i) / float(ssr_steps)));
+			// Fade only the last few steps (the old linear fade left distant mountains at a fifth of their strength).
+			hit = vec4(textureLod(screen_tex, uv, 0.0).rgb, edge.x * edge.y * (1.0 - smoothstep(0.8, 1.0, float(i) / float(steps))));
 			break;
 		}
 	}
