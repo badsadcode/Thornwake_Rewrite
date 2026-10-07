@@ -9,10 +9,11 @@ uniform sampler2D depth_tex : hint_depth_texture, filter_nearest, repeat_disable
 uniform vec3 sun_direction = vec3(0.0, 1.0, 0.0); // world space, toward the sun
 uniform vec3 sun_color : source_color = vec3(1.0, 0.95, 0.85);
 uniform float intensity = 0.6;
-// Build 33 (Tom: "make god rays stand out a bit more without losing what we have"): 0 = the build 32 rays exactly;
-// toward 1 the rays carry farther from the sun (slower falloff, longer march, more samples) and stay bright away from
-// the sun, so they read as streaks across the scene instead of a glow around the disc. The per-sample cap is kept,
-// so the sun itself does not grow into a blob.
+// Build 33 (Tom: "make god rays stand out a bit more without losing what we have"): 0 = the build 32 rays exactly.
+// Reach adds contrast, not light: each pixel's path to the sun is compared with the paths of its neighbours rotated a
+// little around the sun. Clear gaps get brighter and the shadow lanes behind clouds, ridges and trees get darker, while
+// an open sky (no occluders: every path alike) stays as it was. (A first try gathered farther with a slower falloff:
+// the bright sky around the sun added up into the blob of round 24 again.)
 uniform float reach = 0.0;
 
 void vertex() {
@@ -21,23 +22,12 @@ void vertex() {
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 
-void fragment() {
-	vec3 sun_view = (VIEW_MATRIX * vec4(sun_direction, 0.0)).xyz;
-	if (sun_view.z >= -0.05 || intensity <= 0.0) discard; // sun behind the camera
-	vec4 clip = PROJECTION_MATRIX * vec4(sun_view, 0.0);
-	vec2 sun_uv = clip.xy / clip.w * 0.5 + 0.5;
-	// Fade out as the sun leaves the screen.
-	vec2 off = max(vec2(0.0), max(-sun_uv, sun_uv - 1.0));
-	float on_screen = 1.0 - smoothstep(0.0, 0.45, length(off));
-	if (on_screen <= 0.0) discard;
-
-	int samples = reach > 0.0 ? 48 : 32;
-	float decay = mix(0.955, 0.984, reach);
-	vec2 uv = SCREEN_UV;
-	vec2 delta = (sun_uv - uv) / float(samples) * mix(0.85, 1.0, reach);
-	uv += delta * hash(FRAGCOORD.xy); // dither: no banding
+// Bright, unobstructed sky gathered from `start` toward the sun, `n` samples over 85 % of the way.
+float gather(vec2 start, vec2 sun_uv, int n, float decay, float jitter) {
+	vec2 delta = (sun_uv - start) / float(n) * 0.85;
+	vec2 uv = start + delta * jitter; // dither: no banding
 	float light = 0.0, weight = 1.0;
-	for (int i = 0; i < samples; i++) {
+	for (int i = 0; i < n; i++) {
 		uv += delta;
 		if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) break;
 		float depth = textureLod(depth_tex, uv, 0.0).r;
@@ -52,13 +42,33 @@ void fragment() {
 		}
 		weight *= decay;
 	}
-	light /= float(samples);
-	// The slower falloff gathers more in total; scale it back so reach lengthens the rays rather than just
-	// brightening the whole screen (weight sums: 32 samples at 0.955 ~ 16.9, 48 at 0.984 ~ 33.4).
-	light *= mix(1.0, 0.75, reach);
+	return light / float(n);
+}
+
+void fragment() {
+	vec3 sun_view = (VIEW_MATRIX * vec4(sun_direction, 0.0)).xyz;
+	if (sun_view.z >= -0.05 || intensity <= 0.0) discard; // sun behind the camera
+	vec4 clip = PROJECTION_MATRIX * vec4(sun_view, 0.0);
+	vec2 sun_uv = clip.xy / clip.w * 0.5 + 0.5;
+	// Fade out as the sun leaves the screen.
+	vec2 off = max(vec2(0.0), max(-sun_uv, sun_uv - 1.0));
+	float on_screen = 1.0 - smoothstep(0.0, 0.45, length(off));
+	if (on_screen <= 0.0) discard;
+
+	float jitter = hash(FRAGCOORD.xy);
+	float light = gather(SCREEN_UV, sun_uv, 32, 0.955, jitter);
+	if (reach > 0.0) {
+		// Neighbours rotated about 1.5 degrees either way around the sun (in pixels, so the rotation is round).
+		vec2 px = vec2(VIEWPORT_SIZE.x / VIEWPORT_SIZE.y, 1.0);
+		vec2 v = (SCREEN_UV - sun_uv) * px;
+		vec2 side = vec2(-v.y, v.x) * 0.026 / px;
+		float here = gather(SCREEN_UV, sun_uv, 16, 0.92, jitter);
+		float around = 0.5 * (gather(SCREEN_UV + side, sun_uv, 16, 0.92, jitter) + gather(SCREEN_UV - side, sun_uv, 16, 0.92, jitter));
+		float contrast = (here - around) / (here + around + 0.02); // -1 (in a shadow lane) .. 1 (in a gap)
+		light *= clamp(1.0 + reach * 3.0 * contrast, 0.0, 1.0 + 1.5 * reach);
+	}
 	// Stronger toward the sun, and only while the sun is above the horizon.
 	float near_sun = 1.0 - smoothstep(0.0, 0.9, distance(SCREEN_UV, sun_uv));
 	float elevation = smoothstep(-0.02, 0.12, sun_direction.y);
-	float spread = mix(0.6, 1.1, reach); // reach: the rays keep more of their strength away from the sun
-	ALBEDO = sun_color * light * intensity * on_screen * elevation * (spread + (2.0 - spread) * near_sun) * 2.6;
+	ALBEDO = sun_color * light * intensity * on_screen * elevation * (0.6 + 1.4 * near_sun) * 2.6;
 }
