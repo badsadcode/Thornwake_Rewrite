@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 27** (round 21: rolling ground mist — banks, lumpy tops, billows; mist height after teleports) | `8c310e9` | Thornwake-Rewrite-Preview-27 (v0.9.27) | |
 | **Build 26** (round 20, fixes from Tom's dumps: river foam arcs, gentler fog, wetland channels — terrain revision 14, estuary seams) | `ba41cce` | Thornwake-Rewrite-Preview-26 (v0.9.26) | Build 25 terrain: snapshot `cd98f74` |
 | **Build 25** (round 19: rain fronts visible from afar with a rain wall, mountain cloud, overcast mood, cloud contrast and colour) | `cd98f74` | Thornwake-Rewrite-Preview-25 (v0.9.25) | |
 | **Build 24** (fixes: black fog in shadow, sea seams from the coastal heading turn; F9 debug dump) | `9a0c314` | Thornwake-Rewrite-Preview-24 (v0.9.24) | |
