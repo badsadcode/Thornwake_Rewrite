@@ -895,7 +895,9 @@ void fragment() {
 	float murk = 1.0 - dot(transmittance, vec3(0.333));
 
 	// Screen-space reflection, sky as fallback (rougher, flatter sky in storms).
-	vec3 ray = normalize(reflect(VERTEX, n_view));
+	// (round 25: along the softened normal, as the reflection strength — the full ripple normal threw most rays of a
+	// windy lake into the sky, so shores and mountains never showed in it; Tom's alpine lake)
+	vec3 ray = normalize(reflect(VERTEX, n_soft));
 	vec4 hit = vec4(0.0);
 	// (round 25, Tom: mountains across an alpine lake were not reflected — the march reached only ~280 m (high) or
 	// ~180 m (medium) and fell back to the sky; now ~8 km in 48 steps or ~2.4 km in 24, with a short refinement on a hit)
@@ -919,11 +921,12 @@ void fragment() {
 			for (int r = 0; r < 4; r++) {
 				vec3 m = 0.5 * (a + b);
 				vec4 mc = PROJECTION_MATRIX * vec4(m, 1.0);
+				if (mc.w <= 1e-4) break;
 				vec2 muv = clamp(mc.xy / mc.w * 0.5 + 0.5, 0.0, 1.0);
 				if (view_from_depth(muv, texture(depth_tex, muv).r, INV_PROJECTION_MATRIX).z > m.z) b = m; else a = m;
 			}
 			vec4 bc = PROJECTION_MATRIX * vec4(b, 1.0);
-			uv = clamp(bc.xy / bc.w * 0.5 + 0.5, 0.0, 1.0);
+			if (bc.w > 1e-4) uv = clamp(bc.xy / bc.w * 0.5 + 0.5, 0.0, 1.0);
 			vec2 edge = smoothstep(vec2(0.0), vec2(0.08), uv) * smoothstep(vec2(0.0), vec2(0.08), 1.0 - uv);
 			// Fade only the last few steps (the old linear fade left distant mountains at a fifth of their strength).
 			hit = vec4(textureLod(screen_tex, uv, 0.0).rgb, edge.x * edge.y * (1.0 - smoothstep(0.8, 1.0, float(i) / float(steps))));

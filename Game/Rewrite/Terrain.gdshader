@@ -278,7 +278,9 @@ void fragment() {
 			vec3 r1 = cross(dpdy, NORMAL), r2 = cross(NORMAL, dpdx);
 			float det = dot(dpdx, r1);
 			vec3 grad = sign(det) * (dhx * r1 + dhy * r2);
-			NORMAL = normalize(abs(det) * NORMAL - grad);
+			vec3 bumped = abs(det) * NORMAL - grad;
+			// (guard: a zero-area pixel footprint gives a zero vector, and one NaN normal spreads over the screen in glow)
+			if (abs(det) > 1e-12 && dot(bumped, bumped) > 1e-24) NORMAL = normalize(bumped);
 			c *= 1.0 + clamp(hgt * 4.0, -0.15, 0.08); // crevices darker
 		}
 		base_rough = mix(0.95, base_rough, ground_relief);
