@@ -182,6 +182,9 @@ public static class TileBuilder
                 double snow = climate.Snow(A.Snow * share + B.Snow * (1 - share), temperature, h - sea);
                 double plants = A.Def.Vegetation.Grass * share + B.Def.Vegetation.Grass * (1 - share);
                 Put(biome0, k, Mix(A.Grass, B.Grass, sa, sb, dark), snow);
+                // With biomes the grass line follows the cold too (alpine meadows reach above the trees, thinning out
+                // from +1 °C to −3 °C), carried in the plant cover; GroundCover then drops its fixed 1.7 km line.
+                if (climate.Settings.Biomes) plants *= DetMath.Smooth((temperature + 3) / 4);
                 Put(biome1, k, Mix(A.Dry, B.Dry, sa, sb, dark), Math.Min(1, plants));
                 // CUSTOM2: r = map colour packed (debug view), g = the two rock looks (lo + 8·hi), b = weight of hi,
                 // a = rock exposure. Looks are ordered so neighbouring vertices across a border agree on the pair.
@@ -250,7 +253,7 @@ public static class TileBuilder
         };
         BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater, sea);
         if (data.Water is { } builtWater) data.WaterShore = ShoreData(sampler, builtWater.Vertices, builtWater.Colors, heights, s2, samples, x0, z0, spacing, Side);
-        var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2, biome1, props, biome3, biome0);
+        var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2, biome1, props, biome3, biome0, climate.Settings.Biomes);
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
         bool populations = config.GrassStyle == 1;
         if (key.Level == 0 && config.Grass > 0 && populations)

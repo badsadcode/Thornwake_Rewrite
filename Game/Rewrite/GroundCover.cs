@@ -34,8 +34,14 @@ public static partial class GroundCover
         /// <summary>Per vertex 0.5 + depth below the nearest water surface / 2 m (0.5 = waterline), as in the tile colours.</summary>
         public readonly float[] Shore;
         public Grid(Vector3[] vertices, Vector3[] normals, double[] forest, TerrainSample[] samples, double spacing, double x0, double z0, int side, float[] shore,
-            Vector2[]? uv2 = null, float[]? biome1 = null, float[]? props = null, float[]? biome3 = null, float[]? biome0 = null)
-        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; EditedAmount = uv2; Biome1 = biome1; PropScale = props; Biome3 = biome3; Biome0 = biome0; }
+            Vector2[]? uv2 = null, float[]? biome1 = null, float[]? props = null, float[]? biome3 = null, float[]? biome0 = null, bool climateLine = false)
+        { Vertices = vertices; Normals = normals; Forest = forest; Samples = samples; Spacing = spacing; X0 = x0; Z0 = z0; Side = side; Shore = shore; EditedAmount = uv2; Biome1 = biome1; PropScale = props; Biome3 = biome3; Biome0 = biome0; ClimateLine = climateLine; }
+
+        /// <summary>True when the plant cover already carries the climate's grass line (worlds with biomes).</summary>
+        public readonly bool ClimateLine;
+
+        /// <summary>0..1 above the grass line: the fixed 1.7–2.2 km band without biomes, none with (in the plant cover).</summary>
+        public float Alpine(float height, double sea) => ClimateLine ? 0 : (float)DetMath.Smooth((height - sea - 1700) / 500);
 
         /// <summary>Per vertex biome data (rgb grass colour, a = snow), as on the terrain mesh.</summary>
         public readonly float[]? Biome0;
@@ -160,7 +166,7 @@ public static partial class GroundCover
         {
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || g.Edited(x, z)) return;
             if (up < .82f || height - sea < 1.6) return;
-            float alpine = (float)DetMath.Smooth((height - sea - 1700) / 500);
+            float alpine = g.Alpine(height, sea);
             float plants = g.Plants(x, z); // biome plant cover, squared: sparse biomes (desert, ash, tundra) get only odd tufts
             float density = (1 - .65f * forest) * (1 - alpine) * (float)DetMath.Smooth((up - .82) / .08) * plants * plants;
             if (Unit(h, 1) > density * .9f) return;

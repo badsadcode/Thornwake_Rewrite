@@ -65,9 +65,25 @@ public static class Vegetation
         // Steep enough that land is mostly either forest or meadow, with short edges (a wide band of half-wooded land
         // looked like scattered trees everywhere near the player).
         double patches = Noise.Fbm(x, z, 2600, 4, 60, seed, .55) * 3.4 + .45 + (coverSetting - 1) * 1.1;
-        double treeline = 1750 + 350 * Noise.Gradient(x / 9000, z / 9000, seed + 5);
-        double cover = DetMath.Smooth(patches) * DetMath.Smooth((treeline - elevation) / 220) * DetMath.Smooth((elevation - 2.5) / 4);
+        double cover = DetMath.Smooth(patches) * Treeline(sampler, x, z, elevation, seed) * DetMath.Smooth((elevation - 2.5) / 4);
         return cover * (1 - .7 * DetMath.Smooth((t.Mountain - .45) / .35)) * sparse;
+    }
+
+    /// <summary>
+    /// 0..1: below the tree line. With biomes (round 24, Tom: alpine slopes at 2.1 km and 4.6 °C stood bare) it follows
+    /// the climate — trees thin out from a mean of +2 °C and stop at −1 °C (near the real tree line), so warm mountains
+    /// are wooded higher up than cold ones; without biomes the fixed ~1.75 km line of build 9.
+    /// </summary>
+    public static double Treeline(TerrainSampler sampler, double x, double z, double elevation, ulong seed)
+    {
+        var climate = sampler.Plan.Climate;
+        if (climate.Settings.Biomes)
+        {
+            double t = climate.At(x, z, elevation).Temperature + .8 * Noise.Gradient(x / 9000, z / 9000, seed + 5);
+            return DetMath.Smooth((t + 1) / 3);
+        }
+        double treeline = 1750 + 350 * Noise.Gradient(x / 9000, z / 9000, seed + 5);
+        return DetMath.Smooth((treeline - elevation) / 220);
     }
 
     public static List<TreeInstance> Trees(TerrainSampler sampler, TileKey key, in DetailConfig config)

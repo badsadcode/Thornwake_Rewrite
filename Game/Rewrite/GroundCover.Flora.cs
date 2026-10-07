@@ -178,7 +178,7 @@ public static partial class GroundCover
         {
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || g.Edited(x, z)) return;
             if (up < .82f || height - sea < 1.4) return;
-            float alpine = (float)DetMath.Smooth((height - sea - 1700) / 500);
+            float alpine = g.Alpine(height, sea);
             float plants = g.Plants(x, z);
             float habitat = (1 - .7f * forest) * (1 - alpine) * (float)DetMath.Smooth((up - .82) / .08) * plants * plants;
             if (habitat <= .01f) return;
