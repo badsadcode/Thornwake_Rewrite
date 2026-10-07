@@ -1,7 +1,8 @@
 #[compute]
 #version 450
 // FFT ocean, step 1 (OceanFft.cs): the spectrum at the current time for each cascade (layer). In: h0 = (h0(k),
-// conj(h0(-k))) per texel, centred (texel n <-> k = 2pi(n - N/2)/L). Out, two complex fields per texel, layers 0..2 and
+// conj(h0(-k))) per texel, layers 0..2 the previous spectrum and 3..5 the new one, blended by misc.z (a change of sea
+// state or wind fades in over a few seconds instead of popping), centred (texel n <-> k = 2pi(n - N/2)/L). Out, two complex fields per texel, layers 0..2 and
 // 3..5 of one array (each pair is one inverse FFT of two real fields at once):
 //   A = (Dx + i Dz, Dy + i dDy/dx)   B = (dDy/dz + i dDx/dx, dDz/dz + i dDx/dz)
 // with the choppy displacement D = +i k/|k| h (crests pinch, as Gerstner waves).
@@ -12,7 +13,7 @@ layout(set = 0, binding = 1, rgba32f) uniform writeonly image2DArray spec_img;
 
 layout(push_constant, std430) uniform Params {
 	vec4 sizes; // tile size per cascade (m); w: time (s)
-	vec4 misc;  // x: N; y: loop period T (s): frequencies are whole multiples of 2pi/T, time runs modulo T
+	vec4 misc;  // x: N; y: loop period T (s): frequencies are whole multiples of 2pi/T, time runs modulo T; z: blend
 } pc;
 
 vec2 cmul(vec2 a, vec2 b) { return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x); }
@@ -25,7 +26,7 @@ void main() {
 	float size = id.z == 0 ? pc.sizes.x : (id.z == 1 ? pc.sizes.y : pc.sizes.z);
 	vec2 k = 6.28318530718 * vec2(float(id.x - n / 2), float(id.y - n / 2)) / size;
 	float kl = length(k);
-	vec4 h0 = imageLoad(h0_img, id);
+	vec4 h0 = mix(imageLoad(h0_img, id), imageLoad(h0_img, ivec3(id.xy, id.z + 3)), pc.misc.z);
 	vec2 h = vec2(0.0);
 	if (kl > 1e-6) {
 		// Frequencies rounded to whole multiples of 2pi/T: the sea repeats every T seconds exactly, so the time can wrap

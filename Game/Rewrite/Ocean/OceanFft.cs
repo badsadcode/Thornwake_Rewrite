@@ -34,9 +34,11 @@ public sealed class OceanFft : IDisposable
     private Rid[] _dispMip = Array.Empty<Rid>(), _derivMip = Array.Empty<Rid>(), _mipSets = Array.Empty<Rid>();
     private readonly int _seed;
     private double _state = -1, _angle;
-    private float[]? _pendingH0;
+    private float[]? _pendingH0, _oldH0, _newH0;
+    private double _blend = 1; // 0 → 1 over BlendSeconds after each change
+    private const double BlendSeconds = 4;
     private double _lastTime = double.NaN;
-    private readonly List<Mode> _modes = new(); // CPU copy of cascade 0's long waves (Height)
+    private List<Mode> _modes = new(), _oldModes = new(); // CPU copy of cascade 0's long waves (Height), new and fading out
 
     private readonly record struct Mode(double Kx, double Kz, double Omega, double Re, double Im, double ReM, double ImM);
 
@@ -67,7 +69,7 @@ public sealed class OceanFft : IDisposable
         (_specShader, _specPipe) = Pipeline("ocean_spectrum");
         (_fftShader, _fftPipe) = Pipeline("ocean_fft");
         (_assembleShader, _assemblePipe) = Pipeline("ocean_assemble");
-        _h0 = Texture(RenderingDevice.DataFormat.R32G32B32A32Sfloat, 3, 16);
+        _h0 = Texture(RenderingDevice.DataFormat.R32G32B32A32Sfloat, 6, 16); // previous (0..2) and new (3..5) spectrum
         _spec = Texture(RenderingDevice.DataFormat.R32G32B32A32Sfloat, 6, 16);
         _specSet = Set(_specShader, _h0, _spec);
         _fftSet = Set(_fftShader, _spec);
@@ -158,15 +160,31 @@ public sealed class OceanFft : IDisposable
     }
 
     /// <summary>
-    /// The sea state (0..1) and wind heading (rad, the direction the waves run): rebuilds the initial spectrum. The
-    /// random numbers stay the same, so a change re-weights the waves without a jump.
+    /// The sea state (0..1) and wind heading (rad, the direction the waves run): rebuilds the initial spectrum and fades
+    /// it in over a few seconds. The random numbers stay the same, so the waves only grow, shrink or turn.
     /// </summary>
     public void Configure(double seaState, double windAngle)
     {
-        if (Math.Abs(seaState - _state) < 1e-4 && Math.Abs(windAngle - _angle) < 1e-4) return;
+        bool first = _newH0 == null;
+        if (!first && Math.Abs(seaState - _state) < .02 && Math.Abs(Mathf.AngleDifference((float)windAngle, (float)_angle)) < .1) return;
         _state = Math.Clamp(seaState, 0, 1); _angle = windAngle;
         Choppiness = (float)(.8 + .4 * _state);
-        _pendingH0 = BuildH0();
+        _oldModes = _modes;
+        _modes = new List<Mode>();
+        var fresh = BuildH0();
+        if (first) { _oldH0 = fresh; _blend = 1; }
+        else
+        {
+            // The fade starts from what is showing now (a change during a fade continues smoothly).
+            var shown = new float[fresh.Length];
+            float f = (float)_blend;
+            for (int i = 0; i < shown.Length; i++) shown[i] = _oldH0![i] + (_newH0![i] - _oldH0[i]) * f;
+            _oldH0 = shown; _blend = 0;
+        }
+        _newH0 = fresh;
+        _pendingH0 = new float[fresh.Length * 2];
+        Array.Copy(_oldH0!, 0, _pendingH0, 0, fresh.Length);
+        Array.Copy(fresh, 0, _pendingH0, fresh.Length, fresh.Length);
     }
 
     /// <summary>Advances the sea to the ocean clock (call once per frame).</summary>
@@ -175,26 +193,28 @@ public sealed class OceanFft : IDisposable
         double t = Loop(oceanTime);
         float dt = double.IsNaN(_lastTime) ? 0 : (float)Math.Clamp(oceanTime - _lastTime, 0, .25);
         _lastTime = oceanTime;
+        _blend = Math.Min(1, _blend + dt / BlendSeconds);
+        float blend = (float)_blend;
         var h0 = _pendingH0;
         _pendingH0 = null;
         float chop = Choppiness;
-        RenderingServer.CallOnRenderThread(Callable.From(() => Run(h0, (float)t, dt, chop)));
+        RenderingServer.CallOnRenderThread(Callable.From(() => Run(h0, (float)t, dt, chop, blend)));
     }
 
     private static double Loop(double t) => t - Math.Floor(t / Period) * Period;
 
-    private void Run(float[]? h0, float t, float dt, float chop)
+    private void Run(float[]? h0, float t, float dt, float chop, float blend)
     {
         if (h0 != null)
         {
             var bytes = MemoryMarshal.AsBytes(h0.AsSpan());
             int layer = N * N * 16;
-            for (int c = 0; c < 3; c++) _rd.TextureUpdate(_h0, (uint)c, bytes.Slice(c * layer, layer));
+            for (int c = 0; c < 6; c++) _rd.TextureUpdate(_h0, (uint)c, bytes.Slice(c * layer, layer));
         }
         long list = _rd.ComputeListBegin();
         _rd.ComputeListBindComputePipeline(list, _specPipe);
         _rd.ComputeListBindUniformSet(list, _specSet, 0);
-        Push(list, Sizes[0], Sizes[1], Sizes[2], t, N, (float)Period, 0, 0);
+        Push(list, Sizes[0], Sizes[1], Sizes[2], t, N, (float)Period, blend, 0);
         _rd.ComputeListDispatch(list, N / 16, N / 16, 3);
         _rd.ComputeListAddBarrier(list);
         _rd.ComputeListBindComputePipeline(list, _fftPipe);
@@ -340,11 +360,17 @@ public sealed class OceanFft : IDisposable
     /// </summary>
     public double Height(double worldX, double worldZ, double oceanTime)
     {
+        double y = Height(_modes, worldX, worldZ, oceanTime);
+        return _blend >= 1 ? y : Height(_oldModes, worldX, worldZ, oceanTime) * (1 - _blend) + y * _blend; // (as the GPU fades)
+    }
+
+    private double Height(List<Mode> modes, double worldX, double worldZ, double oceanTime)
+    {
         double t = Loop(oceanTime), chop = Choppiness, x = worldX, z = worldZ, y = 0;
         for (int iter = 0; iter < 3; iter++)
         {
             double dx = 0, dz = 0; y = 0;
-            foreach (var m in _modes)
+            foreach (var m in modes)
             {
                 // h = h0 e^{i(k·x - ωt)} + conj(h0(-k)) e^{i(k·x + ωt)} (the shader's spectrum, transformed)
                 double a = m.Kx * x + m.Kz * z, p1 = a - m.Omega * t, p2 = a + m.Omega * t;
@@ -363,7 +389,7 @@ public sealed class OceanFft : IDisposable
 
     public void Dispose()
     {
-        _modes.Clear();
+        _modes.Clear(); _oldModes.Clear();
         var rd = _rd;
         var rids = new List<Rid> { _specSet, _fftSet, _assembleSet };
         rids.AddRange(_mipSets);
