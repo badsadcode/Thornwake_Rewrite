@@ -30,6 +30,34 @@ if (peaks != null)
     return 0;
 }
 
+// Spot probe: --spots=<profile>,<seed> prints mild alpine slopes (biome alpine, 2..7 °C) and the widest rivers
+string? spots = args.FirstOrDefault(a => a.StartsWith("--spots="))?[8..];
+if (spots != null)
+{
+    var v = spots.Split(',');
+    var ts = CoreTests.Sampler(v[0], int.Parse(v[1]));
+    var plan = ts.Plan;
+    double half = plan.Profile.WorldSize / 2;
+    int shown = 0;
+    for (double x = -half; x < half && shown < 8; x += 3000)
+        for (double z = -half; z < half && shown < 8; z += 3000)
+        {
+            var t = ts.Sample(x, z, 8);
+            if (t.Water != WaterKind.None) continue;
+            var (a, b, share) = plan.Biomes.Sample(x, z);
+            if (plan.Biomes.Pool[a].Def.Id != "alpine" || share < .7) continue;
+            double temp = plan.Climate.At(x, z, t.Height - plan.Profile.SeaLevel).Temperature;
+            if (temp < 2 || temp > 7) continue;
+            Console.WriteLine($"alpine {x:0} {z:0} h {t.Height:0} T {temp:0.0}"); shown++;
+        }
+    foreach (var r in plan.Hydrology.Reaches.OrderByDescending(r => r.Catchment[^1]).Take(5))
+    {
+        var p = r.Points[r.Points.Length / 2];
+        Console.WriteLine($"river {p.X:0} {p.Z:0} catchment {r.Catchment[^1]:0}");
+    }
+    return 0;
+}
+
 // Mouth step probe: --mouths=<type id>,<km>,<seed>,<count>,<dir> scans 1 m grids around sea/lake mouths for steps
 string? mouths = args.FirstOrDefault(a => a.StartsWith("--mouths="))?[9..];
 if (mouths != null)
