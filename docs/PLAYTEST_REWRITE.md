@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 32 — your and Noor's notes
+* **Water experimental 3A** (*Settings → Water*, Noor's brief): experimental 3's waves with foam born on breaking crests
+  that drifts away with the wind and breaks up, fading — no more paint blobs or streaks swinging in place; foam with
+  bubbles and gaps inside, older foam see-through; glassier, deeper water; more detail far out. Experimental 3 is
+  unchanged for comparison.
+* **No more sun blob** with the natural look: only the sun and real highlights glow.
+* **Alpine slopes** have trees and grass up to the cold line (generic ones for now).
+* **Digging the seabed** no longer lays a flat calm strip over the waves.
+* **Wide rivers** get wind chop and whitecaps in storms (experimental 3/3A).
+* Debug dumps now include your own world type, so I can rebuild your exact world.
+
 ## New in build 31 — water: under the surface, calmer far sea
 * **Underwater light** (dive with C): sunlight shafts fanning down from the moving surface, brightest looking toward
   the sun; a dancing net of light on the sea and lake bed; the sun's bright spot when you look up. With water

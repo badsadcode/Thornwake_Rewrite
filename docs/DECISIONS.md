@@ -826,6 +826,37 @@ finish water before anything else (water focus: underwater light → experimenta
 * **Setting** "Underwater light": off / simple / full (default full; the office PC's integrated GPU may want simple).
 * **Not yet**: shadows of cliffs, overhangs or boats in the shafts (the terrain is a heightfield: no caves yet).
 
+## D65 — Round 24: experimental 3A, sun blob, alpine vegetation, seabed digging (2026-10-07)
+Tom and Noor (docs/design-inbox/THORNWAKE_EXPERIMENTAL3A_PROMPT.md, dumps 20261007-17xxxx/181232): keep experimental
+3's waves; fix foam that reads as paint and swings back and forth, water too matte, far sea too smooth.
+* **Experimental 3A** is a new water style (experimental 3 unchanged). The FFT foam field lives in its own ping-pong
+  textures and is advected by the wind drift (~3 % of the wind speed) on the GPU; the shader reads it where the
+  water is *shown* (rest position + displacement): read at the rest position it swung with every orbit — the
+  "oscillating streaks". Birth threshold and lifetime grow with the sea state (a breeze: few short-lived caps; a
+  gale: whitecaps that trail), the 7.9 m cascade hardly makes any (it made white chips).
+* **Foam pattern** (foam3a): broken patches made of bubble cells on warped coordinates, threads of varying width with
+  gaps, bubble clumps in dense foam, a solid core only in fresh foam; brightness varies inside (no flat white) and
+  older foam lets the water through. No soft far-away cover, no wide stretch, no milky under-layer around old
+  foam — those made the "combed paint" patches Tom circled. Far away the lace coarsens instead of blurring.
+* **Optics**: stronger reflection in rough seas, small facets catch more sky (Fresnel on a less softened normal), a
+  broad sun sheen under the glints, ~20 % clearer sea shallows, less diffuse "paint" in the water body.
+* **Far sea**: anisotropic sampling of the FFT textures, the 59 m and 7.9 m cascades fade later, the drawn
+  procedural chop halved on the sea (it blurred the simulated detail).
+* **Sun blob** (dump 174752, natural look, glow 1.5, haze 2, low sun): isolated by switching effects off — mist
+  no, glow yes. With the HDR threshold at 1.3 the bright sky and sunlit clouds around a low sun all glowed and
+  merged. Natural: threshold 2.6, luminance cap 4, glow from the small blur levels only. Sun shafts gather only the
+  disc and inner halo (they counted a hazy quarter of the screen as "sun").
+* **Alpine** (dump 172215: 2.1 km, 4.6 °C, bare): the tree line (fixed 1.75 km) and grass line (fixed 1.7 km) now
+  follow the climate in worlds with biomes — trees thin from +2 °C to −1 °C, grass from +1 °C to −3 °C. Worlds
+  without biomes keep build 9's lines (fixtures unchanged).
+* **Wide rivers in a storm** (dump 172621: glassy river between whitecapped water): rivers wider than ~40 m get the
+  FFT lake chop and caps by their width (FFT styles). Not verified on Tom's world (custom type only on his PC).
+* **Seabed digging** (dump 181232): the local water simulation joined its flat sheet over dug sea cells (meant for
+  dug channels beside rivers): a calm strip over the storm waves. Sea cells are now flagged and never drawn over;
+  the sea's own surface covers holes in its floor.
+* **Debug dumps** now carry a custom world type (replayed with --type-file=): Tom's WAYFARER world could not be
+  rebuilt from his dumps.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
