@@ -599,6 +599,28 @@ vec3 foam_at(vec2 q, vec2 dn, float stretch, float t, float amount, float dist) 
 	float shade = 0.74 + 0.26 * mix(fbm * 0.5 + lace * 0.5, 0.75, far);
 	return vec3(clamp(top, 0.0, 1.0) * 0.95, under, shade);
 }
+#ifdef EXP3A
+// Open-sea foam pattern of experimental 3A (round 24; Tom: the smeared, combed patches "look weird"): broken patches
+// whose inside is made of bubble-cell threads (lace), a solid core only in fresh foam. No soft far-away cover (it
+// smudged into paint strokes from 35 m on) and no wide stretching: the lace gets coarser with the pixel footprint
+// instead, so it stays texture, not a smear. Returns coverage 0..1.
+float foam3a(vec2 q, vec2 dn, float t, float amount, float fresh, float footprint) {
+	if (amount <= 0.001) return 0.0;
+	vec2 sd = vec2(-dn.y, dn.x);
+	q += (vec2(noise(q * 0.13), noise(q * 0.13 + 5.7)) - 0.5) * 5.0; // warp: no straight edges
+	vec2 qs = vec2(dot(q, dn) / 1.6, dot(q, sd));                     // a little longer along the drift
+	float fbm = noise(qs * 0.32) * 0.5 + noise(qs * 0.85 + 3.1) * 0.3 + noise(qs * 2.2 - 1.7) * 0.2;
+	float edge = 1.0 - amount * 1.15;
+	float mask = smoothstep(edge, edge + 0.1, fbm);                   // where there is foam at all: ragged patches
+	float sc = 1.0 / max(1.0, footprint * 2.0);                       // coarser lace far away (no aliasing, no smear)
+	float e1 = cells(qs * 1.1 * sc + vec2(3.1, 0.0), t * 0.2);
+	float e2 = cells(qs * 2.9 * sc + vec2(0.0, 7.7), t * 0.35);
+	float thread = mix(0.09, 0.32, fresh) * (1.0 + 0.6 * (1.0 - sc));
+	float lace = max(1.0 - smoothstep(0.0, thread, e1), (1.0 - smoothstep(0.0, thread * 0.8, e2)) * 0.75);
+	float core = smoothstep(0.35, 0.85, fresh) * smoothstep(edge + 0.06, edge + 0.3, fbm); // fresh: solid inside
+	return mask * max(core, lace);
+}
+#endif
 // Foam drifting with one even drift (the wind over open water): carried and pulled into streaks along it.
 vec3 foam_layers(vec2 p, vec2 drift, float t, float amount, float dist) {
 	float speed = length(drift);
@@ -970,16 +992,16 @@ void fragment() {
 		float fresh = smoothstep(0.35, 0.85, field_foam);
 		float old = smoothstep(0.03, 0.4, field_foam) * (1.0 - fresh);
 		vec2 fd = wdir * (0.25 + 0.25 * wind_speed);
-		vec3 lip = foam_at(pq + fd * TIME, wdir, 1.2, TIME, max(cap * 0.95, fresh * 0.8), dist);
-		vec3 streak = foam_at(pq * 0.8 + fd * TIME + vec2(37.1, 11.3), wdir, 3.6, TIME, old * 0.5, dist);
-		float top = max(lip.x, streak.x * 0.8);
-		// Older foam is a thin film of bubbles: it lets the water's colour through (not paint on the surface).
+		vec2 fq = pq + fd * TIME;
+		float lip = foam3a(fq, wdir, TIME, max(cap * 0.95, fresh * 0.8), max(cap, fresh), footprint);
+		float streak = foam3a(fq * 0.85 + vec2(37.1, 11.3), wdir, TIME, old * 0.55, 0.0, footprint);
+		float top = max(lip, streak * 0.85);
 		float age_mix = clamp(max(cap, fresh) * 1.3, 0.0, 1.0);
-		float opacity = mix(0.42, 0.96, age_mix);
 		foam = max(foam, top);
-		foam_opacity = mix(foam_opacity, opacity, step(layers.x, top));
-		under_foam = max(under_foam, max(lip.y, streak.y * 0.5) * 0.8);
-		foam_shade = mix(foam_shade, mix(streak.z, lip.z, age_mix), step(layers.x, top));
+		foam_opacity = mix(foam_opacity, mix(0.85, 0.97, age_mix), step(layers.x, top));
+		// Bubbles under the breaking crest only (old foam drew a milky smear around itself).
+		under_foam = max(under_foam, lip * max(cap, fresh) * 0.6);
+		foam_shade = mix(foam_shade, mix(0.84, 0.97, age_mix), step(layers.x, top));
 	}
 #endif
 	if (river > 0.5 && length(current) > 0.15) {
