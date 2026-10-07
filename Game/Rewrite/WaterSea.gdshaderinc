@@ -225,6 +225,7 @@ uniform vec3 fft_size = vec3(480.0, 59.0, 7.9);
 uniform vec3 fft_longest = vec3(480.0, 12.0, 1.6); // longest wavelength each cascade carries (fades when under a pixel)
 uniform vec3 fft_offset_x; // the float origin modulo each tile (double precision on the CPU): world-anchored waves
 uniform vec3 fft_offset_z;
+uniform float fft_crest_scale = 1.0; // wind-sea Hs / total Hs: the crest measure (glow, foam) is scaled by the wind sea
 
 void fft_cascade(float layer, vec2 p, float size, float ox, float oz, float amp,
 		inout vec3 offset, inout vec4 deriv, inout float foam) {
@@ -257,7 +258,7 @@ vec3 gerstner(vec2 p, float depth, float sea, float lake, float fetch_m, float e
 	float sx = 1.0 + deriv.z, sz = 1.0 + deriv.w;
 	n.x -= deriv.x / max(sx, 0.25);
 	n.z -= deriv.y / max(sz, 0.25);
-	crest += offset.y;
+	crest += offset.y * fft_crest_scale; // (the swell lifts the whole surface: a calm sea glowed everywhere)
 	// As gerstner(): fold = 1 - Jacobian; the lingering foam joins it (whitecaps trailing behind the crests).
 	jac += vec3(-deriv.z + foam * 0.9, -deriv.w, 0.0);
 	return offset;

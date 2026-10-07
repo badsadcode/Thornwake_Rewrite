@@ -476,6 +476,7 @@ public partial class Atmosphere : Node3D
         }
         else if (!fft && Ocean != null) { Ocean.Dispose(); Ocean = null; }
         Ocean?.Configure(seaState, _wavesAngle);
+        _water.SetShaderParameter("fft_crest_scale", (float)(Spectrum.Hs / Math.Sqrt(Spectrum.Hs * Spectrum.Hs + Spectrum.SwellHs * Spectrum.SwellHs)));
         SendSpectrumOrigin();
     }
 
