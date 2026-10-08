@@ -210,10 +210,12 @@ public static class GameSettings
         "Waves on the sea and lakes, smoothly from calm (a long soft swell) through breezy and rough to storm (huge seas, " +
         "experimental 2). Rain and storms make the sea rougher on top of this.")
         { Describe = v => v < .2 ? "calm" : v < .45 ? "breezy" : v < .75 ? "rough" : "storm" });
-    public static readonly Setting CloudQuality = Add(new("sky.cloud_quality", "Sky", "Cloud quality", 0, 2, 1, 1,
+    public static readonly Setting CloudQuality = Add(new("sky.cloud_quality", "Sky", "Cloud quality", 0, 3, 1, 1,
         "One layer; layered (high cirrus, the main clouds and low fast clouds, each with its own wind); volumetric (experimental: " +
         "real 3D clouds with billowing shapes, light through them and sky colours in their shadows; crisp in calm air, smudged " +
-        "in wind — much heavier on the GPU).", options: new[] { "one layer", "layered", "volumetric (experimental)" }));
+        "in wind — much heavier on the GPU); volumetric v2 (experimental: the same clouds also in front of the land — they " +
+        "come down onto the mountains, wrap the summits, lie as a sea of cloud below a peak and can be walked or flown into).",
+        options: new[] { "one layer", "layered", "volumetric (experimental)", "volumetric v2 (experimental)" }));
     public static readonly Setting CloudResolution = Add(new("sky.cloud_resolution", "Sky", "Cloud resolution", 0, 2, 1, 1,
         "Detail of the cloud texture: crisper edges and finer wisps at higher settings (a little more memory and start-up time).",
         options: new[] { "256", "512", "1024" }));

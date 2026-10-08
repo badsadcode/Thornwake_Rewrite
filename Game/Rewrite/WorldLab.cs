@@ -78,6 +78,7 @@ public partial class WorldLab : Node3D
     private string? _smokeDirectory, _shotPath;
     private (double X, double Z)? _shotAt;
     private (float Yaw, float Pitch, float Zoom)? _shotView;
+    private bool _faceSun; // debug: turn the camera toward the sun before the screenshot
     // --extra-yaws=a,b,…: after the shot, more shots turned by these yaw offsets (<name>-1.png …), same world and tiles.
     private readonly List<float> _extraYaws = new();
     private int _extraShot;
@@ -158,6 +159,7 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg == "--weather-probe") _weatherProbe = true;
             if (arg.StartsWith("--rain-here=")) _shotRainHere = float.Parse(arg[12..], CultureInfo.InvariantCulture);
+            if (arg == "--face-sun") _faceSun = true;
             if (arg.StartsWith("--strike=")) _shotStrike = double.Parse(arg[9..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--thunder-wavs=")) _thunderWavs = arg[15..];
             if (arg.StartsWith("--tool=")) _tools.Select(int.Parse(arg[7..], CultureInfo.InvariantCulture));
@@ -1216,6 +1218,7 @@ public partial class WorldLab : Node3D
                     }
                 }
                 if (_shotView is { } v) { _yaw = v.Yaw; _pitch = v.Pitch; _zoom = v.Zoom; _arm.SpringLength = v.Zoom; }
+                if (_faceSun) { var s = _atmosphere.Sun.GlobalTransform.Basis.Z; _yaw = Mathf.Atan2(-s.X, -s.Z); }
                 _smokeStage = 1; _smokeTimer = 0;
             }
             else if (_smokeStage == 1 && settled)

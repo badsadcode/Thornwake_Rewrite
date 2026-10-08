@@ -25,6 +25,8 @@ public partial class Atmosphere : Node3D
     // Cloud texture size (setting "Cloud resolution"). The cloud shadow decal stays at 256 (it is blurry anyway).
     private int _cloudPixels;
     private const int Tile = 256;
+    private ShaderMaterial _cloudsNear = null!;
+    private MeshInstance3D? _cloudsNearQuad;
     private ShaderMaterial _sky = null!, _shafts = null!, _beams = null!, _curtains = null!;
     private GpuParticles3D? _splashes;
     private ShaderMaterial? _splashMaterial;
@@ -98,11 +100,13 @@ public partial class Atmosphere : Node3D
         for (int i = 0; i < _noiseBase.Length; i++) _noiseBase[i] = raw[i * 4];
         _cloudPixels = Tile;
         _sky = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Sky.gdshader") };
-        _sky.SetShaderParameter("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(_noise)));
-        _sky.SetShaderParameter("cloud_period", CloudPeriod);
-        _sky.SetShaderParameter("cloud_height", CloudHeight);
+        // Cloud renderer v2: the clouds in front of the scene share the sky's code and its parameters (SkyParam).
+        _cloudsNear = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/CloudsNear.gdshader"), RenderPriority = 99 };
+        SkyParam("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(_noise)));
+        SkyParam("cloud_period", CloudPeriod);
+        SkyParam("cloud_height", CloudHeight);
         _cloudNoise = CloudNoise3D.Create();
-        _sky.SetShaderParameter("cloud_noise", _cloudNoise); // volumetric clouds: 3D billows and detail (and the mist's)
+        SkyParam("cloud_noise", _cloudNoise); // volumetric clouds: 3D billows and detail (and the mist's)
         Environment = new Godot.Environment
         {
             BackgroundMode = Godot.Environment.BGMode.Sky,
@@ -166,6 +170,14 @@ public partial class Atmosphere : Node3D
             Visible = GameSettings.LightBeams.Value > 0,
         };
         camera.AddChild(_beamQuad);
+        // Cloud renderer v2: the cloud volume in front of the scene (hidden with the other cloud qualities).
+        _cloudsNearQuad = new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(2, 2) }, MaterialOverride = _cloudsNear, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            ExtraCullMargin = 16384, Position = new Vector3(0, 0, -1), GIMode = GeometryInstance3D.GIModeEnum.Disabled,
+            Visible = GameSettings.CloudQuality.Index == 3,
+        };
+        camera.AddChild(_cloudsNearQuad);
         // Distant rain curtains (simulated weather; the shader discards when the weather map is off).
         camera.AddChild(new MeshInstance3D
         {
@@ -254,6 +266,13 @@ public partial class Atmosphere : Node3D
     public void SetWater(ShaderMaterial water) { _water = water; _wavesState = -1; ShareClouds(); ApplyAll(); }
 
     /// <summary>The water reflects the sky's own clouds (experimental 2): same texture, period and heights.</summary>
+    /// <summary>A sky material parameter, mirrored to the clouds drawn in front of the scene (cloud renderer v2).</summary>
+    private void SkyParam(string name, Variant value)
+    {
+        _sky.SetShaderParameter(name, value);
+        _cloudsNear.SetShaderParameter(name, value);
+    }
+
     private void ShareClouds()
     {
         if (_water == null) return;
@@ -310,18 +329,21 @@ public partial class Atmosphere : Node3D
         e.AdjustmentSaturation = GameSettings.Saturation.F * (natural ? 1.08f : 1);
         RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
-        _sky.SetShaderParameter("quality", GameSettings.CloudQuality.Index);
+        SkyParam("quality", GameSettings.CloudQuality.Index);
+        bool v2 = GameSettings.CloudQuality.Index == 3;
+        RenderingServer.GlobalShaderParameterSet("cloud_v2", v2 ? 1f : 0f);
+        if (_cloudsNearQuad != null) _cloudsNearQuad.Visible = v2;
         int pixels = 256 << GameSettings.CloudResolution.Index;
         if (pixels != _cloudPixels)
         {
             // Same pattern (periodic noise, same seed) with finer detail; the sky material keeps its uniforms.
             _cloudPixels = pixels;
-            _sky.SetShaderParameter("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(pixels == Tile ? _noise : CloudNoise(pixels, 4242))));
+            SkyParam("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(pixels == Tile ? _noise : CloudNoise(pixels, 4242))));
             _beams?.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
             ShareClouds();
         }
-        _sky.SetShaderParameter("sun_glare", GameSettings.SunGlare.F);
-        _sky.SetShaderParameter("sun_style", GameSettings.SunStyle.Index);
+        SkyParam("sun_glare", GameSettings.SunGlare.F);
+        SkyParam("sun_style", GameSettings.SunStyle.Index);
         _shafts.SetShaderParameter("intensity", GameSettings.SunShafts.F);
         _shafts.SetShaderParameter("contrast", GameSettings.GodRayContrast.F);
         _beams?.SetShaderParameter("contrast", GameSettings.GodRayContrast.F);
@@ -789,9 +811,16 @@ public partial class Atmosphere : Node3D
         // Flat cloud bases ~1.5 km above the sea.
         // (never closer than ~1 km: the sky is drawn behind the terrain, so a cloud base just over the player's head on
         // a mountain made a low grey ceiling and a wall of cloud on the horizon — Tom, build 25)
-        float baseAbove = Mathf.Clamp(SeaLevel + 1500 - cameraLocal.Y, 1000, 2200);
+        // (cloud renderer v2 draws clouds in front of the scene too: the base stays at its height, also below the camera)
+        float baseAbove = GameSettings.CloudQuality.Index == 3
+            ? Mathf.Min(SeaLevel + 1500 - cameraLocal.Y, 2200)
+            : Mathf.Clamp(SeaLevel + 1500 - cameraLocal.Y, 1000, 2200);
         float windAngle = Mathf.Atan2(Wind.Direction.Y, Wind.Direction.X);
         RenderingServer.GlobalShaderParameterSet("cloud_more", new Vector4(mackerel, windAngle, (float)_cloudTime, baseAbove));
+        // The sun as the sky sees it, for the clouds drawn in front of the scene (CloudsNear.gdshader).
+        var toLight = Sun.GlobalTransform.Basis.Z.Normalized();
+        RenderingServer.GlobalShaderParameterSet("cloud_light", new Vector4(Sun.LightColor.R, Sun.LightColor.G, Sun.LightColor.B, Sun.LightEnergy));
+        RenderingServer.GlobalShaderParameterSet("cloud_light_dir", new Vector4(toLight.X, toLight.Y, toLight.Z, 0));
     }
     // ---- simulated weather (round 27): steering wind, nearby thunderstorm cells, wind-built sea
     private Vector2? _steer;
@@ -852,7 +881,7 @@ public partial class Atmosphere : Node3D
     /// </summary>
     public void SetRelief(Image image, double x, double z, float size)
     {
-        _sky.SetShaderParameter("relief_tex", ImageTexture.CreateFromImage(image));
+        SkyParam("relief_tex", ImageTexture.CreateFromImage(image));
         _reliefX = x; _reliefZ = z; _reliefSize = size;
     }
 

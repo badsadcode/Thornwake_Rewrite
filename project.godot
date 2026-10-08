@@ -137,3 +137,15 @@ cloud_more={
 "type": "vec4",
 "value": Vector4(0, 0, 0, 1500)
 }
+cloud_v2={
+"type": "float",
+"value": 0.0
+}
+cloud_light={
+"type": "vec4",
+"value": Vector4(1, 1, 1, 1)
+}
+cloud_light_dir={
+"type": "vec4",
+"value": Vector4(0, 1, 0, 0)
+}
