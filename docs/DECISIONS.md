@@ -986,6 +986,32 @@ lightning every player sees the same.
   after their own distance ÷ 343 m/s). Cost: nothing extra per player — no strike messages needed.
 * Classic weather model unchanged (one wind everywhere, wind map off).
 
+## D72 — Round 29: sun blob, clouds v2, foam net (2026-10-08)
+Return point before this round: build 38 (`2df30d8`, docs/SNAPSHOTS.md). Every change is an option or a fix that
+keeps the previous look selectable.
+* **Sun blob** (Tom: the sun "blobbing 80 % of the screen"). Reproduced with his build 33+ settings (dumps33: God ray
+  contrast 1, sun shafts 3, light beams 4, glow 1.5) at 15:30 facing the sun: a white disc half the screen wide.
+  Isolation renders: contrast 0 → clean; light beams 0 → blob stays; sun shafts 0 → mostly gone. Cause: God ray
+  contrast raised the sun's volumetric fog energy to 3 and anisotropy to .85, so the haze around a low sun passed the
+  shafts' brightness threshold over a quarter of the sky, and the shafts gathered it into the disc. Fix: the shafts
+  gather only sky within ~8° of the sun (the disc and inner halo, however bright the haze); contrast now raises fog
+  energy to 1 + 0.8c and anisotropy to .65 + .1c. Same scene afterwards: a natural haze glow.
+* **Clouds v2** (*Cloud quality → volumetric v2*, ideas from SunshineClouds2, docs/SKY_IDEAS.md). The sky's cloud code
+  moved unchanged into SkyCommon.gdshaderinc; the march was generalised (any camera height, a distance limit,
+  minimum step) and CloudsNear.gdshader, a full-screen pass, marches the same volume from the camera to the scene's
+  depth over geometry (the sky keeps its half-resolution march behind it). The cloud base is no longer kept ≥ 0.8 km
+  above the camera, so clouds lie on the mountains, fill valleys below a summit and can be walked into. Ray offsets
+  from interleaved gradient noise, moving every frame under TAA/FSR 2. Inside a thick deck the light is grey-white
+  scattered sunlight (first renders: deep blue, then dark grey fog). Haze toward the horizon also when looking down.
+  Not yet: amortised far clouds (item 2), the physical sky tables (item 3).
+* **Foam net** (*Foam style → net*, Tom liked emilje/godot-water-shader's foam; look only, nothing copied). FoamNet.cs
+  bakes a seamless 512² texture at start-up (warped Worley cells: round clear holes of different sizes, thick
+  fluffy foam between, small holes in thick parts, faint cracks; a coarse and a fine net and patch noise). The
+  foam layers sample it at ~8 m and ~3 m, the fine net taking over in fresh foam; whole patches thick or bare; the
+  net shows where foam thins, fresh breakers stay solid. Three tunings by render (too wide → flecks → between).
+* Tom's other water ideas (sea spray, intersection foam, water queries, spline water, bicubic normals, warped
+  cascades) are planned in docs/WATER_EXPERIMENT.md.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

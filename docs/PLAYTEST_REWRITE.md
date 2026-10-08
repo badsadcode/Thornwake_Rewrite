@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 39 — no more sun blob, clouds on the mountains, foam net
+* **Sun blob fixed.** With high *God ray contrast* and *Sun shafts* the hazy sky around a low sun turned into a white
+  disc covering half the screen. Shafts now come only from the sun itself, and the contrast setting brightens the fog
+  much less. Your settings can stay as they are.
+* **Clouds v2** (*Settings → Sky → Cloud quality → volumetric v2*, experimental): the same clouds, but also drawn in
+  front of the land. They come down onto the mountains, fill the valleys below a summit, and you can walk or fly into
+  them (grey-white fog inside). *volumetric* keeps build 38's clouds. Please tell me how it runs — it costs more when
+  you are in or near the clouds. With TAA or FSR 2 the cloud grain smooths out over a few frames.
+* **Foam net** (*Lighting and effects → Foam style → net*): foam as a white net around clear holes, solid on fresh
+  breakers, breaking into a patchy net as it thins (the look you liked). *lace* is build 38's foam.
+
 ## New in build 38 — raindrop splashes, wind that follows the land
 * **Splashes** (simulated weather): raindrops now bounce off water — little crowns with droplets flying up, as many
   as the rain is strong, fewer on rough water.
