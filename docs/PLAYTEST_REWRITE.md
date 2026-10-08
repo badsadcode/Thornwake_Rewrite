@@ -78,6 +78,14 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 40 — storm skies, biome skies that show
+* **Storms** (simulated weather): no more flat grey lid. A low, heavy deck with dark slate cores and paler patches,
+  rolls lying across the wind and a lumpy underside; dark ragged scud racing underneath with the wind; lighter
+  where the storm ends at the horizon; thin parts glowing on the sun's side. Lightning flashes light it up.
+* **Biome skies** (*Sky → Biome skies*): now clearly visible — dusty warm light over deserts, ashen red-grey haze by
+  volcanoes, humid green-grey jungles, gloomy purple-grey blighted swamps, crisp blue in the cold north. The light
+  and haze are tinted too. *off* keeps the realistic sky.
+
 ## New in build 39 — no more sun blob, clouds on the mountains, foam net
 * **Sun blob fixed.** With high *God ray contrast* and *Sun shafts* the hazy sky around a low sun turned into a white
   disc covering half the screen. Shafts now come only from the sun itself, and the contrast setting brightens the fog

@@ -584,3 +584,51 @@ float cloud_jitter(vec2 frag, float clock) {
 	float f = cloud_v2 > 1.5 ? mod(floor(clock * 60.0), 64.0) : 0.0;
 	return cloud_ign(frag + f * 5.588238);
 }
+
+// Storm sky (round 29, Tom: "they cover the whole sky and turn a bit darker, but just a grey darker sky doesn't build
+// atmosphere"): instead of a flat grey wash, a low heavy deck with structure and racing scud under it. Simulated
+// weather only (the classic model keeps build 35's overcast). Every texture scale divides the low layer's wrap period
+// (108 km), and streaks come from taps smeared along a direction (no rotated coordinates), so nothing jumps.
+//   * the deck (~900 m): big swells of thick and thin cloud, rolls lying across the wind, a lumpy underside; dark
+//     cores, paler thin parts, thin parts glowing on the sun's side; darker the heavier the storm (thunder: w);
+//   * scud (~450 m): ragged dark fragments stretched along the wind, moving twice as fast as the deck;
+//   * the horizon: lighter under the deck's far edge, where the storm thins out.
+vec3 storm_deck(vec3 dir, float day, float storm, float thunder, vec3 sun_dir) {
+	float up = dir.y;
+	vec3 lit = vec3(0.5, 0.53, 0.57) * (0.3 + 0.7 * day) * mix(vec3(1.0), sky_mood.rgb, 0.6);
+	vec3 horizon = horizon_color * (0.5 + 0.5 * day) * mix(vec3(1.0), sky_mood.rgb, 0.7);
+	if (up <= 0.0) return mix(lit * 0.8, horizon * 0.8, 0.5);
+	vec2 wd = normalize(wind.xz + vec2(1e-4)), sd = vec2(-wd.y, wd.x);
+	vec2 xz = cloud_layers.zw + dir.xz * (900.0 / max(up, 0.025));
+	float big = texture(cloud_tex, xz / 13500.0).r;
+	float mid = texture(cloud_tex, xz / 4320.0 + vec2(0.3, 0.1)).g;
+	float fine = texture(cloud_tex, xz / 1080.0 + vec2(0.7, 0.4)).r;
+	float roll = 0.0;
+	for (int i = -2; i <= 2; i++) roll += texture(cloud_tex, (xz + sd * float(i) * 900.0) / 2700.0 + vec2(0.55, 0.85)).r;
+	roll = smoothstep(0.35, 0.75, roll / 5.0);
+	float thick = clamp(big * 0.45 + mid * 0.3 + roll * 0.35 - 0.05, 0.0, 1.0);
+	float lump = fine * 0.6 + mid * 0.4;
+	// Lumpy underside: bulges dark beneath with paler rims (first render: too soft, an even blue-grey).
+	float bulge = smoothstep(0.35, 0.75, fine) * smoothstep(0.3, 0.8, thick);
+	float shade = mix(0.16, 1.0, smoothstep(0.3, 0.9, 1.0 - thick)) * (0.72 + 0.5 * lump) * (1.0 - 0.35 * bulge);
+	vec3 col = lit * shade * mix(1.0, 0.5, storm) * (1.0 - 0.4 * thunder);
+	col = mix(col, col * vec3(0.82, 0.88, 1.0), smoothstep(0.5, 0.9, thick)); // slate-blue in the darkest cores
+	// Thin parts glow on the sun's side (light through the deck).
+	vec2 sh = normalize(sun_dir.xz + vec2(1e-4));
+	float sunside = pow(max(dot(normalize(dir.xz + vec2(1e-4)), sh), 0.0), 3.0) * smoothstep(0.0, 0.3, sun_dir.y);
+	col += vec3(0.95, 0.92, 0.86) * day * sunside * smoothstep(0.6, 0.15, thick) * 0.3;
+	// Scud racing under the deck.
+	vec2 sxz = cloud_layers.zw * 2.0 + dir.xz * (450.0 / max(up, 0.025));
+	float s = 0.0;
+	for (int i = -2; i <= 2; i++) {
+		vec2 q = sxz + wd * float(i) * 420.0;
+		s += texture(cloud_tex, q / 2700.0 + vec2(0.11, 0.62)).r * 0.6 + texture(cloud_tex, q / 900.0 + vec2(0.57, 0.23)).g * 0.4;
+	}
+	s /= 5.0;
+	float scud = smoothstep(0.46 - storm * 0.1, 0.62, s) * smoothstep(0.02, 0.12, up) * smoothstep(0.2, 0.7, storm);
+	col = mix(col, lit * (0.13 + 0.1 * fine) * (1.0 - 0.3 * thunder), scud * 0.95);
+	// Light under the far edge of the deck.
+	col = mix(col, horizon * mix(0.85, 0.6, storm), (1.0 - smoothstep(0.0, 0.12, up)) * 0.55);
+	return col;
+}
+

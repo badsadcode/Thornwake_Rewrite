@@ -164,9 +164,12 @@ void sky() {
 		if (weather_frame.w > 0.5) {
 			vec3 w = wmap(dir.xz * min(700.0 / max(up, 0.02), 60000.0));
 			storm_here = max(w.g, w.b * 0.9) * smoothstep(-0.05, 0.02, up) + storm * smoothstep(0.02, -0.05, up);
+			storm_here = max(storm_here, storm * smoothstep(0.05, 0.4, up)); // the storm here (also forced rain, H) overhead
 			overcast *= 1.0 - 0.35 * w.b;
+			// Round 29: a storm deck with structure and racing scud instead of the flat grey (classic model unchanged).
+			if (!AT_CUBEMAP_PASS) overcast = storm_deck(dir, day, max(storm, storm_here), w.b, sun_dir);
 		}
-		col = mix(col, overcast, storm_here * 0.85);
+		col = mix(col, overcast, storm_here * (weather_frame.w > 0.5 ? 0.95 : 0.85));
 		disc *= 1.0 - storm;
 		// Lightning (round 27): the clouds light up toward the strike — a broad glow for a near one (the whole deck
 		// overhead flashes), a narrow low glow on the horizon for a far one; clear sky barely.

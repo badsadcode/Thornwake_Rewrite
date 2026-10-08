@@ -1012,6 +1012,19 @@ keeps the previous look selectable.
 * Tom's other water ideas (sea spray, intersection foam, water queries, spline water, bicubic normals, warped
   cascades) are planned in docs/WATER_EXPERIMENT.md.
 
+## D73 — Round 29b: storm sky, biome skies (2026-10-08)
+* **Storm sky** (Tom, dump fa9d900c, swamp in a storm: "they cover the whole sky and turn a bit darker, but just a grey
+  darker sky doesn't build atmosphere"). The sky mixed a flat grey overcast over everything at 85 % of the storm
+  strength, washing out every cloud. Simulated weather now draws a storm deck instead (SkyCommon storm_deck): a low
+  deck (~900 m) with big swells of thick and thin cloud, rolls lying across the wind (taps smeared across it), a
+  lumpy underside (bulges dark beneath), slate-blue near-black cores, thin parts glowing on the sun's side, darker
+  under thunder; ragged scud (~450 m) stretched along the wind and moving at twice the deck's drift; a paler band
+  where the deck ends at the horizon. All scales divide the low layer's 108 km wrap (no jumps). The storm here also
+  sets the deck overhead (forced rain, H). Classic weather model unchanged.
+* **Biome skies** (Tom: "don't seem to change anything"): the biomes' sky tints are near white (5–20 %) and were
+  scaled ×.6 / ×1.4 — invisible. Now ×1.5 (subtle) / ×2.6 (strong; ×3.2 turned a desert sky mustard), and the tint
+  also colours the sunlight (35 %) and the volumetric fog (60 %).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
