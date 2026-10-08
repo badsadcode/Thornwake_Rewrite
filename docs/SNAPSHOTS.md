@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 36** (round 27: simulated weather over the whole world, lightning with propagated thunder, waves of grass, storm clouds and distant rain curtains, denser rain, raindrops on water) | `8bcdfac` | Thornwake-Rewrite-Preview-36 (v0.9.36) | Weather model: classic = build 35 weather, wind, sway and rain |
 | **RETURN POINT — before the weather overhaul** (Tom, 2026-10-08: "save current state as return point, so far it's looking good") = build 35 | `2ed21e8` | Thornwake-Rewrite-Preview-35 (v0.9.35) | In game: *Weather model → classic (build 35)* keeps this weather, wind, plant sway and rain; in git: `git checkout 2ed21e8` (or diff against it) |
 | **Build 35** (round 26: SMAA / FSR 2 and fog smoothing against ghosting; water experimental 4; ground parallax) | `0df8014` | Thornwake-Rewrite-Preview-35 (v0.9.35) | Ground parallax 0 = build 34 ground; water 3A unchanged |
 | **Build 34** (round 25b: lakes mirror shores and mountains; fuller alpine slopes; ground variety and ground relief options) | `0ba99ba` | Thornwake-Rewrite-Preview-34 (v0.9.34) | Ground variety/relief 0 = build 33 ground |
