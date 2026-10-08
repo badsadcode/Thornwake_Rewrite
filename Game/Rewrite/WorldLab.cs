@@ -692,7 +692,24 @@ public partial class WorldLab : Node3D
         double level = WaterSurface(_originX + cam.X, _originZ + cam.Z, out var kind);
         _cameraDepth = double.IsNaN(level) ? 0 : (float)(level - cam.Y);
         _atmosphere.SetUnderwater(_cameraDepth, kind);
+        // The nearest water surface for raindrop splashes: under the camera, else in rings 12 and 24 m around.
+        _splashTimer -= GetProcessDeltaTime();
+        if (_splashTimer <= 0)
+        {
+            _splashTimer = .25;
+            double found = level;
+            for (int ring = 1; ring <= 2 && double.IsNaN(found); ring++)
+                for (int i = 0; i < 8 && double.IsNaN(found); i++)
+                {
+                    double a = i * Math.Tau / 8;
+                    found = WaterSurface(_originX + cam.X + Math.Cos(a) * 12 * ring, _originZ + cam.Z + Math.Sin(a) * 12 * ring, out _);
+                }
+            _splashLevel = (float)found;
+        }
+        _atmosphere.SetSplashSurface(_splashLevel, cam);
     }
+    private double _splashTimer;
+    private float _splashLevel = float.NaN;
 
     public override void _PhysicsProcess(double delta)
     {

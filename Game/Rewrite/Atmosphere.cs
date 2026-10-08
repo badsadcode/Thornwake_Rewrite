@@ -26,6 +26,13 @@ public partial class Atmosphere : Node3D
     private int _cloudPixels;
     private const int Tile = 256;
     private ShaderMaterial _sky = null!, _shafts = null!, _beams = null!, _curtains = null!;
+    private GpuParticles3D? _splashes;
+    private ShaderMaterial? _splashMaterial;
+    private float _splashLevel = float.NaN;
+    private Vector3 _splashCamera;
+
+    /// <summary>The water surface (world height) near the camera, or NaN: raindrop splashes stand on it.</summary>
+    public void SetSplashSurface(float level, Vector3 camera) { _splashLevel = level; _splashCamera = camera; }
     private Decal _shadow = null!;
     private Image _noise = null!;
     private ImageTexture _shadowTexture = null!;
@@ -189,6 +196,22 @@ public partial class Atmosphere : Node3D
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         camera.AddChild(_rainParticles);
+        // Raindrop splashes on water (simulated weather): placed at the water surface near the camera each frame.
+        _splashMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/RainSplash.gdshader") };
+        _splashes = new GpuParticles3D
+        {
+            Amount = 1800, Lifetime = .32, Emitting = false, LocalCoords = false,
+            VisibilityAabb = new Aabb(new Vector3(-16, -2, -16), new Vector3(32, 4, 32)),
+            DrawPass1 = new QuadMesh { Size = new Vector2(.22f, .16f), Material = _splashMaterial },
+            ProcessMaterial = new ParticleProcessMaterial
+            {
+                EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box, EmissionBoxExtents = new Vector3(12, .01f, 12),
+                Gravity = Vector3.Zero, InitialVelocityMin = 0, InitialVelocityMax = 0, Spread = 0,
+                ScaleMin = .7f, ScaleMax = 1.4f,
+            },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        AddChild(_splashes);
         ApplyAll();
     }
 
@@ -436,6 +459,22 @@ public partial class Atmosphere : Node3D
             // Rain slants with the wind; snow drifts with it.
             if (_rainParticles.ProcessMaterial is ParticleProcessMaterial pm)
                 pm.Direction = new Vector3(Wind.Direction.X * Wind.Speed * slant, -1, Wind.Direction.Y * Wind.Speed * slant);
+        }
+        // Raindrop splashes (round 28): only in the simulated model, raining, over water close below the camera, and
+        // fewer on rough water (a still crown would float over the troughs).
+        if (_splashes != null)
+        {
+            float above = _splashCamera.Y - _splashLevel;
+            bool on = _steer != null && !Snowing && Precip > .05f && !float.IsNaN(_splashLevel) && above > -.2f && above < 60;
+            _splashes.Emitting = on;
+            if (on)
+            {
+                _splashes.GlobalPosition = new Vector3(_splashCamera.X, _splashLevel + .01f, _splashCamera.Z);
+                _splashes.AmountRatio = Mathf.Clamp(Mathf.Pow(Precip, .8f) * GameSettings.RainStrength.F / 1.6f, .05f, 1)
+                    * (1 - Mathf.SmoothStep(.5f, .9f, (float)_wavesState)) * (1 - Mathf.SmoothStep(25, 60, above));
+                float splashLit = Mathf.Clamp(_daylight * 1.1f, .08f, 1);
+                _splashMaterial!.SetShaderParameter("tint", new Color(.8f * splashLit, .84f * splashLit, .88f * splashLit));
+            }
         }
         // Raindrops ringing on water (round 27): how hard it rains here (not snow), for the water shader.
         RenderingServer.GlobalShaderParameterSet("rain_now", new Vector4(Snowing ? 0 : Mathf.Clamp(Precip, 0, 1), 0, 0, 0));
