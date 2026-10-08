@@ -1,0 +1,33 @@
+# First gameplay prototype (planned, after the dedicated repo)
+
+Tom, 2026-10-08: "after that we need to introduce some basic game mechanics… proper swimming, sailing and survival
+elements (not a final system but something to check how it could look). Maybe chopping trees, fishing, building a
+campfire and cooking fish. Hunting would be nice but I don't have animal assets yet."
+
+A playable loop to judge the feel, not the final systems. Everything goes in `Game/Rewrite/`, behind the existing
+world. In multiplayer later, all world changes (felled trees, fires) become edits keyed by world position, the same
+way dug terrain is, so this layout already suits it.
+
+## Order (each step is one build Tom can play)
+1. **Survival basics**: health, hunger, warmth, stamina on the HUD. Warmth comes from the real air temperature,
+   wind and rain (Weather/Wind already know them), and being wet. A small inventory and a hotbar, reusing the ideas of the
+   original game's hotbar (`Game/UI/HotbarControls.cs`), not its code.
+2. **Proper swimming**: today's swim is a flying mode under water. Replace it with buoyancy, a surface stroke and a dive,
+   breath, stamina drain, slower in currents (river current profile, D-rivers) and pushed by waves (the sea state
+   already gives wave height at a point). Wet clothes make you colder afterwards.
+3. **Chopping trees**: an axe tool. Trees are world data (deterministic per tile), so a felled tree is stored as an edit
+   (tile, tree index) and removed from collision and rendering. The tree falls (a simple rigid body tipping along
+   the cut), leaves a stump and gives logs and branches.
+4. **Campfire**: place stones and wood. Fire and smoke particles bent by the wind map, light that flickers, warmth
+   nearby. Rain weakens it, and heavy rain puts it out unless sheltered.
+5. **Fishing**: a rod. Cast, the float bobs on the real water surface, wait, tug, catch. Fish depend on the water kind
+   (sea, lake, river, pond), the time of day and the weather. Placeholder fish meshes.
+6. **Cooking**: raw fish on the fire, cooked after a time, burnt if left. Eating restores hunger. Raw fish risks sickness.
+7. **Sailing**: a small boat (raft or rowing boat first, then a sail). It floats on the sea and lake waves using the
+   same wave function the water draws, so the boat rides what you see, and the regional wind drives the sail.
+   This is the biggest step, so it comes last.
+
+**Hunting** waits for animal assets. The survival needs and the inventory are designed so that meat and hides slot in later.
+
+## Not yet
+Saving progress, crafting trees, building, multiplayer sync.
