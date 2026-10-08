@@ -98,6 +98,10 @@ public static class GameSettings
     public static readonly Setting TerrainDistance = Add(new("view.terrain", "View distance", "Terrain", 0, 3, 1, 1,
         "How far the terrain reaches before the horizon fog. ~80 km is for testing (more distant tiles to build).",
         options: new[] { "~10 km", "~20 km", "~40 km", "~80 km" }, rebuild: true));
+    public static readonly Setting HorizonLand = Add(new("view.horizon", "View distance", "Horizon land", 0, 2, 1, 2,
+        "Coarse far land (and sea) beyond the terrain, out to ~100 or ~250 km, following the Earth's curve and fading " +
+        "into the haze — no hard edge where the terrain stops. Off = build 36 (the terrain just ends).",
+        options: new[] { "off", "~100 km", "~250 km" }));
     // Round 25 (Tom: "the loss of detail is pretty near, still visible — a slider so I can benchmark it").
     public static readonly Setting TerrainDetail = Add(new("view.terrain_detail", "View distance", "Terrain detail range", 1, 4, 1, 1,
         "How far each terrain detail level reaches: the full-detail ground, grass, 3D trees and every coarser ring move " +

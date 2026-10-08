@@ -40,6 +40,7 @@ public partial class WorldLab : Node3D
     private readonly GameClock _clock = new();
     private readonly Weather _weather = new();
     private bool _weatherProbe;
+    private HorizonLand? _horizon;
     private float _shotRainHere = -1; // screenshots: force the local rain (0..1) under the simulated weather
     private double _shotStrike = -1; // screenshots: a held lightning strike this far ahead (m)
     private bool _strikePlaced;
@@ -319,6 +320,8 @@ public partial class WorldLab : Node3D
         var start = _landmarks.Count > 0 ? _landmarks[0] : Landmarks.Dry(_sampler, "Start", Landmarks.Home(_sampler.Plan).X, Landmarks.Home(_sampler.Plan).Z);
         _originX = Math.Floor(start.X / 64) * 64; _originZ = Math.Floor(start.Z / 64) * 64;
         _streamer.Configure(_sampler, _originX, _originZ);
+        if (_horizon == null) { _horizon = new HorizonLand(); AddChild(_horizon); }
+        _horizon.Configure(_sampler);
         _water.Configure(_sampler, _streamer.WaterMaterial, _originX, _originZ);
         _rain = false;
         Teleport(start.X, start.Z);
@@ -613,6 +616,7 @@ public partial class WorldLab : Node3D
         if (_sampler == null) return;
         Rebase(PlayerX, PlayerZ);
         _streamer.Update(PlayerX, PlayerZ);
+        _horizon?.Step(PlayerX, PlayerZ, _originX, _originZ, _streamer.Levels, WorldStreamer.TopRadius);
         if (_holding && _streamer.HasGround(PlayerX, PlayerZ))
         {
             // Snap to the generated ground once its collision exists.
@@ -1154,7 +1158,7 @@ public partial class WorldLab : Node3D
     private void Smoke(double delta)
     {
         _smokeTimer += delta;
-        bool settled = _streamer.Settled && !_holding;
+        bool settled = _streamer.Settled && !_holding && !(_horizon?.Busy ?? false);
         if (_shotPath != null)
         {
             if (_shotWet is { } wet && !_shotRain) _atmosphere.SetWetness(wet.Ground, wet.Puddles);
