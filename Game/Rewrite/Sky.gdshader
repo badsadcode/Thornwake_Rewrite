@@ -29,6 +29,11 @@ uniform int sun_style = 0;     // 0 classic (build 11), 1 natural (colour, size 
 // xy: world position of the camera plus the wind drift, wrapped to the cloud period (m); z: coverage 0..1;
 // w: storm 0..1 (rain: grey, darker sky and clouds).
 global uniform vec4 cloud_state;
+// Round 27, simulated weather: the weather around (WeatherMap.cs) — r cloud, g rain, b thunderstorm — and the
+// camera's place in it (uv, 1/size in m, on).
+global uniform sampler2D weather_map : filter_linear, repeat_disable;
+global uniform vec4 weather_frame;
+vec3 wmap(vec2 rel) { return texture(weather_map, weather_frame.xy + rel * weather_frame.z).rgb; }
 // xy: the same for the high cirrus layer, zw: for the low layer (each drifts at its own speed and heading).
 global uniform vec4 cloud_layers;
 // Biome mood: rgb multiplies the sky colours, a = extra haze toward the horizon colour (0 = realistic sky).
@@ -140,6 +145,7 @@ vec3 underlight(vec3 dir) {
 }
 
 float cloud_density(vec2 xz, float coverage) {
+	if (weather_frame.w > 0.5) coverage = mix(coverage, wmap(xz - cloud_state.xy).r, 0.85); // where the weather really is
 	vec2 uv = xz / cloud_period;
 	float base = texture(cloud_tex, uv).r;
 	float detail = texture(cloud_tex, uv * 4.0 + vec2(0.31, 0.17)).g;
@@ -160,6 +166,7 @@ float cirrus_density(vec2 xz, float coverage) {
 
 // Low ragged clouds: smaller, broken pieces.
 float low_density(vec2 xz, float coverage, float storm) {
+	if (weather_frame.w > 0.5) { vec3 w = wmap(xz - cloud_state.xy); coverage = mix(coverage, w.r, 0.85); storm = max(w.g, w.b); }
 	vec2 uv = xz / (cloud_period * 0.45) + vec2(0.53, 0.29);
 	float n = texture(cloud_tex, uv).r * 0.65 + texture(cloud_tex, uv * 3.0).g * 0.35;
 	float edge = 1.0 - (coverage * 0.55 + storm * 0.35);
@@ -347,6 +354,9 @@ float vremap(float v, float a, float b, float c, float d) { return c + (v - a) /
 
 // The cloud map at xz: x = mass (0..1), y = how high the cloud grows above VBOTTOM (m), z = base (m above the camera).
 vec3 vweather(vec2 xz, float coverage) {
+	// Simulated weather: cover from the map, rain thickens the deck, thunderstorm cells grow towers (up to ~5 km).
+	vec3 wm = weather_frame.w > 0.5 ? wmap(xz - cloud_state.xy) : vec3(coverage, cloud_state.w, 0.0);
+	coverage = mix(coverage, wm.r, weather_frame.w * 0.85);
 	vec2 uv = xz / cloud_period;
 	float n = texture(cloud_tex, uv).r * 0.8 + texture(cloud_tex, uv * 4.0 + vec2(0.31, 0.17)).g * 0.2;
 	float edge = 1.0 - coverage;
@@ -358,7 +368,9 @@ vec3 vweather(vec2 xz, float coverage) {
 	// (only where the land holds cloud does the base come down toward the ridges; elsewhere it stays put)
 	float base = mix(VBOTTOM, clamp(extra.z, max(VBOTTOM - 500.0, 600.0), VBOTTOM), clamp(extra.x / 0.85, 0.0, 1.0));
 	mass = max(mass, extra.x * (0.75 + 0.5 * n));
-	return vec3(mass, 350.0 + 950.0 * sqrt(mass) + tower * 5200.0 + cloud_state.w * 700.0 + extra.y + (VBOTTOM - base), base);
+	float cb = smoothstep(0.1, 0.7, wm.b) * weather_frame.w;
+	mass = max(mass, cb * smoothstep(0.25, 0.6, n + cb * 0.3));
+	return vec3(mass, 350.0 + 950.0 * sqrt(mass) + max(tower, cb * (0.6 + 0.4 * n)) * 5200.0 + wm.g * 700.0 + extra.y + (VBOTTOM - base), base);
 }
 
 // Density at p (camera-relative x/z offset by the cloud drift, y above the camera). detail: the fine erosion (off for
@@ -670,7 +682,15 @@ void sky() {
 			float deck = texture(cloud_tex, xz / (cloud_period * 0.7)).r * 0.65 + texture(cloud_tex, xz / (cloud_period * 0.22) + 0.4).g * 0.35;
 			overcast *= mix(1.0, 0.8 + 0.4 * deck, smoothstep(0.02, 0.2, up));
 		}
-		col = mix(col, overcast, storm * 0.85);
+		// Simulated weather: the low grey deck only where it rains — overhead when it rains here, on the horizon
+		// toward rain far away — darker under thunderstorms.
+		float storm_here = storm;
+		if (weather_frame.w > 0.5) {
+			vec3 w = wmap(dir.xz * min(700.0 / max(up, 0.02), 60000.0));
+			storm_here = max(w.g, w.b * 0.9) * smoothstep(-0.05, 0.02, up) + storm * smoothstep(0.02, -0.05, up);
+			overcast *= 1.0 - 0.35 * w.b;
+		}
+		col = mix(col, overcast, storm_here * 0.85);
 		disc *= 1.0 - storm;
 		// Lightning (round 27): the clouds light up toward the strike — a broad glow for a near one (the whole deck
 		// overhead flashes), a narrow low glow on the horizon for a far one; clear sky barely.

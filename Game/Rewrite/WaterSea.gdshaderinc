@@ -43,6 +43,31 @@ uniform vec3 crest_glow : source_color = vec3(0.10, 0.55, 0.50);
 const float wave_phase[12] = { 0.0, 1.7, 4.1, 2.6, 5.3, 0.9, 3.3, 5.9, 1.1, 4.6, 2.2, 0.4 };
 global uniform float ocean_time;
 global uniform vec4 wind; // dir.x, speed/8, dir.z, gust
+global uniform vec4 rain_now; // round 27: x = rain falling here (0..1)
+
+float rr_hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+// Raindrops on the water (round 27): expanding rings, each drop at a random spot in a half-metre cell at a random
+// moment, more drops the harder it rains; returned as a surface slope (lighting only, no geometry).
+vec2 rain_rings(vec2 p, float t, float rain) {
+	vec2 slope = vec2(0.0);
+	for (int layer = 0; layer < 3; layer++) {
+		vec2 q = p * (2.2 + float(layer) * 0.7) + float(layer) * 17.3;
+		vec2 cell = floor(q), f = fract(q) - 0.5;
+		float h = rr_hash(cell + float(layer) * 7.1);
+		float period = 0.7 + 0.6 * h;
+		float cycle = t / period + h;
+		if (rr_hash(cell + floor(cycle) * 1.73) > 0.15 + 0.8 * rain) continue;
+		float age = fract(cycle);
+		vec2 c = (vec2(rr_hash(cell + 1.3 + floor(cycle)), rr_hash(cell + 2.7 + floor(cycle))) - 0.5) * 0.35;
+		vec2 d = f - c;
+		float r = length(d) + 1e-4;
+		float x = r - age * 0.42;
+		// (a ring of a few centimetres; the first instant a sharp splash in the middle)
+		slope += d / r * (cos(x * 42.0) * exp(-x * x * 500.0) * (1.0 - age) * (1.0 - age) * 1.1
+			+ exp(-r * r * 2500.0) * smoothstep(0.12, 0.0, age) * 1.5);
+	}
+	return slope;
+}
 uniform vec3 sky_horizon : source_color = vec3(0.70, 0.76, 0.78);
 uniform vec3 sky_zenith : source_color = vec3(0.32, 0.47, 0.62);
 
@@ -409,7 +434,8 @@ void vertex() {
 			float swash = 1.0 - smoothstep(0.0, 2.0, vertex_depth);
 			float period = 7.0 + 4.0 * sea_state;
 			float run = 0.5 + 0.5 * sin(-PI2 / period * ocean_time + noise(rest_xz * 0.02) * 2.0);
-			offset.y += swash * (0.1 + 0.5 * sea_state) * mix(0.4, 1.0, exposure) * (run * run - 0.3);
+			// (round 27: in a gale the sea surges much further up the beach)
+			offset.y += swash * (0.1 + 0.5 * sea_state + 0.55 * smoothstep(0.55, 1.0, sea_state)) * mix(0.4, 1.0, exposure) * (run * run - 0.3);
 		}
 	}
 	VERTEX += offset;
@@ -844,6 +870,8 @@ void fragment() {
 				* (1.0 - smoothstep(1.0, 4.0, footprint));
 		}
 	}
+	// Raindrops ringing on the surface close by (they fade out by ~35 m; rivers and the open sea too).
+	if (rain_now.x > 0.02) slope += rain_rings(p, TIME, rain_now.x) * rain_now.x * (1.0 - smoothstep(12.0, 35.0, dist));
 	vec3 n_world = normalize(vec3(-slope.x, 1.0, -slope.y));
 	vec3 n_view = normalize((VIEW_MATRIX * vec4(n_world, 0.0)).xyz);
 	NORMAL = n_view;

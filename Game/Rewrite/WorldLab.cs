@@ -40,11 +40,13 @@ public partial class WorldLab : Node3D
     private readonly GameClock _clock = new();
     private readonly Weather _weather = new();
     private bool _weatherProbe;
+    private float _shotRainHere = -1; // screenshots: force the local rain (0..1) under the simulated weather
     private double _shotStrike = -1; // screenshots: a held lightning strike this far ahead (m)
     private bool _strikePlaced;
     private Lightning? _lightning;
     private string? _thunderWavs;
     private WeatherField? _weatherField;
+    private WeatherMap? _weatherMap;
     private TerrainSampler? _weatherFieldFor;
     /// <summary>The world weather field (simulated weather model; null otherwise): the map and the sky read it.</summary>
     public WeatherField? WeatherField => GameSettings.WeatherModel.Index == 1 ? _weatherField : null;
@@ -151,6 +153,7 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--front=")) { var v = arg[8..].Split(','); _atmosphere.ForceFront = new Vector2(float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg == "--weather-probe") _weatherProbe = true;
+            if (arg.StartsWith("--rain-here=")) _shotRainHere = float.Parse(arg[12..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--strike=")) _shotStrike = double.Parse(arg[9..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--thunder-wavs=")) _thunderWavs = arg[15..];
             if (arg.StartsWith("--tool=")) _tools.Select(int.Parse(arg[7..], CultureInfo.InvariantCulture));
@@ -374,13 +377,17 @@ public partial class WorldLab : Node3D
             _weather.UpdateFromField(_weatherField, _shotPath != null ? 600 : delta, gameHours, PlayerX, PlayerZ, temperature, groundSnow, _shotPath != null);
             var (sx, sz, speed) = _weatherField.Steering(gameHours);
             _atmosphere.SetSimulatedWeather(new Vector2((float)sx, (float)sz), (float)speed, _weather.NearCells, PlayerX, PlayerZ);
+            _weatherMap ??= new WeatherMap();
+            var camNow = _camera.GlobalPosition;
+            _weatherMap.Update(_weatherField, gameHours, _originX + camNow.X, _originZ + camNow.Z, delta, _shotPath != null);
         }
         else
         {
             _weather.Update(_shotPath != null ? 600 : delta, gameHours, rain, temperature, groundSnow, (ulong)_sampler.Plan.Manifest.Seed);
             _atmosphere.SetSimulatedWeather(null, 0, null, 0, 0);
+            WeatherMap.Disable();
         }
-        _atmosphere.Precipitation = _weather.Precipitation;
+        _atmosphere.Precipitation = _shotRainHere >= 0 ? _shotRainHere : _weather.Precipitation;
         _atmosphere.Snowing = _weather.Snow;
         _atmosphere.Thunder = _weather.Thunder;
         _atmosphere.WeatherClouds = _weather.Cloudiness;
@@ -415,7 +422,7 @@ public partial class WorldLab : Node3D
             }
         }
         GD.Print($"WEATHER rain {100.0 * rainy / n:0}% of the time, thunder {100.0 * stormy / n:0}%, up to {maxCells} cells within 70 km");
-        foreach (double h in new[] { 14.0, 15.0 })
+        foreach (double h in new[] { 14.0, 38.0 })
         {
             GD.Print($"WEATHER map h{h} (200 km, 5 km per char; # heavy, + rain, . cloud):");
             for (int j = -20; j < 20; j++)

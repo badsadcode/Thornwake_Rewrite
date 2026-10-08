@@ -54,7 +54,8 @@ public sealed class Wind
         Direction = Direction.Slerp(steady > .01f ? v / steady : Direction, Math.Clamp((float)realSeconds * .5f, 0, 1));
         // Gusts: stronger and more frequent in storms and near outflow.
         Gust = (float)Math.Clamp(.5 + .5 * Noise.Value(_time / 4, 11, seed + 4) + .3 * Noise.Value(_time / 1.3, 13, seed + 5), 0, 1);
-        SteadySpeed = steady * (float)GameSettings.CloudSpeed.Value;
+        // (not scaled by the Cloud speed setting: that speeds the clouds up; a Cloud speed of 4 made 63 m/s gales here)
+        SteadySpeed = steady;
         Speed = SteadySpeed * (0.85f + (.35f + .25f * storm) * Gust);
         RenderingServer.GlobalShaderParameterSet("wind", new Vector4(Direction.X, Math.Min(2.5f, SteadySpeed / 8), Direction.Y, Gust));
         // Plants (WindSway.gdshaderinc): gusts carried downwind at ~70 % of the wind speed, gustier in storms.

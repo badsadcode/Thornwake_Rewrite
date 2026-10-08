@@ -20,6 +20,8 @@ uniform float max_distance = 7000.0;
 // lit air under the gaps and the shaded lanes between them separate more.
 uniform float contrast = 0.0;
 global uniform vec4 cloud_state;
+global uniform sampler2D weather_map : filter_linear, repeat_disable;
+global uniform vec4 weather_frame;
 
 const int STEPS = 40;
 
@@ -31,6 +33,8 @@ float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.545
 
 // The sky's main deck (Sky.gdshader cloud_density), from a blurrier mip (soft shaft edges) but a crisper threshold.
 float cloud_density(vec2 xz, float coverage) {
+	// (simulated weather: the map's cover, so beams fall where the cloud really breaks)
+	if (weather_frame.w > 0.5) coverage = mix(coverage, texture(weather_map, weather_frame.xy + (xz - cloud_state.xy) * weather_frame.z).r, 0.85);
 	vec2 uv = xz / cloud_period;
 	float n = textureLod(cloud_tex, uv, 2.0).r * 0.8 + textureLod(cloud_tex, uv * 4.0 + vec2(0.31, 0.17), 2.0).g * 0.2;
 	float edge = 1.0 - coverage;

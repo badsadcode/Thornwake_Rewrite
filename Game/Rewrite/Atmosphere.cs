@@ -25,7 +25,7 @@ public partial class Atmosphere : Node3D
     // Cloud texture size (setting "Cloud resolution"). The cloud shadow decal stays at 256 (it is blurry anyway).
     private int _cloudPixels;
     private const int Tile = 256;
-    private ShaderMaterial _sky = null!, _shafts = null!, _beams = null!;
+    private ShaderMaterial _sky = null!, _shafts = null!, _beams = null!, _curtains = null!;
     private Decal _shadow = null!;
     private Image _noise = null!;
     private ImageTexture _shadowTexture = null!;
@@ -130,6 +130,7 @@ public partial class Atmosphere : Node3D
         _beams.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
         _beams.SetShaderParameter("cloud_period", CloudPeriod);
         _beams.SetShaderParameter("cloud_height", CloudHeight);
+        _curtains = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/RainCurtains.gdshader"), RenderPriority = 98 };
 
         GameSettings.Changed += OnSetting;
         ApplyAll();
@@ -158,6 +159,12 @@ public partial class Atmosphere : Node3D
             Visible = GameSettings.LightBeams.Value > 0,
         };
         camera.AddChild(_beamQuad);
+        // Distant rain curtains (simulated weather; the shader discards when the weather map is off).
+        camera.AddChild(new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(2, 2) }, MaterialOverride = _curtains, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            ExtraCullMargin = 16384, Position = new Vector3(0, 0, -1), GIMode = GeometryInstance3D.GIModeEnum.Disabled,
+        });
         camera.AddChild(new MeshInstance3D
         {
             Mesh = new QuadMesh { Size = new Vector2(2, 2) }, MaterialOverride = _underwater, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
@@ -390,6 +397,11 @@ public partial class Atmosphere : Node3D
         Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, gloom);
         _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, gloom);
         UpdateWaterSky(elevation);
+        // Rain curtains: lit like the overcast (grey, dimmer at dusk and night), hanging from ~1.5 km above the sea.
+        float lit = Mathf.Clamp(_daylight * 1.1f, .06f, 1);
+        _curtains.SetShaderParameter("rain_color", new Color(.5f * lit, .53f * lit, .57f * lit));
+        _curtains.SetShaderParameter("cloud_base", SeaLevel + 1500);
+        _curtains.SetShaderParameter("strength", GameSettings.DistantRain.F);
         Environment.FogDensity = (Natural ? .00007f : .00009f) * GameSettings.Haze.F * Mathf.Lerp(1, 4, Math.Max(_storm, overcast * .45f));
         Environment.FogEnabled = GameSettings.Haze.Value > 0 || _storm > 0;
         // The sky's radiance map is not re-baked for the storm (global uniform), so dim the ambient light directly.
@@ -401,11 +413,32 @@ public partial class Atmosphere : Node3D
             if (Snowing != _particlesSnow) SetParticleKind(Snowing);
             float p = Precip;
             _rainParticles.Emitting = p > .05f;
-            _rainParticles.AmountRatio = Mathf.Clamp(p * 1.1f, 0, 1) * Math.Clamp(GameSettings.RainStrength.F, .2f, 1);
+            float slant = Snowing ? .12f : .02f;
+            if (_steer != null)
+            {
+                // Simulated weather (round 27, Tom: "rain should be denser… varying density"): up to 24 000 drops,
+                // Rain strength scales all of them (1 ≈ 15 000 in a downpour), and the rain comes in sheets with the
+                // gusts. (Changing Amount restarts the emitter: only when the model changes.)
+                if (_rainParticles.Amount != 24000)
+                {
+                    _rainParticles.Amount = 24000;
+                    SetParticleKind(Snowing);
+                }
+                float sheets = .7f + .45f * Wind.Gust;
+                _rainParticles.AmountRatio = Mathf.Clamp(Mathf.Pow(p, .8f) * sheets, 0, 1) * Math.Clamp(GameSettings.RainStrength.F / 1.6f, .12f, 1);
+                if (!Snowing) slant = .04f;
+            }
+            else
+            {
+                if (_rainParticles.Amount != 9000) { _rainParticles.Amount = 9000; SetParticleKind(Snowing); }
+                _rainParticles.AmountRatio = Mathf.Clamp(p * 1.1f, 0, 1) * Math.Clamp(GameSettings.RainStrength.F, .2f, 1);
+            }
             // Rain slants with the wind; snow drifts with it.
             if (_rainParticles.ProcessMaterial is ParticleProcessMaterial pm)
-                pm.Direction = new Vector3(Wind.Direction.X * Wind.Speed * (Snowing ? .12f : .02f), -1, Wind.Direction.Y * Wind.Speed * (Snowing ? .12f : .02f));
+                pm.Direction = new Vector3(Wind.Direction.X * Wind.Speed * slant, -1, Wind.Direction.Y * Wind.Speed * slant);
         }
+        // Raindrops ringing on water (round 27): how hard it rains here (not snow), for the water shader.
+        RenderingServer.GlobalShaderParameterSet("rain_now", new Vector4(Snowing ? 0 : Mathf.Clamp(Precip, 0, 1), 0, 0, 0));
         if (_steer == null) UpdateLightning(delta); // classic model; the simulated one has Lightning.cs
         else if (_flash != null) _flash.Visible = false;
         // Warmer light at a low sun.
@@ -600,7 +633,17 @@ public partial class Atmosphere : Node3D
         }
         else
         {
-            _rainParticles.DrawPass1 = new QuadMesh { Size = new Vector2(.015f, .6f), Material = new StandardMaterial3D
+            _rainParticles.DrawPass1 = _steer != null
+                // Simulated weather: thinner streaks that fade out within a few metres of the camera (close ones drew
+                // white poles through the view).
+                ? new QuadMesh { Size = new Vector2(.011f, .55f), Material = new StandardMaterial3D
+                {
+                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                    AlbedoColor = new Color(.78f, .83f, .88f, .2f), ProximityFadeEnabled = true, ProximityFadeDistance = 1.5f,
+                    BillboardMode = BaseMaterial3D.BillboardModeEnum.FixedY,
+                    DistanceFadeMode = BaseMaterial3D.DistanceFadeModeEnum.PixelAlpha, DistanceFadeMinDistance = 1.2f, DistanceFadeMaxDistance = 5f,
+                } }
+                : new QuadMesh { Size = new Vector2(.015f, .6f), Material = new StandardMaterial3D
             {
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
                 AlbedoColor = new Color(.8f, .85f, .9f, .18f), ProximityFadeEnabled = true, ProximityFadeDistance = 1.5f, BillboardMode = BaseMaterial3D.BillboardModeEnum.FixedY,
@@ -645,6 +688,17 @@ public partial class Atmosphere : Node3D
         // Storms come from upwind and leave downwind; the bearing follows the wind slowly.
         var toward = StormComing ? -Wind.Direction : Wind.Direction;
         float az = Mathf.Atan2(toward.Y, toward.X);
+        // Simulated weather: the towers stand over the strongest real thunderstorm 8–70 km away.
+        if (_cells != null)
+        {
+            double best = 0;
+            foreach (var c in _cells)
+            {
+                double ox = c.X - _cellsX, oz = c.Z - _cellsZ, d = Math.Sqrt(ox * ox + oz * oz);
+                double w = c.Intensity * DetMathSmooth((d - c.Radius - 4000) / 5000) * DetMathSmooth((70000 - d) / 35000);
+                if (w > best) { best = w; az = (float)Math.Atan2(oz, ox); }
+            }
+        }
         _stormAzimuth = float.IsNaN(_stormAzimuth) || force != null ? az : Mathf.LerpAngle(_stormAzimuth, az, (float)Math.Min(1, delta / 120));
         if (!float.IsNaN(ForceStormAzimuth)) _stormAzimuth = ForceStormAzimuth;
         // Lightning inside the far cells: a flicker every few seconds in one of the three (visible mostly at night).

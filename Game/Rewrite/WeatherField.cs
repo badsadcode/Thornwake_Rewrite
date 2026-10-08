@@ -124,7 +124,10 @@ public sealed class WeatherField
     private readonly List<Cell> _scratch = new();
 
     /// <summary>The weather at a world point (sea-level climate; the caller corrects for snow by height).</summary>
-    public Sample At(double x, double z, double gameHours, bool withCells = true)
+    public Sample At(double x, double z, double gameHours, bool withCells = true) => At(x, z, gameHours, withCells, _scratch);
+
+    /// <summary>As <see cref="At(double,double,double,bool)"/>, with the caller's own list (thread-safe).</summary>
+    public Sample At(double x, double z, double gameHours, bool withCells, List<Cell> scratch)
     {
         var (_, rain) = _climate.At(x, z, 0);
         var (systems, band) = Synoptic(x, z, gameHours);
@@ -136,8 +139,8 @@ public sealed class WeatherField
         double convective = 0;
         if (withCells)
         {
-            Cells(x, z, gameHours, 0, _scratch);
-            foreach (var c in _scratch)
+            Cells(x, z, gameHours, 0, scratch);
+            foreach (var c in scratch)
             {
                 double d2 = ((c.X - x) * (c.X - x) + (c.Z - z) * (c.Z - z)) / (c.Radius * c.Radius);
                 double core = Math.Exp(-d2) * c.Intensity;
