@@ -39,3 +39,24 @@ thunderstorms with anvils, rain shafts and lightning, lenticulars over peaks, ma
 deck) and the night part of 4 (auroras, shooting stars) are in; the water reflects the clouds and the far cloud types.
 Round 19 (build 25): approaching rain fronts with a rain wall visible from far away, mountain cloud, overcast mood. Not yet from 3: fog banks rolling off the sea; clouds wrapping slopes in front of the player (needs fog volumes). Next: the Milky Way, then the cloud experiments (the far towers are a
 first step toward them: shaded puffs, not yet a volume).
+
+## Ideas from other Godot cloud projects (2026-10-08, review only; no code taken)
+Tom asked for a look at three projects (all MIT, used as **ideas only**): Bonkahe/SunshineClouds2,
+clayjohn/godot-volumetric-cloud-demo-v2 and MMqd/godot-nishita-sky-with-volumetric-clouds. They are general
+cloud renderers with one global coverage (or a painted mask). Thornwake's clouds are already driven by a simulated
+world (weather map, fronts, storm cells, mountain clouds, lenticulars, curtains, lightning, matching shadows and
+reflections). What they do better is **how** the clouds are drawn:
+1. **Clouds as a compositor effect with depth** (SunshineClouds2): a compute pass after the scene, not the sky
+   shader, so clouds can sit **in front of** mountains, wrap around summits, and you can fly into them. Ours are
+   drawn behind everything (the sky), which is why the cloud base is kept ≥ 0.8 km above the camera. Biggest visual
+   gain for a mountain world. Low resolution plus a depth-aware upscale (furthest depth per block) keeps it cheap.
+2. **Amortised far clouds** (clayjohn v2): the whole sky dome rendered into a texture a 1/64 part per frame and
+   blended between two copies, about 20× cheaper. It suits far clouds that change slowly; near clouds stay per frame.
+   The same texture could feed the water's sky reflection and the radiance map.
+3. **Physical sky from small lookup tables** (clayjohn v2, Hillaire 2020 transmittance and sky-view LUTs): correct
+   sunset colours, a darker sky from high summits, and the sun's colour for the light, at almost no per-pixel cost.
+   Ours is hand-tuned gradients plus twilight effects.
+4. **Better step noise and stepping**: blue-noise / interleaved-gradient dither instead of white noise (less grain
+   at the same step count, so fewer steps), coarse steps until cloud is found, then fine (Schneider 2015).
+5. Small ones: curl-noise distortion for wispy edges; reading cloud density back at points (we can do this on the
+   CPU from the weather field, e.g. for the sun's warmth in survival); a moon lit by the sun with eclipses (Nishita).
