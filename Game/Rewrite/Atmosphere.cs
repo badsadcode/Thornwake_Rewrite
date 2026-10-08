@@ -1025,9 +1025,13 @@ public partial class Atmosphere : Node3D
 
     private void UpdateMood(double delta)
     {
-        float strength = GameSettings.BiomeMoods.Index switch { 0 => 0, 1 => .6f, _ => 1.4f };
-        var neutral = new Vector4(1, 1, 1, 0);
-        var target = neutral.Lerp(_moodTarget, strength);
+        // Round 29 (Tom: "biome specific skies don't seem to change anything"): the tints in biomes.json are near white
+        // (a 5–20 % shift) and were scaled by .6 / 1.4 — invisible. Now amplified (subtle ×1.6, strong ×3.2) and also
+        // carried by the sunlight and the fog's colour, so a jungle, a desert and a volcano feel different.
+        float strength = GameSettings.BiomeMoods.Index switch { 0 => 0, 1 => 1.6f, _ => 3.2f };
+        var t = _moodTarget;
+        var target = new Vector4(Mathf.Clamp(1 + strength * (t.X - 1), .3f, 1.3f), Mathf.Clamp(1 + strength * (t.Y - 1), .3f, 1.3f),
+            Mathf.Clamp(1 + strength * (t.Z - 1), .3f, 1.3f), Mathf.Clamp(t.W * strength * .55f, 0, 1));
         _mood = _mood.Lerp(target, 1 - Mathf.Exp(-(float)delta / 3)); // ~3 s to settle when crossing into a biome
         RenderingServer.GlobalShaderParameterSet("sky_mood", _mood);
         var tint = new Color(_mood.X, _mood.Y, _mood.Z);
@@ -1035,6 +1039,8 @@ public partial class Atmosphere : Node3D
         float light = Mathf.Clamp(_daylight * 1.1f, 0, 1);
         var fog = new Color("aebfc2").Lerp(new Color("e0b090"), (1 - Mathf.Clamp(_sunElevation / 12, 0, 1)) * (1 - _night) * .5f);
         Environment.FogLightColor = (fog * tint * light).Lerp(new Color("0b0f18"), _night * .9f);
+        Sun.LightColor *= new Color(1, 1, 1).Lerp(tint, .35f);
+        Environment.VolumetricFogAlbedo = new Color("dfe6ea") * new Color(1, 1, 1).Lerp(tint, .6f);
         Environment.FogDensity *= 1 + 2.5f * _mood.W;
         Environment.FogEnabled |= _mood.W > .01f;
     }
