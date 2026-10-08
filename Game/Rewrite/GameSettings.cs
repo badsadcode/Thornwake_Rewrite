@@ -241,6 +241,11 @@ public static class GameSettings
     public static readonly Setting WeatherOn = Add(new("sim.weather", "Simulation", "Weather", 0, 1, 1, 1,
         "Simulated weather: fronts every few game hours bring clouds, rain, storms or snow, more often in wet climates. " +
         "Off: the Cloud cover setting and H (rain) only."));
+    public static readonly Setting WeatherModel = Add(new("sim.weather_model", "Simulation", "Weather model", 0, 1, 1, 1,
+        "Classic: the build 35 weather — fronts come by the clock, the same rain everywhere at once, wind and waves as " +
+        "before. Simulated: weather systems, frontal rain bands and thunderstorm cells move across the whole world with " +
+        "the wind — you can see a storm coming, sail into it or leave it behind; the wind gusts out of storms and the " +
+        "sea builds with the wind.", options: new[] { "classic (build 35)", "simulated" }));
     public static readonly Setting RainFrequency = Add(new("sim.rain_frequency", "Simulation", "Rain frequency", .3, 2.5, .05, 1,
         "How often weather fronts bring rain (1 = as the climate says).", "×"));
     public static readonly Setting RainStrength = Add(new("sim.rain", "Simulation", "Rain strength", .1, 4, .1, 1,

@@ -30,7 +30,32 @@ public sealed class Wind
         double baseSpeed = 5.5 + 4.5 * Noise.Value(gameHours / 6, 7, seed + 3) + storm * 9;
         Gust = (float)Math.Clamp(.5 + .5 * Noise.Value(_time / 4, 11, seed + 4) + .3 * Noise.Value(_time / 1.3, 13, seed + 5), 0, 1);
         Speed = (float)(Math.Max(.5, baseSpeed) * (0.85 + .35 * Gust) * GameSettings.CloudSpeed.Value);
+        SteadySpeed = (float)(Math.Max(.5, baseSpeed) * GameSettings.CloudSpeed.Value);
         RenderingServer.GlobalShaderParameterSet("wind", new Vector4(Direction.X, Math.Min(2.5f, Speed / 8), Direction.Y, Gust));
+    }
+
+    /// <summary>The speed without gusts (m/s): what builds the sea and bends the plants.</summary>
+    public float SteadySpeed { get; private set; } = 6;
+
+    /// <summary>
+    /// Simulated weather (round 27): the surface wind follows the steering wind of the weather systems (turned by up
+    /// to ~±35° by the land and the hour), slower near the ground, plus gust fronts blowing out of nearby storms.
+    /// </summary>
+    public void UpdateSimulated(double realSeconds, double gameHours, Vector2 steer, float steerSpeed, Vector2 outflowDir,
+        float outflowSpeed, float storm, ulong seed)
+    {
+        _time += realSeconds;
+        double veer = Noise.Value(gameHours / 7, 0, seed + 1) * .6;
+        var dir = steer.Rotated((float)veer);
+        float baseSpeed = (float)(steerSpeed * .45 + 2.5 * Noise.Value(gameHours / 5, 7, seed + 3) + storm * 6);
+        var v = dir * Math.Max(.5f, baseSpeed) + outflowDir * outflowSpeed;
+        float steady = v.Length();
+        Direction = Direction.Slerp(steady > .01f ? v / steady : Direction, Math.Clamp((float)realSeconds * .5f, 0, 1));
+        // Gusts: stronger and more frequent in storms and near outflow.
+        Gust = (float)Math.Clamp(.5 + .5 * Noise.Value(_time / 4, 11, seed + 4) + .3 * Noise.Value(_time / 1.3, 13, seed + 5), 0, 1);
+        SteadySpeed = steady * (float)GameSettings.CloudSpeed.Value;
+        Speed = SteadySpeed * (0.85f + (.35f + .25f * storm) * Gust);
+        RenderingServer.GlobalShaderParameterSet("wind", new Vector4(Direction.X, Math.Min(2.5f, SteadySpeed / 8), Direction.Y, Gust));
     }
 
     /// <summary>"from NW" etc. (where the wind comes from).</summary>

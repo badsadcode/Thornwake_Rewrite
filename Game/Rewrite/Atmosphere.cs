@@ -365,6 +365,15 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("rain_wetness", new Vector2(_wetness, _puddles));
         RenderingServer.GlobalShaderParameterSet("ocean_time", (float)(OceanTime % 100000));
         double seaState = Math.Clamp(GameSettings.SeaState.Value + _storm * .45, 0, 1);
+        if (_steer != null)
+        {
+            // Simulated: the sea builds with the wind over a minute or two and calms more slowly (no gusts in it);
+            // the Sea state setting adds a background swell (0.25 = a light one).
+            float target = Mathf.SmoothStep(4, 22, Wind.SteadySpeed);
+            if (_windSea < 0 || StillShot) _windSea = target;
+            _windSea = Mathf.MoveToward(_windSea, target, (float)delta / (target > _windSea ? 90 : 180));
+            seaState = Math.Clamp(GameSettings.SeaState.Value * .6 + _windSea * .9, 0, 1);
+        }
         if (originX != Spectrum.OriginX || originZ != Spectrum.OriginZ) { Spectrum.SetOrigin(originX, originZ); SendSpectrumOrigin(); }
         double windAngle = Math.Atan2(Wind.Direction.Y, Wind.Direction.X);
         if (Math.Abs(seaState - _wavesState) > .004 || Math.Abs(Mathf.AngleDifference((float)windAngle, (float)_wavesAngle)) > .14) { _wavesAngle = windAngle; UpdateWaves(seaState); }
@@ -403,7 +412,12 @@ public partial class Atmosphere : Node3D
         Sun.LightColor = new Color("fff3df").Lerp(new Color("ffc58a"), warm * .8f);
         var toSun = Sun.GlobalTransform.Basis.Z.Normalized(); // a directional light shines along -Z
 
-        Wind.Update(delta, sky.Day * 24 + sky.Hour, _storm, 77);
+        if (_steer is { } steer)
+        {
+            var (outDir, outSpeed) = Outflow();
+            Wind.UpdateSimulated(delta, sky.Day * 24 + sky.Hour, steer, _steerSpeed, outDir, outSpeed, _storm, 77);
+        }
+        else Wind.Update(delta, sky.Day * 24 + sky.Hour, _storm, 77);
         double wind = Wind.Speed * 1.5; // m/s at cloud height
         _windX += delta * wind * Wind.Direction.X; _windZ += delta * wind * Wind.Direction.Y;
         _windX %= CloudPeriod; _windZ %= CloudPeriod;
@@ -685,6 +699,39 @@ public partial class Atmosphere : Node3D
         float windAngle = Mathf.Atan2(Wind.Direction.Y, Wind.Direction.X);
         RenderingServer.GlobalShaderParameterSet("cloud_more", new Vector4(mackerel, windAngle, (float)_cloudTime, baseAbove));
     }
+    // ---- simulated weather (round 27): steering wind, nearby thunderstorm cells, wind-built sea
+    private Vector2? _steer;
+    private float _steerSpeed;
+    private System.Collections.Generic.IReadOnlyList<WeatherField.Cell>? _cells;
+    private double _cellsX, _cellsZ;
+    private float _windSea = -1;
+    /// <summary>Thunderstorm cells near the player (simulated model) and the player position they are relative to.</summary>
+    public System.Collections.Generic.IReadOnlyList<WeatherField.Cell>? Cells => _cells;
+    public (double X, double Z) CellsOrigin => (_cellsX, _cellsZ);
+
+    /// <summary>From the weather model: null steering = classic (build 35) wind and sea.</summary>
+    public void SetSimulatedWeather(Vector2? steer, float steerSpeed, System.Collections.Generic.IReadOnlyList<WeatherField.Cell>? cells, double x, double z)
+    {
+        _steer = steer; _steerSpeed = steerSpeed; _cells = cells; _cellsX = x; _cellsZ = z;
+    }
+
+    /// <summary>Storm outflow at the player: gust fronts blow out of nearby thunderstorm cells (direction, extra m/s).</summary>
+    private (Vector2 Dir, float Speed) Outflow()
+    {
+        if (_cells == null) return (Vector2.Zero, 0);
+        Vector2 sum = Vector2.Zero; float best = 0;
+        foreach (var c in _cells)
+        {
+            double ox = _cellsX - c.X, oz = _cellsZ - c.Z, d = Math.Sqrt(ox * ox + oz * oz) + 1;
+            // Strongest under and just outside the core (the downdraft spreading out), fading by ~3 radii.
+            float s = (float)(c.Intensity * 14 * Math.Exp(-Math.Pow(d / (c.Radius * 2.2), 2)));
+            if (s <= .05f) continue;
+            sum += new Vector2((float)(ox / d), (float)(oz / d)) * s;
+            best = Math.Max(best, s);
+        }
+        return (sum.LengthSquared() > 1e-6f ? sum.Normalized() : Vector2.Zero, best);
+    }
+
     /// <summary>Everything the sky, weather and sea are doing now (F9 debug dump).</summary>
     public string DebugInfo()
     {

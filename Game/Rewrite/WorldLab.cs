@@ -39,6 +39,11 @@ public partial class WorldLab : Node3D
     private HSlider _timeSlider = null!;
     private readonly GameClock _clock = new();
     private readonly Weather _weather = new();
+    private bool _weatherProbe;
+    private WeatherField? _weatherField;
+    private TerrainSampler? _weatherFieldFor;
+    /// <summary>The world weather field (simulated weather model; null otherwise): the map and the sky read it.</summary>
+    public WeatherField? WeatherField => GameSettings.WeatherModel.Index == 1 ? _weatherField : null;
     private double? _pendingHour;
 
     private IReadOnlyList<WorldProfile> _profiles = Array.Empty<WorldProfile>();
@@ -141,6 +146,7 @@ public partial class WorldLab : Node3D
             // --front=km,strength: an approaching rain front at this distance (bearing from --storm-at, else upwind)
             if (arg.StartsWith("--front=")) { var v = arg[8..].Split(','); _atmosphere.ForceFront = new Vector2(float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
+            if (arg == "--weather-probe") _weatherProbe = true;
             if (arg.StartsWith("--tool=")) _tools.Select(int.Parse(arg[7..], CultureInfo.InvariantCulture));
             if (arg == "--grid") { _gridShown = true; _streamer.ShowGrid(true); }
             if (arg == "--biome-tint") { _biomeTint = true; _streamer.ShowBiomes(true); }
@@ -333,6 +339,7 @@ public partial class WorldLab : Node3D
         _status = $"{plan.Profile.Name}{(_custom ? " (custom)" : "")}, seed {plan.Manifest.Seed}: generated in {(Time.GetTicksMsec() - _generationStarted) / 1000:0.0} s " +
             $"({plan.Hydrology.Reaches.Count} river reaches, {plan.Hydrology.Lakes.Count} lakes).";
         _overlay.Text = "Loading terrain…";
+        if (_weatherProbe) { WeatherProbe(); GetTree().Quit(); }
     }
 
     /// <summary>The weather at the player: fronts over game time, rain amount from the local climate, snow when cold.</summary>
@@ -348,7 +355,24 @@ public partial class WorldLab : Node3D
         var (ba, bb, share) = _sampler.Plan.Biomes.Sample(PlayerX, PlayerZ);
         double groundSnow = _sampler.Plan.Biomes.Pool[ba].Snow * share + _sampler.Plan.Biomes.Pool[bb].Snow * (1 - share);
         // Screenshots run with the clock stopped; let the weather settle at once there.
-        _weather.Update(_shotPath != null ? 600 : delta, sky.Day * 24 + sky.Hour, rain, temperature, groundSnow, (ulong)_sampler.Plan.Manifest.Seed);
+        double gameHours = sky.Day * 24 + sky.Hour;
+        bool simulated = GameSettings.WeatherModel.Index == 1;
+        if (simulated)
+        {
+            if (_weatherField == null || _weatherFieldFor != _sampler)
+            {
+                _weatherField = new WeatherField((ulong)_sampler.Plan.Manifest.Seed, _sampler.Plan.Climate);
+                _weatherFieldFor = _sampler;
+            }
+            _weather.UpdateFromField(_weatherField, _shotPath != null ? 600 : delta, gameHours, PlayerX, PlayerZ, temperature, groundSnow, _shotPath != null);
+            var (sx, sz, speed) = _weatherField.Steering(gameHours);
+            _atmosphere.SetSimulatedWeather(new Vector2((float)sx, (float)sz), (float)speed, _weather.NearCells, PlayerX, PlayerZ);
+        }
+        else
+        {
+            _weather.Update(_shotPath != null ? 600 : delta, gameHours, rain, temperature, groundSnow, (ulong)_sampler.Plan.Manifest.Seed);
+            _atmosphere.SetSimulatedWeather(null, 0, null, 0, 0);
+        }
         _atmosphere.Precipitation = _weather.Precipitation;
         _atmosphere.Snowing = _weather.Snow;
         _atmosphere.Thunder = _weather.Thunder;
@@ -359,6 +383,45 @@ public partial class WorldLab : Node3D
         _atmosphere.Mackerel = _weather.Mackerel;
         _atmosphere.FrontHours = _weather.FrontHours;
         _atmosphere.FrontStrength = _weather.FrontStrength;
+    }
+
+    /// <summary>--weather-probe: two game days of the simulated weather at the start point, printed (and a rain map).</summary>
+    private void WeatherProbe()
+    {
+        var field = new WeatherField((ulong)_sampler!.Plan.Manifest.Seed, _sampler.Plan.Climate);
+        double x = _shotAt?.X ?? PlayerX, z = _shotAt?.Z ?? PlayerZ;
+        var (t0, r0) = _sampler.Plan.Climate.At(x, z, 0);
+        GD.Print($"WEATHER probe at {x:0},{z:0}: {t0:0.0} C, {r0:0} mm/yr");
+        int rainy = 0, stormy = 0, n = 0; double maxCells = 0;
+        var cells = new System.Collections.Generic.List<WeatherField.Cell>();
+        for (double h = 0; h < 48; h += .25, n++)
+        {
+            var w = field.At(x, z, h);
+            field.Cells(x, z, h, 70000, cells);
+            maxCells = Math.Max(maxCells, cells.Count);
+            if (w.Precip > .1) rainy++;
+            if (w.Convective > .35) stormy++;
+            if (h % 2 == 0)
+            {
+                var (sx, sz, sp) = field.Steering(h);
+                GD.Print($"  h{h,4:0} cloud {w.Cloud:0.00} rain {w.Precip:0.00} conv {w.Convective:0.00} front {w.Front:0.00} cells {cells.Count} steer {sp:0.0} m/s");
+            }
+        }
+        GD.Print($"WEATHER rain {100.0 * rainy / n:0}% of the time, thunder {100.0 * stormy / n:0}%, up to {maxCells} cells within 70 km");
+        foreach (double h in new[] { 14.0, 15.0 })
+        {
+            GD.Print($"WEATHER map h{h} (200 km, 5 km per char; # heavy, + rain, . cloud):");
+            for (int j = -20; j < 20; j++)
+            {
+                var line = new System.Text.StringBuilder();
+                for (int i = -20; i < 20; i++)
+                {
+                    var w = field.At(x + i * 5000, z + j * 5000, h);
+                    line.Append(w.Precip > .5 ? '#' : w.Precip > .1 ? '+' : w.Cloud > .6 ? '.' : ' ');
+                }
+                GD.Print("  |" + line + "|");
+            }
+        }
     }
 
     private double _peakTimer, _peakX = double.NaN, _peakZ, _reliefX = double.NaN, _reliefZ;

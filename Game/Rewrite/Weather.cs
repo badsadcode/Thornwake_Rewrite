@@ -100,6 +100,74 @@ public sealed class Weather
         Mackerel = Mathf.MoveToward(Mackerel, (float)mackerel, slow);
     }
 
+    /// <summary>Thunderstorm cells near the player (simulated model): lightning and the sky read them.</summary>
+    public readonly System.Collections.Generic.List<WeatherField.Cell> NearCells = new();
+    private double _forecastTimer;
+
+    /// <summary>
+    /// Simulated model (round 27): the weather here is the world field at the player — clouds and rain from the
+    /// systems, fronts and thunderstorm cells passing over — with the same easing as the classic model. Distant storms
+    /// and the mackerel sky come from real cells and the field ahead, not from the clock.
+    /// </summary>
+    public void UpdateFromField(WeatherField field, double realSeconds, double gameHours, double x, double z, double temperature,
+        double groundSnow, bool settleNow)
+    {
+        var here = field.At(x, z, gameHours);
+        field.Cells(x, z, gameHours, 70000, NearCells);
+        _cloudTarget = (float)here.Cloud;
+        _precipTarget = (float)here.Precip;
+        Snow = temperature < 1 || (groundSnow > .45 && temperature < 4);
+        Thunder = here.Convective > .35 && temperature > 6 && !Snow;
+        float rate = settleNow ? 1 : (float)realSeconds / 25;
+        Cloudiness = Mathf.MoveToward(Cloudiness, Math.Max(_cloudTarget, _precipTarget * .95f + .05f * Math.Sign(_precipTarget)), rate);
+        Precipitation = Mathf.MoveToward(Precipitation, _precipTarget, rate * .8f);
+
+        // Distant storms: the strongest cell 8–70 km away; coming when it lies upwind (the weather drifts toward us).
+        var (sx, sz, _) = field.Steering(gameHours);
+        double distant = 0, side = 0;
+        foreach (var c in NearCells)
+        {
+            double ox = c.X - x, oz = c.Z - z, d = Math.Sqrt(ox * ox + oz * oz);
+            double w = c.Intensity * SmoothStep(4000, 9000, d - c.Radius) * SmoothStep(70000, 35000, d);
+            if (w > distant) { distant = w; side = -(ox * sx + oz * sz); }
+        }
+        distant *= 1 - Math.Min(1, Precipitation * 2.5);
+        if (distant > .05) StormComing = side > 0;
+
+        // Forecast (every few real seconds): when rain arrives, and the mackerel sky ahead of it.
+        _forecastTimer -= realSeconds;
+        double mackerel = Mackerel;
+        if (_forecastTimer <= 0 || settleNow)
+        {
+            _forecastTimer = 3;
+            FrontHours = double.NaN;
+            double strength = 0, ahead = 0;
+            if (Precipitation < .05f && !Snow)
+                for (double dh = .25; dh <= 8; dh += .25)
+                {
+                    double p = field.At(x, z, gameHours + dh, withCells: dh < 3).Precip;
+                    if (dh >= 3) ahead = Math.Max(ahead, p);
+                    if (p <= .08 || !double.IsNaN(FrontHours)) continue;
+                    FrontHours = dh;
+                    strength = p;
+                }
+            FrontStrength = (float)Math.Clamp(strength * 1.2, 0, 1);
+            mackerel = SmoothStep(.05, .3, ahead) * (1 - Math.Min(1, Precipitation * 4)) * SmoothStep(.9, .5, Cloudiness);
+        }
+
+        // Afternoon towers wherever cells are building, and on warm humid afternoons in general.
+        double hour = ((gameHours % 24) + 24) % 24;
+        double building = 0;
+        foreach (var c in NearCells) building = Math.Max(building, c.Age < .4 ? c.Intensity : 0);
+        double cumulus = temperature > 8 && !Snow
+            ? Math.Max(building, SmoothStep(10, 14, hour) * SmoothStep(20, 16.5, hour) * SmoothStep(12, 26, temperature) * .6)
+              * SmoothStep(.95, .6, Cloudiness) * (1 - Math.Min(1, Precipitation * 3)) : 0;
+        float slow = settleNow ? 1 : (float)realSeconds / 40;
+        Cumulus = Mathf.MoveToward(Cumulus, (float)cumulus, slow);
+        DistantStorm = Mathf.MoveToward(DistantStorm, (float)distant, slow);
+        Mackerel = Mathf.MoveToward(Mackerel, (float)mackerel, slow);
+    }
+
     private static double SmoothStep(double a, double b, double x)
     {
         double t = Math.Clamp((x - a) / (b - a), 0, 1);
