@@ -13,9 +13,33 @@ biomes) and in `BIOMES_PLAN.md` step 7. Nothing of it exists in code yet.
   it grows; a village laid out on its own patch of ground with exits and slots; a biome built from those pieces.
 * **Inside the game project** (a Godot scene, started with `--editor` or from the main menu). It uses the same
   terrain, renderer, wind, weather and water as the game, so the preview is exactly what players will see.
-* **Everything it saves is a data file** under `Content/` (the JSON the game already reads, such as `biomes.json`
+* **Everything it saves is a data file** in a package (see below), starting with `Content/` (the JSON the game already reads, such as `biomes.json`
   and `asset_sets.json`, plus new site files). The game and the editor read the same files, so nothing is
   hard-coded and Noor or Tom can make content without touching code. The headless tests validate every content file.
+
+## Helper tools (Tom: "not painting or modelling software, but tools that help")
+* **Terrain**: generate the sandbox ground **the same way the game does**. Pick a world type, seed and biome, or
+  cut a patch out of a generated world. Then sculpt it with brushes (raise, lower, smooth, flatten to a height,
+  terrace, ramp between two points, noise, erode) and paint ground materials and the blend mask.
+* **Splines** for everything linear: walls, fences, hedges and palisades (pieces repeated along the line, posts
+  at the corners, following the ground or stepping down slopes), plus roads, paths, ditches, streams and moats
+  (the terrain is cut and the surface laid along the line).
+* **Placement**: snap to the ground or a grid, align to the slope, rotate and scale with random ranges, duplicate
+  along a line or in a ring, and a **scatter brush** for rocks, bushes, debris and crops.
+* **Quality of life**: undo and redo, a live game-quality preview (time of day, weather, season), walk mode at
+  player height, measurements, a fit check (how many places in a world this site fits), autosave and
+  thumbnails for every asset.
+
+## Packages: content as add-ons (Tom: "like mods for the game, or addons")
+* The editor saves **packages**. A package is a folder, or one `.twpkg` file (a zip) when shared, with a
+  `manifest.json` (id, name, version, author, dependencies, game version) and its content: data files (biomes,
+  plants, sites…), models (`.glb`) and textures (`.png`).
+* The game loads the **base package** (its own content, made the same way) plus the packages the player enables,
+  in load order. A package can **add** content (a new village, a new biome) or **override** an entry by its id.
+  Models load at runtime through Godot's glTF loader, so a package needs no rebuild of the game.
+* Every package is validated on load (missing files, broken references, impossible values) with a readable report.
+* **Determinism**: the enabled packages and their versions become part of a world's identity. In multiplayer the
+  server lists its packages and their hashes, and clients must have the same ones (later: download them from the server).
 
 ## Pages
 1. **Sites** (needed first, for settlements and POIs):
@@ -36,7 +60,8 @@ biomes) and in `BIOMES_PLAN.md` step 7. Nothing of it exists in code yet.
 6. **Weather profiles, resources, landforms**: later pages, following the design inbox.
 
 ## Order
-1. The editor shell: scene, file browser of `Content/`, save, load, undo, and a preview viewport using the game's renderer.
+1. The package format and loader (the base game's own content moves into the base package), then the editor shell:
+   a package browser, save, load, undo, and a preview viewport using the game's renderer.
 2. The **Sites** page with the symbolic villages from `GAMEPLAY_PLAN.md`, so the settlement system and its
    editor grow together.
 3. Plants and objects, then asset sets, then biomes (the data already exists, so these are mostly forms and previews).
