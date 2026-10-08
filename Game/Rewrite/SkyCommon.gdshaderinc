@@ -517,6 +517,12 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		amb *= mix(1.0, 0.45, deep) * mix(0.75, 1.0, hb);
 		amb = mix(amb, amb * vec3(0.86, 0.9, 1.12), deep * 0.6);
 		vec3 s = light_col * sun_e * powder * 1.3 + amb;
+		// v2 (round 29): seen from inside a thick deck the light comes from every side, scattered many times — grey-
+		// white, not the blue of the sky overhead (the first render inside the deck was a deep blue fog).
+		if (cloud_v2 > 0.5) {
+			float gl = dot(amb, vec3(0.3, 0.59, 0.11));
+			s = mix(s, vec3(gl) * 1.15 + light_col * 0.22 * exp(-od * sigma_k * 0.12), deep * 0.85);
+		}
 		// Under a full deck the dense parts are darker, the thin ones brighter (light through them).
 		s *= mix(1.0, 1.35 - 0.6 * clamp(d, 0.0, 1.0), smoothstep(0.6, 0.9, cloud_state.z));
 		// Aerial perspective, thicker toward the horizon where the clouds meet it (Noor).
