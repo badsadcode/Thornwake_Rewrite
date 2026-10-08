@@ -1028,7 +1028,7 @@ public partial class Atmosphere : Node3D
         // Round 29 (Tom: "biome specific skies don't seem to change anything"): the tints in biomes.json are near white
         // (a 5–20 % shift) and were scaled by .6 / 1.4 — invisible. Now amplified (subtle ×1.6, strong ×3.2) and also
         // carried by the sunlight and the fog's colour, so a jungle, a desert and a volcano feel different.
-        float strength = GameSettings.BiomeMoods.Index switch { 0 => 0, 1 => 1.6f, _ => 3.2f };
+        float strength = GameSettings.BiomeMoods.Index switch { 0 => 0, 1 => 1.5f, _ => 2.6f };
         var t = _moodTarget;
         var target = new Vector4(Mathf.Clamp(1 + strength * (t.X - 1), .3f, 1.3f), Mathf.Clamp(1 + strength * (t.Y - 1), .3f, 1.3f),
             Mathf.Clamp(1 + strength * (t.Z - 1), .3f, 1.3f), Mathf.Clamp(t.W * strength * .55f, 0, 1));
