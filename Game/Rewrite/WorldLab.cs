@@ -1192,7 +1192,13 @@ public partial class WorldLab : Node3D
         var settings = new VBoxContainer { Name = "Settings" };
         tabs.AddChild(settings);
         settings.AddChild(new Label { Text = "Saved automatically. Detail and distance changes rebuild the terrain in the background.", Modulate = new Color(1, 1, 1, .7f) });
-        settings.AddChild(SettingsUi.List(GameSettings.All, GameSettings.ResetSection));
+        settings.AddChild(SettingsUi.List(GameSettings.All.Where(s => s.Section != "Audio"), GameSettings.ResetSection));
+
+        // ---- Audio (round 29, Tom)
+        var audio = new VBoxContainer { Name = "Audio" };
+        tabs.AddChild(audio);
+        audio.AddChild(new Label { Text = "Saved automatically.", Modulate = new Color(1, 1, 1, .7f) });
+        audio.AddChild(SettingsUi.List(GameSettings.All.Where(s => s.Section == "Audio"), GameSettings.ResetSection));
     }
 
     // ------------------------------------------------------------------ headless screenshot run

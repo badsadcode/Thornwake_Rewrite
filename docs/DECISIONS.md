@@ -1024,6 +1024,10 @@ keeps the previous look selectable.
 * **Biome skies** (Tom: "don't seem to change anything"): the biomes' sky tints are near white (5–20 %) and were
   scaled ×.6 / ×1.4 — invisible. Now ×1.5 (subtle) / ×2.6 (strong; ×3.2 turned a desert sky mustard), and the tint
   also colours the sunlight (35 %) and the volumetric fog (60 %).
+* **Audio tab** (Tom: "I like the sounds, wind especially; rain is good but could you soften it a bit, and an audio tab
+  in the options"): a new menu tab with Master volume (the master bus), Weather sounds (all, the old setting moved
+  here), Rain, Rain tone, Wind, Thunder. Rain tone low-passes the hiss (it was raw high-passed white noise) and
+  quietens the hiss and the drops; default 0.35 (soft), 1 = build 39's crisp rain.
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder

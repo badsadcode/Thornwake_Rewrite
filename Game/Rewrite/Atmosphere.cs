@@ -363,6 +363,9 @@ public partial class Atmosphere : Node3D
         _shadow.Visible = GameSettings.CloudShadows.Value > 0 && GameSettings.Clouds.Value > 0;
         _shadowStrength = Math.Clamp(.62f * GameSettings.CloudShadows.F, 0, 1);
         UpdateCoverage();
+        // Master volume (Audio tab).
+        AudioServer.SetBusVolumeDb(0, Mathf.LinearToDb(Math.Max(.0001f, GameSettings.MasterVolume.F)));
+        AudioServer.SetBusMute(0, GameSettings.MasterVolume.F <= .001f);
         _water?.SetShaderParameter("foam_style", GameSettings.FoamStyle.Index);
         _water?.SetShaderParameter("ssr_steps", GameSettings.WaterReflections.Index switch { 0 => 0, 1 => 16, _ => 32 });
         if (vp != null)

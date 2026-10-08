@@ -88,7 +88,7 @@ void fragment() {
             _pendingThunder.RemoveAt(i);
             var player = new AudioStreamPlayer3D
             {
-                Stream = sound, VolumeDb = db + Mathf.LinearToDb(Math.Max(.001f, GameSettings.WeatherVolume.F)),
+                Stream = sound, VolumeDb = db + Mathf.LinearToDb(Math.Max(.001f, GameSettings.WeatherVolume.F * GameSettings.ThunderVolume.F)),
                 AttenuationModel = AudioStreamPlayer3D.AttenuationModelEnum.Disabled, MaxDistance = 0, DopplerTracking = AudioStreamPlayer3D.DopplerTrackingEnum.Disabled,
                 Position = camera + dir * 40,
             };
@@ -368,7 +368,7 @@ void fragment() {
 
     // ---- rain and wind (continuous, synthesized)
     private AudioStreamGeneratorPlayback? _ambience;
-    private double _rainLp, _rainLp2, _windLp, _windLp2, _windBand, _windPhase, _rainLevel, _windLevel, _dropTimer;
+    private double _rainLp, _rainLp2, _rainHi, _windLp, _windLp2, _windBand, _windPhase, _rainLevel, _windLevel, _dropTimer;
     private float _dropAmp;
 
     private void SetupAmbience()
@@ -385,8 +385,12 @@ void fragment() {
         int frames = _ambience.GetFramesAvailable();
         if (frames <= 0) return;
         float volume = GameSettings.WeatherVolume.F;
-        double rainTarget = snowing ? 0 : Math.Pow(Math.Clamp(precipitation, 0, 1), .7) * volume;
-        double windTarget = Math.Clamp((windSpeed - 2) / 22, 0, 1.2) * (.6 + .5 * gust) * volume;
+        double rainTarget = snowing ? 0 : Math.Pow(Math.Clamp(precipitation, 0, 1), .7) * volume * GameSettings.RainVolume.F;
+        double windTarget = Math.Clamp((windSpeed - 2) / 22, 0, 1.2) * (.6 + .5 * gust) * volume * GameSettings.WindVolume.F;
+        // Rain tone (round 29, Tom: "rain is good, but could you soften it a bit"): the hiss was raw high-passed white
+        // noise; soft tones low-pass it (a gentler patter) and quieten the hiss and the drops.
+        double tone = GameSettings.RainTone.F;
+        double hissCut = .12 + .88 * tone, hissGain = .35 * (.55 + .45 * tone), dropGain = .25 * (.5 + .5 * tone);
         var buffer = new Vector2[frames];
         for (int i = 0; i < frames; i++)
         {
@@ -396,6 +400,8 @@ void fragment() {
             // Rain: hiss (high band) with a deeper roar as it gets heavy, and single drops ticking in light rain.
             _rainLp += .55 * (n - _rainLp);
             double hiss = n - _rainLp; // high pass
+            _rainHi += hissCut * (hiss - _rainHi); // softened by the rain tone (1 = unchanged)
+            hiss = _rainHi;
             _rainLp2 += .06 * (n2 - _rainLp2);
             double roar = _rainLp2 * 2.2 * Math.Clamp(_rainLevel * 1.5 - .3, 0, 1);
             _dropTimer -= 1.0 / Rate;
@@ -405,7 +411,7 @@ void fragment() {
                 _dropAmp = (float)(.3 + .7 * _random.NextDouble());
             }
             _dropAmp *= .992f;
-            double rain = _rainLevel * (hiss * .35 + roar) + _dropAmp * n * .25 * Math.Min(1, _rainLevel * 6);
+            double rain = _rainLevel * (hiss * hissGain + roar) + _dropAmp * n * dropGain * Math.Min(1, _rainLevel * 6);
             // Wind: low rushing band, its pitch and level rising with the speed.
             _windLp += .02 * (n2 - _windLp);
             _windLp2 += .02 * (_windLp - _windLp2);

@@ -85,6 +85,8 @@ milestone M6), caves.
 * **Biome skies** (*Sky → Biome skies*): now clearly visible — dusty warm light over deserts, ashen red-grey haze by
   volcanoes, humid green-grey jungles, gloomy purple-grey blighted swamps, crisp blue in the cold north. The light
   and haze are tinted too. *off* keeps the realistic sky.
+* **Audio tab** in the menu: Master volume, Weather sounds (all), Rain, Rain tone, Wind, Thunder. The rain is softer
+  now (*Rain tone* 0.35; 1 = the crisper rain of build 39).
 
 ## New in build 39 — no more sun blob, clouds on the mountains, foam net
 * **Sun blob fixed.** With high *God ray contrast* and *Sun shafts* the hazy sky around a low sun turned into a white

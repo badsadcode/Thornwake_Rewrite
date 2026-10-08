@@ -255,8 +255,19 @@ public static class GameSettings
         "before. Simulated: weather systems, frontal rain bands and thunderstorm cells move across the whole world with " +
         "the wind — you can see a storm coming, sail into it or leave it behind; the wind gusts out of storms and the " +
         "sea builds with the wind.", options: new[] { "classic (build 35)", "simulated" }));
-    public static readonly Setting WeatherVolume = Add(new("sim.weather_volume", "Simulation", "Weather sound", 0, 1.5, .05, 1,
-        "Volume of thunder, rain and wind (simulated weather model). 0 = silent.", "×"));
+    // ---- Audio (round 29, Tom: "an audio tab in the options"): its own tab in the menu.
+    public static readonly Setting MasterVolume = Add(new("audio.master", "Audio", "Master volume", 0, 1.5, .05, 1,
+        "Everything the game plays. 0 = silent.", "×"));
+    public static readonly Setting WeatherVolume = Add(new("sim.weather_volume", "Audio", "Weather sounds (all)", 0, 1.5, .05, 1,
+        "Thunder, rain and wind together (simulated weather model). 0 = silent.", "×"));
+    public static readonly Setting RainVolume = Add(new("audio.rain", "Audio", "Rain", 0, 1.5, .05, 1,
+        "Rain on the ground and water: a soft hiss in drizzle, a roar in a downpour, drops ticking in light rain.", "×"));
+    public static readonly Setting RainTone = Add(new("audio.rain_tone", "Audio", "Rain tone", 0, 1, .05, .35,
+        "Soft (0: muffled, as heard from under a roof or through a hood) to crisp (1: build 39's bright hiss).", ""));
+    public static readonly Setting WindVolume = Add(new("audio.wind", "Audio", "Wind", 0, 1.5, .05, 1,
+        "The wind rushing, rising and falling with gusts.", "×"));
+    public static readonly Setting ThunderVolume = Add(new("audio.thunder", "Audio", "Thunder", 0, 1.5, .05, 1,
+        "Thunder: a crack close by, a long low roll from far away (it arrives after distance ÷ 343 m/s).", "×"));
     public static readonly Setting DistantRain = Add(new("sim.distant_rain", "Simulation", "Distant rain", 0, 1.5, .05, 1,
         "Grey curtains of rain under distant showers and storms (simulated weather model). 0 = off.", "×"));
     public static readonly Setting RainFrequency = Add(new("sim.rain_frequency", "Simulation", "Rain frequency", .3, 2.5, .05, 1,
