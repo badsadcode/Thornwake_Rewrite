@@ -78,6 +78,27 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 36 — simulated weather, lightning and thunder, wind in the plants
+*Settings → Simulation → Weather model*: **simulated** (new, default) or **classic (build 35)** — the classic model
+keeps build 35's weather, wind, sway and rain exactly.
+* **Weather across the whole world.** Rain bands and thunderstorm cells drift across the map with the wind; each
+  storm is born, peaks and dies within ~3 game hours, more often where it is warm and humid and in the afternoon.
+  The local climate decides how much falls (deserts rarely, rainforests often) and whether it is snow.
+* **You can see weather coming.** Clouds are thick and dark where the weather really is (not one grey lid over
+  everything); distant showers and storms hang **grey rain curtains** under them (*Distant rain* setting); with
+  volumetric clouds thunderstorms grow towers; the painted storm towers on the horizon stand over the real storm.
+* **Lightning and thunder.** Strikes come from the storm cells: branching bolts with re-strikes, the land and clouds
+  flashing toward them. The **thunder arrives after distance ÷ 343 m/s** from the bolt's direction — a crack close
+  by, a long low roll far away (built from the bolt's own length and the land's echoes). **L** (dev) strikes ahead of
+  you — count the seconds. *Weather sound* sets thunder, rain and wind volume.
+* **Wind.** It follows the weather systems and gusts out of storms; the **sea builds with the wind** (Sea state now
+  adds a background swell) and storm waves surge further up beaches. *Cloud speed* no longer speeds up the wind.
+* **Plants and trees.** Gusts sweep across meadows as visible **waves of grass** (paler where the blades bend, also on
+  the ground beyond the grass), plants lean more in strong wind and swing slowly — no more fast jiggle. Tree crowns
+  sway as a whole.
+* **Rain.** Denser (Rain strength now scales up to 24 000 drops), coming in sheets with the gusts, softer streaks
+  near the camera, and **raindrops ringing on water**.
+
 ## New in build 35 — less ghosting, experimental 4 water, ground parallax
 * **Ghosting** on storm waves and behind the character comes from TAA (it blends past frames; the water has no
   motion data) and from the volumetric fog's own blending. New choices: *Anti-aliasing → SMAA* (sharp, no ghosting —

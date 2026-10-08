@@ -908,6 +908,46 @@ rates), plus grass shadows and more visible god rays.
   reads the shifted coordinate. The loop samples at an explicit mip (derivatives of the unshifted lookup, taken
   outside the per-pixel branch).
 
+## D69 — Round 27: simulated weather, lightning and thunder, plant wind, storm visuals (2026-10-08)
+Tom: "proper semi-realistic weather simulation, lightning storms and thunder with nice sound propagation… wind on
+plants is broken… waves of grass… stormy clouds… distant rain visible… denser rain… raindrops on water… waves
+pouring further onto the shore". Return point first: build 35 (`2ed21e8`, SNAPSHOTS); everything new sits behind
+*Weather model* (classic = build 35).
+* **Weather field** (WeatherField.cs): deterministic in space and game time, evaluated on demand (nothing stepped
+  or stored, so teleporting and screenshots are exact). Two synoptic layers drifting at different speeds (systems
+  deepen and fill), ridged frontal bands across the steering, and thunderstorm cells (one candidate per 30 km grid
+  cell in a slower frame, a 2.2–3.8 h life per 8–16 h period, fuel = warmth × humidity × unsettled systems ×
+  afternoon). Rain threshold from annual rainfall. Probe (`--weather-probe`): 2–3 % of the time raining at
+  ~250 mm/yr, 12 % at 630, 31 % at 1080; up to 6 cells within 70 km.
+* **Local weather** reads the field at the player (eased as before); distant storms, the mackerel sky and the rain
+  forecast come from real cells and the field ahead. Surface wind follows the steering (±35°) plus outflow from
+  nearby cells; the sea state builds from the steady wind over ~1.5 min and calms over ~3 (Sea state setting × 0.6
+  as background swell).
+* **Lightning** (Lightning.cs): strikes per cell at ~4 s / intensity²; midpoint-displacement bolts with branches as
+  camera-facing ribbons (width ∝ distance, ≥ 4 m) and a held strike for screenshots; land flash ∝ e^(−d/5 km); a
+  `lightning` global lights the sky toward the strike (a broad lobe close by, low and narrow far off, mostly lost in
+  daylight). **Thunder** is synthesized per strike from the bolt's segments: each arrives at its distance / 343 m/s
+  (the roll), weights by thickness / distance, rings ~0.3 s, five land echoes 0.4–3 s, a decaying envelope; a
+  two-pole low pass at 70 + 3800·e^(−d/1.8 km) Hz (air absorption) plus a brown-noise body, a broadband crack under
+  1.6 km; played after the delay from the bolt's direction at ∝ 1/d. Rain and wind sound from a generator stream.
+* **Plant wind** (WindSway.gdshaderinc): gust patches advected downwind at 0.7 × the steady wind (C# integrates the
+  travel, so speed changes never jump), lean = h·(1 − e^(−0.8·s²·(0.3 + gust)))·0.6, natural swing per plant
+  (grass ~0.7 Hz, flowers ~0.7, shrubs ~0.45, crowns ~0.25), faint flutter, tip dip on the arc. The old version read
+  the fast gust value (changing within a second) for every plant at once: the jiggle. The `wind` global now carries
+  the steady speed in the simulated model.
+* **Weather map** (WeatherMap.cs): 64 × 64 over 128 km, rebuilt on a worker thread every 2 s or 4 km (field.At is
+  given its own scratch list). The sky takes cover from it (flat and volumetric), raises thunderstorm towers (up to
+  ~5.2 km), and draws the low grey deck only toward rain; the far storm towers point at the strongest real cell.
+  **Rain curtains** (RainCurtains.gdshader): 28 steps along each view ray from 1.5 to 60 km below the cloud base,
+  rain × streaks (columns, leaning downwind) → a grey veil, darker under storms.
+* **Rain**: 24 000 particles in the simulated model, ratio p^0.8 × (0.7 + 0.45·gust) × Rain strength / 1.6;
+  near streaks fade within 1.2–5 m (close ones drew white poles). Raindrop rings: three cell layers, a ring and a
+  first-instant splash as slope, within 35 m. Swash +0.55 m at sea states above 0.55.
+* The Cloud speed setting multiplied the wind speed: with Tom's 4 the simulated sea saw 63 m/s. In the simulated
+  model it only moves the clouds.
+* The GitHub integration cannot create repositories (403): Tom creates the empty dedicated repo; this session then
+  attaches it and pushes the history.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
