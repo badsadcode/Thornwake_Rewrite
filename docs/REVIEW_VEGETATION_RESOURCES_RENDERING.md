@@ -110,6 +110,14 @@ Tom's settings and storm location (dump fa9d900c) [C]:
 
    Culling would not touch any of these.
 
+10. **Digging or raising ground can spawn trees, rocks, grass and other objects** (Tom, 2026-10-08) [C]. Every object
+    is re-decided from the *current* ground whenever a tile is rebuilt, and `TerrainSampler.Sample` already includes
+    the edits (TerrainSampler.cs:88/260). A candidate that was rejected (too steep, too low, rocky, wet) can pass after
+    an edit and appear, and an accepted one can vanish. Only some plant rules skip edited ground (`g.Edited`, with a
+    0.15 threshold). Trees (`Vegetation.Trees`), rocks, props, cliff dressing and far cards don't check edits at all,
+    so a shovel can grow a tree. Fix, in the spirit of §3.1: decide existence from the **unedited** world, then let edits
+    only *remove* or *bury* things (or move them onto the new surface), never create them.
+
 ---
 
 ## 3. Recommendations
@@ -236,6 +244,8 @@ share them:
 - Decoration as a subset lattice.
 
 **Soon, independent of gameplay:**
+- Edits never create objects (problem 10): existence from the unedited world, edits only remove or bury. Small and
+  safe; it's also the first piece of the "world data + overlay" rule.
 - Worker-thread MultiMesh buffers (commit hitches).
 - Merging tiny MultiMeshes.
 - Grass distance decoupling.
