@@ -13,11 +13,21 @@ global uniform float leaf_translucency;
 global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
 global uniform vec4 wind;
+#include "res://Game/Rewrite/WindSway.gdshaderinc"
 varying vec3 world_position;
 
 void vertex() {
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	if (sway > 0.0) {
+	if (sway > 0.0 && wind_sim()) {
+		// Round 27: shrubs and leafy plants bend with the shared gusts (WindSway), slower than grass.
+		vec3 origin = MODEL_MATRIX[3].xyz;
+		float phase = origin.x * 0.31 + origin.z * 0.23;
+		float w = COLOR.r * COLOR.r;
+		vec3 b = wind_bend(origin.xz, phase, sway * 4.0, 0.4 + 0.15 * fract(phase));
+		VERTEX += inverse(mat3(MODEL_MATRIX)) * b * w;
+		// Leaves rustle a little on their own.
+		VERTEX.y += sin(TIME * 3.1 + phase + VERTEX.x * 2.0) * sway * 0.05 * w * wind_field.y;
+	} else if (sway > 0.0) {
 		vec3 origin = MODEL_MATRIX[3].xyz;
 		float phase = origin.x * 0.31 + origin.z * 0.23;
 		float w = COLOR.r * COLOR.r;

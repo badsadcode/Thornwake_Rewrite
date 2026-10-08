@@ -31,6 +31,7 @@ public sealed class Wind
         Gust = (float)Math.Clamp(.5 + .5 * Noise.Value(_time / 4, 11, seed + 4) + .3 * Noise.Value(_time / 1.3, 13, seed + 5), 0, 1);
         Speed = (float)(Math.Max(.5, baseSpeed) * (0.85 + .35 * Gust) * GameSettings.CloudSpeed.Value);
         SteadySpeed = (float)(Math.Max(.5, baseSpeed) * GameSettings.CloudSpeed.Value);
+        RenderingServer.GlobalShaderParameterSet("wind_field", Vector4.Zero); // classic sway
         RenderingServer.GlobalShaderParameterSet("wind", new Vector4(Direction.X, Math.Min(2.5f, Speed / 8), Direction.Y, Gust));
     }
 
@@ -56,7 +57,11 @@ public sealed class Wind
         SteadySpeed = steady * (float)GameSettings.CloudSpeed.Value;
         Speed = SteadySpeed * (0.85f + (.35f + .25f * storm) * Gust);
         RenderingServer.GlobalShaderParameterSet("wind", new Vector4(Direction.X, Math.Min(2.5f, SteadySpeed / 8), Direction.Y, Gust));
+        // Plants (WindSway.gdshaderinc): gusts carried downwind at ~70 % of the wind speed, gustier in storms.
+        _gustTravel = (_gustTravel + realSeconds * SteadySpeed * .7) % 100000;
+        RenderingServer.GlobalShaderParameterSet("wind_field", new Vector4((float)_gustTravel, Math.Min(3f, SteadySpeed / 8), .55f + .45f * storm, 1));
     }
+    private double _gustTravel;
 
     /// <summary>"from NW" etc. (where the wind comes from).</summary>
     public string Compass()

@@ -12,11 +12,22 @@ global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
 // Wind (rewrite world; zero in the valley game, which never sets it): crowns sway, more toward the top.
 global uniform vec4 wind;
+#include "res://Game/Rewrite/WindSway.gdshaderinc"
 varying vec3 world_position;
 void vertex() {
     vec3 base = MODEL_MATRIX[3].xyz;
     vec3 wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-    if (wind.y > 0.0) {
+    if (wind.y > 0.0 && wind_sim()) {
+        // Round 27: the crown leans with the shared gusts (WindSway) and swings slowly as a whole (~0.25 Hz),
+        // much more in a storm; leaves rustle on top.
+        float h = clamp((wp.y - base.y) / 14.0, 0.0, 1.0);
+        float phase = base.x * 0.13 + base.z * 0.17;
+        vec3 b = wind_bend(base.xz, phase, 1.0, 0.2 + 0.08 * fract(phase));
+        vec3 offset = vec3(b.x, 0.0, b.z) * h * h * 2.6;
+        offset += vec3(sin(TIME * 4.3 + phase + wp.y * 0.7), 0.0, cos(TIME * 3.7 + phase + wp.x * 0.5)) * 0.025 * h * wind_field.y;
+        VERTEX += (inverse(mat3(MODEL_MATRIX)) * offset);
+        wp += offset;
+    } else if (wind.y > 0.0) {
         float h = clamp((wp.y - base.y) / 14.0, 0.0, 1.0);
         float phase = base.x * 0.13 + base.z * 0.17;
         float sway = h * h * (0.08 + 0.22 * wind.y) * (0.7 + 0.3 * wind.w);

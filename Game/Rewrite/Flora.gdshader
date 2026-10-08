@@ -9,6 +9,7 @@ global uniform float leaf_translucency;
 global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
 global uniform vec4 wind; // x, z: direction; y: strength (0 calm … 1 fresh … 2.5 storm); w: gust
+#include "res://Game/Rewrite/WindSway.gdshaderinc"
 
 varying float layer;
 varying vec3 world_position;
@@ -26,6 +27,10 @@ void vertex() {
 		float s = sin(TIME * 0.7 + dot(origin.xz, vec2(0.08, 0.05)) + phase * 0.4);
 		VERTEX.x += s * 0.12 * w;
 		VERTEX.z += cos(TIME * 0.55 + phase) * 0.06 * w;
+	} else if (motion > 0.5 && wind_sim()) {
+		// Round 27: the shared gust waves, lean and slow swing (WindSway); flowers a little stiffer than grass.
+		vec3 b = wind_bend(origin.xz, phase, 1.0, 0.6 + 0.25 * fract(phase * 1.7));
+		VERTEX += inverse(mat3(MODEL_MATRIX)) * b * w;
 	} else if (motion > 0.5) {
 		// Wind: lean (more in gusts) plus flutter, with gust waves travelling across the field.
 		float wave = sin(dot(origin.xz, wind.xz) * 0.15 - TIME * (1.5 + wind.y)) * 0.5 + 0.5;

@@ -10,6 +10,8 @@ uniform float snow_line = 2700.0;
 uniform bool show_grid = false;
 // x: surface wetness (rain darkens and glosses the ground), y: cosmetic puddles in flat hollows (Atmosphere.cs).
 global uniform vec2 rain_wetness;
+global uniform vec4 wind;
+#include "res://Game/Rewrite/WindSway.gdshaderinc"
 varying vec3 world_normal;
 varying vec4 biome_a; // biome grass colour, snow cover (D42)
 varying vec4 biome_b; // biome dry-ground colour, plant cover
@@ -165,6 +167,9 @@ void fragment() {
 			grass = mix(grass, b, bare);
 		}
 	}
+	// Round 27: gusts sweeping the grass show as paler moving patches on the ground's grass colour too, so the
+	// waves carry on beyond the grass sprites (simulated weather only).
+	if (wind_sim()) grass *= 1.0 + vec3(0.075, 0.07, 0.035) * wind_gust(p) * min(1.0, wind_field.y) * smoothstep(0.1, 0.6, cover) * (1.0 - bare);
 	vec3 woods = biome_a.rgb * vec3(0.70, 0.71, 0.69);                                     // forest floor / far canopy
 	if (noor) {
 		grass *= mix(vec3(1.0), gdetail(G_GRASS, p), 0.85 * g_detail * (1.0 - bare)); // (bare patches have their own)
