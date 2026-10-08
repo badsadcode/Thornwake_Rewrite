@@ -55,6 +55,7 @@ The world comes first, then the real game systems:
      fords, bridges), plus tracks and **roads to nowhere** (abandoned, overgrown, leading to ruins or nothing).
    * All of it is deterministic from the world seed, like the terrain, so every player gets the same map. The
      original game's settlement notes (MILESTONES §90, WORLD_GENERATION_VISION) are ideas only, not code.
+   Premade settlements and POIs are made in the **World Site Editor** (`docs/WORLD_SITE_EDITOR_PLAN.md`).
 3. **Premade assets in the world**: ruins, points of interest and other authored pieces placed by rules (biome,
    terrain, distance from roads and towns), terrain graded under them.
 4. **The complete world**, then the proper game: final mechanics, NPCs and the other planned systems.
