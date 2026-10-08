@@ -948,6 +948,22 @@ pouring further onto the shore". Return point first: build 35 (`2ed21e8`, SNAPSH
 * The GitHub integration cannot create repositories (403): Tom creates the empty dedicated repo; this session then
   attaches it and pushes the history.
 
+## D70 — Round 28: horizon land (2026-10-08)
+Tom: "hide the hard cutoff of the terrain in the far distance — from a mountain top you see it". The streamed
+rings end in a square (~20 km at the default Terrain setting) and the sky showed straight behind it.
+* **HorizonLand.cs**: one mesh of 40 concentric squares (48 vertices a side) from the exact outer edge of the top
+  ring (tiles cx ± TopRadius) out to ~100 or ~250 km, the squares growing geometrically; heights from the terrain
+  sampler at half the local spacing, water flat at its level (sea/lake colours, smoother), land in the blended
+  biome grass/dry colours by the biome's plant amount, darker for forest, rock by the slope, snow from the climate,
+  a pale strip at the shore. The Earth's curve (d² − inner²)/2R keeps the join level and drops the far land below
+  the horizon (true horizon ~180 km from a 2.6 km summit, ~250 km from 5 km up). A skirt 400 m down under the inner
+  edge hides gaps against the terrain. Normal Godot fog fades it.
+* Built on a worker thread when the top ring moves (~8 km), placed by the float origin each frame; screenshots
+  wait for it. The first render showed nothing: the strips faced down and were back-face culled — the material
+  draws both sides.
+* Renders (2.5 km up, thin haze): the square plateau edge against flat teal becomes hazy land to the horizon; over
+  open sea no seam.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

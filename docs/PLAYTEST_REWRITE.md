@@ -78,6 +78,13 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 37 — land to the horizon
+* **Horizon land** (*Settings → View distance*, default ~250 km; off = build 36): beyond the streamed terrain a
+  coarse far land carries on — the world's own mountains, valleys, lakes and coast, in the biome colours with rock
+  on steep slopes and snow where it is cold — following the Earth's curve and fading into the haze. From a summit
+  you no longer see the square edge where the terrain stopped. It is rebuilt in the background only after you
+  travel ~8 km, so it costs almost nothing.
+
 ## New in build 36 — simulated weather, lightning and thunder, wind in the plants
 *Settings → Simulation → Weather model*: **simulated** (new, default) or **classic (build 35)** — the classic model
 keeps build 35's weather, wind, sway and rain exactly.
