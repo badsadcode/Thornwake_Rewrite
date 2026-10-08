@@ -23,7 +23,10 @@ void vertex() {
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 
 // Bright, unobstructed sky gathered from `start` toward the sun, `n` samples over 85 % of the way.
-float gather(vec2 start, vec2 sun_uv, int n, float decay, float jitter) {
+// Round 29 (Tom: the sun "blobbing 80 % of the screen", build 33+ with God ray contrast 1 and shafts 3): only sky within
+// ~8° of the sun counts (sun_view: toward the sun in view space). Strong forward-scattering haze made the whole sky
+// around a low sun brighter than the threshold, and the shafts gathered it into a white disc half the screen wide.
+float gather(vec2 start, vec2 sun_uv, int n, float decay, float jitter, mat4 inv_proj, vec3 sun_view) {
 	vec2 delta = (sun_uv - start) / float(n) * 0.85;
 	vec2 uv = start + delta * jitter; // dither: no banding
 	float light = 0.0, weight = 1.0;
@@ -33,12 +36,14 @@ float gather(vec2 start, vec2 sun_uv, int n, float decay, float jitter) {
 		float depth = textureLod(depth_tex, uv, 0.0).r;
 		if (depth < 1e-6) { // sky (reverse-Z: the far plane is 0)
 			vec3 c = textureLod(screen_tex, uv, 0.0).rgb;
+			vec4 vv = inv_proj * vec4(uv * 2.0 - 1.0, 0.5, 1.0);
+			float near_disc = smoothstep(0.9903, 0.99863, dot(normalize(vv.xyz / vv.w), sun_view)); // 8° … 3°
 			// Only very bright sky casts rays: the sun disc, its halo and sunlit cloud edges. Clouds (dimmer) block it,
 			// so the sun breaks through gaps in rays; a clear sky gives rays past trees and mountains.
 			// (round 24: relative to the threshold 0.9, a hazy low-sun sky was "bright" for a quarter of the screen and
 			// gathered into a huge white disc — Tom: "the sun is like a huge blob"; now only the disc and the inner halo,
 			// each sample capped)
-			light += min(max(0.0, dot(c, vec3(0.3, 0.59, 0.11)) - 1.8), 3.0) * weight;
+			light += min(max(0.0, dot(c, vec3(0.3, 0.59, 0.11)) - 1.8), 3.0) * weight * near_disc;
 		}
 		weight *= decay;
 	}
@@ -56,14 +61,15 @@ void fragment() {
 	if (on_screen <= 0.0) discard;
 
 	float jitter = hash(FRAGCOORD.xy);
-	float light = gather(SCREEN_UV, sun_uv, 32, 0.955, jitter);
+	vec3 sv = normalize(sun_view);
+	float light = gather(SCREEN_UV, sun_uv, 32, 0.955, jitter, INV_PROJECTION_MATRIX, sv);
 	if (contrast > 0.0) {
 		// Neighbours rotated about 1.5 degrees either way around the sun (in pixels, so the rotation is round).
 		vec2 px = vec2(VIEWPORT_SIZE.x / VIEWPORT_SIZE.y, 1.0);
 		vec2 v = (SCREEN_UV - sun_uv) * px;
 		vec2 side = vec2(-v.y, v.x) * 0.026 / px;
-		float here = gather(SCREEN_UV, sun_uv, 16, 0.92, jitter);
-		float around = 0.5 * (gather(SCREEN_UV + side, sun_uv, 16, 0.92, jitter) + gather(SCREEN_UV - side, sun_uv, 16, 0.92, jitter));
+		float here = gather(SCREEN_UV, sun_uv, 16, 0.92, jitter, INV_PROJECTION_MATRIX, sv);
+		float around = 0.5 * (gather(SCREEN_UV + side, sun_uv, 16, 0.92, jitter, INV_PROJECTION_MATRIX, sv) + gather(SCREEN_UV - side, sun_uv, 16, 0.92, jitter, INV_PROJECTION_MATRIX, sv));
 		float lane = (here - around) / (here + around + 0.02); // -1 (in a shadow lane) .. 1 (in a gap)
 		light *= clamp(1.0 + contrast * 3.0 * lane, 0.0, 1.0 + 1.5 * contrast);
 	}

@@ -354,8 +354,9 @@ public partial class Atmosphere : Node3D
         _beams?.SetShaderParameter("contrast", GameSettings.GodRayContrast.F);
         // God ray contrast also feeds the volumetric fog: brighter, more forward scattering, so shafts through trees and fog stand
         // out (build 32 at 0: Godot's energy 1 and anisotropy .65).
-        Sun.LightVolumetricFogEnergy = 1 + 2 * GameSettings.GodRayContrast.F;
-        Environment.VolumetricFogAnisotropy = .65f + .2f * GameSettings.GodRayContrast.F;
+        // (round 29: 1 + 2c and .65 + .2c lit the haze around a low sun into a glare half the screen wide — Tom's "blob")
+        Sun.LightVolumetricFogEnergy = 1 + .8f * GameSettings.GodRayContrast.F;
+        Environment.VolumetricFogAnisotropy = .65f + .1f * GameSettings.GodRayContrast.F;
         if (_shaftQuad != null) _shaftQuad.Visible = GameSettings.SunShafts.Value > 0;
         _beams?.SetShaderParameter("intensity", GameSettings.LightBeams.F);
         if (_beamQuad != null) _beamQuad.Visible = GameSettings.LightBeams.Value > 0 && GameSettings.Clouds.Value > 0;
