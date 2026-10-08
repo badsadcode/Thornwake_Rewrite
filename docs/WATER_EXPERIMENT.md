@@ -116,3 +116,29 @@ mountain river; fast ones show the whitewater.
 
 Test harness: `xvfb-run godot --path . -s tools/water_test.gd -- out=/tmp/w.png style=1|2 kind=sea|lake|river|deep sea=0.5`
 renders a beach / lake / river with either style in seconds.
+
+## Ideas from other Godot water projects (2026-10-08, review only; no code taken)
+Tom asked for a look at 2Retr0/GodotOceanWaves, tessarakkt/godot4-oceanfft, emilje/godot-water-shader and
+Tshmofen/waterways-net (all MIT; used as ideas only, adapted, never replacing what we have). Thornwake's water already
+has what they share: a GPU FFT ocean with three cascades, JONSWAP plus swell, choppy crests, Jacobian foam that
+lingers, sub-surface glow, refraction and depth colour, plus much they lack (shore waves and breakers, rivers with a
+current, rock wakes, regional wave directions, rain rings, real-sky reflections, a deterministic CPU height for
+multiplayer). Worth adapting:
+1. **Bicubic sampling of the near wave normals** (GodotOceanWaves): blend bicubic → bilinear by texels per metre,
+   so the long cascade (~1.9 m texels) shows no faceting up close. Cheap; helps the "distance shimmer"/close-up
+   polish (task 75).
+2. **Sea spray** (GodotOceanWaves): GPU particles thrown off breaking crests and blown downwind, more in storms and
+   at shore breakers (the raindrop-splash particles are the template).
+3. **Domain-warped cascade lookups** (tessarakkt): a slow, large warp of the FFT texture coordinates breaks the
+   tiling that shows in the foam over open sea. Cheap.
+4. **Intersection foam with memory** (emilje): a small top-down depth capture around the player finds where bodies,
+   boats and floating logs cut the surface; foam rings form there and fade over seconds (a history texture). Needed
+   once swimming and boats arrive (gameplay plan steps 2 and 7).
+5. **Water queries for gameplay** (waterways-net's float system): `GetWaterHeight` / `GetWaterFlow` on the CPU for
+   any point (sea waves from OceanFft.Height, river current from the river data), for swimming, boats and floating
+   logs. Same deterministic data, so every player agrees.
+6. **Spline-drawn water for the World Site Editor** (waterways-net): streams, moats, mill races and waterfalls drawn
+   as curves, the flow following the curve, faster and foamier where it steepens. Generated rivers could gain real
+   waterfalls the same way where they drop steeply.
+7. Smaller: a continuous LOD sea mesh (tessarakkt's CDLOD) if boats need denser waves near the camera; simulation
+   frame-skip as a low-end option.
