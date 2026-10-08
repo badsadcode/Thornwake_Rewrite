@@ -613,17 +613,21 @@ vec2 foam_net_cover(vec2 q, vec2 dn, float stretch, float amount) {
 	float hf = texture(foam_net, qs / 3.1 + vec2(0.37, 0.71)).g;
 	float m = mix(lf, hf, smoothstep(0.45, 1.0, amount) * 0.65);
 	float patchy = texture(foam_net, q / 61.0 + vec2(0.13, 0.29)).b;
-	m *= 0.75 + 0.5 * smoothstep(0.25, 0.75, patchy);
-	float cut = 1.15 - 1.1 * min(amount, 1.0);           // thin foam: only the thickest net shows
+	m *= 0.6 + 0.8 * smoothstep(0.3, 0.7, patchy);         // whole patches thick or bare
+	float a = min(amount, 1.0);
+	float cut = 1.2 - 1.15 * a;                            // thin foam: only the thickest net shows
 	// (a trace of foam over a wide area — a wake, a calm sea — showed the net's brightest knots as a faint band)
-	return vec2(smoothstep(cut, cut + 0.3, m) * smoothstep(0.05, 0.3, amount), m);
+	float net = smoothstep(cut, cut + 0.25, m) * smoothstep(0.08, 0.35, a);
+	// Fresh breakers stay solid white bands, holed only where the net's clear cells are.
+	float core = smoothstep(0.65, 0.95, a) * smoothstep(0.2, 0.5, m);
+	return vec2(max(net, core), m);
 }
 
 vec3 foam_at(vec2 q, vec2 dn, float stretch, float t, float amount, float dist) {
 	if (amount <= 0.001) return vec3(0.0, 0.0, 1.0);
 	if (foam_style == 1) {
 		vec2 n = foam_net_cover(q, dn, stretch, amount);
-		float under = smoothstep(0.0, 0.6, amount) * smoothstep(0.1, 0.5, n.y) * 0.8; // milky water around the net
+		float under = smoothstep(0.2, 0.8, amount) * smoothstep(0.1, 0.5, n.y) * 0.45; // milky water around the net
 		return vec3(n.x * 0.95, under, 0.78 + 0.22 * n.y);
 	}
 	float near = 1.0 - smoothstep(12.0, 70.0, dist);
