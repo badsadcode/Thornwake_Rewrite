@@ -33,7 +33,7 @@ void sky() {
 		COLOR = vec3(0.0); ALPHA = 0.0;
 		if (quality == 2) { vec4 v = volumetric(dir, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
 		// v2: the same volume from any height; nearer than the scene it is drawn by CloudsNear.gdshader.
-		if (quality == 3) { vec4 v = volumetric_v2(dir, 1e9, cloud_ign(FRAGCOORD.xy), 150, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
+		if (quality == 3) { vec4 v = volumetric_v2(dir, 1e9, cloud_jitter(FRAGCOORD.xy, cloud_more.z), 150, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
 	} else {
 		vec3 col = sky_colour(dir, sun_dir, sun_col, day, mu);
 		float night = 1.0 - smoothstep(-0.16, 0.04, sun_dir.y);

@@ -473,7 +473,9 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 	light_col *= mix(vec3(1.0), vec3(1.06, 1.0, 0.9), 0.6 * (1.0 - night));
 	vec3 glow = underlight(dir);
 	if (night > 0.5) { sky_top = vec3(0.012, 0.016, 0.03); sky_side = sky_top; ground = vec3(0.004); }
-	vec3 haze = sky_colour(dir, sun_dir, sun_col, day, mu);
+	// (v2 also looks down onto clouds below: their haze is the horizon's; identical to before for rays climbing)
+	vec3 hdir = normalize(vec3(dir.x, max(dir.y, 0.0), dir.z));
+	vec3 haze = sky_colour(hdir, sun_dir, sun_col, day, dot(hdir, sun_dir));
 	float calm = 1.0 - smoothstep(0.5, 1.6, wind.y);
 	float sigma_k = mix(0.011, 0.019, calm) * (1.0 + storm); // calm cumulus: denser, crisper edges; real cloud is opaque within ~100 m
 	float trans = 1.0;
@@ -518,7 +520,7 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		// Under a full deck the dense parts are darker, the thin ones brighter (light through them).
 		s *= mix(1.0, 1.35 - 0.6 * clamp(d, 0.0, 1.0), smoothstep(0.6, 0.9, cloud_state.z));
 		// Aerial perspective, thicker toward the horizon where the clouds meet it (Noor).
-		s = mix(s, haze, clamp(1.0 - exp(-t / 36000.0) + (1.0 - smoothstep(0.0, 0.12, dir.y)) * 0.25, 0.0, 0.92));
+		s = mix(s, haze, clamp(1.0 - exp(-t / 36000.0) + (1.0 - smoothstep(0.0, 0.12, abs(dir.y))) * 0.25, 0.0, 0.92));
 		// Far away a step is longer than a cloud edge is thick: soften there so samples do not flicker on and off.
 		float sigma = d * sigma_k * mix(1.0, 0.45, smoothstep(150.0, 450.0, step_len));
 		float ab = exp(-sigma * step_len);
@@ -567,3 +569,9 @@ vec4 volumetric_v2(vec3 dir, float t_far, float jitter, int max_steps, vec3 sun_
 // Interleaved gradient noise (Jimenez 2014): an even, fine-grained pattern of ray offsets — less visible grain than
 // white noise at the same number of steps.
 float cloud_ign(vec2 frag) { return fract(52.9829189 * fract(dot(frag, vec2(0.06711056, 0.00583715)))); }
+// With a temporal anti-aliasing (TAA, FSR 2: cloud_v2 = 2) the pattern moves every frame (by the frame number, as
+// Jimenez suggests) so the history averages the grain away; without it, it stays put (a still grain, no flicker).
+float cloud_jitter(vec2 frag, float clock) {
+	float f = cloud_v2 > 1.5 ? mod(floor(clock * 60.0), 64.0) : 0.0;
+	return cloud_ign(frag + f * 5.588238);
+}

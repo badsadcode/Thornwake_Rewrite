@@ -13,7 +13,7 @@ global uniform vec4 cloud_light_dir;
 #define SKY_LIGHT0_COLOR cloud_light.rgb
 #include "res://Game/Rewrite/SkyCommon.gdshaderinc"
 
-uniform int max_steps = 96;
+uniform int max_steps = 128;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -29,7 +29,7 @@ void fragment() {
 	vec3 sun_dir = normalize(cloud_light_dir.xyz);
 	vec3 sun_col = cloud_light.rgb * cloud_light.a;
 	float day = clamp(sun_dir.y * 4.0 + 0.35, 0.08, 1.0);
-	vec4 v = volumetric_v2(dir, scene, cloud_ign(FRAGCOORD.xy), max_steps, sun_dir, sun_col, day, dot(dir, sun_dir), cloud_state.z, cloud_state.w);
+	vec4 v = volumetric_v2(dir, scene, cloud_jitter(FRAGCOORD.xy, TIME), max_steps, sun_dir, sun_col, day, dot(dir, sun_dir), cloud_state.z, cloud_state.w);
 	if (v.a < 0.002) discard;
 	ALBEDO = v.rgb;
 	ALPHA = v.a;

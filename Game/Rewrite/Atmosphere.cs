@@ -334,7 +334,9 @@ public partial class Atmosphere : Node3D
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
         SkyParam("quality", GameSettings.CloudQuality.Index);
         bool v2 = GameSettings.CloudQuality.Index == 3;
-        RenderingServer.GlobalShaderParameterSet("cloud_v2", v2 ? 1f : 0f);
+        // (2: a temporal anti-aliasing averages the clouds' moving ray offsets — TAA, FSR 2)
+        bool temporal = GameSettings.AntiAliasing.Index is 2 or 4;
+        RenderingServer.GlobalShaderParameterSet("cloud_v2", v2 ? (temporal ? 2f : 1f) : 0f);
         if (_cloudsNearQuad != null) _cloudsNearQuad.Visible = v2;
         int pixels = 256 << GameSettings.CloudResolution.Index;
         if (pixels != _cloudPixels)
