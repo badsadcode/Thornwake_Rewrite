@@ -521,7 +521,10 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		// white, not the blue of the sky overhead (the first render inside the deck was a deep blue fog).
 		if (cloud_v2 > 0.5) {
 			float gl = dot(amb, vec3(0.3, 0.59, 0.11));
-			s = mix(s, vec3(gl) * 1.15 + light_col * 0.22 * exp(-od * sigma_k * 0.12), deep * 0.85);
+			// (second render: still a dark grey fog at 15:30 — the deck glows with sunlight scattered deep into it,
+			// most toward the sun)
+			vec3 inside = vec3(gl) * 1.6 + light_col * (0.35 + 0.35 * phase_f) * exp(-od * sigma_k * 0.06);
+			s = mix(s, max(s, inside), deep * 0.85);
 		}
 		// Under a full deck the dense parts are darker, the thin ones brighter (light through them).
 		s *= mix(1.0, 1.35 - 0.6 * clamp(d, 0.0, 1.0), smoothstep(0.6, 0.9, cloud_state.z));
