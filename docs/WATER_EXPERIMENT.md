@@ -142,3 +142,8 @@ multiplayer). Worth adapting:
    waterfalls the same way where they drop steeply.
 7. Smaller: a continuous LOD sea mesh (tessarakkt's CDLOD) if boats need denser waves near the camera; simulation
    frame-skip as a low-end option.
+8. **Tom likes emilje's foam** (2026-10-08). Its look: a network of thick, soft foam veins around large clear holes,
+   in two sizes mixed by how much the surface is compressed (finer where it folds hardest), cut with a soft
+   threshold, broken up by a large noise, and kept with a decaying memory. Plan: bake our own seamless "foam network"
+   texture at start-up (warped cellular edges plus wisps, no image taken from that project) and use it in our
+   foam layers with the two-scale mix, as a switchable foam style, compared in renders.
