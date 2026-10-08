@@ -8,7 +8,7 @@ Earlier wishes for it are in `docs/design-inbox/THORNWAKE_MASTER_REWORK_SUPPLEME
 biomes) and in `BIOMES_PLAN.md` step 7. Nothing of it exists in code yet.
 
 ## What it is and is not
-* **An assembler, not a modelling tool.** Meshes, textures and sprites are made in Blender, Krita and so on. The
+* **An assembler, not a modelling tool.** Meshes, textures and sprites are made in Blender, Affinity Photo and so on. The
   editor imports them and turns them into Thornwake content: a plant with wind stiffness, LODs, collision and where
   it grows; a village laid out on its own patch of ground with exits and slots; a biome built from those pieces.
 * **Inside the game project** (a Godot scene, started with `--editor` or from the main menu). It uses the same
