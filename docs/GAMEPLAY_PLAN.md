@@ -1,10 +1,11 @@
-# First gameplay prototype (planned, after the dedicated repo)
+# First gameplay prototype (planned, after the dedicated repo) and the road to a complete world
 
 Tom, 2026-10-08: "after that we need to introduce some basic game mechanics… proper swimming, sailing and survival
 elements (not a final system but something to check how it could look). Maybe chopping trees, fishing, building a
 campfire and cooking fish. Hunting would be nice but I don't have animal assets yet."
 
-A playable loop to judge the feel, not the final systems. Everything goes in `Game/Rewrite/`, behind the existing
+**A proof of concept, not the final survival system** (Tom: "just some basic mechanics"). It is a playable loop
+to judge the feel. Code stays simple and separate, so it can be thrown away or rebuilt when the proper mechanics come. Everything goes in `Game/Rewrite/`, behind the existing
 world. In multiplayer later, all world changes (felled trees, fires) become edits keyed by world position, the same
 way dug terrain is, so this layout already suits it.
 
@@ -31,3 +32,15 @@ way dug terrain is, so this layout already suits it.
 
 ## Not yet
 Saving progress, crafting trees, building, multiplayer sync.
+
+## Roadmap after the prototype (Tom, 2026-10-08)
+The world comes first, then the real game systems:
+1. **Mechanics proof of concept** (above).
+2. **Roads and settlements**: villages and towns placed where people would settle (water, flat land, coasts,
+   river crossings, passes), roads between them that follow the terrain (easy gradients, valleys, fords and bridges),
+   plus tracks and **roads to nowhere** (abandoned, overgrown, leading to ruins or nothing). Deterministic from the
+   world seed like the terrain, so every player gets the same map. The original game's settlement notes
+   (MILESTONES §90, WORLD_GENERATION_VISION) are ideas only, not code.
+3. **Premade assets in the world**: ruins, points of interest and other authored pieces placed by rules (biome,
+   terrain, distance from roads and towns), terrain graded under them.
+4. **The complete world**, then the proper game: final mechanics, NPCs and the other planned systems.
