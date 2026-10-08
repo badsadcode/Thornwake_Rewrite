@@ -406,7 +406,8 @@ public partial class Atmosphere : Node3D
             if (_rainParticles.ProcessMaterial is ParticleProcessMaterial pm)
                 pm.Direction = new Vector3(Wind.Direction.X * Wind.Speed * (Snowing ? .12f : .02f), -1, Wind.Direction.Y * Wind.Speed * (Snowing ? .12f : .02f));
         }
-        UpdateLightning(delta);
+        if (_steer == null) UpdateLightning(delta); // classic model; the simulated one has Lightning.cs
+        else if (_flash != null) _flash.Visible = false;
         // Warmer light at a low sun.
         float warm = 1 - Mathf.Clamp(elevation / 30, 0, 1);
         Sun.LightColor = new Color("fff3df").Lerp(new Color("ffc58a"), warm * .8f);

@@ -322,6 +322,7 @@ global uniform vec4 wind; // dir.x, speed/8, dir.z, gust
 uniform sampler2D relief_tex : filter_linear, hint_default_black, repeat_disable;
 global uniform vec4 relief_frame;
 global uniform vec4 cloud_front;
+global uniform vec4 lightning; // round 27: horizontal direction to the strike (x, z), brightness, distance (km)
 
 // Extra cloud at a point (relative to the camera, xz in m): x = mass the land and the front add, y = extra height (m),
 // z = how low the base comes down toward the ground (m above the camera; 1e9 = unchanged).
@@ -671,6 +672,16 @@ void sky() {
 		}
 		col = mix(col, overcast, storm * 0.85);
 		disc *= 1.0 - storm;
+		// Lightning (round 27): the clouds light up toward the strike — a broad glow for a near one (the whole deck
+		// overhead flashes), a narrow low glow on the horizon for a far one; clear sky barely.
+		if (lightning.z > 0.001) {
+			float near_k = 1.0 - smoothstep(1.0, 12.0, lightning.w);
+			float toward = max(0.0, dot(normalize(dir.xz + vec2(1e-5)), lightning.xy));
+			float lobe = mix(pow(toward, mix(6.0, 60.0, smoothstep(2.0, 30.0, lightning.w))) * (1.0 - smoothstep(0.02, 0.35, up)), 1.0, near_k * 0.45);
+			float cloudy = clamp(max(storm, deck_d) + 0.25, 0.0, 1.0);
+			// (daylight drowns most of it: a white-out over a sunlit sky in the first render)
+			col += vec3(0.72, 0.78, 1.0) * lightning.z * lobe * cloudy * (0.3 + 0.55 * near_k) * mix(1.0, 0.12, day);
+		}
 		COLOR = col + disc;
 	}
 }

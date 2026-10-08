@@ -40,6 +40,10 @@ public partial class WorldLab : Node3D
     private readonly GameClock _clock = new();
     private readonly Weather _weather = new();
     private bool _weatherProbe;
+    private double _shotStrike = -1; // screenshots: a held lightning strike this far ahead (m)
+    private bool _strikePlaced;
+    private Lightning? _lightning;
+    private string? _thunderWavs;
     private WeatherField? _weatherField;
     private TerrainSampler? _weatherFieldFor;
     /// <summary>The world weather field (simulated weather model; null otherwise): the map and the sky read it.</summary>
@@ -147,6 +151,8 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--front=")) { var v = arg[8..].Split(','); _atmosphere.ForceFront = new Vector2(float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg == "--weather-probe") _weatherProbe = true;
+            if (arg.StartsWith("--strike=")) _shotStrike = double.Parse(arg[9..], CultureInfo.InvariantCulture);
+            if (arg.StartsWith("--thunder-wavs=")) _thunderWavs = arg[15..];
             if (arg.StartsWith("--tool=")) _tools.Select(int.Parse(arg[7..], CultureInfo.InvariantCulture));
             if (arg == "--grid") { _gridShown = true; _streamer.ShowGrid(true); }
             if (arg == "--biome-tint") { _biomeTint = true; _streamer.ShowBiomes(true); }
@@ -340,6 +346,7 @@ public partial class WorldLab : Node3D
             $"({plan.Hydrology.Reaches.Count} river reaches, {plan.Hydrology.Lakes.Count} lakes).";
         _overlay.Text = "Loading terrain…";
         if (_weatherProbe) { WeatherProbe(); GetTree().Quit(); }
+        if (_thunderWavs != null) { ThunderWavs(_thunderWavs); GetTree().Quit(); }
     }
 
     /// <summary>The weather at the player: fronts over game time, rain amount from the local climate, snow when cold.</summary>
@@ -422,6 +429,25 @@ public partial class WorldLab : Node3D
                 GD.Print("  |" + line + "|");
             }
         }
+    }
+
+    /// <summary>--thunder-wavs=dir: thunder of one bolt heard from 0.3, 1.5, 5 and 15 km, saved as WAV files.</summary>
+    private static void ThunderWavs(string dir)
+    {
+        System.IO.Directory.CreateDirectory(dir);
+        var builder = new Lightning();
+        var segments = new System.Collections.Generic.List<(Vector3, Vector3, float)>();
+        var build = typeof(Lightning).GetMethod("BuildBolt", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        build.Invoke(builder, new object[] { segments, new Vector3(0, 1600, 0), new Vector3(0, 0, 0), 3f, 0 });
+        foreach (double d in new[] { 300.0, 1500, 5000, 15000 })
+        {
+            var (sound, delay, db) = Lightning.Thunder(segments, new Vector3((float)d, 2, 0), 7, true);
+            if (sound == null) continue;
+            string path = System.IO.Path.Combine(dir, $"thunder_{d / 1000:0.0}km.wav");
+            sound.SaveToWav(path);
+            GD.Print($"THUNDER {d / 1000:0.0} km: heard after {delay:0.0} s, {sound.Data.Length / 2 / 22050.0:0.0} s long, {db:0.0} dB -> {path}");
+        }
+        builder.Free();
     }
 
     private double _peakTimer, _peakX = double.NaN, _peakZ, _reliefX = double.NaN, _reliefZ;
@@ -598,6 +624,17 @@ public partial class WorldLab : Node3D
         UpdateRelief();
         if (!_timeSlider.HasFocus()) _timeSlider.SetValueNoSignal(sky.Hour);
         _atmosphere.Update(delta, sky, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
+        if (GameSettings.WeatherModel.Index == 1 && GameSettings.WeatherOn.On)
+        {
+            if (_lightning == null)
+            {
+                _lightning = new Lightning { GroundAt = (x, z) => _sampler?.Height(x, z, 32) ?? 0 };
+                AddChild(_lightning);
+            }
+            _lightning.Step(delta, _atmosphere.Cells, false, _atmosphere.Snowing, cam, _originX, _originZ,
+                _atmosphere.Precipitation, _atmosphere.Wind.Speed, _atmosphere.Wind.Gust);
+        }
+        else if (_lightning != null) { _lightning.QueueFree(); _lightning = null; RenderingServer.GlobalShaderParameterSet("lightning", Vector4.Zero); }
         if (GameSettings.GroundFog.Index > 0)
             _mist.Update(_sampler, PlayerX, PlayerZ, _originX, _originZ, _atmosphere.MistAmount, (float)_sampler.Height(PlayerX, PlayerZ, 8), _atmosphere.MistColour);
         else _mist.Visible = false;
@@ -868,6 +905,13 @@ public partial class WorldLab : Node3D
             case Key.T or Key.Y or Key.Bracketleft or Key.Bracketright or Key.Minus or Key.Equal: if (!_menu.Visible) _tools.DevKey(key.Keycode); break;
             case Key.H: if (!_menu.Visible) { _rain = !_rain; _status = _rain ? "Rain on (H stops it)." : "Rain stopped."; } break;
             case Key.K: if (!_menu.Visible) { _water.Clear(); _rain = false; _status = "Simulated water cleared."; } break;
+            case Key.L: if (!_menu.Visible && _lightning != null)
+                {
+                    _lightning.StrikeNear(_camera.GlobalPosition, -_camera.GlobalBasis.Z, _originX, _originZ);
+                    _status = "Lightning (dev): a strike ahead — count the seconds to the thunder (×343 m).";
+                }
+                else if (!_menu.Visible) _status = "Lightning needs Settings → Simulation → Weather model: simulated.";
+                break;
             case Key.F9: DebugDump(); break;
             case Key.F12: Screenshot(Path.Combine(OS.GetUserDataDir(), $"screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png")); break;
         }
@@ -1139,6 +1183,12 @@ public partial class WorldLab : Node3D
                 _smokeStage = 2; _smokeTimer = 0; _simTime = 0;
             }
             else if (_smokeStage == 2 && _shotPours.Count > 0 && _simTime > _shotWait * .5 && _water.Sim is { } sim && sim.Sources.Count > 0) sim.Sources.Clear();
+            else if (_smokeStage == 2 && _shotStrike > 0 && !_strikePlaced && _lightning != null && (settled || _smokeTimer > 240)
+                && _smokeTimer > 1.5 && _simTime >= _shotWait)
+            {
+                _lightning.StrikeNear(_camera.GlobalPosition, -_camera.GlobalBasis.Z, _originX, _originZ, _shotStrike, hold: true);
+                _strikePlaced = true; _smokeTimer = 0;
+            }
             else if (_smokeStage == 2 && (settled || _smokeTimer > 240) && _smokeTimer > 1.5 && _simTime >= _shotWait)
             {
                 GD.Print($"SCATTER grass={_streamer.GrassCommitted} rocks={_streamer.RocksCommitted} props={_streamer.PropsCommitted} farTrees={_streamer.FarTreesCommitted}");

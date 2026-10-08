@@ -93,6 +93,10 @@ cloud_types={
 "type": "vec4",
 "value": Vector4(0, 0, 0, 0)
 }
+lightning={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
 cloud_lens={
 "type": "vec4",
 "value": Vector4(0, 0, 0, 0)

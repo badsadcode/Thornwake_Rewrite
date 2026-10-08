@@ -246,6 +246,8 @@ public static class GameSettings
         "before. Simulated: weather systems, frontal rain bands and thunderstorm cells move across the whole world with " +
         "the wind — you can see a storm coming, sail into it or leave it behind; the wind gusts out of storms and the " +
         "sea builds with the wind.", options: new[] { "classic (build 35)", "simulated" }));
+    public static readonly Setting WeatherVolume = Add(new("sim.weather_volume", "Simulation", "Weather sound", 0, 1.5, .05, 1,
+        "Volume of thunder, rain and wind (simulated weather model). 0 = silent.", "×"));
     public static readonly Setting RainFrequency = Add(new("sim.rain_frequency", "Simulation", "Rain frequency", .3, 2.5, .05, 1,
         "How often weather fronts bring rain (1 = as the climate says).", "×"));
     public static readonly Setting RainStrength = Add(new("sim.rain", "Simulation", "Rain strength", .1, 4, .1, 1,
