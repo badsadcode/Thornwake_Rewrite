@@ -21,7 +21,7 @@ void vertex() {
 		// Round 27: gust waves sweep the field, the blades lean with the wind and swing slowly (WindSway).
 		vec3 b = wind_bend(origin.xz, phase * 6.0, 0.5, 0.65 + 0.2 * fract(phase * 7.3));
 		VERTEX += inverse(mat3(MODEL_MATRIX)) * b * w;
-		sheen = wind_gust(origin.xz) * min(1.0, wind_field.y);
+		sheen = wind_gust(origin.xz) * min(1.0, wind_here(origin.xz).z);
 	} else {
 		// Lean with the wind (more in gusts) plus a flutter; travelling gust waves across the field.
 		float wave = sin(dot(origin.xz, wind.xz) * 0.15 - TIME * (1.5 + wind.y)) * 0.5 + 0.5;

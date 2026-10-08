@@ -64,8 +64,8 @@ void fragment() {
     /// Per frame: <paramref name="cells"/> in world coordinates (or null: classic model, <paramref name="thunderHere"/>
     /// = a storm over the player); <paramref name="camera"/> in the scene; the scene origin in the world.
     /// </summary>
-    public void Step(double delta, IReadOnlyList<WeatherField.Cell>? cells, bool thunderHere, bool snowing, Vector3 camera,
-        double originX, double originZ, float precipitation, float windSpeed, float gust)
+    public void Step(double delta, double gameHours, IReadOnlyList<WeatherField.Cell>? cells, bool thunderHere, bool snowing,
+        Vector3 camera, double originX, double originZ, float precipitation, float windSpeed, float gust)
     {
         _time += delta;
         double camX = originX + camera.X, camZ = originZ + camera.Z;
@@ -74,7 +74,8 @@ void fragment() {
             if (cells != null)
             {
                 foreach (var c in cells)
-                    if (c.Thunder) MaybeStrike(c.X, c.Z, c.Radius, c.Intensity, delta, camX, camZ, camera.Y, originX, originZ);
+                    if (c.Thunder) CellStrikes(c, gameHours, camX, camZ, camera.Y, originX, originZ);
+                if (_fired.Count > 4000) _fired.Clear();
             }
             else if (thunderHere)
                 MaybeStrike(camX + 2500, camZ - 1500, 6000, .8, delta, camX, camZ, camera.Y, originX, originZ);
@@ -99,6 +100,35 @@ void fragment() {
         StepAmbience(precipitation, snowing, windSpeed, gust);
     }
 
+    private readonly HashSet<(ulong, long, int)> _fired = new();
+
+    /// <summary>
+    /// Strikes of a thunderstorm cell, the same for every player (round 28, multiplayer): game time is cut into slots of
+    /// ~3 real seconds (at the shared Day length); in each slot a cell may strike up to twice, more likely the stronger
+    /// it is, at a moment, spot, kind and bolt shape all derived from the cell's id and the slot. Each player only
+    /// hears it at their own distance / 343 m/s.
+    /// </summary>
+    private void CellStrikes(WeatherField.Cell c, double gameHours, double camX, double camZ, float camY, double originX, double originZ)
+    {
+        double slot = 1.2 / Math.Max(10, GameSettings.DayLength.Value); // game hours in ~3 real seconds
+        long now = (long)Math.Floor(gameHours / slot);
+        for (long s = now - 1; s <= now; s++)
+            for (int k = 0; k < 2; k++)
+            {
+                ulong h = Thornwake.WorldGen.Hashing.Mix(c.Id * 31 + (ulong)s * 0x9E3779B97F4A7C15UL + (ulong)k * 7919);
+                if (Thornwake.WorldGen.Hashing.Unit(h) > c.Intensity * c.Intensity * .6) continue;
+                double at = (s + Thornwake.WorldGen.Hashing.Unit(Thornwake.WorldGen.Hashing.Mix(h + 1))) * slot;
+                if (at > gameHours || at < gameHours - 2 * slot) continue;
+                if (!_fired.Add((c.Id, s, k))) continue;
+                double u = Math.Max(1e-6, Thornwake.WorldGen.Hashing.Unit(Thornwake.WorldGen.Hashing.Mix(h + 2)));
+                double r = c.Radius * Math.Sqrt(-2 * Math.Log(u)) * .55;
+                double a = Thornwake.WorldGen.Hashing.Unit(Thornwake.WorldGen.Hashing.Mix(h + 3)) * Math.Tau;
+                bool ground = Thornwake.WorldGen.Hashing.Unit(Thornwake.WorldGen.Hashing.Mix(h + 4)) < .45;
+                CreateStrike(c.X + Math.Cos(a) * r, c.Z + Math.Sin(a) * r, c.Intensity, ground, false, camX, camZ, camY, originX, originZ,
+                    (int)(h >> 33));
+            }
+    }
+
     private void MaybeStrike(double cx, double cz, double radius, double intensity, double delta, double camX, double camZ,
         float camY, double originX, double originZ)
     {
@@ -111,7 +141,8 @@ void fragment() {
         // Where: scattered over the core (gaussian-ish), now and then out ahead of it ("bolt from the blue").
         double r = radius * Math.Sqrt(-2 * Math.Log(Math.Max(1e-6, _random.NextDouble()))) * .55;
         double a = _random.NextDouble() * Math.Tau;
-        CreateStrike(cx + Math.Cos(a) * r, cz + Math.Sin(a) * r, intensity, _random.NextDouble() < .45, false, camX, camZ, camY, originX, originZ);
+        CreateStrike(cx + Math.Cos(a) * r, cz + Math.Sin(a) * r, intensity, _random.NextDouble() < .45, false, camX, camZ, camY, originX, originZ,
+            _random.Next());
     }
 
     /// <summary>A strike in front of the camera (L key, screenshots): 0.3–8 km away, or at <paramref name="distance"/>.</summary>
@@ -122,28 +153,31 @@ void fragment() {
         double d = distance > 0 ? distance : 300 + _random.NextDouble() * 7700;
         double side = (_random.NextDouble() - .5) * d * .5;
         double x = originX + camera.X + f.X * d - f.Y * side, z = originZ + camera.Z + f.Y * d + f.X * side;
-        CreateStrike(x, z, 1, true, hold, originX + camera.X, originZ + camera.Z, camera.Y, originX, originZ);
+        CreateStrike(x, z, 1, true, hold, originX + camera.X, originZ + camera.Z, camera.Y, originX, originZ, _random.Next());
     }
 
     private bool _hold;
 
+    private Random _rng = new(1);
+
     private void CreateStrike(double x, double z, double intensity, bool toGround, bool hold, double camX, double camZ, float camY,
-        double originX, double originZ)
+        double originX, double originZ, int seed)
     {
         _hold = hold;
+        _rng = new Random(seed); // the bolt's shape, height and re-strikes follow from the seed (same for every player)
         double ground = GroundAt?.Invoke(x, z) ?? 0;
         double dx = x - camX, dz = z - camZ, distance = Math.Sqrt(dx * dx + dz * dz);
         if (distance > 60000) return;
         var s = new Strike { Start = _time, WorldX = x, WorldZ = z, Distance = distance, Ground = toGround,
-            Restrikes = _random.Next(0, 4), Brightness = (float)(.6 + .4 * intensity) };
-        double baseY = ground + 1300 + 600 * _random.NextDouble();
+            Restrikes = _rng.Next(0, 4), Brightness = (float)(.6 + .4 * intensity) };
+        double baseY = ground + 1300 + 600 * _rng.NextDouble();
         var top = new Vector3((float)(x - originX), (float)baseY, (float)(z - originZ));
         var bottom = new Vector3((float)(x - originX), (float)ground, (float)(z - originZ));
-        if (!s.Ground) bottom = top + new Vector3((float)(_random.NextDouble() - .5) * 4000, -300, (float)(_random.NextDouble() - .5) * 4000);
+        if (!s.Ground) bottom = top + new Vector3((float)(_rng.NextDouble() - .5) * 4000, -300, (float)(_rng.NextDouble() - .5) * 4000);
         float width = (float)Math.Max(4, distance * .004); // a few pixels wide at any distance (the glow does the rest)
         BuildBolt(s.Segments, top, bottom, width, 0);
         _strikes.Add(s);
-        QueueThunder(s, camX, camZ, camY, originX, originZ);
+        QueueThunder(s, camX, camZ, camY, originX, originZ, seed);
     }
 
     /// <summary>A jagged bolt by midpoint displacement, with branches that fork off and die out.</summary>
@@ -158,7 +192,7 @@ void fragment() {
             {
                 next.Add(points[i]);
                 var m = (points[i] + points[i + 1]) * .5f;
-                m += new Vector3((float)(_random.NextDouble() - .5), (float)(_random.NextDouble() - .5) * .4f, (float)(_random.NextDouble() - .5)) * rough;
+                m += new Vector3((float)(_rng.NextDouble() - .5), (float)(_rng.NextDouble() - .5) * .4f, (float)(_rng.NextDouble() - .5)) * rough;
                 next.Add(m);
             }
             next.Add(points[^1]);
@@ -168,11 +202,11 @@ void fragment() {
         for (int i = 0; i < points.Count - 1; i++)
         {
             into.Add((points[i], points[i + 1], width));
-            if (depth < 2 && i > 4 && i < points.Count - 8 && _random.NextDouble() < (depth == 0 ? .06 : .03))
+            if (depth < 2 && i > 4 && i < points.Count - 8 && _rng.NextDouble() < (depth == 0 ? .06 : .03))
             {
                 var dir = (points[i + 1] - points[i]).Normalized();
-                var side = new Vector3((float)(_random.NextDouble() - .5), -.6f, (float)(_random.NextDouble() - .5)).Normalized();
-                float length = (a - b).Length() * (float)(.12 + .2 * _random.NextDouble()) / (depth + 1);
+                var side = new Vector3((float)(_rng.NextDouble() - .5), -.6f, (float)(_rng.NextDouble() - .5)).Normalized();
+                float length = (a - b).Length() * (float)(.12 + .2 * _rng.NextDouble()) / (depth + 1);
                 BuildBolt(into, points[i], points[i] + (dir + side).Normalized() * length, width * .45f, depth + 1);
             }
         }
@@ -238,10 +272,10 @@ void fragment() {
 
     // ---- thunder
 
-    private void QueueThunder(Strike s, double camX, double camZ, float camY, double originX, double originZ)
+    private void QueueThunder(Strike s, double camX, double camZ, float camY, double originX, double originZ, int seed)
     {
         var cam = new Vector3((float)(camX - originX), camY, (float)(camZ - originZ));
-        var (sound, first, db) = Thunder(s.Segments, cam, _random.Next(), s.Ground);
+        var (sound, first, db) = Thunder(s.Segments, cam, seed, s.Ground);
         if (sound == null) return;
         var dir = (new Vector3((float)(s.WorldX - camX), 0, (float)(s.WorldZ - camZ))).Normalized();
         _pendingThunder.Add((_time + first, sound, dir, db));

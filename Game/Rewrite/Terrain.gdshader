@@ -169,7 +169,7 @@ void fragment() {
 	}
 	// Round 27: gusts sweeping the grass show as paler moving patches on the ground's grass colour too, so the
 	// waves carry on beyond the grass sprites (simulated weather only).
-	if (wind_sim()) grass *= 1.0 + vec3(0.075, 0.07, 0.035) * wind_gust(p) * min(1.0, wind_field.y) * smoothstep(0.1, 0.6, cover) * (1.0 - bare);
+	if (wind_sim()) grass *= 1.0 + vec3(0.075, 0.07, 0.035) * wind_gust_global(p) * min(1.0, wind_field.y) * smoothstep(0.1, 0.6, cover) * (1.0 - bare);
 	vec3 woods = biome_a.rgb * vec3(0.70, 0.71, 0.69);                                     // forest floor / far canopy
 	if (noor) {
 		grass *= mix(vec3(1.0), gdetail(G_GRASS, p), 0.85 * g_detail * (1.0 - bare)); // (bare patches have their own)

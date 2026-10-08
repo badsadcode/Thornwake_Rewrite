@@ -37,7 +37,9 @@ public sealed class WeatherField
     }
 
     public readonly record struct Sample(double Cloud, double Precip, double Convective, double Front);
-    public readonly record struct Cell(double X, double Z, double Radius, double Intensity, bool Thunder, double Age);
+    /// <summary>A thunderstorm cell. <see cref="Id"/> is the same for every player (grid cell + life period): lightning
+    /// derives its strikes from it, so all clients see the same bolts.</summary>
+    public readonly record struct Cell(double X, double Z, double Radius, double Intensity, bool Thunder, double Age, ulong Id);
 
     /// <summary>Steering wind (toward, unit vector x/z) and speed (m/s) at a game time.</summary>
     public (double X, double Z, double Speed) Steering(double gameHours)
@@ -84,6 +86,60 @@ public sealed class WeatherField
         return (systems, band);
     }
 
+    /// <summary>
+    /// The surface wind at a world point (round 28, Tom: is the wind the same everywhere?): the steering wind slowed
+    /// near the ground and turned by the weather systems (it curves around them, stronger in some, weaker in others),
+    /// then the land: faster on ridges and summits, calm in the lee of higher ground upwind, turned along valleys, and
+    /// on coasts a sea breeze by day and a land breeze at night. Deterministic (seed, place, game time) like the rest,
+    /// so every player computes the same wind. Storm outflow is added by the caller (nearby cells).
+    /// </summary>
+    public (double X, double Z, double Speed) WindAt(TerrainSampler terrain, double x, double z, double gameHours)
+    {
+        var (sx, sz, steer) = Steering(gameHours);
+        var (dx, dz) = Drift(gameHours, 1);
+        double a = Math.Atan2(sz, sx) + .6 * Noise.Value(gameHours / 7, 0, _seed + 31)
+            + .9 * Noise.Value((x - dx) / 350000, (z - dz) / 350000, _seed + 32);
+        double speed = steer * .45 * (.6 + .4 * (Noise.Value((x - dx) / 280000 + 7.1, (z - dz) / 280000, _seed + 33) + 1));
+        double sea = terrain.Plan.Profile.SeaLevel;
+        double H(double px, double pz) => Math.Max(terrain.Height(px, pz, 1200), sea);
+        double h0 = H(x, z);
+        // Exposure: height above the land around (4 km).
+        double mean = 0;
+        for (int i = 0; i < 8; i++) { double b = i * Math.PI / 4; mean += H(x + Math.Cos(b) * 4000, z + Math.Sin(b) * 4000); }
+        mean /= 8;
+        double relative = h0 - mean;
+        speed *= 1 + .7 * Smooth(0, 900, relative) - .35 * Smooth(0, 600, -relative);
+        // Lee: higher ground 3–6 km upwind blocks the wind.
+        double ux = Math.Cos(a), uz = Math.Sin(a);
+        double upwind = Math.Max(H(x - ux * 3000, z - uz * 3000), H(x - ux * 6000, z - uz * 6000));
+        speed *= 1 - .6 * Smooth(0, 800, upwind - h0 - 250);
+        // Valleys: the wind turns along the valley (perpendicular to the slope of the land around).
+        double gx = (H(x + 2000, z) - H(x - 2000, z)) / 4000, gz = (H(x, z + 2000) - H(x, z - 2000)) / 4000;
+        double slope = Math.Sqrt(gx * gx + gz * gz);
+        double channel = Smooth(0, 500, -relative) * Smooth(.02, .08, slope) * .7;
+        if (channel > 0 && slope > 1e-6)
+        {
+            double ax = -gz / slope, az = gx / slope;
+            if (ax * ux + az * uz < 0) { ax = -ax; az = -az; }
+            ux = ux * (1 - channel) + ax * channel; uz = uz * (1 - channel) + az * channel;
+            double l = Math.Sqrt(ux * ux + uz * uz); ux /= l; uz /= l;
+        }
+        double vx = ux * speed, vz = uz * speed;
+        // Sea and land breezes: toward the land by day (up to ~3.5 m/s), toward the sea at night (~1.5 m/s).
+        double L(double px, double pz) => terrain.Sample(px, pz, 1500).Land > 0 ? 1 : 0;
+        double lx = L(x + 3000, z) - L(x - 3000, z), lz = L(x, z + 3000) - L(x, z - 3000);
+        double coast = Math.Sqrt(lx * lx + lz * lz);
+        if (coast > 0)
+        {
+            double hour = ((gameHours % 24) + 24) % 24;
+            double day = Smooth(9, 13, hour) * Smooth(19, 16, hour), night = Smooth(21, 23, hour) + Smooth(6, 4, hour);
+            double breeze = 3.5 * day - 1.5 * Math.Min(1, night);
+            vx += lx / coast * breeze; vz += lz / coast * breeze;
+        }
+        double v = Math.Sqrt(vx * vx + vz * vz);
+        return v > 1e-6 ? (vx / v, vz / v, v) : (Math.Cos(a), Math.Sin(a), 0);
+    }
+
     /// <summary>Thunderstorm cells whose influence reaches within <paramref name="range"/> m of a point.</summary>
     public void Cells(double x, double z, double gameHours, double range, List<Cell> into)
     {
@@ -111,13 +167,14 @@ public sealed class WeatherField
                 // Fuel: warm, humid air in an unsettled system, best in the afternoon.
                 double fuel = Smooth(6, 24, temperature) * Smooth(120, 1300, rain) * Smooth(.3, .62, systems) * afternoon;
                 double chance = fuel * 2.2 * Math.Max(.3, GameSettings.RainFrequency.Value);
-                if (Hashing.Unit(Hashing.Mix(h + (ulong)Math.Floor((gameHours + u3 * period) / period) * 977)) > chance) continue;
+                ulong life_id = Hashing.Mix(h + (ulong)Math.Floor((gameHours + u3 * period) / period) * 977);
+                if (Hashing.Unit(life_id) > chance) continue;
                 double t = age / life;
                 double intensity = Math.Sin(Math.PI * Math.Pow(t, .7)) * (.55 + .45 * u2) * Math.Min(1, fuel * 2.5 + .3);
                 double radius = (4500 + 7500 * u1) * (.6 + .4 * Math.Sin(Math.PI * t));
                 double d = Math.Sqrt((cx - x) * (cx - x) + (cz - z) * (cz - z));
                 if (d - radius * 3 > range) continue;
-                into.Add(new Cell(cx, cz, radius, intensity, intensity > .45 && temperature > 6, t));
+                into.Add(new Cell(cx, cz, radius, intensity, intensity > .45 && temperature > 6, t, life_id));
             }
     }
 

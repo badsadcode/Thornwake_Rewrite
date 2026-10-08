@@ -39,16 +39,16 @@ public sealed class Wind
     public float SteadySpeed { get; private set; } = 6;
 
     /// <summary>
-    /// Simulated weather (round 27): the surface wind follows the steering wind of the weather systems (turned by up
-    /// to ~±35° by the land and the hour), slower near the ground, plus gust fronts blowing out of nearby storms.
+    /// Simulated weather (round 27/28): the regional surface wind at the player (WeatherField.WindAt: systems, ridges,
+    /// lee, valleys, coastal breezes), plus gust fronts blowing out of nearby storms.
     /// </summary>
     public void UpdateSimulated(double realSeconds, double gameHours, Vector2 steer, float steerSpeed, Vector2 outflowDir,
         float outflowSpeed, float storm, ulong seed)
     {
         _time += realSeconds;
-        double veer = Noise.Value(gameHours / 7, 0, seed + 1) * .6;
-        var dir = steer.Rotated((float)veer);
-        float baseSpeed = (float)(steerSpeed * .45 + 2.5 * Noise.Value(gameHours / 5, 7, seed + 3) + storm * 6);
+        // (round 28: steer is already the surface wind at the player — WeatherField.WindAt)
+        var dir = steer;
+        float baseSpeed = (float)(steerSpeed + 1.5 * Noise.Value(gameHours / 5, 7, seed + 3) + storm * 6);
         var v = dir * Math.Max(.5f, baseSpeed) + outflowDir * outflowSpeed;
         float steady = v.Length();
         Direction = Direction.Slerp(steady > .01f ? v / steady : Direction, Math.Clamp((float)realSeconds * .5f, 0, 1));

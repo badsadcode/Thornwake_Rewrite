@@ -48,6 +48,9 @@ public partial class WorldLab : Node3D
     private string? _thunderWavs;
     private WeatherField? _weatherField;
     private WeatherMap? _weatherMap;
+    private WindMap? _windMap;
+    private double _windTimer;
+    private (double X, double Z, double Speed) _localWind = (1, 0, 5);
     private TerrainSampler? _weatherFieldFor;
     /// <summary>The world weather field (simulated weather model; null otherwise): the map and the sky read it.</summary>
     public WeatherField? WeatherField => GameSettings.WeatherModel.Index == 1 ? _weatherField : null;
@@ -378,17 +381,29 @@ public partial class WorldLab : Node3D
                 _weatherFieldFor = _sampler;
             }
             _weather.UpdateFromField(_weatherField, _shotPath != null ? 600 : delta, gameHours, PlayerX, PlayerZ, temperature, groundSnow, _shotPath != null);
-            var (sx, sz, speed) = _weatherField.Steering(gameHours);
+            // The surface wind here (regional wind: systems, ridges, lee, valleys, coasts), sampled twice a second.
+            _windTimer -= delta;
+            if (_windTimer <= 0 || _shotPath != null)
+            {
+                _windTimer = .5;
+                _localWind = _weatherField.WindAt(_sampler, PlayerX, PlayerZ, gameHours);
+            }
+            var (sx, sz, speed) = _localWind;
             _atmosphere.SetSimulatedWeather(new Vector2((float)sx, (float)sz), (float)speed, _weather.NearCells, PlayerX, PlayerZ);
+            _windMap ??= new WindMap();
             _weatherMap ??= new WeatherMap();
             var camNow = _camera.GlobalPosition;
             _weatherMap.Update(_weatherField, gameHours, _originX + camNow.X, _originZ + camNow.Z, delta, _shotPath != null);
+            float ratio = (float)(_atmosphere.Wind.SteadySpeed / Math.Max(.5, _localWind.Speed));
+            _windMap.Update(_weatherField, _sampler, gameHours, _originX + camNow.X, _originZ + camNow.Z, _originX, _originZ, ratio,
+                delta, _shotPath != null);
         }
         else
         {
             _weather.Update(_shotPath != null ? 600 : delta, gameHours, rain, temperature, groundSnow, (ulong)_sampler.Plan.Manifest.Seed);
             _atmosphere.SetSimulatedWeather(null, 0, null, 0, 0);
             WeatherMap.Disable();
+            WindMap.Disable();
         }
         _atmosphere.Precipitation = _shotRainHere >= 0 ? _shotRainHere : _weather.Precipitation;
         _atmosphere.Snowing = _weather.Snow;
@@ -425,6 +440,14 @@ public partial class WorldLab : Node3D
             }
         }
         GD.Print($"WEATHER rain {100.0 * rainy / n:0}% of the time, thunder {100.0 * stormy / n:0}%, up to {maxCells} cells within 70 km");
+        // Regional wind around (round 28): speed and direction at points 0–12 km away, with the ground height.
+        foreach (double h in new[] { 14.0, 3.0 })
+            for (int i = 0; i < 9; i++)
+            {
+                double px = x + (i == 0 ? 0 : Math.Cos(i * Math.PI / 4) * 6000), pz = z + (i == 0 ? 0 : Math.Sin(i * Math.PI / 4) * 6000);
+                var (wx, wz, ws) = field.WindAt(_sampler, px, pz, h);
+                GD.Print($"WIND h{h} at {px - x:+0;-0} {pz - z:+0;-0}: ground {_sampler.Height(px, pz, 200):0} m, {ws:0.0} m/s toward ({wx:0.00}, {wz:0.00})");
+            }
         foreach (double h in new[] { 14.0, 38.0 })
         {
             GD.Print($"WEATHER map h{h} (200 km, 5 km per char; # heavy, + rain, . cloud):");
@@ -642,7 +665,7 @@ public partial class WorldLab : Node3D
                 _lightning = new Lightning { GroundAt = (x, z) => _sampler?.Height(x, z, 32) ?? 0 };
                 AddChild(_lightning);
             }
-            _lightning.Step(delta, _atmosphere.Cells, false, _atmosphere.Snowing, cam, _originX, _originZ,
+            _lightning.Step(delta, sky.Day * 24 + sky.Hour, _atmosphere.Cells, false, _atmosphere.Snowing, cam, _originX, _originZ,
                 _atmosphere.Precipitation, _atmosphere.Wind.Speed, _atmosphere.Wind.Gust);
         }
         else if (_lightning != null) { _lightning.QueueFree(); _lightning = null; RenderingServer.GlobalShaderParameterSet("lightning", Vector4.Zero); }
