@@ -614,8 +614,9 @@ vec2 foam_net_cover(vec2 q, vec2 dn, float stretch, float amount) {
 	float m = mix(lf, hf, smoothstep(0.45, 1.0, amount) * 0.65);
 	float patchy = texture(foam_net, q / 61.0 + vec2(0.13, 0.29)).b;
 	m *= 0.75 + 0.5 * smoothstep(0.25, 0.75, patchy);
-	float cut = 1.0 - min(amount, 1.0);                  // thin foam: only the thickest net shows
-	return vec2(smoothstep(cut * 0.95, cut * 0.95 + 0.3, m), m);
+	float cut = 1.15 - 1.1 * min(amount, 1.0);           // thin foam: only the thickest net shows
+	// (a trace of foam over a wide area — a wake, a calm sea — showed the net's brightest knots as a faint band)
+	return vec2(smoothstep(cut, cut + 0.3, m) * smoothstep(0.05, 0.3, amount), m);
 }
 
 vec3 foam_at(vec2 q, vec2 dn, float stretch, float t, float amount, float dist) {
