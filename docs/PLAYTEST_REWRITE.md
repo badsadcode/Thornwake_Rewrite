@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 38 — raindrop splashes, wind that follows the land
+* **Splashes** (simulated weather): raindrops now bounce off water — little crowns with droplets flying up, as many
+  as the rain is strong, fewer on rough water.
+* **The wind is local now.** It still comes from the weather systems, but the land shapes it: stronger on ridges and
+  hilltops, calm in the lee of mountains and in hollows, running along valleys, sea breezes by day and land breezes
+  at night on coasts. Grass, plants and trees use the wind **where they stand** — walk from a sheltered valley up to
+  a ridge and watch the grass go from gentle sway to streaming. The HUD wind is the wind where you are.
+* **Lightning is the same for everyone**: strikes come from the storm cells in a fixed, repeatable way, so in
+  multiplayer every player will see the same bolt (and hear it after their own distance).
+* *Weather model → classic* still gives build 35's weather and one wind everywhere.
+
 ## New in build 37 — land to the horizon
 * **Horizon land** (*Settings → View distance*, default ~250 km; off = build 36): beyond the streamed terrain a
   coarse far land carries on — the world's own mountains, valleys, lakes and coast, in the biome colours with rock

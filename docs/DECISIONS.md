@@ -964,6 +964,28 @@ rings end in a square (~20 km at the default Terrain setting) and the sky showed
 * Renders (2.5 km up, thin haze): the square plateau edge against flat teal becomes hazy land to the horizon; over
   open sea no seam.
 
+## D71 — Round 28b: raindrop splashes, regional wind, shared lightning (2026-10-08)
+Tom: "love the raindrops on water… could we also add that splash effect?" and, on "is the wind global?" / "how
+heavy in multiplayer?", agreed ("ok sounds good") to a regional wind computed from the shared weather field and to
+lightning every player sees the same.
+* **Splashes** (RainSplash.gdshader, Atmosphere): 1800 GPU particles, 0.32 s each, emitted in a 24 m square at the
+  water surface below the camera (WorldLab looks for the nearest water every 0.25 s). Each one is a billboard crown:
+  a ring spreading out and a few droplets thrown up and falling back. Amount follows rain × Rain strength, fewer
+  on rough water; tinted by daylight. Simulated model only, not in snow, and only within 60 m above the water.
+* **Regional wind** (WeatherField.WindAt): the steering flow slowed to ~0.45 at the ground and turned by the
+  systems; ridges/hills above the 4 km mean height up to ×1.7, hollows down to ×0.65; calm in the lee of higher
+  ground 3–6 km upwind (to ×0.4); channelled along valleys; sea/land breezes from the land/sea 3 km either side
+  and the hour. Deterministic in seed, position and game time, so every client computes the same wind with no
+  network traffic. The player's wind (sea state, rain slant, sound) samples it every 0.5 s; a 48×48 **wind map**
+  over 12 km (WindMap.cs, worker thread, a few ms per refresh) lets grass, plants and crowns read the wind at their
+  own position (WindSway `wind_here`), carrying the player's storm gust and outflow ratio. Probe: a lake valley
+  3.4 m/s while the ridges above had 8–12 m/s at 14:00; 1.3 m/s at 03:00.
+* **Shared lightning**: each storm cell has a stable Id; strikes are drawn per cell per game-time slot
+  (1.2 real seconds) from a hash of (Id, slot, k) with probability intensity² × 0.6, and the bolt's shape is
+  seeded from the same hash. Two players under the same storm see the same bolt at the same moment (each hears it
+  after their own distance ÷ 343 m/s). Cost: nothing extra per player — no strike messages needed.
+* Classic weather model unchanged (one wind everywhere, wind map off).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
