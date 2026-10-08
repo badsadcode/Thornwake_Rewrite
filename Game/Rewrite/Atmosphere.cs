@@ -89,6 +89,7 @@ public partial class Atmosphere : Node3D
     public Wind Wind { get; } = new();
     private float _wetness, _puddles; // cosmetic rain wetness of the ground and puddles (0..1)
     private ShaderMaterial? _water;
+    private ImageTexture? _foamNet;
     /// <summary>The GPU FFT sea of the "experimental 3" water (null with other styles, or without compute shaders).</summary>
     public OceanFft? Ocean { get; private set; }
 
@@ -279,6 +280,8 @@ public partial class Atmosphere : Node3D
         _water.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
         _water.SetShaderParameter("cloud_period", CloudPeriod);
         _water.SetShaderParameter("cloud_height", CloudHeight);
+        _foamNet ??= FoamNet.Create(); // the foam net (foam style "net")
+        _water.SetShaderParameter("foam_net", _foamNet);
     }
 
     private void OnSetting(Setting s)
@@ -357,6 +360,7 @@ public partial class Atmosphere : Node3D
         _shadow.Visible = GameSettings.CloudShadows.Value > 0 && GameSettings.Clouds.Value > 0;
         _shadowStrength = Math.Clamp(.62f * GameSettings.CloudShadows.F, 0, 1);
         UpdateCoverage();
+        _water?.SetShaderParameter("foam_style", GameSettings.FoamStyle.Index);
         _water?.SetShaderParameter("ssr_steps", GameSettings.WaterReflections.Index switch { 0 => 0, 1 => 16, _ => 32 });
         if (vp != null)
         {

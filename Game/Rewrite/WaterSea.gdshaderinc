@@ -11,6 +11,11 @@ uniform vec3 lake_scatter : source_color = vec3(0.06, 0.20, 0.17);
 uniform vec3 river_scatter : source_color = vec3(0.07, 0.15, 0.12);
 uniform vec3 absorption = vec3(0.55, 0.16, 0.12);
 uniform vec3 foam_color : source_color = vec3(0.93, 0.95, 0.95);
+// Foam style (round 29): 0 = the procedural lace (experimental 2–4); 1 = the foam net (FoamNet.cs, Tom liked the foam of
+// emilje/godot-water-shader): a thick fluffy net around round clear holes, coarse and fine nets mixed by how fresh the
+// foam is, cut by a soft threshold that rises as it thins, patchy.
+uniform int foam_style = 0;
+uniform sampler2D foam_net : filter_linear_mipmap_anisotropic, repeat_enable, hint_default_white;
 uniform float refraction : hint_range(0.0, 0.1) = 0.03;
 uniform float caustic_strength : hint_range(0.0, 2.0) = 0.8;
 uniform float reflection_strength : hint_range(0.0, 1.0) = 0.9;
@@ -597,8 +602,29 @@ vec3 reflected_sky(vec3 dir, vec2 offs, vec3 base) { // offs: this water's xz mi
 // to its average far away (cells smaller than a pixel would alias).
 // foam_at takes the already-drifted position q and the streak frame (dn, stretch): only a frame that is the same
 // everywhere (the wind's) may be applied to q, since dot(q, dn) with dn turning from place to place winds q into arcs.
+// The foam net (foam_style 1) at the drifted position q: (cover 0..1, structure 0..1: the net's own brightness).
+// Coarse net ~8 m a tile (~1 m holes), fine net ~3 m (~20 cm), the fine one taking over in fresh, strong foam (where
+// the surface is compressed hardest); a slow warp so no tile edge runs straight; patches thick and thin over ~60 m.
+vec2 foam_net_cover(vec2 q, vec2 dn, float stretch, float amount) {
+	vec2 sd = vec2(-dn.y, dn.x);
+	q += (vec2(noise(q * 0.07), noise(q * 0.07 + 5.7)) - 0.5) * 6.0;
+	vec2 qs = vec2(dot(q, dn) / stretch, dot(q, sd));
+	float lf = texture(foam_net, qs / 8.0).r;
+	float hf = texture(foam_net, qs / 3.1 + vec2(0.37, 0.71)).g;
+	float m = mix(lf, hf, smoothstep(0.45, 1.0, amount) * 0.65);
+	float patchy = texture(foam_net, q / 61.0 + vec2(0.13, 0.29)).b;
+	m *= 0.75 + 0.5 * smoothstep(0.25, 0.75, patchy);
+	float cut = 1.0 - min(amount, 1.0);                  // thin foam: only the thickest net shows
+	return vec2(smoothstep(cut * 0.95, cut * 0.95 + 0.3, m), m);
+}
+
 vec3 foam_at(vec2 q, vec2 dn, float stretch, float t, float amount, float dist) {
 	if (amount <= 0.001) return vec3(0.0, 0.0, 1.0);
+	if (foam_style == 1) {
+		vec2 n = foam_net_cover(q, dn, stretch, amount);
+		float under = smoothstep(0.0, 0.6, amount) * smoothstep(0.1, 0.5, n.y) * 0.8; // milky water around the net
+		return vec3(n.x * 0.95, under, 0.78 + 0.22 * n.y);
+	}
 	float near = 1.0 - smoothstep(12.0, 70.0, dist);
 	float far = smoothstep(35.0, 160.0, dist);
 	vec2 sd = vec2(-dn.y, dn.x);
@@ -633,6 +659,7 @@ vec3 foam_at(vec2 q, vec2 dn, float stretch, float t, float amount, float dist) 
 // centres dim — the inside of the foam is never one flat white, Tom: "like a blob of paint").
 vec2 foam3a(vec2 q, vec2 dn, float t, float amount, float fresh, float footprint) {
 	if (amount <= 0.001) return vec2(0.0);
+	if (foam_style == 1) return foam_net_cover(q, dn, 1.6, max(amount, fresh * 0.9));
 	vec2 sd = vec2(-dn.y, dn.x);
 	q += (vec2(noise(q * 0.13), noise(q * 0.13 + 5.7)) - 0.5) * 5.0; // warp: no straight edges
 	vec2 qs = vec2(dot(q, dn) / 1.6, dot(q, sd));                     // a little longer along the drift

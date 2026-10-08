@@ -140,6 +140,9 @@ public static class GameSettings
         "drifts away with the wind, breaking up into streaks; glassier, deeper water; livelier far sea. Experimental 4: 3A, but " +
         "rough and stormy water reflects less (calm water is the same as 3A). Switch any time to compare.",
         options: new[] { "classic", "experimental", "experimental 2", "experimental 3", "experimental 3A", "experimental 4" }));
+    public static readonly Setting FoamStyle = Add(new("fx.foam_style", "Lighting and effects", "Foam style", 0, 1, 1, 0,
+        "Experimental water foam (2 and later): lace (thin threads along bubble cells, build 38) or net (a thick, fluffy net of " +
+        "foam around round clear holes, finer where the foam is fresh, patchy as it thins).", options: new[] { "lace", "net" }));
     public static readonly Setting GroundTextures = Add(new("fx.ground_textures", "Lighting and effects", "Ground textures", 0, 1, 1, 0,
         "Current: the ground of the previous builds (kept as it is). Noor: Noor's pixel-art textures on the ground — grass, " +
         "sand, snow and soil keep their biome colours with the texture's pattern; forest floor, mud (wet mud when it rains), " +
