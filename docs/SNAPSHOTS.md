@@ -4,6 +4,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 38** (round 28b: raindrop splashes on water, regional wind shaped by the land — ridges, lee, valleys, sea breezes — read by every plant; lightning the same for every player) | `ab829d5` | Thornwake-Rewrite-Preview-38 (v0.9.38) | Weather model: classic = build 35 weather, one wind everywhere |
 | **Build 37** (round 28: horizon land — far terrain and sea to ~250 km, Earth's curve, no hard edge) | `c84aa47` | Thornwake-Rewrite-Preview-37 (v0.9.37) | Horizon land: off = build 36 |
 | **Build 36** (round 27: simulated weather over the whole world, lightning with propagated thunder, waves of grass, storm clouds and distant rain curtains, denser rain, raindrops on water) | `8bcdfac` | Thornwake-Rewrite-Preview-36 (v0.9.36) | Weather model: classic = build 35 weather, wind, sway and rain |
 | **RETURN POINT — before the weather overhaul** (Tom, 2026-10-08: "save current state as return point, so far it's looking good") = build 35 | `2ed21e8` | Thornwake-Rewrite-Preview-35 (v0.9.35) | In game: *Weather model → classic (build 35)* keeps this weather, wind, plant sway and rain; in git: `git checkout 2ed21e8` (or diff against it) |
