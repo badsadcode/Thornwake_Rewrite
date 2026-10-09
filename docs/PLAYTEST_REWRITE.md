@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 41 — Godot 4.7.2
+* **The game now runs on Godot 4.7.2** (was 4.5.1). Nothing in the game changed on purpose: same worlds, same
+  settings, and the picture was kept the same (fog blending as in 4.5). Please play as usual and tell me if
+  anything looks or feels different: the sky and fog, the water reflections, the glow around the sun, the FPS in the
+  forest tests, loading, stutters.
+* If build 41 does not start or misbehaves, **build 40 is the way back** (the code is kept on the branch
+  `godot-4.5.1`). One thing seen here: under Wine on Linux build 41 crashes at start unless DirectInput is switched
+  off (`WINEDLLOVERRIDES="dinput8=d"`); that is a Wine problem with Godot 4.7's game-controller support, real
+  Windows is not affected as far as I know. If it crashes on your Windows too, tell me straight away.
+
 ## New in build 40 — storm skies, biome skies that show
 * **Storms** (simulated weather): no more flat grey lid. A low, heavy deck with dark slate cores and paler patches,
   rolls lying across the wind and a lumpy underside; dark ragged scud racing underneath with the wind; lighter

@@ -2,9 +2,15 @@
 
 Tom: "would it be possible to switch to Godot Engine 4.7.2? I believe it has some cool features that we could use."
 
-**Short answer: yes, it's possible and it looks low-risk. The code needs no changes to compile.** It's still a
-deliberate step with its own return point: three of the changes alter how our sky, water and god rays look. The
-project stays on 4.5.1 until Tom says go.
+**Done on 2026-10-09 (D75, build 41)** after Tom's go ("If you will be able to go back to the previous version, then
+go for it"). Return point: branch `godot-4.5.1` and the build 40 EXE. The notes below are the assessment that led to it.
+
+After the switch: all 56 headless tests pass; the Windows export runs the world smoke test (under Wine only with
+DirectInput off, `WINEDLLOVERRIDES="dinput8=d"`: Wine 9 crashes in Godot 4.7's controller set-up, build 40 does not
+touch it); more renders, 4.5.1 left and 4.7.2 right, morning sun over the sea (the old sun-blob scene), deep under
+water at day and at night, a snowy mountain at night:
+[`img/godot472_compare_sun_underwater_night.jpg`](img/godot472_compare_sun_underwater_night.jpg) — the same picture
+within a few levels (under water and the night ~5 % brighter).
 
 ## What was tried (in a scratch copy, nothing committed)
 * Downloaded the official `Godot_v4.7.2-stable_mono_linux_x86_64` (released 2026-08-17; 4.7 came out 2026-06-18).
