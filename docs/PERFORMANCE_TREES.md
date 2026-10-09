@@ -67,9 +67,10 @@ Two more things worth knowing:
   steps. The cost is the same in A and B, so it did not cause the difference, but it does eat headroom. Please also
   test "volumetric" (2).
 * **Reproduce lines in debug dumps are broken for custom worlds.** They write `--set=gen.gen.size=…` (double
-  prefix, `WorldLab.cs:202`), so the world parameters are ignored. Even with the prefix fixed, a replay here still
-  generated the 2048 km default world. That is a second bug to find. I could not replay the forest scenes for exact
-  instance counts. Both are small fixes for when code changes are allowed.
+  prefix, `WorldLab.cs:202`), so the world parameters are ignored and a replay generates the default world.
+  With the prefix corrected by hand, a replay generates the right 32 km world. This is a one-line fix for when
+  code changes are allowed. My forest replays here used an older scratch copy and landed in the wrong world, so
+  the instance counts above are calculated from the code, not measured.
 
 ## What I propose (in order, each one switchable, nothing removed)
 0. **Measure first** (small, test-only code): a `--bench` run that holds a dump's camera, turns vsync off, records
