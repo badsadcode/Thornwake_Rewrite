@@ -1,3 +1,16 @@
+# Thornwake Rewrite
+
+**This repository is the Thornwake rewrite** (moved here from the `rewrite/main` branch of `badsadcode/Thornwake` on
+2026-10-09, with its full history; the original repository is left untouched). The rewrite lives in `Game/Rewrite/`
+(game) and `Game/WorldGen/` (deterministic world generation); the original prototype's code and the notes below are
+kept for reference.
+
+* What changed and why: [`docs/DECISIONS.md`](docs/DECISIONS.md) · what each build added: [`docs/PLAYTEST_REWRITE.md`](docs/PLAYTEST_REWRITE.md)
+* Return points (commit per build): [`docs/SNAPSHOTS.md`](docs/SNAPSHOTS.md) · plan: [`docs/REWRITE_PLAN.md`](docs/REWRITE_PLAN.md), [`docs/GAMEPLAY_PLAN.md`](docs/GAMEPLAY_PLAN.md)
+* Tests: `dotnet run --project Tests/WorldGen/Thornwake.WorldGen.Tests.csproj -c Release` · engine: Godot 4.5.1 .NET (Forward+)
+
+---
+
 # Thornwake — Harthwood Valley
 
 > **Playable A4 development lab:** double-click `TEST_PLAYABLE_WORLD.cmd`; see [controls and setup](docs/PLAYABLE_WORLD_TEST_GUIDE.md) and [validation checkpoint](docs/PLAYABLE_A4_WORLD_VALIDATION.md). Current desktop source uses Forward+; the OpenGL requirement below describes the older packaged prototype, not this development build.

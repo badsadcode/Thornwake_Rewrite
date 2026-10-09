@@ -1029,6 +1029,12 @@ keeps the previous look selectable.
   here), Rain, Rain tone, Wind, Thunder. Rain tone low-passes the hiss (it was raw high-passed white noise) and
   quietens the hiss and the drops; default 0.35 (soft), 1 = build 39's crisp rain.
 
+## D74 — The rewrite moves to its own repository (2026-10-09)
+Tom: "keep this repo as is and make a brand new one for this version with all the files". `badsadcode/Thornwake_Rewrite`
+(private) received the full history of `rewrite/main` (276 commits, same ids) as `main`; `badsadcode/Thornwake` stays
+untouched. Work continues on `main` here. Tags for the return points could not be pushed from the cloud session (the
+git connection refuses tag pushes); `docs/SNAPSHOTS.md` lists every commit to tag from GitHub if wanted.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

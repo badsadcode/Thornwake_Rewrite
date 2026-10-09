@@ -1,6 +1,6 @@
 # Snapshots to go back to
 
-Every snapshot is a commit on `rewrite/main` (history is never rewritten, so these stay valid forever).
+Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `rewrite/main` branch of `badsadcode/Thornwake`; the history was moved unchanged, so the commit ids are the same and stay valid forever).
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
@@ -49,7 +49,7 @@ Every snapshot is a commit on `rewrite/main` (history is never rewritten, so the
 **Going back to a snapshot**
 * Code: `git checkout 6cf6d18` (look around), or make a branch from it: `git switch -c back-to-preview-7 6cf6d18`.
   On GitHub: open the commit `6cf6d18`, then "Browse files" → branch/tag menu → create a branch or tag there
-  (this cloud session may only push to `rewrite/main`, so it could not create the tag itself).
+  (the cloud session cannot push tags, so it could not create them itself).
 * Terrain: the terrain fingerprints of each snapshot are frozen in `Tests/WorldGen/Fixtures/`
   (`terrain-build5.json`, `terrain-preview7.json`, `terrain-build8.json`, `terrain-build9.json`). Generation changes after a snapshot are added as parameters whose
   old values reproduce the snapshot; a test proves it bit for bit (decision D25).
