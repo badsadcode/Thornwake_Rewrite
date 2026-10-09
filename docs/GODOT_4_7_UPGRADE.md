@@ -12,7 +12,14 @@ project stays on 4.5.1 until Tom says go.
   errors and 0 warnings**.
 * Headless import of the whole project with 4.7.2: **0 errors**. 105 `.import` files get rewritten (normal for an
   engine upgrade); `project.godot` gets its version tag bumped once saved in the editor.
-* Render comparison of the same scene, 4.5.1 vs 4.7.2: see below.
+* Render comparison of Tom's lake dump `214317` (same world, place, time and settings):
+  [`img/godot472_lake_compare.jpg`](img/godot472_lake_compare.jpg), top to bottom: 4.5.1, 4.7.2 as it is, 4.7.2 with
+  `rendering/environment/fog/use_legacy_blending = true`.
+  * **4.7.2 as it is** comes out hazier and paler. It is 20 % brighter on average and differs from 4.5.1 by about
+    25 levels per pixel (0–255). The new fog blending moves our god rays, haze and mist.
+  * **With legacy fog blending**, it is practically the same picture as 4.5.1: same average brightness (±1.5) and
+    about 10 levels per pixel of difference, mostly from moving water and leaves. So the upgrade can start with
+    the old look and move to the new fog deliberately.
 
 ## What 4.6 and 4.7 bring that matters to Thornwake
 From the official changelogs (`CHANGELOG.md` at the `4.6-stable` and `4.7.2-stable` tags):
@@ -37,7 +44,7 @@ Per-cascade shadow culling helps a little, but the main cost is the number of 3D
 ## Proposed steps (when Tom says go)
 1. Put a **return point** in `SNAPSHOTS.md`: the last 4.5.1 commit, with the build 40 EXE as the playable return
    point.
-2. Do the upgrade on a branch (`godot-4.7`): the SDK line, re-import, a `project.godot` save, and the cloud setup
+2. Do the upgrade on a branch (`godot-4.7`): the SDK line, `use_legacy_blending = true`, re-import, a `project.godot` save, and the cloud setup
    script fetching 4.7.2. Run all headless tests, then render the standard comparison set (lake, forest, storm,
    ocean, sunset, underwater) on both versions.
 3. Retune glow, SSR and fog where they changed, until the comparisons match build 40 or look better. Every retune
