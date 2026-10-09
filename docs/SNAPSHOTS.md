@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **RETURN POINT — last Godot 4.5.1 version** (Tom, 2026-10-09: "if you will be able to go back to the previous version, then go for it") = build 40 + docs | `460d823` (branch `godot-4.5.1`) | Thornwake-Rewrite-Preview-40 (v0.9.40) | In git: `git checkout godot-4.5.1`, open with Godot 4.5.1 .NET (`tools/bootstrap.ps1 -Version 4.5.1` on Windows; `GODOT_VERSION=4.5.1` in `tools/setup-cloud.sh`) |
 | **Build 40** (round 29b: storm skies with structure and racing scud; biome skies that show; Audio tab, softer rain) | `5edb5a2` | Thornwake-Rewrite-Preview-40 (v0.9.40) | Weather model: classic = build 35 overcast; Biome skies off; Rain tone 1 = build 39 rain |
 | **Build 39** (round 29: sun blob fixed; clouds v2 — clouds on the mountains, in front of the land; foam net) | `2e80589` | Thornwake-Rewrite-Preview-39 (v0.9.39) | Cloud quality: volumetric = build 38 clouds; Foam style: lace = build 38 foam |
 | **RETURN POINT — before clouds v2, foam net and the sun-blob fix** (Tom, 2026-10-08: "as long as we can get back to what we have now, go for it") = build 38 | `2df30d8` | Thornwake-Rewrite-Preview-38 (v0.9.38) | In game: *Cloud quality* volumetric (not v2) and *Foam style* lace keep build 38's clouds and foam; in git: `git checkout 2df30d8` |

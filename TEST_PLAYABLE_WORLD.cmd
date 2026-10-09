@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-set "engine=%~dp0.tools\godot\Godot_v4.5.1-stable_mono_win64\Godot_v4.5.1-stable_mono_win64.exe"
+set "engine=%~dp0.tools\godot\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64.exe"
 if not exist "%engine%" (
   echo Project Godot engine not found. See docs\PLAYABLE_WORLD_TEST_GUIDE.md.
   pause

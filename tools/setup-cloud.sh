@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Linux/cloud development setup (Ubuntu 24.04). Windows development keeps using tools/bootstrap.ps1.
 #
-# Installs: .NET 8 SDK (Ubuntu archive), Godot 4.5.1 .NET for Linux, Xvfb + Mesa software Vulkan
+# Installs: .NET 8 SDK (Ubuntu archive), Godot 4.7.2 .NET for Linux, Xvfb + Mesa software Vulkan
 # (lavapipe) so Forward+ scenes can render screenshots without a GPU. Idempotent.
 #
 #   bash tools/setup-cloud.sh          # install everything
@@ -12,7 +12,7 @@
 # .tools/godot/<win64>/GodotSharp/Tools/nupkgs; we link that path to the Linux bundle's identical packages.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GODOT_VERSION=4.5.1
+GODOT_VERSION=4.7.2
 GODOT_DIR=/opt/godot/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64
 SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO=sudo
 

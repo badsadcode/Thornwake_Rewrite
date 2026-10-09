@@ -7,7 +7,7 @@ kept for reference.
 
 * What changed and why: [`docs/DECISIONS.md`](docs/DECISIONS.md) · what each build added: [`docs/PLAYTEST_REWRITE.md`](docs/PLAYTEST_REWRITE.md)
 * Return points (commit per build): [`docs/SNAPSHOTS.md`](docs/SNAPSHOTS.md) · plan: [`docs/REWRITE_PLAN.md`](docs/REWRITE_PLAN.md), [`docs/GAMEPLAY_PLAN.md`](docs/GAMEPLAY_PLAN.md)
-* Tests: `dotnet run --project Tests/WorldGen/Thornwake.WorldGen.Tests.csproj -c Release` · engine: Godot 4.5.1 .NET (Forward+)
+* Tests: `dotnet run --project Tests/WorldGen/Thornwake.WorldGen.Tests.csproj -c Release` · engine: Godot 4.7.2 .NET (Forward+; 4.5.1 up to branch `godot-4.5.1`)
 
 ---
 

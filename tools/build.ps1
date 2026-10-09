@@ -6,7 +6,7 @@ $dotnet = Join-Path $env:ProgramFiles 'dotnet\dotnet.exe'
 if (-not (Test-Path -LiteralPath $dotnet)) { throw 'Install a .NET 8 or 9 SDK for development. Players do not need it.' }
 $env:PATH = (Split-Path -Parent $dotnet) + ';' + $env:PATH
 & (Join-Path $PSScriptRoot 'bootstrap.ps1')
-$engine = Join-Path $root '.tools\godot\Godot_v4.5.1-stable_mono_win64\Godot_v4.5.1-stable_mono_win64_console.exe'
+$engine = Join-Path $root '.tools\godot\Godot_v4.7.2-stable_mono_win64\Godot_v4.7.2-stable_mono_win64_console.exe'
 New-Item -ItemType Directory -Force -Path 'artifacts','dist\Thornwake-Windows' | Out-Null
 & $dotnet restore Thornwake.csproj
 if ($LASTEXITCODE -ne 0) { throw 'Restore failed.' }

@@ -1035,6 +1035,17 @@ Tom: "keep this repo as is and make a brand new one for this version with all th
 untouched. Work continues on `main` here. Tags for the return points could not be pushed from the cloud session (the
 git connection refuses tag pushes); `docs/SNAPSHOTS.md` lists every commit to tag from GitHub if wanted.
 
+## D75 — Godot 4.7.2 (2026-10-09)
+Tom: "If you will be able to go back to the previous version, then go for it." The project moves from Godot 4.5.1 to
+4.7.2 .NET (still .NET 8). Assessment and changelog notes: `docs/GODOT_4_7_UPGRADE.md`.
+* **Return point**: branch `godot-4.5.1` (= `460d823`, build 40 plus docs) and the build 40 EXE (`SNAPSHOTS.md`).
+* **Same look first**: `rendering/environment/fog/use_legacy_blending = true` keeps 4.5's fog blending (without it the
+  god rays, haze and mist came out hazier and ~20 % brighter). Tom and Noor plan to rewrite the atmosphere from
+  scratch, so no time goes into retuning the old one for 4.6's fog and glow changes.
+* Changed: the SDK line in `Thornwake.csproj`, `NuGet.Config`, `TEST_*.cmd`, `tools/build.ps1`, `tools/bootstrap.ps1`,
+  `tools/setup-cloud.sh`, `project.godot` (feature tag 4.7). The re-import rewrote 52 `.import` files (new importer
+  options at their defaults) and added 51 `.uid` files Godot 4.7 wants for every script and shader. No game code changed.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

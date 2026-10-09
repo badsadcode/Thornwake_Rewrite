@@ -10,7 +10,7 @@ project stays on 4.5.1 until Tom says go.
 * Downloaded the official `Godot_v4.7.2-stable_mono_linux_x86_64` (released 2026-08-17; 4.7 came out 2026-06-18).
 * Pointed the project at `Godot.NET.Sdk/4.7.2` (one line in `Thornwake.csproj`; still .NET 8): **builds with 0
   errors and 0 warnings**.
-* Headless import of the whole project with 4.7.2: **0 errors**. 105 `.import` files get rewritten (normal for an
+* Headless import of the whole project with 4.7.2: **0 errors**. 52 `.import` files get rewritten (normal for an
   engine upgrade); `project.godot` gets its version tag bumped once saved in the editor.
 * Render comparison of Tom's lake dump `214317` (same world, place, time and settings):
   [`img/godot472_lake_compare.jpg`](img/godot472_lake_compare.jpg), top to bottom: 4.5.1, 4.7.2 as it is, 4.7.2 with

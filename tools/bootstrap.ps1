@@ -1,4 +1,4 @@
-param([string]$Version = '4.5.1')
+param([string]$Version = '4.7.2')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $toolDir = Join-Path $root '.tools'
