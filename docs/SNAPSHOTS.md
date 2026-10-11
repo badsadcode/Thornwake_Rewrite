@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 43** (round 30b: simplified tree shadows, full-detail tree distance, sharper benchmark) | `2f59eef` | Thornwake-Rewrite-Preview-43 (v0.9.43) | Tree shadows: detailed + Full-detail trees 220 m = build 42 |
 | **Build 42** (round 30: tree impostors and tree field with cross-faded hand-overs; benchmark; Display tab; one-call batch fills) | `f3697be` | Thornwake-Rewrite-Preview-42 (v0.9.42) | Tree impostors: off = build 41 trees and cards; `--legacy-multimesh` = build 41 batch fills |
 | **Build 41** (Godot 4.7.2; same game and look as build 40) | `071c704` | Thornwake-Rewrite-Preview-41 (v0.9.41) | The return point below (branch `godot-4.5.1`, build 40) |
 | **RETURN POINT — last Godot 4.5.1 version** (Tom, 2026-10-09: "if you will be able to go back to the previous version, then go for it") = build 40 + docs | `460d823` (branch `godot-4.5.1`) | Thornwake-Rewrite-Preview-40 (v0.9.40) | In git: `git checkout godot-4.5.1`, open with Godot 4.5.1 .NET (`tools/bootstrap.ps1 -Version 4.5.1` on Windows; `GODOT_VERSION=4.5.1` in `tools/setup-cloud.sh`) |
