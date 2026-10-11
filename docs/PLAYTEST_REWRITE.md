@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 43 — cheaper near trees and shadows (from your benchmark)
+Your build 42 benchmark showed the far trees are solved (impostors 1.7 ms); what is left is the detailed trees near
+you (~11 ms) and the shadows (~12 ms).
+* **Tree shadows: simplified** (new default, *Settings → Lighting → Tree shadows*): near trees cast their shadow from
+  the lighter model of the same tree; you still see the detailed one. *detailed* = build 42.
+* **Full-detail trees** (*View distance*, default 140 m; build 42 used 220 m): how far trees use their most detailed
+  model; beyond, the lighter model of the same tree.
+* **Benchmark:** "without X" now removes things from the shadows too, and new lines measure each kind's shadows, the
+  terrain's shadows, the soft shadow filter and the shadow distance. New test **Tree detail A/B**. The warm-up no
+  longer always waits 30 s. Please run **Standard** again (same settings as last time) and **Tree detail A/B**.
+
 ## New in build 42 — trees: impostors and the tree field; benchmark; Display tab
 * **Dense forests for much less.** Beyond the detailed 3D trees, every tree is now drawn as an *impostor*: a picture of
   its own 3D model, baked when the game starts from 8 sides and from above, lit and swaying like the 3D tree. It keeps
