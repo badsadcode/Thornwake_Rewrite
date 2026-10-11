@@ -29,6 +29,13 @@ public static class ObjectCollision
 
     private static readonly Dictionary<float, CylinderShape3D> Cylinders = new();
 
+    /// <summary>Free the cached shapes (scene exit): static Godot resources outliving the engine crash on shutdown.</summary>
+    public static void Release()
+    {
+        foreach (var shape in Cylinders.Values) shape.Dispose();
+        Cylinders.Clear();
+    }
+
     private static CylinderShape3D Cylinder(float radius, float height)
     {
         float key = Mathf.Snapped(radius, .02f) * 1000 + Mathf.Snapped(height, .5f);
