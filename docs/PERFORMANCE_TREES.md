@@ -239,3 +239,12 @@ Flight streaming: slowest commit frame 18.5 ms (build 45: 37.9), no frame over 5
 over 8.5 ms 135 (45: 192; 43: 667), over 20 ms none. A ground piece now costs at most 10.5 ms in a frame (45: 34.6).
 What remains: object shapes up to 16.6 ms in one frame (a batch of 128, rock hulls are the slow ones) and tile mesh
 commits up to 13.2 ms; build 44's heightmap (1 % low 33) showed what is left to gain.
+
+## Build 47 baseline (Tom, 2026-10-12): the reference for Atmosphere 2.0
+`standard`, overall **63.5 FPS**: forest 53.5, lake 46.1, coast 92.5, mountains 92.3, flight 48.8 (1 % low 26.3).
+Not directly comparable with build 46's 70.7: this run used **field of view 70** (build 46 run: 50; more forest on
+screen, 7.3k draw calls instead of 5.5k) plus biome skies on and brightness 0.95. Streaming: the slowest tile mesh
+commit halved (13.2 → 6.6 ms, arrays prepared on the builders); collision ≤ 11.2 ms per frame. The remaining spikes
+are the visible scatter batches (rocks, bushes, grass: up to 18.5 ms in one frame), left for later (Tom: no endless
+optimisation). An earlier aborted run at 6–10 FPS had *Detailed trees ~6.4 km / impostors ~1.6 km* (1.37 million 3D
+trees): a settings mix-up, not a regression.
