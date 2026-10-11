@@ -1062,6 +1062,28 @@ an automated benchmark for volunteers on many PCs, and a Display tab (native 192
   monitor's resolution (Godot does not change video modes); Render scale lowers the 3D resolution instead.
 * Debug dumps' Reproduce lines fixed (custom worlds replay).
 
+## D77 — Round 30c: collision back to build 43, landing on the real ground, a collision test (2026-10-11)
+Tom, build 44: "when I'm walking towards a rock and I hit it, I get rubber-banded back … with the new collisions, I'm
+able to go up on high slopes … the character is jittering on the ground … I'm not able to jump."
+* **Build 44's collision is gone** (heightmap ground and shapes added straight to the physics server, `3af5bb5`/`a8d272c`).
+  The ground is the triangle shape again and every trunk, rock, log and bush its own CollisionShape3D, exactly as
+  build 43. What stays from build 44: collision is built *after* a tile appears, nearest tile first, and the ground now
+  in eight 64 × 8 m pieces (1,024 triangles, ~1.5 ms each here) within the frame's 8 ms streaming budget. A whole tile's
+  ground in one go cost ~18 ms (up to 44 ms): that was the hitch build 44 went after. The ground under the player waits
+  for its collision, as before.
+* **Landing on the real ground.** The collision mesh is the terrain sampled every metre, so at a cliff step (the
+  ground drops metres between two grid points) it runs up to ~4 m above the exact terrain height. Teleports, map
+  jumps and the "never fall through the world" net put the player on the exact height: under the visible ground, where
+  the net then caught the player every frame (not on the floor: no jumping, jitter) or lifted the player up cliff
+  faces. Now all three use the collision surface (a ray straight down; trunks, stumps, bushes and logs skipped), and the
+  net only acts when the player really is below it.
+* **Collision test** (`--collision-test`, `tools/collision_test.sh`, run before every build): in Tom's test world at
+  three places, standing still (no jitter), jumping, walking and sprinting into a trunk and a boulder (stopped, not
+  pushed back; walking up a boulder's side is allowed where it is gentler than 50°, like any slope), a slope steeper
+  than 50° (not climbable), landing on a cliff step (standing on the ground), and every rock kind's hull. It picks its
+  sites itself: clear, walkable approaches, boulders standing at least 0.6 m out of the ground (rocks are partly
+  buried: a "boulder" whose top is 2 cm above the ground is not an obstacle).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

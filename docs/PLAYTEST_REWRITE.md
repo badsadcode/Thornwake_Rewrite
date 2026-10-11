@@ -78,6 +78,22 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 45 — collisions fixed
+Thanks for catching this. Build 44's faster collision was wrong: rocks pushed you back, you could walk up slopes you
+could not climb before, you jittered and could not jump.
+* **Collisions are build 43's again** (ground, trunks, rocks, logs, bushes): rocks stop you, steep slopes stay
+  unclimbable. The only thing kept from build 44 is *when* collision is built (after a tile appears, in small pieces),
+  so the streaming stutter should stay lower than in build 43.
+* **Jitter / no jumping:** found a second cause, older than build 44. At cliff steps the ground you walk on is up to a
+  few metres above the height the game used when placing you (teleport, map, loading, the "don't fall through the
+  world" safety net). You ended up *under* the visible ground, held there by the safety net: jittering, not on the
+  floor, so no jumping; and the net could lift you up cliff faces. Now you are always placed on the ground you can see.
+* **A collision test now runs before every build** (standing still, jumping, running into trees and boulders, steep
+  slopes, cliff steps), so this does not slip through again.
+* Please try: walking and sprinting into rocks and trees, jumping, steep slopes, teleporting next to cliffs, and tell
+  me if anything still pushes you around. The **Standard** benchmark again would show whether the flight stutter
+  stayed down.
+
 ## New in build 44 — less stutter while moving
 Your build 43 benchmark: forest 38 → 56 FPS, lake 35 → 52. What was left: stutters while moving (flight 1 % low
 26 FPS). The slow frames were new terrain tiles being finished on the main thread, mostly building the ground's
