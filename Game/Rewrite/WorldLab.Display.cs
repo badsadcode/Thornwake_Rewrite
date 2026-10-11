@@ -84,7 +84,7 @@ public partial class WorldLab
         for (int i = 0; i < DisplayServer.GetScreenCount(); i++)
         {
             var size = DisplayServer.ScreenGetSize(i);
-            _displayScreen.AddItem($"Monitor {i + 1}: {size.X} × {size.Y} ({DisplaySettings.Aspect(size)}), {DisplayServer.ScreenGetRefreshRate(i):0} Hz" +
+            _displayScreen.AddItem($"Monitor {i + 1}: {size.X} × {size.Y} ({DisplaySettings.Aspect(size)}), {DisplaySettings.Hz(i)}" +
                                    (i == DisplayServer.GetPrimaryScreen() ? ", main" : ""));
         }
         int screen = DisplaySettings.ScreenIndex;

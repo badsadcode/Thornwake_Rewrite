@@ -149,10 +149,17 @@ public static class DisplaySettings
         Save();
     }
 
+    /// <summary>"60 Hz", or "? Hz" where the system does not report it.</summary>
+    public static string Hz(int screen)
+    {
+        double hz = DisplayServer.ScreenGetRefreshRate(screen);
+        return double.IsFinite(hz) && hz > 0 ? $"{hz:0} Hz" : "? Hz";
+    }
+
     public static string Current()
     {
         var s = DisplayServer.WindowGetSize();
         return $"{ModeNames[(int)WindowMode]} · window {s.X} × {s.Y} ({Aspect(s)}) on monitor {ScreenIndex + 1} of {DisplayServer.GetScreenCount()} " +
-               $"({DisplayServer.ScreenGetSize(ScreenIndex).X} × {DisplayServer.ScreenGetSize(ScreenIndex).Y}, {DisplayServer.ScreenGetRefreshRate(ScreenIndex):0} Hz) · UI {UiScale * 100:0} %";
+               $"({DisplayServer.ScreenGetSize(ScreenIndex).X} × {DisplayServer.ScreenGetSize(ScreenIndex).Y}, {DisplaySettings.Hz(ScreenIndex)}) · UI {UiScale * 100:0} %";
     }
 }

@@ -482,7 +482,7 @@ public partial class WorldLab
         ["gpu_type"] = RenderingServer.GetVideoAdapterType().ToString(), ["graphics_api"] = RenderingServer.GetVideoAdapterApiVersion(),
         ["driver"] = string.Join(" ", OS.GetVideoAdapterDriverInfo()),
         ["rendering"] = $"{RenderingServer.GetCurrentRenderingDriverName()} / {RenderingServer.GetCurrentRenderingMethod()}",
-        ["screen"] = $"{DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y} @ {DisplayServer.ScreenGetRefreshRate():0} Hz",
+        ["screen"] = $"{DisplayServer.ScreenGetSize().X}x{DisplayServer.ScreenGetSize().Y} @ {DisplaySettings.Hz(DisplayServer.WindowGetCurrentScreen())}",
         ["window"] = $"{DisplayServer.WindowGetSize().X}x{DisplayServer.WindowGetSize().Y} ({DisplayServer.WindowGetMode()})",
     };
 

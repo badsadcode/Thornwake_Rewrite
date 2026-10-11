@@ -42,6 +42,8 @@ public sealed class TreeImpostors
     public async void Bake(Node host, TreeCatalog catalog)
     {
         if (Ready || Baking) return;
+        // Headless runs (smoke tests) draw nothing: no bake, and nothing to wait for.
+        if (DisplayServer.GetName() == "headless" || RenderingServer.GetCurrentRenderingDriverName() is "" or "dummy") { Ready = true; return; }
         Baking = true;
         var started = Time.GetTicksMsec();
         var bakeShader = GD.Load<Shader>("res://Game/Rewrite/ImpostorBake.gdshader");
