@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 46** (round 30d: streaming without starving the main thread — background work at lower priority, fewer builders, collision objects in batches; quit crash fixed) | `6d3f029` | Thornwake-Rewrite-Preview-46 (v0.9.46) | Settings unchanged; build 45 = `a95c4ce` |
 | **Build 45** (round 30c fix: collision back to build 43 — rocks stop you, steep slopes unclimbable — built in pieces; landing on the visible ground at cliff steps; collision test) | `a95c4ce` | Thornwake-Rewrite-Preview-45 (v0.9.45) | Collision = build 43; build 44 collision only in git (`ffa9f45`) |
 | **Build 44** (round 30c: less stutter while moving — heightmap ground collision, collision built after the tile, shapes straight to physics) | `ffa9f45` | Thornwake-Rewrite-Preview-44 (v0.9.44) | (collision withdrawn in build 45) |
 | **Build 43** (round 30b: simplified tree shadows, full-detail tree distance, sharper benchmark) | `2f59eef` | Thornwake-Rewrite-Preview-43 (v0.9.43) | Tree shadows: detailed + Full-detail trees 220 m = build 42 |
