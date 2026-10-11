@@ -78,6 +78,13 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 47 — last streaming pass (before Atmosphere 2.0)
+* **Fewer hitches while moving**: tree, rock and bush collision is added in small steps that respect the frame budget
+  (build 46: up to 16.6 ms in one frame), and the terrain meshes are prepared on the background threads (half of the
+  main-thread time per new tile).
+* Nothing visual changed. **This build is the baseline for Atmosphere 2.0**: please run **Standard** once (Tree
+  shadows: simplified), and check collisions, jumping, slopes and flying as before. It also becomes the rollback point.
+
 ## New in build 46 — smoother streaming (from your build 45 benchmarks)
 Thanks for the four runs. What they show:
 * **Your forest drop (56 → 39 FPS) is the Tree shadows setting**: it was on *detailed* in this run (*simplified* in

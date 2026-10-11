@@ -1097,6 +1097,24 @@ Tom's build 45 benchmarks: flight 1 % low 25 FPS; single frames spent 35–41 ms
 * Settings unchanged. The `treedetail` results confirm the defaults (simplified tree shadows, full detail 140 m):
   `docs/PERFORMANCE_TREES.md`.
 
+## D79 — Atmosphere 2.0 approved (2026-10-11)
+Tom and Noor approved the revised plan (`docs/ATMOSPHERE_2_0_SAGE_FEASIBILITY_REVIEW.md` §10) to start after build 47
+is tested and a rollback snapshot is secured.
+* **Visual quality first**, stylized and slightly dreamy, varied (bright and welcoming to dark and oppressive), not
+  photorealism; Valheim's forest light as inspiration, not a copy.
+* **Freedom to replace** what does not work; prefer the simplest solution that convincingly reaches the look.
+* **Baseline: Look natural (ACES)**; alternatives stay until compared visually. Tom provides reference images.
+* **Forest rays**: both approaches (tuned native volumetric fog; canopy shadow map + own ray march) compared on look
+  and total cost. **Clouds**: structure, lighting, near detail, silhouettes, mountains and horizon first; 1.7 ms is a
+  target, not a constraint.
+* **Five behavioural biome profiles**: temperate forest, plains, taiga, desert, swamp; they respond to weather, time,
+  terrain, vegetation and local conditions. No permanent forest haze.
+* **Iterative**: small milestones, each a Windows build with captures, moving-camera tests (forest walk, toward and
+  away from the sun, lakeside, flying through clouds, mountains) and the benchmark; rollback points before significant
+  rendering changes; pause for feedback before significant artistic decisions; 8–10 builds as a target, not a deadline.
+* **Not another optimisation project**: then roads, settlements, wildlife, NPCs, resources, caves, gameplay.
+* Known visual artefacts stay tracked (review §10) until fixed.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
