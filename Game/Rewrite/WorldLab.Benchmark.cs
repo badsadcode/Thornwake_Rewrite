@@ -159,7 +159,8 @@ public partial class WorldLab
         foreach (var s in GameSettings.All) if (values.TryGetValue(s.Key, out double v)) s.Value = v;
     }
 
-    private bool BenchSettledNow => _streamer.Settled && _streamer.PendingCollision == 0 && !_holding && !(_horizon?.Busy ?? false) && _generation == null;
+    // (captures only need what is visible; measurements also wait for collision, so its building does not show up)
+    private bool BenchSettledNow => _streamer.Settled && (_streamer.PendingCollision == 0 || _bench is { Capture: true }) && !_holding && !(_horizon?.Busy ?? false) && _generation == null;
 
     /// <summary>One step of the run, every frame (end of _Process).</summary>
     private void BenchStep(double delta)
