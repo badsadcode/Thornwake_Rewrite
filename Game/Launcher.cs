@@ -14,7 +14,7 @@ public partial class Launcher : Control
         Rewrite.DisplaySettings.Apply(GetTree().Root);
         var args = OS.GetCmdlineUserArgs();
         if (args.Any(a => a == "--smoke-test")) { CallDeferred(nameof(Open), "res://Game/Main.tscn"); return; }
-        if (args.Any(a => a.StartsWith("--world-smoke=") || a.StartsWith("--bench=") || a == "--world")) { CallDeferred(nameof(Open), "res://Game/Rewrite/WorldLab.tscn"); return; }
+        if (args.Any(a => a.StartsWith("--world-smoke=") || a.StartsWith("--bench=") || a == "--world" || a == "--collision-test")) { CallDeferred(nameof(Open), "res://Game/Rewrite/WorldLab.tscn"); return; }
         Input.MouseMode = Input.MouseModeEnum.Visible;
         SetAnchorsPreset(LayoutPreset.FullRect);
         AddChild(new ColorRect { Color = new Color("1f2b2d"), AnchorRight = 1, AnchorBottom = 1 });

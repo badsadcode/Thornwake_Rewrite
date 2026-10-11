@@ -68,7 +68,7 @@ public static class DisplaySettings
         if (_loaded) return;
         _loaded = true;
         var args = OS.GetCmdlineUserArgs();
-        _automation = args.Any(a => a.StartsWith("--world-shot=") || a.StartsWith("--world-smoke=") || a == "--smoke-test");
+        _automation = args.Any(a => a.StartsWith("--world-shot=") || a.StartsWith("--world-smoke=") || a == "--smoke-test" || a == "--collision-test");
         var file = new ConfigFile();
         if (file.Load(FilePath) == Error.Ok)
         {
