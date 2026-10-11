@@ -48,7 +48,7 @@ public partial class WorldLab
         public double StageTime, StableTime;
         public ulong LastTicks;
         public readonly List<float> Frame = new(), Gpu = new(), Cpu = new(), Script = new(), Commit = new();
-        public readonly double[] CommitParts = new double[5], CommitPartsMax = new double[5];
+        public readonly double[] CommitParts = new double[6], CommitPartsMax = new double[6];
         public double DrawCalls, Primitives, Objects, MaxDrawCalls, Compiles;
         public int Samples;
         public double Distance;
@@ -318,7 +318,7 @@ public partial class WorldLab
         run.Cpu.Add((float)(RenderingServer.ViewportGetMeasuredRenderTimeCpu(vp) + RenderingServer.GetFrameSetupTimeCpu()));
         // Game code: the world's own _Process (terrain streaming, weather, water, …), measured around it.
         run.Script.Add((float)_lastProcessMs);
-        double[] parts = { _streamer.CommitMeshMs, _streamer.CommitCollisionMs, _streamer.CommitObjectsMs, _streamer.CommitEnterMs, _streamer.CommitFieldMs };
+        double[] parts = { _streamer.CommitMeshMs, _streamer.CommitCollisionMs, _streamer.CommitObjectsMs, _streamer.CommitEnterMs, _streamer.CommitFieldMs, _streamer.CommitGroundMs };
         for (int i = 0; i < parts.Length; i++) { run.CommitParts[i] += parts[i]; run.CommitPartsMax[i] = Math.Max(run.CommitPartsMax[i], parts[i]); }
         run.Commit.Add((float)(_streamer.FrameCommitMs + _streamer.CommitFieldMs));
         double draws = RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalDrawCallsInFrame);
@@ -374,6 +374,7 @@ public partial class WorldLab
                 ["objects_total"] = R(run.CommitParts[2]), ["objects_max"] = R(run.CommitPartsMax[2]),
                 ["enter_tree_total"] = R(run.CommitParts[3]), ["enter_tree_max"] = R(run.CommitPartsMax[3]),
                 ["tree_field_total"] = R(run.CommitParts[4]), ["tree_field_max"] = R(run.CommitPartsMax[4]),
+                ["ground_collision_total"] = R(run.CommitParts[5]), ["ground_collision_max"] = R(run.CommitPartsMax[5]),
             },
             ["hitches"] = new JsonObject
             {
@@ -612,7 +613,7 @@ public partial class WorldLab
             var c = s!["commit_parts_ms"];
             if (c == null || s["tile_commit_ms"]!["max"]!.GetValue<double>() < 1) continue;
             sb.AppendLine($"  streaming in '{s["label"]}': slowest frame of commits {s["tile_commit_ms"]!["max"]} ms; worst single frame per part: meshes {c["meshes_max"]}, " +
-                          $"collision {c["collision_max"]}, objects {c["objects_max"]}, adding to scene {c["enter_tree_max"]}, tree field {c["tree_field_max"]} ms; " +
+                          $"collision {c["collision_max"]} (ground {c["ground_collision_max"]}), objects {c["objects_max"]}, adding to scene {c["enter_tree_max"]}, tree field {c["tree_field_max"]} ms; " +
                           $"game code per frame p99 {s["script_ms"]!["p99"]} ms");
         }
         foreach (var s in j["scenarios"]!.AsArray())

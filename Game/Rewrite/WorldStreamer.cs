@@ -37,13 +37,17 @@ public partial class WorldStreamer : Node3D
     public double CommitObjectsMs { get; private set; }
     public double CommitEnterMs { get; private set; }
     public double CommitFieldMs => _field.FrameCommitMs;
+    /// <summary>Of <see cref="CommitCollisionMs"/>: the ground's triangle shapes (the rest: trees, rocks, logs, bushes).</summary>
+    public double CommitGroundMs { get; private set; }
+    private readonly Dictionary<TileKey, (Node3D Root, TileData Data)> _pendingCollision = new();
+    public int PendingCollision => _pendingCollision.Count;
     public long Triangles { get; private set; }
     /// <summary>Instances committed so far (diagnostics): grass tufts, rocks, props, far tree cards.</summary>
     public long GrassCommitted { get; private set; }
     public long RocksCommitted { get; private set; }
     public long PropsCommitted { get; private set; }
     public long FarTreesCommitted { get; private set; }
-    public bool Settled => _sampler != null && Missing == 0 && _jobs.Count == 0 && (!TreeField.Enabled || (Impostors.Ready && _field.Settled));
+    public bool Settled => _sampler != null && Missing == 0 && _jobs.Count == 0 && _pendingCollision.Count == 0 && (!TreeField.Enabled || (Impostors.Ready && _field.Settled));
     public TreeImpostors Impostors { get; } = new();
     private TreeField _field = null!;
     public TreeField Field => _field;
@@ -132,6 +136,7 @@ public partial class WorldStreamer : Node3D
     {
         _revision++;
         foreach (var node in _tiles.Values) { RemoveChild(node); node.QueueFree(); }
+        _pendingCollision.Clear();
         _tiles.Clear(); _tileTriangles.Clear(); _tileRevision.Clear(); _failed.Clear(); _desired.Clear();
         _config = DetailConfig.For(sampler); Levels = 7 + GameSettings.TerrainDistance.Index;
         _sampler = sampler; _originX = originX; _originZ = originZ; Triangles = 0; Built = 0; MaxCommitMs = 0;
@@ -175,8 +180,11 @@ public partial class WorldStreamer : Node3D
     }
 
     /// <summary>True once a collision tile under (x, z) is resident.</summary>
-    public bool HasGround(double x, double z) =>
-        _tiles.ContainsKey(new TileKey(0, (long)Math.Floor(x / TileBuilder.BaseTile), (long)Math.Floor(z / TileBuilder.BaseTile)));
+    public bool HasGround(double x, double z)
+    {
+        var key = new TileKey(0, (long)Math.Floor(x / TileBuilder.BaseTile), (long)Math.Floor(z / TileBuilder.BaseTile));
+        return _tiles.ContainsKey(key) && !_pendingCollision.ContainsKey(key);
+    }
 
     public void Update(double px, double pz)
     {
@@ -184,7 +192,7 @@ public partial class WorldStreamer : Node3D
         _field.Update(px, pz);
         Desired(px, pz);
         var timer = Stopwatch.StartNew();
-        CommitMeshMs = CommitCollisionMs = CommitObjectsMs = CommitEnterMs = 0;
+        CommitMeshMs = CommitCollisionMs = CommitObjectsMs = CommitEnterMs = CommitGroundMs = 0;
 
         // Commit finished builds, nearest levels first, within a frame budget.
         foreach (var key in _jobs.Where(j => j.Value.Task.IsCompleted).Select(j => j.Key).OrderBy(k => k.Level).ToList())
@@ -206,6 +214,28 @@ public partial class WorldStreamer : Node3D
             _tileTriangles[key] = tris; Triangles += tris; Built++;
             LastCommitMs = commit.Elapsed.TotalMilliseconds; MaxCommitMs = Math.Max(MaxCommitMs, LastCommitMs);
         }
+        // Collision for committed level-0 tiles: the nearest every frame, more while there is time left.
+        if (_pendingCollision.Count > 0)
+        {
+            foreach (var key in _pendingCollision.Keys.OrderBy(k => Distance(k, px, pz)).ToList())
+            {
+                if (CommitCollisionMs > 0 && timer.Elapsed.TotalMilliseconds > 8) break;
+                var (root, data) = _pendingCollision[key];
+                _pendingCollision.Remove(key);
+                if (!GodotObject.IsInstanceValid(root) || !_tiles.TryGetValue(key, out var current) || current != root) continue;
+                long t0 = Stopwatch.GetTimestamp();
+                // All shapes go straight to the physics server (see ObjectCollision); kept alive in the body's metadata.
+                var body = new StaticBody3D { CollisionLayer = 1, CollisionMask = 0 };
+                var ground = new ConcavePolygonShape3D { Data = data.CollisionFaces, BackfaceCollision = true };
+                var keep = new List<Shape3D> { ground };
+                PhysicsServer3D.BodyAddShape(body.GetRid(), ground.GetRid(), Transform3D.Identity);
+                CommitGroundMs += Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+                ObjectCollision.Add(body, data, keep);
+                body.SetMeta("shapes", new Godot.Collections.Array<Shape3D>(keep));
+                root.AddChild(body);
+                CommitCollisionMs += Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+            }
+        }
         FrameCommitMs = timer.Elapsed.TotalMilliseconds;
 
         // Schedule missing tiles: finest level first, then nearest.
@@ -226,7 +256,7 @@ public partial class WorldStreamer : Node3D
         if (Missing == 0)
             foreach (var key in _tiles.Keys.Where(k => !_desired.Contains(k)).ToList())
             {
-                var node = _tiles[key]; RemoveChild(node); node.QueueFree();
+                var node = _tiles[key]; RemoveChild(node); node.QueueFree(); _pendingCollision.Remove(key);
                 _tiles.Remove(key); Triangles -= _tileTriangles[key]; _tileTriangles.Remove(key); _tileRevision.Remove(key);
             }
     }
@@ -318,13 +348,9 @@ public partial class WorldStreamer : Node3D
         }
         CommitMeshMs += Stopwatch.GetElapsedTime(stage).TotalMilliseconds;
         stage = Stopwatch.GetTimestamp();
-        if (data.CollisionFaces != null)
-        {
-            var body = new StaticBody3D { CollisionLayer = 1, CollisionMask = 0 };
-            body.AddChild(new CollisionShape3D { Shape = new ConcavePolygonShape3D { Data = data.CollisionFaces, BackfaceCollision = true } });
-            ObjectCollision.Add(body, data);
-            root.AddChild(body);
-        }
+        // Collision is built afterwards, nearest tile first, a little per frame (round 30c: building it here made
+        // every level-0 tile a 10–36 ms stall while moving).
+        if (data.CollisionFaces != null) _pendingCollision[key] = (root, data);
         CommitCollisionMs += Stopwatch.GetElapsedTime(stage).TotalMilliseconds;
         stage = Stopwatch.GetTimestamp();
         root.SetMeta("cards", data.FarTrees.Count); // (benchmark counts)
