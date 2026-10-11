@@ -1191,8 +1191,20 @@ public partial class WorldLab : Node3D
         _menu = new PanelContainer { Visible = false, AnchorLeft = .5f, AnchorRight = .5f, AnchorTop = .5f, AnchorBottom = .5f,
             OffsetLeft = -520, OffsetRight = 520, OffsetTop = -340, OffsetBottom = 340 };
         layer.AddChild(_menu);
-        var tabs = new TabContainer();
-        _menu.AddChild(tabs);
+        var menuColumn = new VBoxContainer();
+        _menu.AddChild(menuColumn);
+        var tabs = new TabContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        menuColumn.AddChild(tabs);
+        // Always visible under every tab (Tom: "add close/exit in ESC menu so I don't have to Alt+F4 in fullscreen").
+        var menuBar = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
+        menuColumn.AddChild(menuBar);
+        var resume = new Button { Text = "Resume (Esc)" };
+        resume.Pressed += () => ToggleMenu(false);
+        var back = new Button { Text = "Back to launcher" };
+        back.Pressed += () => { Input.MouseMode = Input.MouseModeEnum.Visible; GetTree().ChangeSceneToFile("res://Game/Launcher.tscn"); };
+        var quit = new Button { Text = "Quit game" };
+        quit.Pressed += () => GetTree().Quit();
+        menuBar.AddChild(resume); menuBar.AddChild(back); menuBar.AddChild(quit);
 
         // ---- World: teleport, movement, time of day, leave
         var box = new VBoxContainer { Name = "World" };
@@ -1214,13 +1226,6 @@ public partial class WorldLab : Node3D
         _timeSlider = new HSlider { MinValue = 0, MaxValue = 24, Step = .05, Value = 10.5 };
         _timeSlider.ValueChanged += v => _pendingHour = v;
         box.AddChild(_timeSlider);
-        box.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill });
-        var back = new Button { Text = "Back to launcher" };
-        back.Pressed += () => { Input.MouseMode = Input.MouseModeEnum.Visible; GetTree().ChangeSceneToFile("res://Game/Launcher.tscn"); };
-        box.AddChild(back);
-        var quit = new Button { Text = "Quit" };
-        quit.Pressed += () => GetTree().Quit();
-        box.AddChild(quit);
 
         // ---- New world: size, world type, seed, parameters (Auto unless changed), map preview
         var gen = new VBoxContainer { Name = "New world" };

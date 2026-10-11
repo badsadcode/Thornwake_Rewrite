@@ -78,6 +78,11 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 48 — Quit from the Esc menu
+* **Resume, Back to launcher and Quit game** now sit under the tabs of the Esc menu, on every tab (the Quit button
+  used to be at the bottom of the World tab only). No more Alt+F4 in fullscreen.
+* Nothing else changed: build 47 stays the baseline for Atmosphere 2.0.
+
 ## New in build 47 — last streaming pass (before Atmosphere 2.0)
 * **Fewer hitches while moving**: tree, rock and bush collision is added in small steps that respect the frame budget
   (build 46: up to 16.6 ms in one frame), and the terrain meshes are prepared on the background threads (half of the
