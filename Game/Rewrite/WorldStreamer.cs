@@ -73,7 +73,8 @@ public partial class WorldStreamer : Node3D
     public long RocksCommitted { get; private set; }
     public long PropsCommitted { get; private set; }
     public long FarTreesCommitted { get; private set; }
-    public bool Settled => _sampler != null && Missing == 0 && _jobs.Count == 0 && _pendingCollision.Count == 0 && (!TreeField.Enabled || (Impostors.Ready && _field.Settled));
+    /// <summary>Everything visible is in place (collision may still be building: see <see cref="PendingCollision"/>).</summary>
+    public bool Settled => _sampler != null && Missing == 0 && _jobs.Count == 0 && (!TreeField.Enabled || (Impostors.Ready && _field.Settled));
     public TreeImpostors Impostors { get; } = new();
     private TreeField _field = null!;
     public TreeField Field => _field;
@@ -252,9 +253,10 @@ public partial class WorldStreamer : Node3D
                 // the player back and let the player walk up slopes that could not be climbed before): triangle shapes
                 // for the ground, a CollisionShape3D per trunk, rock, log and bush. Only *when* it is built changed:
                 // after the tile appears, in pieces, nearest tile first; the ground under the player waits for it.
-                // Over the frame's budget, only the tile the player is on (or next to) still gets a step.
-                bool urgent = Distance(key, px, pz) < TileBuilder.BaseTile * 1.5;
-                bool Over() => (CommitCollisionMs > 0 || !urgent) && timer.Elapsed.TotalMilliseconds > 8;
+                // At least one small step per frame (a ground piece or a batch of objects, ~1 ms), more while the
+                // frame's budget lasts. (Build 47 tried "only the player's tile over budget": on a slow PC the other
+                // tiles starved while new terrain kept arriving.)
+                bool Over() => CommitCollisionMs > 0 && timer.Elapsed.TotalMilliseconds > 8;
                 var faces = p.Data.CollisionFaces!;
                 int pieces = (faces.Length / 3 + GroundPieceTriangles - 1) / GroundPieceTriangles;
                 while (p.Next < pieces)

@@ -135,7 +135,7 @@ public partial class WorldLab
         foreach (var s in GameSettings.All) if (values.TryGetValue(s.Key, out double v)) s.Value = v;
     }
 
-    private bool BenchSettledNow => _streamer.Settled && !_holding && !(_horizon?.Busy ?? false) && _generation == null;
+    private bool BenchSettledNow => _streamer.Settled && _streamer.PendingCollision == 0 && !_holding && !(_horizon?.Busy ?? false) && _generation == null;
 
     /// <summary>One step of the run, every frame (end of _Process).</summary>
     private void BenchStep(double delta)
