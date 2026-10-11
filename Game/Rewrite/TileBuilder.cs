@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Thornwake.WorldGen;
 
@@ -72,6 +73,9 @@ public sealed class TileData
     public (Vector3[] Vertices, Color[] Colors, Vector2[] Flow, int[] Indices)? Water { get; set; }
     /// <summary>Triangle soup for a ConcavePolygonShape3D (level 0 only).</summary>
     public Vector3[]? CollisionFaces { get; init; }
+    /// <summary>Level 0: the ground heights (Side × Side, 1 m apart, row by row) for a heightmap collision shape
+    /// (round 30c: a triangle shape cost ~20 ms per tile to build).</summary>
+    public float[]? CollisionHeights { get; init; }
     public List<TreeInstance> Trees { get; init; } = new();
     public List<Transform3D> Grass { get; set; } = new();
     public List<Transform3D> Reeds { get; set; } = new();
@@ -108,6 +112,9 @@ public static class TileBuilder
     /// mesh detail option, 64 or 128 (the first ring 2 m or 1 m: the step from 1 m to 4 m showed as a near loss of
     /// detail). Skirts hide the cracks between neighbours of any resolution.
     /// </summary>
+    /// <summary><c>--concave-ground</c>: the build 43 triangle-shape ground collision (to compare).</summary>
+    public static readonly bool ConcaveGround = Godot.OS.GetCmdlineUserArgs().Contains("--concave-ground");
+
     public static int CellsFor(int level, int meshDetail = 1) => level == 0 ? 64 : Math.Min(128, Cells * meshDetail);
 
     private static (float R, float G, float B) Mix((float R, float G, float B) a, (float R, float G, float B) b, float sa, float sb, float scale) =>
@@ -271,7 +278,8 @@ public static class TileBuilder
         {
             Key = key, Side = Side, Vertices = vertices, Normals = normals, Colors = colors, Uv = uv, Uv2 = uv2, Indices = indices.ToArray(),
             Biome0 = biome0, Biome1 = biome1, Biome2 = biome2, Biome3 = biome3, WaterTint = waterTint,
-            CollisionFaces = key.Level == 0 ? Faces(vertices) : null,
+            CollisionFaces = key.Level == 0 && ConcaveGround ? Faces(vertices) : null,
+            CollisionHeights = key.Level == 0 && !ConcaveGround ? vertices.Select(v => v.Y).ToArray() : null,
             // Full trees on the nearest levels; beyond, tree cards, then the terrain shader's forest tint.
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };

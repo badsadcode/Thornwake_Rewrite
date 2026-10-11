@@ -226,9 +226,18 @@ public partial class WorldStreamer : Node3D
                 long t0 = Stopwatch.GetTimestamp();
                 // All shapes go straight to the physics server (see ObjectCollision); kept alive in the body's metadata.
                 var body = new StaticBody3D { CollisionLayer = 1, CollisionMask = 0 };
-                var ground = new ConcavePolygonShape3D { Data = data.CollisionFaces, BackfaceCollision = true };
+                Shape3D ground;
+                var groundAt = Transform3D.Identity;
+                if (data.CollisionHeights is { } heights)
+                {
+                    // A heightmap shape is centred on its origin, 1 m between samples: centre it on the tile.
+                    int side = (int)Math.Round(Math.Sqrt(heights.Length));
+                    ground = new HeightMapShape3D { MapWidth = side, MapDepth = side, MapData = heights };
+                    groundAt = new Transform3D(Basis.Identity, new Vector3((side - 1) * .5f, 0, (side - 1) * .5f));
+                }
+                else ground = new ConcavePolygonShape3D { Data = data.CollisionFaces, BackfaceCollision = true };
                 var keep = new List<Shape3D> { ground };
-                PhysicsServer3D.BodyAddShape(body.GetRid(), ground.GetRid(), Transform3D.Identity);
+                PhysicsServer3D.BodyAddShape(body.GetRid(), ground.GetRid(), groundAt);
                 CommitGroundMs += Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
                 ObjectCollision.Add(body, data, keep);
                 body.SetMeta("shapes", new Godot.Collections.Array<Shape3D>(keep));
@@ -350,7 +359,7 @@ public partial class WorldStreamer : Node3D
         stage = Stopwatch.GetTimestamp();
         // Collision is built afterwards, nearest tile first, a little per frame (round 30c: building it here made
         // every level-0 tile a 10–36 ms stall while moving).
-        if (data.CollisionFaces != null) _pendingCollision[key] = (root, data);
+        if (data.CollisionFaces != null || data.CollisionHeights != null) _pendingCollision[key] = (root, data);
         CommitCollisionMs += Stopwatch.GetElapsedTime(stage).TotalMilliseconds;
         stage = Stopwatch.GetTimestamp();
         root.SetMeta("cards", data.FarTrees.Count); // (benchmark counts)

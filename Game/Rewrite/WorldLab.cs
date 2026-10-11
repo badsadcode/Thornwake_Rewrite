@@ -1357,7 +1357,20 @@ public partial class WorldLab : Node3D
             case 8: if (settled && _smokeTimer > 2) { Shot("05-river-mouth.png"); Next(); } break;
             case 9: SetFly(true); _player.Position += Vector3.Up * 400; _pitch = -.25f; _zoom = 12; Next(); break;
             case 10: if (settled && _smokeTimer > 2) { Shot("06-aerial.png"); Next(); } break;
-            case 11: GD.Print($"WORLD_SMOKE_PASS tiles={_streamer.Resident} built={_streamer.Built} maxCommitMs={_streamer.MaxCommitMs:0.0}"); GetTree().Quit(0); break;
+            case 11:
+            {
+                // The player walked (stage 2) and flew (stage 9): after landing again its feet must be on the ground
+                // (collision built and matching the terrain; round 30c moved it to heightmap shapes).
+                SetFly(false); Teleport(PlayerX, PlayerZ); Next(); break;
+            }
+            case 12: if (_smokeTimer > 4 && !_holding)
+            {
+                double feet = _player.Position.Y - _sampler!.Height(PlayerX, PlayerZ, 1);
+                bool onGround = Math.Abs(feet) < .6 || !double.IsNaN(WaterSurface(PlayerX, PlayerZ, out _));
+                GD.Print($"WORLD_SMOKE_{(onGround ? "PASS" : "FAIL")} tiles={_streamer.Resident} built={_streamer.Built} maxCommitMs={_streamer.MaxCommitMs:0.0} feet={feet:0.00}");
+                GetTree().Quit(onGround ? 0 : 1);
+            }
+            break;
         }
         if (_smokeTimer > 900) { GD.PushError("WORLD_SMOKE_TIMEOUT at stage " + _smokeStage); GetTree().Quit(1); }
         void Next() { _smokeStage++; _smokeTimer = 0; }
