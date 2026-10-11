@@ -4,7 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
-| **Build 45** (round 30c fix: collision back to build 43 — rocks stop you, steep slopes unclimbable — built in pieces; landing on the visible ground at cliff steps; collision test) | `2c3472d` | Thornwake-Rewrite-Preview-45 (v0.9.45) | Collision = build 43; build 44 collision only in git (`ffa9f45`) |
+| **Build 45** (round 30c fix: collision back to build 43 — rocks stop you, steep slopes unclimbable — built in pieces; landing on the visible ground at cliff steps; collision test) | `a95c4ce` | Thornwake-Rewrite-Preview-45 (v0.9.45) | Collision = build 43; build 44 collision only in git (`ffa9f45`) |
 | **Build 44** (round 30c: less stutter while moving — heightmap ground collision, collision built after the tile, shapes straight to physics) | `ffa9f45` | Thornwake-Rewrite-Preview-44 (v0.9.44) | (collision withdrawn in build 45) |
 | **Build 43** (round 30b: simplified tree shadows, full-detail tree distance, sharper benchmark) | `2f59eef` | Thornwake-Rewrite-Preview-43 (v0.9.43) | Tree shadows: detailed + Full-detail trees 220 m = build 42 |
 | **Build 42** (round 30: tree impostors and tree field with cross-faded hand-overs; benchmark; Display tab; one-call batch fills) | `f3697be` | Thornwake-Rewrite-Preview-42 (v0.9.42) | Tree impostors: off = build 41 trees and cards; `--legacy-multimesh` = build 41 batch fills |
