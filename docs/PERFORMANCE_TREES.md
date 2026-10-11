@@ -163,3 +163,25 @@ high, grass density 3 to 400 m, volumetric clouds v2, SSIL). `standard` suite:
   lighter LOD2 model of the same trees (≈590 instead of ≈1,900 triangles), shadow only; the camera still sees LOD1.
 * **Full-detail trees** distance (*View distance*, default 140 m; build 42: 220 m): how far trees use LOD1.
 * `treedetail` suite: forest and lake, full detail 80 / 140 / 220 m × tree shadows simplified / detailed.
+
+## Tom's second benchmark (build 43, 2026-10-11): +48 % in the forest
+Same PC and settings. `standard`:
+
+| Scene | build 42 FPS | build 43 FPS | GPU ms (43) |
+|---|---:|---:|---:|
+| forest | 37.9 | **56.0** | 17.4 |
+| lake | 35.3 | **52.2** | 18.7 |
+| coast | 105.8 | 110.6 | 8.6 |
+| mountains | 99.8 | 100.0 | 9.5 |
+| flight | 48.2 | 53.2 (1 % low 26) | 17.8 |
+| overall (geometric mean) | 58.4 | **70.3** | |
+
+Forest costs now (GPU): all vegetation 8.1 ms (3D trees 3.9, grass and plants 1.8, impostors 1.6, cards 0.2), all
+shadows 3.8 ms (trees 1.7, grass and plants 1.0, terrain 0.4; the soft filter and the distance barely matter),
+volumetric clouds 3.3 ms (the biggest single effect; for Atmosphere 2.0). **Simplified tree shadows and 140 m full
+detail: tree shadows 12 → 1.7 ms, 3D trees 12.9 → 3.9 ms.**
+
+**Still to fix: stutter while moving** (flight 1 % low 26 FPS). The slow flight frames coincide with terrain tiles
+being committed (10–36 ms on the main thread). The benchmark's "script" column was the whole frame time
+(Godot's TIME_PROCESS); build 44 measures the world's own per-frame code and splits commits into meshes, collision,
+objects, adding to the scene and the tree field, to find which part to spread over frames.

@@ -648,8 +648,13 @@ public partial class WorldLab : Node3D
 
     // ------------------------------------------------------------------ frame
 
+    private ulong _processStartUs;
+    /// <summary>Time of the last _Process (this script's own work each frame; benchmark).</summary>
+    private double _lastProcessMs;
+
     public override void _Process(double delta)
     {
+        _processStartUs = Time.GetTicksUsec();
         if (_generation is { IsCompleted: true }) FinishGeneration();
         if (_preview is { IsCompleted: true }) FinishPreview();
         if (_bench != null && (_sampler == null || _generation != null)) BenchStep(delta);
@@ -693,6 +698,7 @@ public partial class WorldLab : Node3D
         UpdateUnderwater(cam);
         _hudTimer -= delta;
         if (_hudTimer <= 0) { _hudTimer = .2; UpdateHud(); }
+        _lastProcessMs = (Time.GetTicksUsec() - _processStartUs) / 1000.0;
         if (_bench != null && _generation == null) BenchStep(delta);
         else if (_smokeDirectory != null) Smoke(delta);
     }

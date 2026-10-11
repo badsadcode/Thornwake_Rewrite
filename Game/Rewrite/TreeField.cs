@@ -35,6 +35,8 @@ public sealed partial class TreeField : Node3D
     public bool Settled => _sampler == null || (Missing == 0 && _jobs.Count == 0);
     public long Instances3D { get; private set; }
     public long ImpostorInstances { get; private set; }
+    /// <summary>Main-thread time committing cells in the last Update (benchmark).</summary>
+    public double FrameCommitMs { get; private set; }
 
     private readonly TreeCatalog _catalog;
     private readonly TreeImpostors _impostors;
@@ -135,6 +137,7 @@ public sealed partial class TreeField : Node3D
 
     public void Update(double px, double pz)
     {
+        FrameCommitMs = 0;
         if (_sampler == null || !Enabled || !_impostors.Ready) return;
         // Wanted cells: near cells where any part is within the 3D range, far cells where any part is within the
         // impostor range and some part beyond the 3D range.
@@ -152,6 +155,7 @@ public sealed partial class TreeField : Node3D
             if (revision != _revision || !_desired.Contains(key)) continue;
             Commit(task.Result, revision);
         }
+        FrameCommitMs = timer.Elapsed.TotalMilliseconds;
 
         // Schedule: missing cells, stale ones, and near cells that now need their detailed model.
         var missing = _desired.Where(k => !_cells.TryGetValue(k, out var c) || c.Revision != _revision

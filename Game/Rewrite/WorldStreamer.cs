@@ -30,6 +30,13 @@ public partial class WorldStreamer : Node3D
     public double MaxCommitMs { get; private set; }
     /// <summary>Main-thread time spent committing finished tiles in the last <see cref="Update"/> (benchmark).</summary>
     public double FrameCommitMs { get; private set; }
+    /// <summary>Last Update's commit time split up (benchmark): terrain and water meshes, collision shapes, objects
+    /// (trees, grass, rocks, cards), adding the tiles to the scene (physics bodies register here), the tree field.</summary>
+    public double CommitMeshMs { get; private set; }
+    public double CommitCollisionMs { get; private set; }
+    public double CommitObjectsMs { get; private set; }
+    public double CommitEnterMs { get; private set; }
+    public double CommitFieldMs => _field.FrameCommitMs;
     public long Triangles { get; private set; }
     /// <summary>Instances committed so far (diagnostics): grass tufts, rocks, props, far tree cards.</summary>
     public long GrassCommitted { get; private set; }
@@ -177,6 +184,7 @@ public partial class WorldStreamer : Node3D
         _field.Update(px, pz);
         Desired(px, pz);
         var timer = Stopwatch.StartNew();
+        CommitMeshMs = CommitCollisionMs = CommitObjectsMs = CommitEnterMs = 0;
 
         // Commit finished builds, nearest levels first, within a frame budget.
         foreach (var key in _jobs.Where(j => j.Value.Task.IsCompleted).Select(j => j.Key).OrderBy(k => k.Level).ToList())
@@ -190,7 +198,9 @@ public partial class WorldStreamer : Node3D
             var node = Commit(task.Result);
             LastBuildMs = task.Result.BuildMs;
             if (_tiles.Remove(key, out var old)) { RemoveChild(old); old.QueueFree(); Triangles -= _tileTriangles[key]; }
+            long enter = Stopwatch.GetTimestamp();
             AddChild(node);
+            CommitEnterMs += Stopwatch.GetElapsedTime(enter).TotalMilliseconds;
             _tiles[key] = node; _tileRevision[key] = revision;
             long tris = task.Result.Indices.Length / 3;
             _tileTriangles[key] = tris; Triangles += tris; Built++;
@@ -259,6 +269,7 @@ public partial class WorldStreamer : Node3D
     private Node3D Commit(TileData data)
     {
         var key = data.Key;
+        long stage = Stopwatch.GetTimestamp();
         var root = new Node3D { Name = $"T{key.Level}_{key.X}_{key.Z}", Position = new Vector3((float)(key.MinX - _originX), 0, (float)(key.MinZ - _originZ)) };
         using (var arrays = new Godot.Collections.Array())
         {
@@ -305,6 +316,8 @@ public partial class WorldStreamer : Node3D
             else mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
             root.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _water, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         }
+        CommitMeshMs += Stopwatch.GetElapsedTime(stage).TotalMilliseconds;
+        stage = Stopwatch.GetTimestamp();
         if (data.CollisionFaces != null)
         {
             var body = new StaticBody3D { CollisionLayer = 1, CollisionMask = 0 };
@@ -312,6 +325,8 @@ public partial class WorldStreamer : Node3D
             ObjectCollision.Add(body, data);
             root.AddChild(body);
         }
+        CommitCollisionMs += Stopwatch.GetElapsedTime(stage).TotalMilliseconds;
+        stage = Stopwatch.GetTimestamp();
         root.SetMeta("cards", data.FarTrees.Count); // (benchmark counts)
         // With the tree field the tile's trees are only for collision; the field draws them.
         if (!TreeField.Enabled) root.SetMeta("trees", data.Trees.Count);
@@ -372,6 +387,7 @@ public partial class WorldStreamer : Node3D
                 custom: i => new Color(far[i].Crown.R, far[i].Crown.G, far[i].Crown.B, far[i].Conifer ? 1 : 0));
             root.AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = _farTree, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Layers = RenderLayers.TreeCards });
         }
+        CommitObjectsMs += Stopwatch.GetElapsedTime(stage).TotalMilliseconds;
         return root;
     }
 

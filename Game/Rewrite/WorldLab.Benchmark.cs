@@ -48,6 +48,7 @@ public partial class WorldLab
         public double StageTime, StableTime;
         public ulong LastTicks;
         public readonly List<float> Frame = new(), Gpu = new(), Cpu = new(), Script = new(), Commit = new();
+        public readonly double[] CommitParts = new double[5], CommitPartsMax = new double[5];
         public double DrawCalls, Primitives, Objects, MaxDrawCalls, Compiles;
         public int Samples;
         public double Distance;
@@ -304,6 +305,7 @@ public partial class WorldLab
     private void BenchBeginMeasure(BenchRun run)
     {
         run.Frame.Clear(); run.Gpu.Clear(); run.Cpu.Clear(); run.Script.Clear(); run.Commit.Clear();
+        Array.Clear(run.CommitParts); Array.Clear(run.CommitPartsMax);
         run.DrawCalls = run.Primitives = run.Objects = run.MaxDrawCalls = run.Compiles = 0; run.Samples = 0;
         _streamer.ResetCommitStats();
     }
@@ -314,8 +316,11 @@ public partial class WorldLab
         run.Frame.Add(frameMs);
         run.Gpu.Add((float)RenderingServer.ViewportGetMeasuredRenderTimeGpu(vp));
         run.Cpu.Add((float)(RenderingServer.ViewportGetMeasuredRenderTimeCpu(vp) + RenderingServer.GetFrameSetupTimeCpu()));
-        run.Script.Add((float)(Performance.GetMonitor(Performance.Monitor.TimeProcess) * 1000));
-        run.Commit.Add((float)_streamer.FrameCommitMs);
+        // Game code: the world's own _Process (terrain streaming, weather, water, …), measured around it.
+        run.Script.Add((float)_lastProcessMs);
+        double[] parts = { _streamer.CommitMeshMs, _streamer.CommitCollisionMs, _streamer.CommitObjectsMs, _streamer.CommitEnterMs, _streamer.CommitFieldMs };
+        for (int i = 0; i < parts.Length; i++) { run.CommitParts[i] += parts[i]; run.CommitPartsMax[i] = Math.Max(run.CommitPartsMax[i], parts[i]); }
+        run.Commit.Add((float)(_streamer.FrameCommitMs + _streamer.CommitFieldMs));
         double draws = RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalDrawCallsInFrame);
         run.DrawCalls += draws; run.MaxDrawCalls = Math.Max(run.MaxDrawCalls, draws);
         run.Primitives += RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalPrimitivesInFrame);
@@ -362,6 +367,14 @@ public partial class WorldLab
             ["fps_1pct_low"] = R(Low(run.Frame, 1)), ["fps_01pct_low"] = R(Low(run.Frame, .1)),
             ["frame_ms"] = Spread(run.Frame), ["gpu_ms"] = Spread(run.Gpu), ["cpu_render_ms"] = Spread(run.Cpu),
             ["script_ms"] = Spread(run.Script), ["tile_commit_ms"] = Spread(run.Commit),
+            ["commit_parts_ms"] = new JsonObject
+            {
+                ["meshes_total"] = R(run.CommitParts[0]), ["meshes_max"] = R(run.CommitPartsMax[0]),
+                ["collision_total"] = R(run.CommitParts[1]), ["collision_max"] = R(run.CommitPartsMax[1]),
+                ["objects_total"] = R(run.CommitParts[2]), ["objects_max"] = R(run.CommitPartsMax[2]),
+                ["enter_tree_total"] = R(run.CommitParts[3]), ["enter_tree_max"] = R(run.CommitPartsMax[3]),
+                ["tree_field_total"] = R(run.CommitParts[4]), ["tree_field_max"] = R(run.CommitPartsMax[4]),
+            },
             ["hitches"] = new JsonObject
             {
                 ["over_33ms"] = run.Frame.Count(f => f > 33.3f), ["over_50ms"] = run.Frame.Count(f => f > 50),
@@ -591,9 +604,17 @@ public partial class WorldLab
         sb.AppendLine($"Screen {m["screen"]} · window {m["window"]}");
         sb.AppendLine($"Overall: {j["overall_fps_geomean"]} fps (geometric mean of the scenes)");
         sb.AppendLine();
-        sb.AppendLine($"{"Scene",-44} {"FPS",7} {"1%low",7} {"frame p95",9} {"GPU avg",8} {"GPU p95",8} {"CPU rnd",8} {"draws",7} {"hitch>50",8}");
+        sb.AppendLine($"{"Scene",-44} {"FPS",7} {"1%low",7} {"frame p95",9} {"GPU avg",8} {"GPU p95",8} {"CPU rnd",8} {"game",6} {"draws",7} {"hitch>50",8}");
         foreach (var s in j["scenarios"]!.AsArray())
-            sb.AppendLine($"{s!["label"],-44} {s["fps_avg"],7} {s["fps_1pct_low"],7} {s["frame_ms"]!["p95"],9} {s["gpu_ms"]!["avg"],8} {s["gpu_ms"]!["p95"],8} {s["cpu_render_ms"]!["avg"],8} {s["draw_calls_avg"],7} {s["hitches"]!["over_50ms"],8}");
+            sb.AppendLine($"{s!["label"],-44} {s["fps_avg"],7} {s["fps_1pct_low"],7} {s["frame_ms"]!["p95"],9} {s["gpu_ms"]!["avg"],8} {s["gpu_ms"]!["p95"],8} {s["cpu_render_ms"]!["avg"],8} {s["script_ms"]!["avg"],6} {s["draw_calls_avg"],7} {s["hitches"]!["over_50ms"],8}");
+        foreach (var s in j["scenarios"]!.AsArray())
+        {
+            var c = s!["commit_parts_ms"];
+            if (c == null || s["tile_commit_ms"]!["max"]!.GetValue<double>() < 1) continue;
+            sb.AppendLine($"  streaming in '{s["label"]}': slowest frame of commits {s["tile_commit_ms"]!["max"]} ms; worst single frame per part: meshes {c["meshes_max"]}, " +
+                          $"collision {c["collision_max"]}, objects {c["objects_max"]}, adding to scene {c["enter_tree_max"]}, tree field {c["tree_field_max"]} ms; " +
+                          $"game code per frame p99 {s["script_ms"]!["p99"]} ms");
+        }
         foreach (var s in j["scenarios"]!.AsArray())
         {
             if (s!["ablation"] is not JsonArray ab || ab.Count == 0) continue;
