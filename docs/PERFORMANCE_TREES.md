@@ -221,3 +221,21 @@ Measured here: the native shape build has a long tail while every core runs a ti
 off the CPU. Build 46: background builders below normal priority and fewer at once (tiles: cores − 2, at most 12;
 tree cells: cores / 4, at most 6; was cores − 1 and cores / 2, i.e. 31 + 16 on Tom's 32 threads), object shapes in
 batches of 128 after the ground, and an over-budget frame only forces a step for the player's own tile.
+
+## Tom's benchmark of build 46 (2026-10-11): best so far
+`standard`, *Tree shadows: simplified*, full detail 140 m. Overall **70.7 FPS** (build 43: 70.3).
+
+| Scene | build 43 | build 45* | **build 46** |
+|---|---:|---:|---:|
+| forest | 56.0 | 38.7 | **56.2** |
+| lake | 52.2 | 43.9 | **52.6** |
+| coast | 110.6 | 97.6 | **110.1** |
+| mountains | 100.0 | 92.6 | **99.8** |
+| flight (1 % low) | 53.2 (26.0) | 47.8 (25.4) | **54.5 (29.9)** |
+
+\* build 45 ran with detailed tree shadows.
+
+Flight streaming: slowest commit frame 18.5 ms (build 45: 37.9), no frame over 50 ms (build 45: 2), commit frames
+over 8.5 ms 135 (45: 192; 43: 667), over 20 ms none. A ground piece now costs at most 10.5 ms in a frame (45: 34.6).
+What remains: object shapes up to 16.6 ms in one frame (a batch of 128, rock hulls are the slow ones) and tile mesh
+commits up to 13.2 ms; build 44's heightmap (1 % low 33) showed what is left to gain.
