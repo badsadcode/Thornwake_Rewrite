@@ -114,6 +114,10 @@ public static class GameSettings
     public static readonly Setting TreeDistance = Add(new("view.trees", "View distance", "Detailed trees", 0, 4, 1, 1,
         "Distance up to which full 3D trees are drawn (at Terrain detail range ×1; farther with a wider range).",
         options: new[] { "~400 m", "~800 m", "~1.6 km", "~3.2 km", "~6.4 km" }, rebuild: true));
+    public static readonly Setting TreeImpostors = Add(new("view.tree_impostors", "View distance", "Tree impostors", 0, 4, 1, 2,
+        "Beyond the detailed trees, the same trees drawn as pictures of their own models (baked from 8 sides and above, " +
+        "lit, swaying): looks like the 3D forest at a fraction of the cost. Off: as in build 41 (3D trees, then tree cards).",
+        options: new[] { "off (build 41)", "~1.6 km", "~3.2 km", "~6.4 km", "~12.8 km" }, rebuild: true));
     public static readonly Setting FarTreeDistance = Add(new("view.far_trees", "View distance", "Distant tree cards", 0, 4, 1, 1,
         "Distance up to which forests are drawn as simple tree cards (at Terrain detail range ×1).",
         options: new[] { "~3 km", "~6 km", "~12 km", "~24 km", "~48 km" }, rebuild: true));
@@ -285,10 +289,10 @@ public static class GameSettings
     public static readonly Setting FogSmoothing = Add(new("perf.fog_smoothing", "Camera and performance", "Fog smoothing over time", .5, .95, .05, .9,
         "How much the volumetric fog blends with past frames: high = smooth but may trail behind moving things, low = " +
         "no trails but grainier fog. 0.9 = build 34.", "×"));
-    public static readonly Setting RenderScale = Add(new("perf.scale", "Camera and performance", "Render scale", .5, 1, .05, 1,
+    public static readonly Setting RenderScale = Add(new("perf.scale", "Display", "Render scale", .5, 1, .05, 1,
         "Render the 3D view at a lower resolution and upscale (AMD FSR) for more frames per second.", "×"));
-    public static readonly Setting VSync = Add(new("perf.vsync", "Camera and performance", "V-Sync", 0, 1, 1, 1, "Synchronise to the monitor (no tearing)."));
-    public static readonly Setting MaxFps = Add(new("perf.max_fps", "Camera and performance", "Frame rate limit", 0, 240, 10, 0,
+    public static readonly Setting VSync = Add(new("perf.vsync", "Display", "V-Sync", 0, 1, 1, 1, "Synchronise to the monitor (no tearing)."));
+    public static readonly Setting MaxFps = Add(new("perf.max_fps", "Display", "Frame rate limit", 0, 240, 10, 0,
         "0 = unlimited.", "fps"));
 
     /// <summary>Raised after any setting changes (after <see cref="Setting.Changed"/>).</summary>

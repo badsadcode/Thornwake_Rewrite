@@ -102,6 +102,8 @@ public partial class WorldLab : Node3D
         // mesh's triangle edges (Tom's playtest) and wrong refraction. This scene uses FXAA or TAA instead (the valley
         // game keeps the project's MSAA setting); Atmosphere applies the anti-aliasing setting.
         GameSettings.Load();
+        DisplaySettings.Apply(GetTree().Root);
+        GetTree().Root.SizeChanged += DisplaySettings.WindowChanged;
         _atmosphere = new Atmosphere { Name = "Atmosphere" };
         AddChild(_atmosphere);
         AddChild(_mist);
@@ -179,12 +181,22 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--set=gen."))
             {
                 var kv = arg[6..].Split('=');
-                if (_gen.All.FirstOrDefault(x => x.Key == kv[0]) is { } g) g.Value = double.Parse(kv[1], CultureInfo.InvariantCulture);
+                // Dumps before build 42 wrote the key with a doubled prefix ("gen.gen.size"); accept both.
+                string key = kv[0].StartsWith("gen.gen.") ? kv[0][4..] : kv[0];
+                if (_gen.All.FirstOrDefault(x => x.Key == key) is { } g) g.Value = double.Parse(kv[1], CultureInfo.InvariantCulture);
             }
         _seedEdit.Text = seed.ToString(CultureInfo.InvariantCulture);
         if (OS.GetCmdlineUserArgs().Contains("--preview-biomes")) _biomeView.ButtonPressed = true;
         if (OS.GetCmdlineUserArgs().Contains("--preview") || OS.GetCmdlineUserArgs().Contains("--preview-biomes")) StartPreview();
         if (_smokeDirectory == null) Input.MouseMode = Input.MouseModeEnum.Captured;
+        // --bench=<suite> [--bench-profile=<id>] [--bench-out=<dir>]: run a benchmark and quit (docs/BENCHMARK.md).
+        if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--bench=")) is { } bench)
+        {
+            string profile = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--bench-profile="))?[16..] ?? "current";
+            string? outDir = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--bench-out="))?[12..];
+            BenchStart(bench[8..], profile, outDir, quitWhenDone: true);
+            return;
+        }
         Generate();
     }
 
@@ -199,7 +211,7 @@ public partial class WorldLab : Node3D
         try { (profile, style) = _gen.Build(recipe); }
         catch (Exception error) { _status = "These world parameters are not valid: " + error.Message; return; }
         _custom = !_gen.IsPreset;
-        _worldArgs = $"--preset={recipe.Id} --seed={seed}" + (_custom ? " " + string.Join(" ", _gen.All.Select(g => $"--set=gen.{g.Key}={g.Value.ToString("R", CultureInfo.InvariantCulture)}")) : "");
+        _worldArgs = $"--preset={recipe.Id} --seed={seed}" + (_custom ? " " + string.Join(" ", _gen.All.Select(g => $"--set={g.Key}={g.Value.ToString("R", CultureInfo.InvariantCulture)}")) : "");
         _overlay.Text = $"Generating {profile.Name}{(_custom ? " (custom)" : "")}, seed {seed}…\ncontinents → erosion → rivers and lakes";
         _overlay.Visible = true;
         _generationStarted = Time.GetTicksMsec();
@@ -623,6 +635,7 @@ public partial class WorldLab : Node3D
     public override void _ExitTree()
     {
         GameSettings.Changed -= OnSettingChanged;
+        GetTree().Root.SizeChanged -= DisplaySettings.WindowChanged;
         // Static caches of Godot resources (tree, rock and prop meshes, materials) must be freed while the engine is
         // still alive; left to the .NET finalizers at process exit they intermittently crashed on quit (as the valley
         // game already handles in Main).
@@ -638,6 +651,7 @@ public partial class WorldLab : Node3D
     {
         if (_generation is { IsCompleted: true }) FinishGeneration();
         if (_preview is { IsCompleted: true }) FinishPreview();
+        if (_bench != null && (_sampler == null || _generation != null)) BenchStep(delta);
         if (_sampler == null) return;
         Rebase(PlayerX, PlayerZ);
         _streamer.Update(PlayerX, PlayerZ);
@@ -677,7 +691,8 @@ public partial class WorldLab : Node3D
         UpdateUnderwater(cam);
         _hudTimer -= delta;
         if (_hudTimer <= 0) { _hudTimer = .2; UpdateHud(); }
-        if (_smokeDirectory != null) Smoke(delta);
+        if (_bench != null && _generation == null) BenchStep(delta);
+        else if (_smokeDirectory != null) Smoke(delta);
     }
 
     /// <summary>Water surface above a world point (generated water, simulated water, waves), NaN if dry.</summary>
@@ -739,6 +754,7 @@ public partial class WorldLab : Node3D
     public override void _PhysicsProcess(double delta)
     {
         if (_sampler == null || _holding) return;
+        if (_bench != null) { _player.Velocity = Vector3.Zero; return; } // the benchmark places the player itself
         float dt = (float)delta;
         var input = Vector2.Zero;
         bool typing = _menu.Visible;
@@ -925,6 +941,11 @@ public partial class WorldLab : Node3D
 
     public override void _UnhandledInput(InputEvent e)
     {
+        if (_bench != null)
+        {
+            if (e is InputEventKey { Pressed: true, Keycode: Key.Escape }) BenchAbort("stopped with Esc");
+            return;
+        }
         if (e is InputEventMouseMotion motion && Input.MouseMode == Input.MouseModeEnum.Captured)
         {
             _yaw -= motion.Relative.X * .0035f;
@@ -1104,6 +1125,11 @@ public partial class WorldLab : Node3D
         _overlay.AddThemeFontSizeOverride("font_size", 26);
         _overlay.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .9f));
         layer.AddChild(_overlay);
+        _benchLabel = new Label { Visible = false, AnchorLeft = .5f, AnchorRight = .5f, OffsetLeft = -420, OffsetRight = 420, OffsetTop = 12,
+            HorizontalAlignment = HorizontalAlignment.Center };
+        _benchLabel.AddThemeFontSizeOverride("font_size", 18);
+        _benchLabel.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .9f));
+        layer.AddChild(_benchLabel);
 
         _menu = new PanelContainer { Visible = false, AnchorLeft = .5f, AnchorRight = .5f, AnchorTop = .5f, AnchorBottom = .5f,
             OffsetLeft = -520, OffsetRight = 520, OffsetTop = -340, OffsetBottom = 340 };
@@ -1192,13 +1218,56 @@ public partial class WorldLab : Node3D
         var settings = new VBoxContainer { Name = "Settings" };
         tabs.AddChild(settings);
         settings.AddChild(new Label { Text = "Saved automatically. Detail and distance changes rebuild the terrain in the background.", Modulate = new Color(1, 1, 1, .7f) });
-        settings.AddChild(SettingsUi.List(GameSettings.All.Where(s => s.Section != "Audio"), GameSettings.ResetSection));
+        settings.AddChild(SettingsUi.List(GameSettings.All.Where(s => s.Section is not ("Audio" or "Display")), GameSettings.ResetSection));
+
+        // ---- Display (Tom, 2026-10-11: native resolution, window modes, aspect ratios, UI scale; saved)
+        tabs.AddChild(BuildDisplayTab());
 
         // ---- Audio (round 29, Tom)
         var audio = new VBoxContainer { Name = "Audio" };
         tabs.AddChild(audio);
         audio.AddChild(new Label { Text = "Saved automatically.", Modulate = new Color(1, 1, 1, .7f) });
         audio.AddChild(SettingsUi.List(GameSettings.All.Where(s => s.Section == "Audio"), GameSettings.ResetSection));
+
+        // ---- Benchmark (docs/BENCHMARK.md)
+        var benchBox = new VBoxContainer { Name = "Benchmark" };
+        tabs.AddChild(benchBox);
+        benchBox.AddChild(new Label
+        {
+            Text = "Runs fixed test scenes in the same world on every PC: time, weather and clouds are frozen, V-Sync and the frame limit " +
+                   "are off. It measures frame times, GPU and CPU time and hitches, then what each kind of object and effect costs. " +
+                   "Takes 5–20 minutes; keep the window in front and don't touch the mouse. Esc stops. Your settings are restored afterwards.",
+            AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(900, 0),
+        });
+        var benchConfig = BenchConfig();
+        var suiteRow = new HBoxContainer();
+        suiteRow.AddChild(new Label { Text = "Test", CustomMinimumSize = new Vector2(120, 0) });
+        var suitePick = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var suiteIds = benchConfig["suites"]!.AsObject().Select(p => p.Key).ToList();
+        foreach (var (_, v) in benchConfig["suites"]!.AsObject()) suitePick.AddItem(v!["name"]!.GetValue<string>());
+        suiteRow.AddChild(suitePick);
+        benchBox.AddChild(suiteRow);
+        var profileRow = new HBoxContainer();
+        profileRow.AddChild(new Label { Text = "Quality", CustomMinimumSize = new Vector2(120, 0) });
+        var profilePick = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var profileIds = new List<string> { "current" };
+        profilePick.AddItem("Your current settings");
+        foreach (var (k, v) in benchConfig["profiles"]!.AsObject()) { profileIds.Add(k); profilePick.AddItem(v!["name"]!.GetValue<string>()); }
+        profileRow.AddChild(profilePick);
+        benchBox.AddChild(profileRow);
+        benchBox.AddChild(new Label
+        {
+            Text = "To compare PCs, use the same quality and window size (Display tab). Results are saved in the bench folder of the game's user folder " +
+                   "(results.json, summary.txt, one CSV of frame times per scene) and the folder opens when done.",
+            AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(900, 0), Modulate = new Color(1, 1, 1, .75f),
+        });
+        var benchButtons = new HBoxContainer();
+        var startBench = new Button { Text = "Start benchmark", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        startBench.Pressed += () => BenchStart(suiteIds[suitePick.Selected], profileIds[profilePick.Selected]);
+        var openBench = new Button { Text = "Open results folder" };
+        openBench.Pressed += () => { string d = Path.Combine(OS.GetUserDataDir(), "bench"); Directory.CreateDirectory(d); OS.ShellOpen(d); };
+        benchButtons.AddChild(startBench); benchButtons.AddChild(openBench);
+        benchBox.AddChild(benchButtons);
     }
 
     // ------------------------------------------------------------------ headless screenshot run

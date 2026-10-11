@@ -22,14 +22,19 @@ public readonly record struct TreeInstance(int Species, Transform3D Transform);
 /// logs are world objects, not decoration); grass and the draw distances come from the player's settings.
 /// </summary>
 public readonly record struct DetailConfig(double Grass, double ForestCover, double ForestDensity, double Rocks, double Props,
-    int TreeLevels, int FarTreeLevels, bool SimulatedWater = true, int GrassStyle = 1, int MeshDetail = 1)
+    int TreeLevels, int FarTreeLevels, bool SimulatedWater = true, int GrassStyle = 1, int MeshDetail = 1, int ImpostorLevels = 0)
 {
+    /// <summary>First level drawn with tree cards: after the 3D trees and the impostors.</summary>
+    public int CardLevels => Math.Max(TreeLevels, ImpostorLevels);
+
     public static DetailConfig For(TerrainSampler sampler)
     {
         var style = sampler.Plan.Style;
         return new(GameSettings.GrassDensity.Value, style.ForestCover, style.ForestDensity, style.RockAmount, style.PropAmount,
             2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index, GameSettings.WaterSimulation.On, GameSettings.GrassStyle.Index,
-            1 << GameSettings.TerrainMesh.Index);
+            1 << GameSettings.TerrainMesh.Index,
+            // Impostors (round 30) from the end of the 3D trees up to ~1.6 km (level 4) … ~12.8 km (level 7).
+            GameSettings.TreeImpostors.Index == 0 ? 0 : Math.Max(2 + GameSettings.TreeDistance.Index, 3 + GameSettings.TreeImpostors.Index));
     }
 }
 
@@ -56,6 +61,8 @@ public sealed class TileData
     /// <summary>Triangle soup for a ConcavePolygonShape3D (level 0 only).</summary>
     public Vector3[]? CollisionFaces { get; init; }
     public List<TreeInstance> Trees { get; init; } = new();
+    /// <summary>The same trees as <see cref="Trees"/> would be, drawn as impostors (the ring after the 3D trees).</summary>
+    public List<TreeInstance> Impostors { get; init; } = new();
     public List<Transform3D> Grass { get; set; } = new();
     public List<Transform3D> Reeds { get; set; } = new();
     /// <summary>Plant sprites (grass style "plant populations"): land and water plants, tile-local.</summary>
@@ -257,6 +264,7 @@ public static class TileBuilder
             CollisionFaces = key.Level == 0 ? Faces(vertices) : null,
             // Full trees on the nearest levels; beyond, tree cards, then the terrain shader's forest tint.
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
+            Impostors = key.Level >= config.TreeLevels && key.Level < config.ImpostorLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };
         BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater, sea);
         if (data.Water is { } builtWater) data.WaterShore = ShoreData(sampler, builtWater.Vertices, builtWater.Colors, heights, s2, samples, x0, z0, spacing, Side);
@@ -276,7 +284,7 @@ public static class TileBuilder
             ObstacleWakes(riverWater.Vertices, riverWater.Colors, riverWater.Flow, shore, rocks);
         if (key.Level <= 1 && config.Props > 0) data.Props = GroundCover.Props(key, grid, sea, coverSeed, config.Props);
         if (key.Level <= 1 && config.Grass > 0) data.WetPlants = GroundCover.WetPlants(key, grid, sea, coverSeed, biomes, Math.Min(1.5, config.Grass), floating: !populations || key.Level > 0);
-        if (key.Level >= config.TreeLevels && key.Level <= config.FarTreeLevels)
+        if (key.Level >= config.CardLevels && key.Level <= config.FarTreeLevels)
             data.FarTrees = GroundCover.FarTrees(key, grid, sea, coverSeed, config.ForestDensity);
         data.BuildMs = timer.Elapsed.TotalMilliseconds;
         return data;

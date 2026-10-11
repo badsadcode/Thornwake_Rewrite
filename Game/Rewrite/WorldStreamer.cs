@@ -28,13 +28,17 @@ public partial class WorldStreamer : Node3D
     public double LastBuildMs { get; private set; }
     public double LastCommitMs { get; private set; }
     public double MaxCommitMs { get; private set; }
+    /// <summary>Main-thread time spent committing finished tiles in the last <see cref="Update"/> (benchmark).</summary>
+    public double FrameCommitMs { get; private set; }
     public long Triangles { get; private set; }
     /// <summary>Instances committed so far (diagnostics): grass tufts, rocks, props, far tree cards.</summary>
     public long GrassCommitted { get; private set; }
     public long RocksCommitted { get; private set; }
     public long PropsCommitted { get; private set; }
     public long FarTreesCommitted { get; private set; }
-    public bool Settled => _sampler != null && Missing == 0 && _jobs.Count == 0;
+    public bool Settled => _sampler != null && Missing == 0 && _jobs.Count == 0 && (Impostors.Ready || GameSettings.TreeImpostors.Index == 0);
+    public TreeImpostors Impostors { get; } = new();
+    public void ResetCommitStats() => MaxCommitMs = 0;
 
     private TerrainSampler? _sampler;
     private long _revision;
@@ -77,6 +81,7 @@ public partial class WorldStreamer : Node3D
             if (s == GameSettings.GroundParallax) _terrain.SetShaderParameter("ground_parallax", GameSettings.GroundParallax.F);
         };
         _trees = new TreeCatalog();
+        Impostors.Bake(this, _trees);
         _farTree = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/FarTree.gdshader") };
         _grass = Visuals.GrassMesh();
         // Rewrite look: translucent, breeze-bent grass (the valley game keeps its own tuft material).
@@ -182,6 +187,7 @@ public partial class WorldStreamer : Node3D
             _tileTriangles[key] = tris; Triangles += tris; Built++;
             LastCommitMs = commit.Elapsed.TotalMilliseconds; MaxCommitMs = Math.Max(MaxCommitMs, LastCommitMs);
         }
+        FrameCommitMs = timer.Elapsed.TotalMilliseconds;
 
         // Schedule missing tiles: finest level first, then nearest.
         var missing = _desired.Where(k => (!_tiles.ContainsKey(k) || _tileRevision[k] != _revision) && !_failed.Contains(k)).ToList();
@@ -297,15 +303,25 @@ public partial class WorldStreamer : Node3D
             ObjectCollision.Add(body, data);
             root.AddChild(body);
         }
-        if (data.Trees.Count > 0) _trees.Instance(root, data.Trees, key.Level >= 2 ? 2 : 1, key.Level == 0 && GameSettings.Shadows.Index > 0);
+        root.SetMeta("trees", data.Trees.Count); root.SetMeta("cards", data.FarTrees.Count); root.SetMeta("impostors", data.Impostors.Count); // (benchmark counts)
+        if (data.Impostors.Count > 0)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = Impostors.Quad };
+            var imp = data.Impostors;
+            MultiMeshFill.Fill(multi, imp.Count, i => imp[i].Transform, custom: i => new Color(imp[i].Species, 0, 0, 0));
+            root.AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = Impostors.Material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Layers = RenderLayers.TreeImpostors });
+        }
+        if (data.Trees.Count > 0) _trees.Instance(root, data.Trees, key.Level >= 2 ? 2 : 1, key.Level == 0 && GameSettings.Shadows.Index > 0,
+            key.Level >= 2 ? RenderLayers.TreesFar : RenderLayers.TreesNear);
         GrassCommitted += data.Grass.Count; RocksCommitted += data.Rocks.Count; PropsCommitted += data.Props.Count; FarTreesCommitted += data.FarTrees.Count;
         // Grass and plant shadows (option): only where the sun casts any.
         var plantShadows = GameSettings.PlantShadows.On && GameSettings.Shadows.Index > 0
             ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
         if (data.Grass.Count > 0)
-            root.AddChild(Multi(_grass, data.Grass.ToArray(), plantShadows, GameSettings.GrassDistance.F));
+            root.AddChild(Multi(_grass, data.Grass.ToArray(), plantShadows, GameSettings.GrassDistance.F, layer: RenderLayers.Plants));
         if (data.Reeds.Count > 0)
-            root.AddChild(Multi(_grass, data.Reeds.ToArray(), plantShadows, GameSettings.GrassDistance.F * 1.3f));
+            root.AddChild(Multi(_grass, data.Reeds.ToArray(), plantShadows, GameSettings.GrassDistance.F * 1.3f, layer: RenderLayers.Plants));
         if (data.Flora.Count > 0)
         {
             // Land grass, shore plants, floating leaves and underwater plants: one draw each, all sprites in one array.
@@ -328,48 +344,45 @@ public partial class WorldStreamer : Node3D
         }
         foreach (var kind in data.Drapes.GroupBy(d => d.Kind))
             root.AddChild(Multi(PlaceholderPlants.Drape(kind.Key), kind.Select(d => d.Transform).ToArray(), GeometryInstance3D.ShadowCastingSetting.Off,
-                160 * GameSettings.ScatterDistance.F));
+                160 * GameSettings.ScatterDistance.F, layer: RenderLayers.Plants));
         foreach (var kind in data.WetPlants.GroupBy(d => d.Kind))
             root.AddChild(Multi(PlaceholderPlants.WetPlant(kind.Key), kind.Select(d => d.Transform).ToArray(), GeometryInstance3D.ShadowCastingSetting.Off,
-                (kind.Key == PlaceholderPlants.BogShrub ? 220 : 150) * GameSettings.ScatterDistance.F));
+                (kind.Key == PlaceholderPlants.BogShrub ? 220 : 150) * GameSettings.ScatterDistance.F, layer: RenderLayers.Plants));
         foreach (var kind in data.Rocks.GroupBy(r => r.Kind))
             root.AddChild(Multi(RockMeshes.Get(kind.Key), kind.Select(r => r.Transform).ToArray(),
                 kind.Key == GroundCover.Stone ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,
                 kind.Key == GroundCover.Stone ? 90 * GameSettings.ScatterDistance.F : kind.Key == GroundCover.Rock ? 400 * GameSettings.ScatterDistance.F : 0,
-                kind.Select(r => r.Tint.A > 0 ? r.Tint : Colors.White).ToArray()));
+                kind.Select(r => r.Tint.A > 0 ? r.Tint : Colors.White).ToArray(), RenderLayers.Rocks));
         foreach (var kind in data.Props.GroupBy(p => p.Kind))
         {
             var transforms = kind.Select(p => p.Transform).ToArray();
             foreach (var (mesh, part) in _props.Parts(kind.Key))
                 root.AddChild(Multi(mesh, transforms.Select(t => t * part).ToArray(),
-                    key.Level == 0 ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off, 260 * GameSettings.ScatterDistance.F));
+                    key.Level == 0 ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off, 260 * GameSettings.ScatterDistance.F,
+                    layer: RenderLayers.Rocks));
         }
         if (data.FarTrees.Count > 0)
         {
-            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = _card, InstanceCount = data.FarTrees.Count };
-            for (int i = 0; i < data.FarTrees.Count; i++)
-            {
-                var t = data.FarTrees[i];
-                multi.SetInstanceTransform(i, new Transform3D(Basis.Identity.Scaled(new Vector3(1, t.Height, 1)), t.Position));
-                multi.SetInstanceCustomData(i, new Color(t.Crown.R, t.Crown.G, t.Crown.B, t.Conifer ? 1 : 0));
-            }
-            root.AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = _farTree, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Layers = 2 });
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = _card };
+            var far = data.FarTrees;
+            MultiMeshFill.Fill(multi, far.Count, i => new Transform3D(Basis.Identity.Scaled(new Vector3(1, far[i].Height, 1)), far[i].Position),
+                custom: i => new Color(far[i].Crown.R, far[i].Crown.G, far[i].Crown.B, far[i].Conifer ? 1 : 0));
+            root.AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = _farTree, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Layers = RenderLayers.TreeCards });
         }
         return root;
     }
 
-    private static MultiMeshInstance3D Multi(Mesh mesh, Transform3D[] transforms, GeometryInstance3D.ShadowCastingSetting shadows, float visibleTo, Color[]? colours = null)
+    private static MultiMeshInstance3D Multi(Mesh mesh, Transform3D[] transforms, GeometryInstance3D.ShadowCastingSetting shadows, float visibleTo, Color[]? colours = null,
+        uint layer = RenderLayers.Objects)
     {
         // Visibility ranges are measured from the node's origin, and tile roots sit at sea level (possibly hundreds of
         // metres below the ground): place the node at the centre of its instances instead.
         var centre = Vector3.Zero;
         foreach (var t in transforms) centre += t.Origin;
         if (transforms.Length > 0) centre /= transforms.Length;
-        var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = colours != null, Mesh = mesh, InstanceCount = transforms.Length };
-        for (int i = 0; i < transforms.Length; i++) multi.SetInstanceTransform(i, transforms[i].Translated(-centre));
-        if (colours != null) for (int i = 0; i < transforms.Length; i++) multi.SetInstanceColor(i, colours[i]);
-        // Render layer 2: objects (tool previews project onto the terrain only, layer 1).
-        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows, Position = centre, Layers = 2 };
+        var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = colours != null, Mesh = mesh };
+        MultiMeshFill.Fill(multi, transforms.Length, i => transforms[i].Translated(-centre), colours != null ? i => colours[i] : null);
+        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows, Position = centre, Layers = layer };
         if (visibleTo > 0) { node.VisibilityRangeEnd = visibleTo; node.VisibilityRangeEndMargin = 15; node.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self; }
         return node;
     }
@@ -381,15 +394,10 @@ public partial class WorldStreamer : Node3D
         var centre = Vector3.Zero;
         foreach (var f in items) centre += f.Transform.Origin;
         centre /= items.Length;
-        var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, UseCustomData = true, Mesh = mesh, InstanceCount = items.Length };
-        for (int i = 0; i < items.Length; i++)
-        {
-            multi.SetInstanceTransform(i, items[i].Transform.Translated(-centre));
-            multi.SetInstanceColor(i, items[i].Tint);
-            float phase = (float)Hashing.Unit(Hashing.Mix((ulong)i * 2654435761UL + (ulong)items[i].Species));
-            multi.SetInstanceCustomData(i, new Color(items[i].Species, motion, phase, 0));
-        }
-        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows, Position = centre, Layers = 2 };
+        var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, UseCustomData = true, Mesh = mesh };
+        MultiMeshFill.Fill(multi, items.Length, i => items[i].Transform.Translated(-centre), i => items[i].Tint,
+            i => new Color(items[i].Species, motion, (float)Hashing.Unit(Hashing.Mix((ulong)i * 2654435761UL + (ulong)items[i].Species)), 0));
+        var node = new MultiMeshInstance3D { Multimesh = multi, CastShadow = shadows, Position = centre, Layers = RenderLayers.Plants };
         if (visibleTo > 0) { node.VisibilityRangeEnd = visibleTo; node.VisibilityRangeEndMargin = 12; node.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self; }
         return node;
     }
@@ -405,11 +413,23 @@ public partial class WorldStreamer : Node3D
     }
 }
 
+/// <summary>
+/// Render layers of the world's objects. Layer 1 is terrain and water, the only layer tool previews project onto. Each
+/// kind of object has its own layer, so the benchmark can hide one kind at a time through the camera's cull mask, with
+/// no rebuild, and measure what it costs.
+/// </summary>
+public static class RenderLayers
+{
+    public const uint Terrain = 1, Objects = 2, TreesNear = 4, TreesFar = 8, TreeCards = 16, Plants = 32, Rocks = 64, TreeImpostors = 128;
+}
+
 /// <summary>Tree meshes per species and LOD, extracted once from the woodland pack (or built for placeholder plants) and
 /// drawn with MultiMesh.</summary>
 public sealed class TreeCatalog
 {
     private readonly Dictionary<(int Species, int Lod), List<(Mesh Mesh, Transform3D Transform)>> _parts = new();
+
+    public List<(Mesh Mesh, Transform3D Transform)> PartsOf(int species, int lod) => Parts(species, lod);
 
     private List<(Mesh, Transform3D)> Parts(int species, int lod)
     {
@@ -431,18 +451,19 @@ public sealed class TreeCatalog
         return parts;
     }
 
-    public void Instance(Node3D root, List<TreeInstance> trees, int lod, bool shadows)
+    public void Instance(Node3D root, List<TreeInstance> trees, int lod, bool shadows, uint layer = RenderLayers.TreesNear)
     {
         foreach (var group in trees.GroupBy(t => t.Species))
         {
             var transforms = group.Select(t => t.Transform).ToArray();
             foreach (var (mesh, part) in Parts(group.Key, lod))
             {
-                var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = mesh, InstanceCount = transforms.Length };
-                for (int i = 0; i < transforms.Length; i++) multi.SetInstanceTransform(i, transforms[i] * part);
+                var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = mesh };
+                var p = part;
+                MultiMeshFill.Fill(multi, transforms.Length, i => transforms[i] * p);
                 root.AddChild(new MultiMeshInstance3D
                 {
-                    Multimesh = multi, Layers = 2,
+                    Multimesh = multi, Layers = layer,
                     CastShadow = shadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
                 });
             }

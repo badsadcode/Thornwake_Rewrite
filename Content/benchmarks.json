@@ -1,0 +1,101 @@
+{
+  "_comment": "Thornwake benchmark scenarios (docs/BENCHMARK.md). Every scene is a fixed place, view and hour in a world that generates the same on every PC; time and weather are frozen, V-Sync and the frame limit are off. Profiles set every graphics setting (others keep their defaults) so results compare across PCs; 'current' keeps the player's own settings.",
+  "version": 1,
+  "world": {
+    "id": "forest32",
+    "name": "Tom's test world: Vast continents (classic), 32 km, seed 42, dense forests",
+    "preset": "vast-world",
+    "seed": 42,
+    "gen": {
+      "gen.version": 0, "gen.size": 0, "gen.continents": 0, "gen.islands": -1, "gen.continent_size": 1.6, "gen.coast": 1.3,
+      "gen.ranges": 0, "gen.mountain_height": 1, "gen.mountain_width": 1, "gen.hill_height": 1, "gen.hills": 0.95,
+      "gen.plains": 0.6, "gen.rock": 1, "gen.coast_detail": 1, "gen.erosion": 1, "gen.shores": 1, "gen.rivers": 1,
+      "gen.river_width": 1, "gen.meanders": 1, "gen.wander": 1, "gen.width_variation": 1, "gen.banks": 1,
+      "gen.forest_cover": 2, "gen.forest_density": 1.6, "gen.rocks": 1, "gen.props": 1, "gen.lakes": 1, "gen.deltas": 1,
+      "gen.latitude": 45, "gen.latitude_span": 0, "gen.warmth": 0, "gen.wetness": 1, "gen.biome_placement": 0,
+      "gen.patch_size": 12
+    }
+  },
+  "frozen": {
+    "time.paused": 1, "sim.weather": 0, "perf.vsync": 0, "perf.max_fps": 0, "sky.cloud_speed": 0, "sky.clouds": 0.35
+  },
+  "profiles": {
+    "low": {
+      "name": "Low",
+      "settings": {
+        "detail.grass_density": 0.5, "detail.grass_distance": 80, "view.terrain": 0, "view.horizon": 1, "view.terrain_detail": 1,
+        "view.trees": 0, "view.far_trees": 0, "view.scatter": 0.7, "fx.plant_shadows": 0, "fx.shadows": 1, "fx.ssao": 0,
+        "fx.ssil": 0, "fx.ssr": 0, "fx.water_reflections": 1, "fx.volumetric_fog": 0, "fx.sun_shafts": 0.3, "fx.light_beams": 0,
+        "fx.ground_fog": 0, "fx.ground_relief": 0, "fx.ground_parallax": 0, "sky.cloud_quality": 0, "sky.cloud_resolution": 0,
+        "perf.aa": 1, "perf.scale": 1, "view.fov": 70
+      }
+    },
+    "medium": {
+      "name": "Medium (game defaults)",
+      "settings": { "view.fov": 70 }
+    },
+    "high": {
+      "name": "High",
+      "settings": {
+        "detail.grass_density": 2, "detail.grass_distance": 200, "view.terrain": 2, "view.horizon": 2, "view.terrain_detail": 2,
+        "view.trees": 2, "view.far_trees": 2, "view.scatter": 1.5, "fx.plant_shadows": 1, "fx.shadows": 3, "fx.ssao": 1,
+        "fx.ssil": 1, "fx.ssr": 1, "fx.water_style": 5, "fx.foam_style": 1, "fx.ground_textures": 1, "fx.volumetric_fog": 1,
+        "fx.sun_shafts": 1, "fx.light_beams": 2, "fx.ground_fog": 2, "sky.cloud_quality": 2, "sky.cloud_resolution": 2,
+        "perf.aa": 3, "perf.scale": 1, "view.fov": 70
+      }
+    },
+    "ultra": {
+      "name": "Ultra (Tom's dense-forest settings)",
+      "settings": {
+        "detail.grass_density": 3, "detail.grass_distance": 400, "view.terrain": 3, "view.horizon": 2, "view.terrain_detail": 2,
+        "view.trees": 3, "view.far_trees": 4, "view.scatter": 4, "fx.plant_shadows": 1, "fx.shadows": 3, "fx.ssao": 1,
+        "fx.ssil": 1, "fx.ssr": 1, "fx.water_style": 5, "fx.foam_style": 1, "fx.ground_textures": 1, "fx.water_reflections": 2,
+        "fx.volumetric_fog": 1, "fx.sun_shafts": 3, "fx.god_ray_contrast": 0.9, "fx.light_beams": 4, "fx.ground_fog": 2,
+        "fx.haze": 1.95, "fx.glow": 1.5, "sky.cloud_quality": 3, "sky.cloud_resolution": 2, "perf.aa": 3, "perf.scale": 1,
+        "view.fov": 50
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "id": "forest",
+      "name": "Dense forest, standing (Tom's forest B)",
+      "at": [-5286.068, 4604.638], "view": [62.938, 0.027, 5.288], "height": 0, "hour": 11.25,
+      "seconds": 20
+    },
+    {
+      "id": "lake",
+      "name": "Lake overlook from the air",
+      "at": [-5775.082, 5791.284], "view": [56.177, -0.084, 14.978], "height": 74, "hour": 16.25,
+      "seconds": 15
+    },
+    {
+      "id": "coast",
+      "name": "Coast",
+      "landmark": "Shore", "view": [1.57, -0.2, 10], "height": 0, "hour": 12,
+      "seconds": 15
+    },
+    {
+      "id": "mountains",
+      "name": "Foothills and mountains",
+      "landmark": "Foothills", "view": [1.57, -0.05, 14], "height": 0, "hour": 12,
+      "seconds": 15
+    },
+    {
+      "id": "flight",
+      "name": "Low flight over forest and lake (streaming)",
+      "path": [[-5286.068, 4604.638], [-5775.082, 5791.284], [-4200, 6900]], "altitude": 60, "speed": 70, "hour": 12,
+      "pitch": -0.12, "zoom": 8
+    }
+  ],
+  "suites": {
+    "standard": { "name": "Standard (all scenes)", "scenarios": ["forest", "lake", "coast", "mountains", "flight"], "ablate": true },
+    "quick": { "name": "Quick (forest and flight)", "scenarios": ["forest", "flight"], "ablate": false },
+    "trees": {
+      "name": "Tree range A/B (forest, detailed trees 800 m to 6.4 km)",
+      "scenarios": ["forest", "lake"],
+      "variants": [ { "view.trees": 1 }, { "view.trees": 2 }, { "view.trees": 3 }, { "view.trees": 4 } ],
+      "ablate": true
+    }
+  }
+}
