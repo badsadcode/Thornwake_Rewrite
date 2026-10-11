@@ -7,6 +7,7 @@ render_mode skip_vertex_transform, cull_disabled, diffuse_burley, specular_disab
 global uniform float leaf_translucency;
 global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
+#include "res://Game/Rewrite/TreeFade.gdshaderinc"
 varying vec3 card_world;
 varying vec3 crown;
 varying float conifer;
@@ -39,6 +40,7 @@ void vertex() {
 }
 
 void fragment() {
+	if (tree_fade_in(card_world, FRAGCOORD.xy, tree_ranges.y)) discard; // with the tree field: only beyond the impostors
 	// Pixel-stepped UV keeps the low-res look of the valley's pixel-textured trees.
 	vec2 uv = floor(UV * 24.0) / 24.0;
 	float x = abs(uv.x - 0.5) * 2.0, y = 1.0 - uv.y; // y: 0 at the ground, 1 at the top

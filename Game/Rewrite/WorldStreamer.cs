@@ -36,8 +36,10 @@ public partial class WorldStreamer : Node3D
     public long RocksCommitted { get; private set; }
     public long PropsCommitted { get; private set; }
     public long FarTreesCommitted { get; private set; }
-    public bool Settled => _sampler != null && Missing == 0 && _jobs.Count == 0 && (Impostors.Ready || GameSettings.TreeImpostors.Index == 0);
+    public bool Settled => _sampler != null && Missing == 0 && _jobs.Count == 0 && (!TreeField.Enabled || (Impostors.Ready && _field.Settled));
     public TreeImpostors Impostors { get; } = new();
+    private TreeField _field = null!;
+    public TreeField Field => _field;
     public void ResetCommitStats() => MaxCommitMs = 0;
 
     private TerrainSampler? _sampler;
@@ -82,6 +84,8 @@ public partial class WorldStreamer : Node3D
         };
         _trees = new TreeCatalog();
         Impostors.Bake(this, _trees);
+        _field = new TreeField(_trees, Impostors);
+        AddChild(_field);
         _farTree = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/FarTree.gdshader") };
         _grass = Visuals.GrassMesh();
         // Rewrite look: translucent, breeze-bent grass (the valley game keeps its own tuft material).
@@ -124,6 +128,7 @@ public partial class WorldStreamer : Node3D
         _tiles.Clear(); _tileTriangles.Clear(); _tileRevision.Clear(); _failed.Clear(); _desired.Clear();
         _config = DetailConfig.For(sampler); Levels = 7 + GameSettings.TerrainDistance.Index;
         _sampler = sampler; _originX = originX; _originZ = originZ; Triangles = 0; Built = 0; MaxCommitMs = 0;
+        _field.Configure(sampler, _config, originX, originZ);
         _terrain.SetShaderParameter("sea_level", (float)sampler.Plan.Profile.SeaLevel);
         _terrain.SetShaderParameter("flora_tint", GameSettings.GrassStyle.Index == 1 ? 1f : 0f);
     }
@@ -138,6 +143,7 @@ public partial class WorldStreamer : Node3D
         if (_sampler != null) _config = DetailConfig.For(_sampler);
         Levels = 7 + GameSettings.TerrainDistance.Index;
         _failed.Clear();
+        if (TreeField.Enabled) _field.Refresh(_config); else _field.Clear();
     }
 
     /// <summary>The ground changed inside a world rectangle (terrain edit): rebuild the tiles there at the nearest
@@ -150,6 +156,7 @@ public partial class WorldStreamer : Node3D
                 _tileRevision[key] = -1;
                 if (_jobs.TryGetValue(key, out var job)) _jobs[key] = (job.Task, -1);
             }
+        _field.Invalidate(minX, minZ, maxX, maxZ);
     }
 
     /// <summary>Move the float origin; every resident tile is repositioned (no rebuild).</summary>
@@ -157,6 +164,7 @@ public partial class WorldStreamer : Node3D
     {
         _originX = originX; _originZ = originZ;
         foreach (var (key, node) in _tiles) node.Position = new Vector3((float)(key.MinX - _originX), 0, (float)(key.MinZ - _originZ));
+        _field.Rebase(originX, originZ);
     }
 
     /// <summary>True once a collision tile under (x, z) is resident.</summary>
@@ -166,6 +174,7 @@ public partial class WorldStreamer : Node3D
     public void Update(double px, double pz)
     {
         if (_sampler == null) return;
+        _field.Update(px, pz);
         Desired(px, pz);
         var timer = Stopwatch.StartNew();
 
@@ -303,16 +312,10 @@ public partial class WorldStreamer : Node3D
             ObjectCollision.Add(body, data);
             root.AddChild(body);
         }
-        root.SetMeta("trees", data.Trees.Count); root.SetMeta("cards", data.FarTrees.Count); root.SetMeta("impostors", data.Impostors.Count); // (benchmark counts)
-        if (data.Impostors.Count > 0)
-        {
-            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = Impostors.Quad };
-            var imp = data.Impostors;
-            MultiMeshFill.Fill(multi, imp.Count, i => imp[i].Transform, custom: i => new Color(imp[i].Species, 0, 0, 0));
-            root.AddChild(new MultiMeshInstance3D { Multimesh = multi, MaterialOverride = Impostors.Material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-                Layers = RenderLayers.TreeImpostors });
-        }
-        if (data.Trees.Count > 0) _trees.Instance(root, data.Trees, key.Level >= 2 ? 2 : 1, key.Level == 0 && GameSettings.Shadows.Index > 0,
+        root.SetMeta("cards", data.FarTrees.Count); // (benchmark counts)
+        // With the tree field the tile's trees are only for collision; the field draws them.
+        if (!TreeField.Enabled) root.SetMeta("trees", data.Trees.Count);
+        if (data.Trees.Count > 0 && !TreeField.Enabled) _trees.Instance(root, data.Trees, key.Level >= 2 ? 2 : 1, key.Level == 0 && GameSettings.Shadows.Index > 0,
             key.Level >= 2 ? RenderLayers.TreesFar : RenderLayers.TreesNear);
         GrassCommitted += data.Grass.Count; RocksCommitted += data.Rocks.Count; PropsCommitted += data.Props.Count; FarTreesCommitted += data.FarTrees.Count;
         // Grass and plant shadows (option): only where the sun casts any.
@@ -431,6 +434,21 @@ public sealed class TreeCatalog
 
     public List<(Mesh Mesh, Transform3D Transform)> PartsOf(int species, int lod) => Parts(species, lod);
 
+    private static readonly Dictionary<Material, Material> Barks = new();
+
+    /// <summary>The pack's bark material as TreeBark.gdshader (same texture and tint), so trunks hand over to the
+    /// impostors with the leaves (round 30). Leaves already use the shared canopy shader, which fades too.</summary>
+    private static Material Rewrite(Material material)
+    {
+        if (material is not BaseMaterial3D b) return material;
+        if (Barks.TryGetValue(material, out var done)) return done;
+        var bark = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/TreeBark.gdshader") };
+        bark.SetShaderParameter("has_texture", b.AlbedoTexture != null);
+        if (b.AlbedoTexture != null) bark.SetShaderParameter("albedo_tex", b.AlbedoTexture);
+        bark.SetShaderParameter("tint", b.AlbedoColor);
+        return Barks[material] = bark;
+    }
+
     private List<(Mesh, Transform3D)> Parts(int species, int lod)
     {
         if (_parts.TryGetValue((species, lod), out var parts)) return parts;
@@ -441,7 +459,7 @@ public sealed class TreeCatalog
         foreach (var source in WoodlandAssets.Meshes(tree.Levels[lod]))
         {
             var mesh = (Mesh)source.Mesh.Duplicate();
-            for (int s = 0; s < mesh.GetSurfaceCount(); s++) mesh.SurfaceSetMaterial(s, source.GetActiveMaterial(s));
+            for (int s = 0; s < mesh.GetSurfaceCount(); s++) mesh.SurfaceSetMaterial(s, Rewrite(source.GetActiveMaterial(s)));
             Transform3D transform = source.Transform; Node? parent = source.GetParent();
             while (parent is Node3D p && p != tree) { transform = p.Transform * transform; parent = p.GetParent(); }
             parts.Add((mesh, transform));

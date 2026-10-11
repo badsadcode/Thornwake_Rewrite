@@ -14,6 +14,7 @@ global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
 global uniform vec4 wind;
 #include "res://Game/Rewrite/WindSway.gdshaderinc"
+#include "res://Game/Rewrite/TreeFade.gdshaderinc"
 varying vec3 world_position;
 
 void vertex() {
@@ -42,6 +43,7 @@ void vertex() {
 }
 
 void fragment() {
+	if (tree_fade_out(world_position, FRAGCOORD.xy, tree_ranges.x)) discard; // hand-over to impostors (placeholder trees)
 	vec4 pixel = texture(pixel_map, UV) * tint;
 	ALBEDO = pixel.rgb;
 	ROUGHNESS = 0.93;

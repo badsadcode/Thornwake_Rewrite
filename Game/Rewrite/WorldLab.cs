@@ -636,6 +636,7 @@ public partial class WorldLab : Node3D
     {
         GameSettings.Changed -= OnSettingChanged;
         GetTree().Root.SizeChanged -= DisplaySettings.WindowChanged;
+        RenderingServer.GlobalShaderParameterSet("tree_ranges", Vector4.Zero); // the valley game's trees never fade
         // Static caches of Godot resources (tree, rock and prop meshes, materials) must be freed while the engine is
         // still alive; left to the .NET finalizers at process exit they intermittently crashed on quit (as the valley
         // game already handles in Main).
@@ -666,6 +667,7 @@ public partial class WorldLab : Node3D
         if (_overlay.Visible && _generation == null && _streamer.Missing < 20) _overlay.Visible = false;
         UpdateCamera();
         var cam = _camera.GlobalPosition;
+        RenderingServer.GlobalShaderParameterSet("tree_camera", new Vector4(cam.X, cam.Y, cam.Z, 0)); // tree hand-overs (TreeFade)
         double latitude = _sampler.Plan.Climate.Latitude(PlayerZ);
         if (_pendingHour is { } setHour) { _clock.SetHour(setHour, latitude); _pendingHour = null; }
         var sky = _clock.Advance(delta, latitude, run: _shotPath == null);

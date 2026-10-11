@@ -45,61 +45,64 @@ public sealed class TreeImpostors
         Baking = true;
         var started = Time.GetTicksMsec();
         var bakeShader = GD.Load<Shader>("res://Game/Rewrite/ImpostorBake.gdshader");
-        var world = new World3D();
-        var viewports = new SubViewport[Frames];
-        var cameras = new Camera3D[Frames];
-        for (int i = 0; i < Frames; i++)
-        {
-            viewports[i] = new SubViewport
-            {
-                Size = new Vector2I(Resolution, Resolution), TransparentBg = true, OwnWorld3D = false, World3D = world,
-                RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled, Msaa3D = Viewport.Msaa.Disabled,
-                ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Disabled, UseTaa = false,
-            };
-            cameras[i] = new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal, Current = true };
-            viewports[i].AddChild(cameras[i]);
-            host.AddChild(viewports[i]);
-        }
-        var root = new Node3D();
-        viewports[0].AddChild(root);
-        var albedo = new List<Image>();
-        var normals = new List<Image>();
         int species = Vegetation.Species.Length;
-        for (int s = 0; s < species; s++)
+        var albedoAt = new Image[species * Frames];
+        var normalAt = new Image[species * Frames];
+        bool trace = OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--impostor-dump="));
+        // A batch of species at a time, each in its own little world with its 9 cameras: two rendered frames per batch
+        // (colour, then normals) instead of two per species.
+        const int Batch = 10;
+        for (int first = 0; first < species; first += Batch)
         {
-            foreach (var child in root.GetChildren()) { root.RemoveChild(child); child.QueueFree(); }
+            int count = Math.Min(Batch, species - first);
+            var viewports = new List<SubViewport>();
             var materials = new List<ShaderMaterial>();
-            Aabb box = default;
-            bool first = true;
-            foreach (var (mesh, transform) in catalog.PartsOf(s, 0))
+            for (int s = first; s < first + count; s++)
             {
-                var instance = new MeshInstance3D { Mesh = mesh, Transform = transform, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
-                for (int surface = 0; surface < mesh.GetSurfaceCount(); surface++)
+                if (trace) GD.Print($"impostor bake {s} {Vegetation.Species[s]}");
+                var world = new World3D();
+                var root = new Node3D();
+                Aabb box = default;
+                bool any = false;
+                foreach (var (mesh, transform) in catalog.PartsOf(s, 0))
                 {
-                    var bake = BakeMaterial(bakeShader, mesh.SurfaceGetMaterial(surface));
-                    instance.SetSurfaceOverrideMaterial(surface, bake);
-                    materials.Add(bake);
+                    var instance = new MeshInstance3D { Mesh = mesh, Transform = transform, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+                    for (int surface = 0; surface < mesh.GetSurfaceCount(); surface++)
+                    {
+                        var bake = BakeMaterial(bakeShader, mesh.SurfaceGetMaterial(surface));
+                        instance.SetSurfaceOverrideMaterial(surface, bake);
+                        materials.Add(bake);
+                    }
+                    root.AddChild(instance);
+                    var b = transform * mesh.GetAabb();
+                    box = any ? box.Merge(b) : b;
+                    any = true;
                 }
-                root.AddChild(instance);
-                var b = transform * mesh.GetAabb();
-                box = first ? b : box.Merge(b);
-                first = false;
-            }
-            float half = Math.Max(Math.Max(Math.Abs(box.Position.X), Math.Abs(box.End.X)), Math.Max(Math.Abs(box.Position.Z), Math.Abs(box.End.Z)));
-            float size = Math.Max(1, Math.Max(box.Size.Y, half * 2) * 1.04f);
-            float bottom = box.Position.Y - size * .01f;
-            var centre = new Vector3(0, bottom + size * .5f, 0);
-            _sizes[s] = new Vector4(size, bottom, 0, 0);
-            for (int v = 0; v < Frames; v++)
-            {
-                var camera = cameras[v];
-                camera.Size = size; camera.Near = .05f; camera.Far = size * 4;
-                if (v < Views)
+                float half = Math.Max(Math.Max(Math.Abs(box.Position.X), Math.Abs(box.End.X)), Math.Max(Math.Abs(box.Position.Z), Math.Abs(box.End.Z)));
+                float size = Math.Max(1, Math.Max(box.Size.Y, half * 2) * 1.04f);
+                float bottom = box.Position.Y - size * .01f;
+                var centre = new Vector3(0, bottom + size * .5f, 0);
+                _sizes[s] = new Vector4(size, bottom, 0, 0);
+                for (int v = 0; v < Frames; v++)
                 {
-                    float a = v * Mathf.Tau / Views;
-                    camera.LookAtFromPosition(centre + new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a)) * size * 2, centre, Vector3.Up);
+                    var vp = new SubViewport
+                    {
+                        Size = new Vector2I(Resolution, Resolution), TransparentBg = true, OwnWorld3D = false, World3D = world,
+                        RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled, Msaa3D = Viewport.Msaa.Disabled,
+                        ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Disabled, UseTaa = false,
+                    };
+                    var camera = new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal, Current = true, Size = size, Near = .05f, Far = size * 4 };
+                    vp.AddChild(camera);
+                    if (v == 0) vp.AddChild(root);
+                    host.AddChild(vp);
+                    if (v < Views)
+                    {
+                        float a = v * Mathf.Tau / Views;
+                        camera.LookAtFromPosition(centre + new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a)) * size * 2, centre, Vector3.Up);
+                    }
+                    else camera.LookAtFromPosition(centre + Vector3.Up * size * 2, centre, Vector3.Forward);
+                    viewports.Add(vp);
                 }
-                else camera.LookAtFromPosition(centre + Vector3.Up * size * 2, centre, Vector3.Forward);
             }
             for (int mode = 0; mode < 2; mode++)
             {
@@ -107,15 +110,17 @@ public sealed class TreeImpostors
                 foreach (var vp in viewports) vp.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;
                 await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
                 await host.ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-                foreach (var vp in viewports)
+                for (int i = 0; i < viewports.Count; i++)
                 {
-                    var image = vp.GetTexture().GetImage();
+                    var image = viewports[i].GetTexture().GetImage();
                     image.Convert(Image.Format.Rgba8);
-                    (mode == 0 ? albedo : normals).Add(image);
+                    (mode == 0 ? albedoAt : normalAt)[first * Frames + i] = image;
                 }
             }
+            foreach (var vp in viewports) vp.QueueFree();
         }
-        foreach (var vp in viewports) vp.QueueFree();
+        var albedo = albedoAt.ToList();
+        var normals = normalAt.ToList();
         // Fill the transparent pixels with the nearest leaf colour, so the smaller mip levels do not darken the edges.
         foreach (var image in albedo) Dilate(image);
         foreach (var image in normals) Dilate(image);
@@ -149,7 +154,8 @@ public sealed class TreeImpostors
             case BaseMaterial3D b:
                 texture = b.AlbedoTexture; tint = b.AlbedoColor; break;
             case ShaderMaterial m:
-                texture = m.GetShaderParameter("pixel_map").AsGodotObject() as Texture2D;
+                // Leaves and placeholder plants: pixel_map; bark (TreeBark.gdshader): albedo_tex.
+                texture = (m.GetShaderParameter("pixel_map").AsGodotObject() ?? m.GetShaderParameter("albedo_tex").AsGodotObject()) as Texture2D;
                 var t = m.GetShaderParameter("tint");
                 if (t.VariantType == Variant.Type.Color) tint = t.AsColor();
                 break;

@@ -13,6 +13,7 @@ global uniform vec3 sun_dir_world;
 // Wind (rewrite world; zero in the valley game, which never sets it): crowns sway, more toward the top.
 global uniform vec4 wind;
 #include "res://Game/Rewrite/WindSway.gdshaderinc"
+#include "res://Game/Rewrite/TreeFade.gdshaderinc"
 varying vec3 world_position;
 void vertex() {
     vec3 base = MODEL_MATRIX[3].xyz;
@@ -39,6 +40,7 @@ void vertex() {
     world_position = wp;
 }
 void fragment() {
+    if (tree_fade_out(world_position, FRAGCOORD.xy, tree_ranges.x)) discard; // rewrite: hand-over to impostors
     vec4 pixel = texture(pixel_map, UV) * tint;
     ALBEDO = pixel.rgb;
     ROUGHNESS = 0.93;

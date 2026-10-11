@@ -393,10 +393,12 @@ public partial class WorldLab
     {
         var kinds = new SortedDictionary<string, (long Nodes, long Instances, long Triangles, long Shadow)>();
         var trees = new SortedDictionary<int, (long Trees, long Impostors, long Cards)>();
-        foreach (var child in _streamer.GetChildren())
+        foreach (var child in _streamer.GetChildren().Concat(_streamer.Field.GetChildren()))
         {
-            if (child is not Node3D tile || !tile.Name.ToString().StartsWith("T")) continue;
-            int level = int.TryParse(tile.Name.ToString().Split('_')[0][1..], out int lv) ? lv : -1;
+            // Terrain tiles "T<level>_x_z"; tree field cells "C<level>_x_z" (level 1: 128 m near cells, 4: 1 km far cells).
+            if (child is not Node3D tile || !(tile.Name.ToString().StartsWith("T") || tile.Name.ToString().StartsWith("C"))) continue;
+            bool cell = tile.Name.ToString().StartsWith("C");
+            int level = (int.TryParse(tile.Name.ToString().Split('_')[0][1..], out int lv) ? lv : -1) + (cell ? 100 : 0);
             var tc = trees.GetValueOrDefault(level);
             long Meta(string k) => tile.HasMeta(k) ? tile.GetMeta(k).AsInt64() : 0;
             trees[level] = (tc.Trees + Meta("trees"), tc.Impostors + Meta("impostors"), tc.Cards + Meta("cards"));
@@ -408,7 +410,7 @@ public partial class WorldLab
                     RenderLayers.TreesNear => "trees_near", RenderLayers.TreesFar => "trees_far", RenderLayers.TreeCards => "tree_cards",
                     RenderLayers.Plants => "plants", RenderLayers.Rocks => "rocks_props", RenderLayers.TreeImpostors => "tree_impostors", _ => "other",
                 };
-                string key = $"{kind}/L{level}";
+                string key = level >= 100 ? $"{kind}/cell{level - 100}" : $"{kind}/L{level}";
                 var v = kinds.GetValueOrDefault(key);
                 long inst = m.Multimesh.InstanceCount;
                 kinds[key] = (v.Nodes + 1, v.Instances + inst, v.Triangles + inst * MeshTriangles(m.Multimesh.Mesh),
@@ -421,7 +423,7 @@ public partial class WorldLab
             byKind[k] = new JsonObject { ["nodes"] = v.Nodes, ["instances"] = v.Instances, ["triangles"] = v.Triangles, ["shadow_nodes"] = v.Shadow };
         o["multimesh"] = byKind;
         var t = new JsonObject();
-        foreach (var (level, v) in trees) t[$"L{level}"] = new JsonObject { ["trees_3d"] = v.Trees, ["tree_impostors"] = v.Impostors, ["tree_cards"] = v.Cards };
+        foreach (var (level, v) in trees) t[level >= 100 ? $"cell{level - 100}" : $"L{level}"] = new JsonObject { ["trees_3d"] = v.Trees, ["tree_impostors"] = v.Impostors, ["tree_cards"] = v.Cards };
         o["trees_per_level"] = t;
         return o;
     }

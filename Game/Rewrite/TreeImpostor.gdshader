@@ -18,6 +18,7 @@ global uniform float leaf_translucency;
 global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
 global uniform vec4 wind;
+#include "res://Game/Rewrite/TreeFade.gdshaderinc"
 
 varying vec3 card_world;
 varying flat int layer0;
@@ -75,6 +76,7 @@ vec3 side_normal(vec4 encoded, float a) {
 }
 
 void fragment() {
+	if (tree_fade_in(card_world, FRAGCOORD.xy, tree_ranges.x) || tree_fade_out(card_world, FRAGCOORD.xy, tree_ranges.y)) discard;
 	vec2 uv = UV;
 	vec4 a0 = texture(albedo_frames, vec3(uv, float(layer0)));
 	vec4 a1 = texture(albedo_frames, vec3(uv, float(layer1)));
