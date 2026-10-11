@@ -81,7 +81,8 @@ milestone M6), caves.
 ## New in build 47 — last streaming pass (before Atmosphere 2.0)
 * **Fewer hitches while moving**: tree, rock and bush collision is added in small steps that respect the frame budget
   (build 46: up to 16.6 ms in one frame), and the terrain meshes are prepared on the background threads (half of the
-  main-thread time per new tile).
+  main-thread time per new tile). The background workers are back at normal priority (lower priority could starve
+  them on PCs with fewer cores; build 46's gain came from running fewer of them).
 * Nothing visual changed. **This build is the baseline for Atmosphere 2.0**: please run **Standard** once (Tree
   shadows: simplified), and check collisions, jumping, slopes and flying as before. It also becomes the rollback point.
 
