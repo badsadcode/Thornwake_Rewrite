@@ -55,6 +55,12 @@ public partial class WorldLab
         public int Stills = 8, StillsTaken;
         public readonly List<string> Captures = new();
         public bool HudWas;
+        // A/B stills: at each still, the same frame once per value of one setting (move and clock paused meanwhile).
+        public string? CompareKey;
+        public double[] CompareValues = Array.Empty<double>();
+        public int CompareStep = -1, CompareWait;
+        public bool CompareArmed;
+        public double CompareWas;
         public int Index;
         public BenchStage Stage = BenchStage.World;
         public double StageTime, StableTime;
@@ -78,6 +84,7 @@ public partial class WorldLab
     private string? _benchWorldKey;
     private Label _benchLabel = null!;
     private const double BenchWarmup = 3, BenchAblateSeconds = 4;
+    private const int BenchCompareFrames = 8; // frames to render before an A/B still (TAA, volumetric fog history)
 
     private static JsonObject BenchConfig() =>
         JsonNode.Parse(Godot.FileAccess.GetFileAsString("res://Content/benchmarks.json"))!.AsObject();
@@ -111,6 +118,15 @@ public partial class WorldLab
             Stills = suiteNode["stills"]?.GetValue<int>() ?? 8,
             Saved = GameSettings.All.ToDictionary(s => s.Key, s => s.Value),
         };
+        // --bench-stills=N: stills per scene; --bench-compare=key=a,b: A/B stills of one setting (also "compare" in the suite).
+        string? Arg(string name) => OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith(name))?[name.Length..];
+        if (int.TryParse(Arg("--bench-stills="), out int stills)) _bench.Stills = Math.Max(1, stills);
+        string? compare = Arg("--bench-compare=") ?? suiteNode["compare"]?.GetValue<string>();
+        if (_bench.Capture && compare?.Split('=') is [var key, var list] && GameSettings.All.Any(s => s.Key == key))
+        {
+            _bench.CompareKey = key;
+            _bench.CompareValues = list.Split(',').Select(v => double.Parse(v, CultureInfo.InvariantCulture)).ToArray();
+        }
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         _menu.Visible = false;
         if (_bench.Capture) { _bench.HudWas = _showHud; _showHud = false; _hud.Visible = false; _help.Visible = false; Directory.CreateDirectory(Path.Combine(outDir, "captures")); }
@@ -241,6 +257,7 @@ public partial class WorldLab
                 break;
             case BenchStage.Measure:
             {
+                if (run.CompareStep >= 0) { run.StageTime -= frameMs / 1000.0; BenchCompareStep(run, scene); break; }
                 BenchRecord(run, frameMs);
                 bool done;
                 double progress;
@@ -259,10 +276,8 @@ public partial class WorldLab
                 // Stills: one at the start, then evenly along the move (the last at its end).
                 if (run.Capture && run.StillsTaken <= run.Stills && (progress >= (double)run.StillsTaken / run.Stills || done))
                 {
-                    string file = Path.Combine(run.OutDir, "captures", $"{run.Index + 1:00}-{scene.Id}-{run.StillsTaken:00}.jpg");
-                    var image = GetViewport().GetTexture().GetImage(); // (null when headless: nothing rendered)
-                    if (image != null && !image.IsEmpty()) { image.SaveJpg(file, .9f); run.Captures.Add(Path.GetFileName(file)); }
-                    run.StillsTaken++;
+                    if (run.CompareKey != null) { run.CompareStep = 0; run.CompareWas = GameSettings.All.First(s => s.Key == run.CompareKey).Value; BenchCompareStep(run, scene); }
+                    else { BenchSaveStill(run, $"{run.Index + 1:00}-{scene.Id}-{run.StillsTaken:00}.jpg"); run.StillsTaken++; }
                 }
                 if (done)
                 {
@@ -310,6 +325,31 @@ public partial class WorldLab
         }
 
         void Next(BenchStage stage) { run.Stage = stage; run.StageTime = 0; run.StableTime = 0; }
+    }
+
+    private void BenchSaveStill(BenchRun run, string name)
+    {
+        var image = GetViewport().GetTexture().GetImage(); // (null when headless: nothing rendered)
+        if (image == null || image.IsEmpty()) return;
+        image.SaveJpg(Path.Combine(run.OutDir, "captures", name), .9f);
+        run.Captures.Add(name);
+    }
+
+    /// <summary>One frame of an A/B still: set the next value, let it render a few frames (temporal effects settle),
+    /// save, and after the last value put the setting back.</summary>
+    private void BenchCompareStep(BenchRun run, BenchScenario scene)
+    {
+        var setting = GameSettings.All.First(s => s.Key == run.CompareKey);
+        double value = run.CompareValues[run.CompareStep];
+        if (!run.CompareArmed) { setting.Value = value; run.CompareWait = BenchCompareFrames; run.CompareArmed = true; return; }
+        if (run.CompareWait > 0) { run.CompareWait--; return; }
+        string tag = run.CompareKey![(run.CompareKey.LastIndexOf('.') + 1)..] + "-" + value.ToString(CultureInfo.InvariantCulture);
+        BenchSaveStill(run, $"{run.Index + 1:00}-{scene.Id}-{run.StillsTaken:00}-{tag}.jpg");
+        run.CompareArmed = false;
+        if (++run.CompareStep < run.CompareValues.Length) return;
+        setting.Value = run.CompareWas;
+        run.CompareStep = -1;
+        run.StillsTaken++;
     }
 
     /// <summary>Move along the flight path; false once past its end.</summary>
