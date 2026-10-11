@@ -91,6 +91,16 @@
   "suites": {
     "standard": { "name": "Standard (all scenes)", "scenarios": ["forest", "lake", "coast", "mountains", "flight"], "ablate": true },
     "quick": { "name": "Quick (forest and flight)", "scenarios": ["forest", "flight"], "ablate": false },
+    "treedetail": {
+      "name": "Tree detail A/B (forest and lake: full-detail trees 80 / 140 / 220 m, tree shadows simplified / detailed)",
+      "scenarios": ["forest", "lake"],
+      "variants": [
+        { "view.tree_full_detail": 80, "fx.tree_shadows": 0 }, { "view.tree_full_detail": 140, "fx.tree_shadows": 0 },
+        { "view.tree_full_detail": 220, "fx.tree_shadows": 0 }, { "view.tree_full_detail": 80, "fx.tree_shadows": 1 },
+        { "view.tree_full_detail": 140, "fx.tree_shadows": 1 }, { "view.tree_full_detail": 220, "fx.tree_shadows": 1 }
+      ],
+      "ablate": false
+    },
     "trees": {
       "name": "Tree range A/B (forest, detailed trees 800 m to 6.4 km)",
       "scenarios": ["forest", "lake"],

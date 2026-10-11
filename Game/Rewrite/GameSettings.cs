@@ -118,6 +118,9 @@ public static class GameSettings
         "Beyond the detailed trees, the same trees drawn as pictures of their own models (baked from 8 sides and above, " +
         "lit, swaying): looks like the 3D forest at a fraction of the cost. Off: as in build 41 (3D trees, then tree cards).",
         options: new[] { "off (build 41)", "~1.6 km", "~3.2 km", "~6.4 km", "~12.8 km" }, rebuild: true));
+    public static readonly Setting TreeFullDetail = Add(new("view.tree_full_detail", "View distance", "Full-detail trees", 60, 300, 10, 140,
+        "With tree impostors on: how far trees use their most detailed model (and cast shadows). Beyond, the lighter " +
+        "model of the same tree. Build 42: 220 m.", "m", rebuild: true));
     public static readonly Setting FarTreeDistance = Add(new("view.far_trees", "View distance", "Distant tree cards", 0, 4, 1, 1,
         "Distance up to which forests are drawn as simple tree cards (at Terrain detail range ×1).",
         options: new[] { "~3 km", "~6 km", "~12 km", "~24 km", "~48 km" }, rebuild: true));
@@ -125,6 +128,10 @@ public static class GameSettings
         "Multiplier on how far small objects stay visible.", "×", rebuild: true));
 
     // ---- lighting and effects (live)
+    public static readonly Setting TreeShadows = Add(new("fx.tree_shadows", "Lighting and effects", "Tree shadows", 0, 1, 1, 0,
+        "With tree impostors on: simplified = near trees cast their shadow from the lighter model of the same tree (looks the " +
+        "same in the shadow, about a third of the cost); detailed = from the full model (build 42).",
+        options: new[] { "simplified", "detailed (build 42)" }, rebuild: true));
     public static readonly Setting PlantShadows = Add(new("fx.plant_shadows", "Lighting and effects", "Grass and plant shadows", 0, 1, 1, 0,
         "Grass, flowers, reeds and shore plants cast shadows (cut out by their sprites, swaying with them). Off: as in " +
         "build 32. Costly with dense grass: benchmark it.", options: new[] { "off", "on" }, rebuild: true));

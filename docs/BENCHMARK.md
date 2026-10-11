@@ -10,7 +10,8 @@ scenes, profiles and test suites: `Content/benchmarks.json`.
 * **From the command line** (it quits when finished; exit code 0 = complete):
   `Thornwake.exe -- --bench=standard --bench-profile=high --window=1920x1080`
   * `--bench=<suite>`: `standard` (all scenes, ~15 min), `quick` (forest + flight, ~5 min), `trees` (tree range
-    A/B: forest and lake with detailed trees 800 m, 1.6, 3.2 and 6.4 km).
+    A/B: forest and lake with detailed trees 800 m, 1.6, 3.2 and 6.4 km), `treedetail` (forest and lake with
+    full-detail trees 80 / 140 / 220 m × tree shadows simplified / detailed, ~10 min).
   * `--bench-profile=<id>`: `low`, `medium` (game defaults), `high`, `ultra` (Tom's dense-forest settings) or
     `current` (your own settings; the default).
   * `--bench-out=<folder>`: where the results go (default: the `bench` folder in the game's user folder).
@@ -48,8 +49,10 @@ Per scene (results.json, summary.txt, and `frames-NN-scene.csv` with every frame
 | memory_mb | video memory (total, textures, buffers), static memory |
 | content | what is loaded per tile level: 3D trees, impostors, tree cards, and per kind (near/far 3D trees, impostors, cards, plants, rocks) the batches, instances, triangles if all drawn, shadow casters |
 
-**What things cost** (suites with `ablate`): after the main measurement, each kind of object is hidden for 4 s
-(far 3D trees, all 3D trees, impostors, tree cards, grass and plants, rocks and props, everything) and each costly
+**What things cost** (suites with `ablate`): after the main measurement, each kind of object is hidden for 4 s, in
+every pass including shadows (far 3D trees, all 3D trees, impostors, tree cards, grass and plants, rocks and props,
+everything); then the shadows of each kind alone (trees, rocks, plants, terrain), the soft shadow filter and the
+shadow distance (build 43; build 42 hid kinds from the camera only, their shadows stayed); and each costly
 effect that is on is switched off for 4 s (shadows, volumetric clouds, volumetric fog, screen-space reflections, water
 reflections, SSAO, SSIL, sun shafts, light beams, ground fog, anti-aliasing). The report lists how many GPU and frame
 milliseconds each one saved. Object kinds sit on their own render layers, so hiding them is instant (no rebuild);

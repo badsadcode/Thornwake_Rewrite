@@ -136,3 +136,30 @@ impostors ~3.2 km or more. The forest looks as dense as before at any distance, 
 * Tom's numbers from the benchmark on the 3080 (the cloud machine renders in software, so only counts are real here).
 * Rocks, bushes and logs: the same cell batching (≈1,200 small batches today).
 * Occlusion behind hills (Godot occluders built from the coarse terrain), if the benchmark shows it is worth it.
+
+## Tom's first benchmark (build 42, 2026-10-11)
+RTX 3080, Ryzen 9 5950X, 1920×1080 fullscreen, his own settings (detailed trees ~800 m, impostors ~3.2 km, shadows
+high, grass density 3 to 400 m, volumetric clouds v2, SSIL). `standard` suite:
+
+| Scene | FPS | 1 % low | GPU ms | CPU render ms | draw calls |
+|---|---:|---:|---:|---:|---:|
+| forest | 37.9 | 35.6 | 25.8 | 5.9 | 6,254 |
+| lake | 35.3 | 32.1 | 27.8 | 4.3 | 4,789 |
+| coast | 105.8 | 98.6 | 9.0 | 1.5 | 1,227 |
+| mountains | 99.8 | 84.1 | 9.5 | 1.3 | 1,035 |
+| flight | 48.2 | 25.6 | 20.1 | 3.9 | 3,447 |
+
+* **GPU-bound** (the CPU needs 4–6 ms of the 26).
+* **Far trees solved:** 661 000 impostors cost 1.7 ms, the far 3D trees (LOD2) 2.0 ms, the cards 0.3 ms.
+* **What is left:** the near detailed trees (all 3D trees 12.9 ms, of which far ones 2.0 → **near LOD1 trees ≈ 11 ms**)
+  and **shadows 12.1 ms** (high: 450 m, 4 cascades, 8192² atlas, soft filter, every near tree casting with its full
+  model). Volumetric clouds 2.2–3.2 ms; everything else under 1 ms.
+* Build 42's "without X" hid kinds from the camera only; their shadows stayed. Build 43 hides them everywhere and
+  measures each kind's shadows, the terrain's shadows, the soft filter and the shadow distance separately. The
+  compile counter was wrong (Godot counts in total), so warm-up always ran its 30 s maximum; fixed.
+
+### Build 43 changes (to be measured)
+* **Simplified tree shadows** (new default; *Lighting → Tree shadows: detailed* = build 42): near trees cast from the
+  lighter LOD2 model of the same trees (≈590 instead of ≈1,900 triangles), shadow only; the camera still sees LOD1.
+* **Full-detail trees** distance (*View distance*, default 140 m; build 42: 220 m): how far trees use LOD1.
+* `treedetail` suite: forest and lake, full detail 80 / 140 / 220 m × tree shadows simplified / detailed.

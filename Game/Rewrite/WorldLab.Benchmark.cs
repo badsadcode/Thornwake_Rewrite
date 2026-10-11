@@ -31,7 +31,10 @@ public partial class WorldLab
 
     private sealed record BenchJob(BenchScenario Scene, Dictionary<string, double> Variant, string Label);
 
-    private sealed record BenchAblation(string Name, uint HideLayers, string? Key, double Value);
+    /// <summary>One thing to take away: object kinds (hidden in every pass, shadows too), shadow casting of kinds
+    /// (incl. the terrain), a setting, or a special shadow change (soft filter, shadow distance).</summary>
+    private sealed record BenchAblation(string Name, uint HideLayers, string? Key, double Value, uint NoShadowLayers = 0, bool TerrainShadows = false,
+        string? Special = null);
 
     private sealed class BenchRun
     {
@@ -204,7 +207,7 @@ public partial class WorldLab
             }
             case BenchStage.Warmup:
                 // Wait until shaders stop compiling (each new material compiles once; that stall is not the scene's cost).
-                if (BenchCompilesThisFrame() > 0) run.StableTime = 0; else run.StableTime += frameMs / 1000.0;
+                if (BenchCompileDelta() > 0) run.StableTime = 0; else run.StableTime += frameMs / 1000.0;
                 if ((run.StageTime > BenchWarmup && run.StableTime > 1) || run.StageTime > 30) { BenchBeginMeasure(run); Next(BenchStage.Measure); }
                 break;
             case BenchStage.Measure:
@@ -282,7 +285,18 @@ public partial class WorldLab
         return false;
     }
 
-    private static double BenchCompilesThisFrame() =>
+    private double _benchCompiles = -1;
+
+    /// <summary>Pipeline compilations since the last call (Godot's monitors count them in total since start).</summary>
+    private double BenchCompileDelta()
+    {
+        double total = BenchCompilesTotal();
+        double delta = _benchCompiles < 0 ? 0 : Math.Max(0, total - _benchCompiles);
+        _benchCompiles = total;
+        return delta;
+    }
+
+    private static double BenchCompilesTotal() =>
         Performance.GetMonitor(Performance.Monitor.PipelineCompilationsCanvas) + Performance.GetMonitor(Performance.Monitor.PipelineCompilationsMesh) +
         Performance.GetMonitor(Performance.Monitor.PipelineCompilationsSurface) + Performance.GetMonitor(Performance.Monitor.PipelineCompilationsDraw) +
         Performance.GetMonitor(Performance.Monitor.PipelineCompilationsSpecialization);
@@ -306,7 +320,7 @@ public partial class WorldLab
         run.DrawCalls += draws; run.MaxDrawCalls = Math.Max(run.MaxDrawCalls, draws);
         run.Primitives += RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalPrimitivesInFrame);
         run.Objects += RenderingServer.GetRenderingInfo(RenderingServer.RenderingInfo.TotalObjectsInFrame);
-        run.Compiles += BenchCompilesThisFrame();
+        run.Compiles += BenchCompileDelta();
         run.Samples++;
     }
 
@@ -438,21 +452,30 @@ public partial class WorldLab
 
     /// <summary>Things to take away one at a time: object kinds (render layers, instant) and effects that need no
     /// terrain rebuild, where they are on.</summary>
-    private static List<BenchAblation> BenchAblations()
+    private const uint AllObjects = RenderLayers.TreesNear | RenderLayers.TreesFar | RenderLayers.TreeImpostors | RenderLayers.TreeCards |
+                                    RenderLayers.Plants | RenderLayers.Rocks | RenderLayers.Objects;
+
+    private List<BenchAblation> BenchAblations()
     {
         var list = new List<BenchAblation>
         {
-            new("far 3D trees (tile level 2+)", RenderLayers.TreesFar, null, 0),
+            new("far 3D trees (LOD2)", RenderLayers.TreesFar, null, 0),
             new("all 3D trees", RenderLayers.TreesNear | RenderLayers.TreesFar, null, 0),
             new("tree impostors", RenderLayers.TreeImpostors, null, 0),
             new("tree cards", RenderLayers.TreeCards, null, 0),
             new("grass and plants", RenderLayers.Plants, null, 0),
-            new("rocks, bushes and logs", RenderLayers.Rocks, null, 0),
-            new("all vegetation and objects", RenderLayers.TreesNear | RenderLayers.TreesFar | RenderLayers.TreeImpostors | RenderLayers.TreeCards | RenderLayers.Plants | RenderLayers.Rocks | RenderLayers.Objects, null, 0),
+            new("rocks, bushes and logs", RenderLayers.Rocks | RenderLayers.Objects, null, 0),
+            new("all vegetation and objects", AllObjects, null, 0),
+            new("tree shadows", 0, null, 0, NoShadowLayers: RenderLayers.TreesNear | RenderLayers.TreesFar),
+            new("rock, bush and log shadows", 0, null, 0, NoShadowLayers: RenderLayers.Rocks | RenderLayers.Objects),
+            new("grass and plant shadows", 0, null, 0, NoShadowLayers: RenderLayers.Plants),
+            new("terrain shadows", 0, null, 0, TerrainShadows: true),
         };
+        if (GameSettings.Shadows.Index >= 3) list.Add(new("soft shadow filter (low instead of high)", 0, null, 0, Special: "soft-low"));
+        if (GameSettings.Shadows.Index >= 2) list.Add(new("shadow distance (90 m instead of the setting's)", 0, null, 0, Special: "shadow-90"));
         (string Name, string Key, double Off)[] effects =
         {
-            ("shadows", "fx.shadows", 0), ("volumetric clouds (flat clouds instead)", "sky.cloud_quality", 0), ("volumetric fog", "fx.volumetric_fog", 0),
+            ("all shadows", "fx.shadows", 0), ("volumetric clouds (flat clouds instead)", "sky.cloud_quality", 0), ("volumetric fog", "fx.volumetric_fog", 0),
             ("screen-space reflections", "fx.ssr", 0), ("water reflections (low)", "fx.water_reflections", 0), ("SSAO", "fx.ssao", 0),
             ("SSIL", "fx.ssil", 0), ("sun shafts", "fx.sun_shafts", 0), ("light beams", "fx.light_beams", 0), ("ground fog", "fx.ground_fog", 0),
             ("anti-aliasing", "perf.aa", 0),
@@ -463,10 +486,46 @@ public partial class WorldLab
     }
 
     private readonly Dictionary<string, double> _benchAblationRestore = new();
+    private readonly List<(GeometryInstance3D Node, bool Visible, GeometryInstance3D.ShadowCastingSetting Shadow)> _benchNodeRestore = new();
+    private float _benchShadowDistance = -1;
+
+    /// <summary>Every drawn object of the terrain tiles and the tree field.</summary>
+    private IEnumerable<GeometryInstance3D> BenchGeometry()
+    {
+        foreach (var root in _streamer.GetChildren().Concat(_streamer.Field.GetChildren()))
+            if (root is Node3D n)
+                foreach (var child in n.GetChildren())
+                    if (child is GeometryInstance3D g) yield return g;
+    }
 
     private void BenchApplyAblation(BenchAblation a, bool apply)
     {
-        if (a.HideLayers != 0) _camera.CullMask = apply ? 0xFFFFFu & ~a.HideLayers : 0xFFFFFu;
+        if (!apply)
+        {
+            foreach (var (node, visible, shadow) in _benchNodeRestore)
+                if (GodotObject.IsInstanceValid(node)) { node.Visible = visible; node.CastShadow = shadow; }
+            _benchNodeRestore.Clear();
+        }
+        else if (a.HideLayers != 0 || a.NoShadowLayers != 0 || a.TerrainShadows)
+            foreach (var g in BenchGeometry())
+            {
+                bool hide = (g.Layers & a.HideLayers) != 0;
+                bool noShadow = (g.Layers & a.NoShadowLayers) != 0 || (a.TerrainShadows && g.Layers == RenderLayers.Terrain && g is MeshInstance3D);
+                if (!hide && !noShadow) continue;
+                _benchNodeRestore.Add((g, g.Visible, g.CastShadow));
+                if (hide) g.Visible = false;
+                if (noShadow) g.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+            }
+        switch (a.Special)
+        {
+            case "soft-low":
+                RenderingServer.DirectionalSoftShadowFilterSetQuality(apply ? RenderingServer.ShadowQuality.SoftLow : RenderingServer.ShadowQuality.SoftHigh);
+                break;
+            case "shadow-90":
+                if (apply) { _benchShadowDistance = _atmosphere.Sun.DirectionalShadowMaxDistance; _atmosphere.Sun.DirectionalShadowMaxDistance = 90; }
+                else if (_benchShadowDistance > 0) { _atmosphere.Sun.DirectionalShadowMaxDistance = _benchShadowDistance; _benchShadowDistance = -1; }
+                break;
+        }
         if (a.Key != null && GameSettings.All.FirstOrDefault(s => s.Key == a.Key) is { } s)
         {
             if (apply) { _benchAblationRestore[a.Key] = s.Value; s.Value = a.Value; }
@@ -490,7 +549,9 @@ public partial class WorldLab
     {
         var run = _bench!;
         _bench = null;
-        _camera.CullMask = 0xFFFFFu;
+        foreach (var (node, visible, shadow) in _benchNodeRestore)
+            if (GodotObject.IsInstanceValid(node)) { node.Visible = visible; node.CastShadow = shadow; }
+        _benchNodeRestore.Clear();
         foreach (var (k, v) in _benchAblationRestore) if (GameSettings.All.FirstOrDefault(s => s.Key == k) is { } s) s.Value = v;
         _benchAblationRestore.Clear();
         foreach (var s in GameSettings.All) if (run.Saved.TryGetValue(s.Key, out double v)) s.Value = v;

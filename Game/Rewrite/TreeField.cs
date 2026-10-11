@@ -80,7 +80,7 @@ public sealed partial class TreeField : Node3D
     {
         DetailRange = 400f * (1 << GameSettings.TreeDistance.Index);
         ImpostorRange = Math.Max(DetailRange, 800f * (1 << GameSettings.TreeImpostors.Index));
-        NearRange = Math.Min(220, DetailRange * .5f);
+        NearRange = Math.Min(GameSettings.TreeFullDetail.F, DetailRange * .5f);
         RenderingServer.GlobalShaderParameterSet("tree_ranges", Enabled ? new Vector4(DetailRange, ImpostorRange, Fade, 1) : Vector4.Zero);
     }
 
@@ -251,9 +251,10 @@ public sealed partial class TreeField : Node3D
             multi.InstanceCount = count;
             multi.Buffer = buffer;
             var mmi = new MultiMeshInstance3D { Multimesh = multi, Layers = lod == 1 ? RenderLayers.TreesNear : RenderLayers.TreesFar };
+            bool detailedShadows = GameSettings.TreeShadows.Index == 1;
             if (lod == 1)
             {
-                mmi.CastShadow = shadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
+                mmi.CastShadow = shadows && detailedShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
                 mmi.VisibilityRangeEnd = NearRange; mmi.VisibilityRangeEndMargin = 30;
             }
             else
@@ -261,6 +262,16 @@ public sealed partial class TreeField : Node3D
                 mmi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
                 if (data.Near) { mmi.VisibilityRangeBegin = NearRange; mmi.VisibilityRangeBeginMargin = 30; }
                 mmi.VisibilityRangeEnd = DetailRange + Fade + diagonal; // beyond: impostors (the shader fades the edge)
+                if (data.Near && shadows && !detailedShadows)
+                {
+                    // Simplified tree shadows: the near trees' shadows come from this lighter model of the same trees
+                    // (same instances, shadow only), while the detailed model is what the camera sees.
+                    node.AddChild(new MultiMeshInstance3D
+                    {
+                        Multimesh = multi, Layers = RenderLayers.TreesNear, CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly,
+                        VisibilityRangeEnd = NearRange + 30,
+                    });
+                }
             }
             mmi.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self;
             node.AddChild(mmi);
