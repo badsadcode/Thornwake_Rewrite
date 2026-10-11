@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 44 — less stutter while moving
+Your build 43 benchmark: forest 38 → 56 FPS, lake 35 → 52. What was left: stutters while moving (flight 1 % low
+26 FPS). The slow frames were new terrain tiles being finished on the main thread, mostly building the ground's
+collision (a triangle shape, ~20 ms per tile).
+* **Ground collision is now a heightmap** (the tiles are a 1 m grid anyway): almost free to build. The walkable
+  ground is the same.
+* **Collision is built just after a tile appears**, nearest first, a slice per frame (you can't walk on a tile before
+  its collision exists, so nothing changes in play). Trunks, rocks and bushes add their shapes straight to the physics
+  engine instead of one node each.
+* **Benchmark:** the "game" column is now the game's own code per frame (the old "script" column was the whole
+  frame), and streaming is split into meshes, collision (ground / objects), objects, adding to the scene and the tree
+  field. Please run **Standard** again and, if you have time, **Tree detail A/B**.
+
 ## New in build 43 — cheaper near trees and shadows (from your benchmark)
 Your build 42 benchmark showed the far trees are solved (impostors 1.7 ms); what is left is the detailed trees near
 you (~11 ms) and the shadows (~12 ms).
