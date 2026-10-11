@@ -71,6 +71,47 @@ public sealed class TileData
     public required float[] Biome3 { get; init; }
     /// <summary>Water surface mesh (null when the tile is dry).</summary>
     public (Vector3[] Vertices, Color[] Colors, Vector2[] Flow, int[] Indices)? Water { get; set; }
+    /// <summary>
+    /// The terrain and water surfaces as Godot arrays, filled on the builder thread (round 30d: converting ~4,500
+    /// vertices × 10 arrays on the main thread was half of a tile's mesh commit). Null until <see cref="PrepareSurfaces"/>.
+    /// The committer takes ownership and disposes them.
+    /// </summary>
+    public Godot.Collections.Array? TerrainArrays { get; set; }
+    public Godot.Collections.Array? WaterArrays { get; set; }
+
+    /// <summary>Fill <see cref="TerrainArrays"/> and <see cref="WaterArrays"/> (pure data; safe on a worker thread).</summary>
+    public void PrepareSurfaces()
+    {
+        var arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = Vertices;
+        arrays[(int)Mesh.ArrayType.Normal] = Normals;
+        arrays[(int)Mesh.ArrayType.Color] = Colors;
+        arrays[(int)Mesh.ArrayType.TexUV] = Uv;
+        arrays[(int)Mesh.ArrayType.TexUV2] = Uv2;
+        arrays[(int)Mesh.ArrayType.Custom0] = Biome0;
+        arrays[(int)Mesh.ArrayType.Custom1] = Biome1;
+        arrays[(int)Mesh.ArrayType.Custom2] = Biome2;
+        arrays[(int)Mesh.ArrayType.Custom3] = Biome3;
+        arrays[(int)Mesh.ArrayType.Index] = Indices;
+        TerrainArrays = arrays;
+        if (Water is { } water && water.Indices.Length > 0)
+        {
+            var w = new Godot.Collections.Array();
+            w.Resize((int)Mesh.ArrayType.Max);
+            w[(int)Mesh.ArrayType.Vertex] = water.Vertices;
+            w[(int)Mesh.ArrayType.Color] = water.Colors;
+            w[(int)Mesh.ArrayType.TexUV] = water.Flow;
+            w[(int)Mesh.ArrayType.TexUV2] = WaterTint is { } tint && tint.Length == water.Vertices.Length ? tint : new Vector2[water.Vertices.Length];
+            var up = new Vector3[water.Vertices.Length];
+            Array.Fill(up, Vector3.Up);
+            w[(int)Mesh.ArrayType.Normal] = up;
+            w[(int)Mesh.ArrayType.Index] = water.Indices;
+            if (WaterShore is { } shore && shore.Length == water.Vertices.Length * 4) w[(int)Mesh.ArrayType.Custom0] = shore;
+            WaterArrays = w;
+        }
+    }
+
     /// <summary>Triangle soup for a ConcavePolygonShape3D (level 0 only).</summary>
     public Vector3[]? CollisionFaces { get; init; }
     public List<TreeInstance> Trees { get; init; } = new();
@@ -297,6 +338,7 @@ public static class TileBuilder
         if (key.Level >= (config.CardLevels >= 0 ? config.CardLevels : config.TreeLevels) && key.Level <= config.FarTreeLevels)
             data.FarTrees = GroundCover.FarTrees(key, grid, sea, coverSeed, config.ForestDensity);
         data.BuildMs = timer.Elapsed.TotalMilliseconds;
+        data.PrepareSurfaces();
         return data;
 
         Vector3[] Faces(Vector3[] v)

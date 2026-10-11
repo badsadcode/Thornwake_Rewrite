@@ -353,19 +353,9 @@ public partial class WorldStreamer : Node3D
         var key = data.Key;
         long stage = Stopwatch.GetTimestamp();
         var root = new Node3D { Name = $"T{key.Level}_{key.X}_{key.Z}", Position = new Vector3((float)(key.MinX - _originX), 0, (float)(key.MinZ - _originZ)) };
-        using (var arrays = new Godot.Collections.Array())
+        if (data.TerrainArrays == null) data.PrepareSurfaces(); // normally done by the builder thread
+        using (var arrays = data.TerrainArrays!)
         {
-            arrays.Resize((int)Mesh.ArrayType.Max);
-            arrays[(int)Mesh.ArrayType.Vertex] = data.Vertices;
-            arrays[(int)Mesh.ArrayType.Normal] = data.Normals;
-            arrays[(int)Mesh.ArrayType.Color] = data.Colors;
-            arrays[(int)Mesh.ArrayType.TexUV] = data.Uv;
-            arrays[(int)Mesh.ArrayType.TexUV2] = data.Uv2;
-            arrays[(int)Mesh.ArrayType.Custom0] = data.Biome0;
-            arrays[(int)Mesh.ArrayType.Custom1] = data.Biome1;
-            arrays[(int)Mesh.ArrayType.Custom2] = data.Biome2;
-            arrays[(int)Mesh.ArrayType.Custom3] = data.Biome3;
-            arrays[(int)Mesh.ArrayType.Index] = data.Indices;
             var mesh = new ArrayMesh();
             const int rgbaFloat = (int)Mesh.ArrayCustomFormat.RgbaFloat;
             var format = (Mesh.ArrayFormat)(((long)rgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift) | ((long)rgbaFloat << (int)Mesh.ArrayFormat.FormatCustom1Shift)
@@ -379,19 +369,10 @@ public partial class WorldStreamer : Node3D
         }
         if (data.Water is { } water && water.Indices.Length > 0)
         {
-            using var arrays = new Godot.Collections.Array();
-            arrays.Resize((int)Mesh.ArrayType.Max);
-            arrays[(int)Mesh.ArrayType.Vertex] = water.Vertices;
-            arrays[(int)Mesh.ArrayType.Color] = water.Colors;
-            arrays[(int)Mesh.ArrayType.TexUV] = water.Flow;
-            if (data.WaterTint is { } tint && tint.Length == water.Vertices.Length) arrays[(int)Mesh.ArrayType.TexUV2] = tint;
-            else arrays[(int)Mesh.ArrayType.TexUV2] = new Vector2[water.Vertices.Length];
-            arrays[(int)Mesh.ArrayType.Normal] = Enumerable.Repeat(Vector3.Up, water.Vertices.Length).ToArray();
-            arrays[(int)Mesh.ArrayType.Index] = water.Indices;
+            using var arrays = data.WaterArrays!;
             var mesh = new ArrayMesh();
             if (data.WaterShore is { } shore && shore.Length == water.Vertices.Length * 4)
             {
-                arrays[(int)Mesh.ArrayType.Custom0] = shore;
                 mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays, null, null,
                     (Mesh.ArrayFormat)((long)Mesh.ArrayCustomFormat.RgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift));
             }
