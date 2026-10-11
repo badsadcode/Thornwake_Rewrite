@@ -52,8 +52,9 @@ public partial class WorldStreamer : Node3D
         public IEnumerator<CollisionShape3D>? Objects;
     }
 
-    // Object shapes added per step (a dense forest tile has ~1,000; all at once took up to 15 ms).
-    private const int ObjectBatch = 128;
+    // Object shapes added per step, the budget checked between steps (a dense forest tile has ~1,000; all at once took up
+    // to 15 ms; batches of 128 still up to 16.6 ms on Tom's PC: rock hulls are slow to build).
+    private const int ObjectBatch = 16;
 
     // The ground's triangle shape is built in pieces of this many triangles (a whole 64 m tile, 8,192 triangles, took
     // ~18 ms in one go: a hitch whenever a tile arrived).
