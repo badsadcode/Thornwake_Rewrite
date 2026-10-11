@@ -24,6 +24,9 @@ public static class ObjectCollision
         .55f, .5f,                          // bald cypress (fluted base)
     };
 
+    /// <summary>Trunk radius at scale 1 (0 = passable).</summary>
+    public static float TrunkRadius(int species) => species < Trunk.Length ? Trunk[species] : .3f;
+
     private static readonly Dictionary<float, CylinderShape3D> Cylinders = new();
 
     private static CylinderShape3D Cylinder(float radius, float height)
@@ -33,23 +36,15 @@ public static class ObjectCollision
         return shape;
     }
 
-    /// <summary>
-    /// Add the tile's object shapes to <paramref name="body"/>. Round 30c: shapes go straight to the physics server
-    /// (no CollisionShape3D node per trunk, rock and bush, which made committing a forest tile slow); the shape
-    /// resources are kept alive in the body's metadata. The body must have no CollisionShape3D children (their shape
-    /// indices would clash with these).
-    /// </summary>
-    public static void Add(StaticBody3D body, TileData data, List<Shape3D> keep)
+    public static void Add(StaticBody3D body, TileData data)
     {
-        var rid = body.GetRid();
-        void Shape(Shape3D shape, Transform3D at) { keep.Add(shape); PhysicsServer3D.BodyAddShape(rid, shape.GetRid(), at); }
         foreach (var tree in data.Trees)
         {
             float radius = tree.Species < Trunk.Length ? Trunk[tree.Species] : .3f;
             if (radius <= 0) continue;
             float scale = tree.Transform.Basis.X.Length();
             var at = tree.Transform.Origin + Vector3.Up * 2f;
-            Shape(Cylinder(radius * scale, 4), new Transform3D(Basis.Identity, at));
+            body.AddChild(new CollisionShape3D { Shape = Cylinder(radius * scale, 4), Position = at });
         }
         foreach (var rock in data.Rocks)
         {
@@ -62,7 +57,7 @@ public static class ObjectCollision
             var unit = RockMeshes.HullPoints(rock.Kind);
             var points = new Vector3[unit.Length];
             for (int i = 0; i < unit.Length; i++) points[i] = b * unit[i];
-            Shape(new ConvexPolygonShape3D { Points = points }, new Transform3D(Basis.Identity, rock.Transform.Origin));
+            body.AddChild(new CollisionShape3D { Shape = new ConvexPolygonShape3D { Points = points }, Position = rock.Transform.Origin });
         }
         foreach (var prop in data.Props)
         {
@@ -72,14 +67,17 @@ public static class ObjectCollision
             {
                 case GroundCover.Log:
                     // Lying along its local X, 3.4 m long.
-                    Shape(new CapsuleShape3D { Radius = .24f * scale, Height = 3.4f * scale },
-                        new Transform3D(t.Basis.Orthonormalized() * new Basis(Vector3.Back, Mathf.Pi / 2), t.Origin + Vector3.Up * .2f * scale));
+                    body.AddChild(new CollisionShape3D
+                    {
+                        Shape = new CapsuleShape3D { Radius = .24f * scale, Height = 3.4f * scale },
+                        Transform = new Transform3D(t.Basis.Orthonormalized() * new Basis(Vector3.Back, Mathf.Pi / 2), t.Origin + Vector3.Up * .2f * scale),
+                    });
                     break;
                 case GroundCover.Stump:
-                    Shape(Cylinder(.4f * scale, 1), new Transform3D(Basis.Identity, t.Origin + Vector3.Up * .3f));
+                    body.AddChild(new CollisionShape3D { Shape = Cylinder(.4f * scale, 1), Position = t.Origin + Vector3.Up * .3f });
                     break;
                 default: // bushes: a low, soft-edged obstacle
-                    Shape(Cylinder(.45f * scale, 1), new Transform3D(Basis.Identity, t.Origin + Vector3.Up * .5f));
+                    body.AddChild(new CollisionShape3D { Shape = Cylinder(.45f * scale, 1), Position = t.Origin + Vector3.Up * .5f });
                     break;
             }
         }

@@ -585,6 +585,31 @@ public partial class WorldLab : Node3D
         }
     }
 
+    /// <summary>
+    /// Height of the walkable surface at (x, z): the first collision hit straight down from high above (terrain or an
+    /// object), else the exact terrain height. The collision mesh is the terrain sampled every metre, so at a cliff it
+    /// can run metres above the exact height between two grid points.
+    /// </summary>
+    private float GroundY(double x, double z)
+    {
+        double h = _sampler!.Sample(x, z).Height;
+        var at = new Vector3((float)(x - _originX), (float)h, (float)(z - _originZ));
+        var space = _player.GetWorld3D().DirectSpaceState;
+        var from = at + Vector3.Up * 300;
+        for (int i = 0; i < 6; i++)
+        {
+            var hit = space.IntersectRay(PhysicsRayQueryParameters3D.Create(from, at + Vector3.Down * 50, 1));
+            if (hit.Count == 0) break;
+            var y = ((Vector3)hit["position"]).Y;
+            // Terrain or a rock: stand on it. A trunk, stump, bush or log: look below it.
+            var owner = hit["collider"].As<CollisionObject3D>();
+            var shape = owner?.ShapeOwnerGetOwner(owner.ShapeFindOwner(hit["shape"].AsInt32())) as CollisionShape3D;
+            if (shape?.Shape is ConcavePolygonShape3D or ConvexPolygonShape3D or null) return y;
+            from = new Vector3(at.X, y - .05f, at.Z);
+        }
+        return (float)h;
+    }
+
     private void Teleport(double x, double z)
     {
         if (_sampler == null) return;
@@ -649,6 +674,7 @@ public partial class WorldLab : Node3D
     // ------------------------------------------------------------------ frame
 
     private ulong _processStartUs;
+    private bool _collisionTestPending = OS.GetCmdlineUserArgs().Contains("--collision-test");
     /// <summary>Time of the last _Process (this script's own work each frame; benchmark).</summary>
     private double _lastProcessMs;
 
@@ -664,9 +690,10 @@ public partial class WorldLab : Node3D
         _horizon?.Step(PlayerX, PlayerZ, _originX, _originZ, _streamer.Levels, WorldStreamer.TopRadius);
         if (_holding && _streamer.HasGround(PlayerX, PlayerZ))
         {
-            // Snap to the generated ground once its collision exists.
-            var t = _sampler.Sample(PlayerX, PlayerZ);
-            _player.Position = new Vector3(_player.Position.X, (float)t.Height + .05f, _player.Position.Z);
+            // Snap to the generated ground once its collision exists: onto the collision surface, which at cliffs (a
+            // drop between two 1 m grid points) runs above the exact terrain height; the player stood under the ground.
+            _player.Position = new Vector3(_player.Position.X, GroundY(PlayerX, PlayerZ) + .05f, _player.Position.Z);
+            _player.Velocity = Vector3.Zero;
             _holding = false;
         }
         if (_overlay.Visible && _generation == null && _streamer.Missing < 20) _overlay.Visible = false;
@@ -699,6 +726,12 @@ public partial class WorldLab : Node3D
         _hudTimer -= delta;
         if (_hudTimer <= 0) { _hudTimer = .2; UpdateHud(); }
         _lastProcessMs = (Time.GetTicksUsec() - _processStartUs) / 1000.0;
+        if (_collisionTestPending && _streamer.Settled && !_holding && _generation == null)
+        {
+            // --at=x,z picks the test area (otherwise the world's start).
+            if (_shotAt is { } testAt && Math.Abs(PlayerX - testAt.X) + Math.Abs(PlayerZ - testAt.Z) > 2) { SetFly(false); Teleport(testAt.X, testAt.Z); }
+            else { _collisionTestPending = false; CollisionTestSetup(); }
+        }
         if (_bench != null && _generation == null) BenchStep(delta);
         else if (_smokeDirectory != null) Smoke(delta);
     }
@@ -774,11 +807,12 @@ public partial class WorldLab : Node3D
             if (Input.IsKeyPressed(Key.D)) input.X += 1;
         }
         if (_smokeDirectory != null && _shotPath == null && _smokeStage == 2) input = new Vector2(0, -1);
+        if (CollisionTestActive) { CollisionTestStep(delta); input = _testInput; }
         input = input.LimitLength(1);
         var forward = new Vector3(-Mathf.Sin(_yaw), 0, -Mathf.Cos(_yaw));
         var right = new Vector3(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));
         var move = right * input.X - forward * input.Y;
-        bool sprint = !typing && Input.IsKeyPressed(Key.Shift);
+        bool sprint = (!typing && Input.IsKeyPressed(Key.Shift)) || (CollisionTestActive && _testSprint);
         var velocity = _player.Velocity;
 
         UpdateLocalWater(dt, typing);
@@ -814,15 +848,26 @@ public partial class WorldLab : Node3D
         {
             float speed = sprint ? 11 : 5;
             velocity.X = move.X * speed; velocity.Z = move.Z * speed;
-            if (_player.IsOnFloor()) { if (!typing && Input.IsKeyPressed(Key.Space)) velocity.Y = 6.5f; }
+            if (_player.IsOnFloor()) { if ((!typing && Input.IsKeyPressed(Key.Space)) || (CollisionTestActive && _testJump)) velocity.Y = 6.5f; }
             else velocity.Y -= 20 * dt;
         }
         _player.Velocity = velocity;
         _player.MoveAndSlide();
         UpdateWakes(dt, level);
-        // Never fall through the world if collision has not streamed in yet (e.g. after very fast flight).
+        // Never fall through the world if collision has not streamed in yet (e.g. after very fast flight): back onto
+        // the collision surface (or the terrain height without collision), and stop the fall.
         var ground = _sampler.Sample(PlayerX, PlayerZ).Height;
-        if (!_noclip && _player.Position.Y < ground - .5) _player.Position = new Vector3(_player.Position.X, (float)ground + .05f, _player.Position.Z);
+        // Below a cliff the 1 m collision mesh can legitimately run under the exact height: only act when the player
+        // is under the collision surface itself (it used to lift the player onto the exact height, up cliff faces).
+        if (!_noclip && _player.Position.Y < ground - .5)
+        {
+            float surface = GroundY(PlayerX, PlayerZ);
+            if (_player.Position.Y < surface - .25f)
+            {
+                _player.Position = new Vector3(_player.Position.X, surface + .05f, _player.Position.Z);
+                _player.Velocity = _player.Velocity with { Y = 0 };
+            }
+        }
 
         // Character: face the direction of travel, swing limbs.
         var flat = new Vector3(_player.Velocity.X, 0, _player.Velocity.Z);

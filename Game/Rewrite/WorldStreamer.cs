@@ -39,7 +39,25 @@ public partial class WorldStreamer : Node3D
     public double CommitFieldMs => _field.FrameCommitMs;
     /// <summary>Of <see cref="CommitCollisionMs"/>: the ground's triangle shapes (the rest: trees, rocks, logs, bushes).</summary>
     public double CommitGroundMs { get; private set; }
-    private readonly Dictionary<TileKey, (Node3D Root, TileData Data)> _pendingCollision = new();
+    private readonly Dictionary<TileKey, PendingCollisionTile> _pendingCollision = new();
+
+    /// <summary>A level-0 tile whose collision is being built, a piece per step.</summary>
+    private sealed class PendingCollisionTile(Node3D root, TileData data)
+    {
+        public readonly Node3D Root = root;
+        public readonly TileData Data = data;
+        public StaticBody3D? Body;
+        public int Next; // next ground piece
+    }
+
+    // The ground's triangle shape is built in pieces of this many triangles (a whole 64 m tile, 8,192 triangles, took
+    // ~18 ms in one go: a hitch whenever a tile arrived).
+    private const int GroundPieceTriangles = 1024;
+
+    private void DropCollision(TileKey key)
+    {
+        if (_pendingCollision.Remove(key, out var p)) p.Body?.Free(); // a half-built body is not in the scene yet
+    }
     public int PendingCollision => _pendingCollision.Count;
     public long Triangles { get; private set; }
     /// <summary>Instances committed so far (diagnostics): grass tufts, rocks, props, far tree cards.</summary>
@@ -136,6 +154,7 @@ public partial class WorldStreamer : Node3D
     {
         _revision++;
         foreach (var node in _tiles.Values) { RemoveChild(node); node.QueueFree(); }
+        foreach (var p in _pendingCollision.Values) p.Body?.Free(); // never added to the scene
         _pendingCollision.Clear();
         _tiles.Clear(); _tileTriangles.Clear(); _tileRevision.Clear(); _failed.Clear(); _desired.Clear();
         _config = DetailConfig.For(sampler); Levels = 7 + GameSettings.TerrainDistance.Index;
@@ -219,31 +238,35 @@ public partial class WorldStreamer : Node3D
         {
             foreach (var key in _pendingCollision.Keys.OrderBy(k => Distance(k, px, pz)).ToList())
             {
-                if (CommitCollisionMs > 0 && timer.Elapsed.TotalMilliseconds > 8) break;
-                var (root, data) = _pendingCollision[key];
-                _pendingCollision.Remove(key);
-                if (!GodotObject.IsInstanceValid(root) || !_tiles.TryGetValue(key, out var current) || current != root) continue;
-                long t0 = Stopwatch.GetTimestamp();
-                // All shapes go straight to the physics server (see ObjectCollision); kept alive in the body's metadata.
-                var body = new StaticBody3D { CollisionLayer = 1, CollisionMask = 0 };
-                Shape3D ground;
-                var groundAt = Transform3D.Identity;
-                if (data.CollisionHeights is { } heights)
+                var p = _pendingCollision[key];
+                if (!GodotObject.IsInstanceValid(p.Root) || !_tiles.TryGetValue(key, out var current) || current != p.Root) { DropCollision(key); continue; }
+                // The same collision as build 43 (Tom, build 44: heightmap ground and server-side shapes made rocks push
+                // the player back and let the player walk up slopes that could not be climbed before): triangle shapes
+                // for the ground, a CollisionShape3D per trunk, rock, log and bush. Only *when* it is built changed:
+                // after the tile appears, in pieces, nearest tile first; the ground under the player waits for it.
+                var faces = p.Data.CollisionFaces!;
+                int pieces = (faces.Length / 3 + GroundPieceTriangles - 1) / GroundPieceTriangles;
+                while (p.Next < pieces)
                 {
-                    // A heightmap shape is centred on its origin, 1 m between samples: centre it on the tile.
-                    int side = (int)Math.Round(Math.Sqrt(heights.Length));
-                    ground = new HeightMapShape3D { MapWidth = side, MapDepth = side, MapData = heights };
-                    groundAt = new Transform3D(Basis.Identity, new Vector3((side - 1) * .5f, 0, (side - 1) * .5f));
+                    if (CommitCollisionMs > 0 && timer.Elapsed.TotalMilliseconds > 8) goto budget;
+                    long t0 = Stopwatch.GetTimestamp();
+                    p.Body ??= new StaticBody3D { CollisionLayer = 1, CollisionMask = 0 };
+                    int start = p.Next * GroundPieceTriangles * 3, count = Math.Min(GroundPieceTriangles * 3, faces.Length - start);
+                    p.Body.AddChild(new CollisionShape3D { Shape = new ConcavePolygonShape3D { Data = faces[start..(start + count)], BackfaceCollision = true } });
+                    p.Next++;
+                    double ms = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+                    CommitGroundMs += ms; CommitCollisionMs += ms;
                 }
-                else ground = new ConcavePolygonShape3D { Data = data.CollisionFaces, BackfaceCollision = true };
-                var keep = new List<Shape3D> { ground };
-                PhysicsServer3D.BodyAddShape(body.GetRid(), ground.GetRid(), groundAt);
-                CommitGroundMs += Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
-                ObjectCollision.Add(body, data, keep);
-                body.SetMeta("shapes", new Godot.Collections.Array<Shape3D>(keep));
-                root.AddChild(body);
-                CommitCollisionMs += Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+                {
+                    if (CommitCollisionMs > 0 && timer.Elapsed.TotalMilliseconds > 8) goto budget;
+                    long t0 = Stopwatch.GetTimestamp();
+                    ObjectCollision.Add(p.Body!, p.Data);
+                    p.Root.AddChild(p.Body);
+                    _pendingCollision.Remove(key);
+                    CommitCollisionMs += Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+                }
             }
+            budget:;
         }
         FrameCommitMs = timer.Elapsed.TotalMilliseconds;
 
@@ -265,7 +288,7 @@ public partial class WorldStreamer : Node3D
         if (Missing == 0)
             foreach (var key in _tiles.Keys.Where(k => !_desired.Contains(k)).ToList())
             {
-                var node = _tiles[key]; RemoveChild(node); node.QueueFree(); _pendingCollision.Remove(key);
+                var node = _tiles[key]; RemoveChild(node); node.QueueFree(); DropCollision(key);
                 _tiles.Remove(key); Triangles -= _tileTriangles[key]; _tileTriangles.Remove(key); _tileRevision.Remove(key);
             }
     }
@@ -359,7 +382,8 @@ public partial class WorldStreamer : Node3D
         stage = Stopwatch.GetTimestamp();
         // Collision is built afterwards, nearest tile first, a little per frame (round 30c: building it here made
         // every level-0 tile a 10–36 ms stall while moving).
-        if (data.CollisionFaces != null || data.CollisionHeights != null) _pendingCollision[key] = (root, data);
+        DropCollision(key); // a rebuilt tile replaces the old one's unfinished collision
+        if (data.CollisionFaces != null) _pendingCollision[key] = new PendingCollisionTile(root, data);
         CommitCollisionMs += Stopwatch.GetElapsedTime(stage).TotalMilliseconds;
         stage = Stopwatch.GetTimestamp();
         root.SetMeta("cards", data.FarTrees.Count); // (benchmark counts)
