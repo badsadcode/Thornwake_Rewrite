@@ -1,0 +1,68 @@
+using System;
+using Godot;
+
+namespace Thornwake.Rewrite;
+
+/// <summary>
+/// Atmosphere 2.0 M1 (docs/ATMOSPHERE_2_0_M1_PLAN.md): the light of the frame in one place — sun colour and energy,
+/// the sky light's energy — from the sun elevation and the cloud gloom. Setting <c>fx.light_model</c>: 0 = build 47's
+/// formulas exactly (the return point), 1 = the new sun curve by phase (candidate values, tuned against Tom and Noor's
+/// reference images). Later M1 steps add the warm/cool split, exposure and bloom here.
+/// </summary>
+public static class AtmosphereLight
+{
+    public readonly record struct State(Color SunColor, float SunEnergy, float AmbientEnergy);
+
+    public static bool Modern => GameSettings.LightModel.Index == 1;
+
+    /// <param name="elevation">Sun elevation in degrees (the light stops at −4°).</param>
+    /// <param name="gloom">0 clear … 1 storm (overcast counts 0.7).</param>
+    /// <param name="natural">Look natural (ACES) rather than classic.</param>
+    public static State Compute(float elevation, float gloom, bool natural)
+    {
+        if (!Modern)
+        {
+            // Build 47: one ramp to 25°, one warm factor to 30°.
+            float warm = 1 - Mathf.Clamp(elevation / 30, 0, 1);
+            return new State(
+                new Color("fff3df").Lerp(new Color("ffc58a"), warm * .8f),
+                Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, gloom),
+                natural ? Mathf.Lerp(.42f, .3f, gloom) : Mathf.Lerp(.55f, .38f, gloom));
+        }
+        // By phase: blue hour (below 0°), golden hour (0–10°: warm, low), morning/afternoon (10–35°: rising),
+        // high noon (above 35°: white, strongest). Overcast takes most of the sun and flattens toward the sky light.
+        float sun = Curve(elevation, SunEnergyCurve) * Mathf.Lerp(1, .28f, gloom);
+        var color = CurveColor(elevation).Lerp(new Color("e8ecf2"), gloom * .6f);
+        float sky = Curve(elevation, SkyEnergyCurve) * (natural ? 1 : 1.3f) * Mathf.Lerp(1, .82f, gloom);
+        return new State(color, sun, sky);
+    }
+
+    // (elevation °, value): sun energy and sky-light energy (natural look).
+    private static readonly (float E, float V)[] SunEnergyCurve =
+        { (-4, .02f), (0, .16f), (5, .42f), (10, .68f), (20, .92f), (35, 1.12f), (60, 1.28f), (90, 1.32f) };
+    private static readonly (float E, float V)[] SkyEnergyCurve =
+        { (-6, .16f), (0, .24f), (10, .33f), (35, .40f), (60, .43f), (90, .44f) };
+    // (elevation °, colour): deep orange at sunrise, gold, warm white, white at noon.
+    private static readonly (float E, Color C)[] SunColorCurve =
+    {
+        (-4, new Color("ff8e52")), (0, new Color("ffa262")), (5, new Color("ffb978")), (10, new Color("ffcf98")),
+        (20, new Color("ffe2bd")), (35, new Color("fff0dc")), (60, new Color("fff6ea")), (90, new Color("fff8ee")),
+    };
+
+    private static float Curve(float x, (float E, float V)[] table)
+    {
+        if (x <= table[0].E) return table[0].V;
+        for (int i = 1; i < table.Length; i++)
+            if (x <= table[i].E) return Mathf.Lerp(table[i - 1].V, table[i].V, Mathf.SmoothStep(table[i - 1].E, table[i].E, x));
+        return table[^1].V;
+    }
+
+    private static Color CurveColor(float x)
+    {
+        var t = SunColorCurve;
+        if (x <= t[0].E) return t[0].C;
+        for (int i = 1; i < t.Length; i++)
+            if (x <= t[i].E) return t[i - 1].C.Lerp(t[i].C, Mathf.SmoothStep(t[i - 1].E, t[i].E, x));
+        return t[^1].C;
+    }
+}

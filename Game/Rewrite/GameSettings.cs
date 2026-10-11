@@ -181,6 +181,10 @@ public static class GameSettings
         "Natural: stronger colour and contrast (ACES tone mapping), deeper shade, glow only on real highlights (no " +
         "spilling light), less grey haze. Classic: the look of build 29.",
         options: new[] { "classic", "natural" }));
+    public static readonly Setting LightModel = Add(new("fx.light_model", "Lighting and effects", "Light model", 0, 1, 1, 0,
+        "Atmosphere 2.0 (experimental, M1): sunlight by phase of the day — golden hour, a softer morning and afternoon, " +
+        "a stronger white noon — with the sky light following. Build 47 = the light until now.",
+        options: new[] { "build 47", "Atmosphere 2.0 (experimental)" }));
     public static readonly Setting Glow = Add(new("fx.glow", "Lighting and effects", "Glow (bloom)", 0, 1.5, .05, .6,
         "Bright sky, sun reflections and foam bleed softly into their surroundings.", "×"));
     public static readonly Setting SunStyle = Add(new("fx.sun_style", "Lighting and effects", "Sun", 0, 1, 1, 0,

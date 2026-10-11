@@ -449,7 +449,8 @@ public partial class Atmosphere : Node3D
         // weaker, flatter sunlight, greyer and hazier air.
         float overcast = Mathf.SmoothStep(.7f, .95f, Coverage);
         float gloom = Math.Max(_storm, overcast * .7f);
-        Sun.LightEnergy = Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, gloom);
+        var light = AtmosphereLight.Compute(elevation, gloom, Natural);
+        Sun.LightEnergy = light.SunEnergy;
         _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, gloom);
         UpdateWaterSky(elevation);
         // Rain curtains: lit like the overcast (grey, dimmer at dusk and night), hanging from ~1.5 km above the sea.
@@ -461,7 +462,7 @@ public partial class Atmosphere : Node3D
         Environment.FogEnabled = GameSettings.Haze.Value > 0 || _storm > 0;
         // The sky's radiance map is not re-baked for the storm (global uniform), so dim the ambient light directly.
         // (natural look: less sky light in the shade, so lit and shaded ground differ)
-        Environment.AmbientLightEnergy = Natural ? Mathf.Lerp(.42f, .3f, gloom) : Mathf.Lerp(.55f, .38f, gloom);
+        Environment.AmbientLightEnergy = light.AmbientEnergy;
         UpdateCoverage();
         if (_rainParticles != null)
         {
@@ -512,9 +513,8 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("rain_now", new Vector4(Snowing ? 0 : Mathf.Clamp(Precip, 0, 1), 0, 0, 0));
         if (_steer == null) UpdateLightning(delta); // classic model; the simulated one has Lightning.cs
         else if (_flash != null) _flash.Visible = false;
-        // Warmer light at a low sun.
-        float warm = 1 - Mathf.Clamp(elevation / 30, 0, 1);
-        Sun.LightColor = new Color("fff3df").Lerp(new Color("ffc58a"), warm * .8f);
+        // Warmer light at a low sun (AtmosphereLight: build 47's single warm factor, or the colour curve by phase).
+        Sun.LightColor = light.SunColor;
         var toSun = Sun.GlobalTransform.Basis.Z.Normalized(); // a directional light shines along -Z
 
         if (_steer is { } steer)
