@@ -97,7 +97,7 @@ void fragment() {
             _jobCenterX = (minX + maxX) / 2; _jobCenterZ = (minZ + maxZ) / 2;
             double half = (maxX - minX) / 2, ccx = _jobCenterX, ccz = _jobCenterZ, viewX = px, viewZ = pz;
             var sampler = _sampler;
-            _job = Task.Run(() => Build(sampler, ccx, ccz, half, range, viewX, viewZ));
+            _job = Background.Run(() => Build(sampler, ccx, ccz, half, range, viewX, viewZ));
         }
         Position = new Vector3((float)(_centerX - originX), 0, (float)(_centerZ - originZ));
     }

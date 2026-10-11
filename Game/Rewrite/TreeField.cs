@@ -161,7 +161,7 @@ public sealed partial class TreeField : Node3D
         var missing = _desired.Where(k => !_cells.TryGetValue(k, out var c) || c.Revision != _revision
             || (k.Level == FineLevel && !c.Near && Dist(k, px, pz) < NearRange + Fade)).ToList();
         Missing = missing.Count;
-        int maxJobs = Math.Max(1, System.Environment.ProcessorCount / 2);
+        int maxJobs = Background.CellJobs;
         if (_jobs.Count < maxJobs)
         {
             var sampler = _sampler; var config = _config; long rev = _revision;
@@ -169,7 +169,7 @@ public sealed partial class TreeField : Node3D
             foreach (var key in missing.Where(k => !_jobs.ContainsKey(k)).OrderBy(k => k.Level).ThenBy(k => Dist(k, px, pz)).Take(maxJobs - _jobs.Count))
             {
                 bool near = key.Level == FineLevel && Dist(key, px, pz) < nearRange;
-                _jobs[key] = (Task.Run(() => Build(sampler, config, key, near)), rev);
+                _jobs[key] = (Background.Run(() => Build(sampler, config, key, near)), rev);
             }
         }
 

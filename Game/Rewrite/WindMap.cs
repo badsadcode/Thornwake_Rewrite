@@ -45,7 +45,7 @@ public sealed class WindMap
             double step = Size / Pixels;
             double cx = Math.Round(camX / step) * step, cz = Math.Round(camZ / step) * step;
             _jobX = cx; _jobZ = cz;
-            _job = Task.Run(() => Build(field, terrain, gameHours, cx, cz));
+            _job = Background.Run(() => Build(field, terrain, gameHours, cx, cz));
             if (now) { _job.Wait(); Update(field, terrain, gameHours, camX, camZ, originX, originZ, playerRatio, 0, false); return; }
         }
         if (double.IsNaN(_mapX)) { Disable(); return; }

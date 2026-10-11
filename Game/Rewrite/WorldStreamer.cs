@@ -88,7 +88,7 @@ public partial class WorldStreamer : Node3D
     private readonly HashSet<TileKey> _desired = new();
     private readonly Dictionary<TileKey, (Task<TileData> Task, long Revision)> _jobs = new();
     private readonly HashSet<TileKey> _failed = new();
-    private readonly int _maxJobs = Math.Max(1, System.Environment.ProcessorCount - 1);
+    private readonly int _maxJobs = Background.TileJobs;
     private ShaderMaterial _terrain = null!, _water = null!, _farTree = null!;
     private Mesh _grass = null!, _card = null!;
     private TreeCatalog _trees = null!;
@@ -299,7 +299,7 @@ public partial class WorldStreamer : Node3D
                          .OrderBy(k => k.Level).ThenBy(k => Distance(k, px, pz)).Take(_maxJobs - _jobs.Count))
             {
                 if (_jobs.TryGetValue(key, out var stale)) { if (!stale.Task.IsCompleted) continue; _jobs.Remove(key); }
-                _jobs[key] = (Task.Run(() => TileBuilder.Build(sampler, key, config)), revision);
+                _jobs[key] = (Background.Run(() => TileBuilder.Build(sampler, key, config)), revision);
             }
         }
 

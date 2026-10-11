@@ -48,7 +48,7 @@ public sealed class WeatherMap
             double step = Size / Pixels;
             double cx = Math.Round(camX / step) * step, cz = Math.Round(camZ / step) * step;
             _jobX = cx; _jobZ = cz;
-            _job = Task.Run(() => Build(field, gameHours, cx, cz));
+            _job = Background.Run(() => Build(field, gameHours, cx, cz));
             if (now) _job.Wait();
             if (now) { Update(field, gameHours, camX, camZ, 0, false); return; }
         }
