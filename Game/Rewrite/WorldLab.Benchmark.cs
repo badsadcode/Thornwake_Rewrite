@@ -231,7 +231,7 @@ public partial class WorldLab
                 if ((int)(run.StageTime / 30) != (int)((run.StageTime - frameMs / 1000.0) / 30))
                     GD.Print($"BENCH settling t={run.StageTime:0}s missing={_streamer.Missing} jobs={_streamer.Pending} field={_streamer.Field.Settled} (missing {_streamer.Field.Missing}, jobs {_streamer.Field.Pending}) impostors={_streamer.Impostors.Ready} collision={_streamer.PendingCollision} holding={_holding} horizon={_horizon?.Busy} generating={_generation != null}");
                 if (run.StableTime > 2) Next(BenchStage.Warmup);
-                else if (run.StageTime > 900) { run.Status = $"terrain never settled in '{scene.Id}'"; BenchFinish(); }
+                else if (run.StageTime > (run.Capture ? 1800 : 900)) { run.Status = $"terrain never settled in '{scene.Id}'"; BenchFinish(); }
                 break;
             }
             case BenchStage.Warmup:
