@@ -666,6 +666,10 @@ public partial class WorldLab : Node3D
         // still alive; left to the .NET finalizers at process exit they intermittently crashed on quit (as the valley
         // game already handles in Main).
         RockMeshes.Release(); ObjectCollision.Release(); RockTextureArray.Release(); GroundTextures.Release(); Flora.Release(); WoodlandAssets.Release(); Visuals.ReleaseMaterials();
+        // Tens of thousands of wrappers (tiles' MultiMeshes, collision shapes) are still referenced from C#: finalised
+        // after Godot's C# layer shut down they aborted the quit (FATAL in _instance_binding_free_callback, 1-2 in 10
+        // collision test runs). Collect them now, while the engine is alive.
+        GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
     }
 
     private double PlayerX => _originX + _player.Position.X;

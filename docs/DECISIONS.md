@@ -1084,6 +1084,19 @@ able to go up on high slopes … the character is jittering on the ground … I'
   sites itself: clear, walkable approaches, boulders standing at least 0.6 m out of the ground (rocks are partly
   buried: a "boulder" whose top is 2 cm above the ground is not an obstacle).
 
+## D78 — Round 30d: streaming without starving the main thread (2026-10-11)
+Tom's build 45 benchmarks: flight 1 % low 25 FPS; single frames spent 35–41 ms on one 1,024-triangle collision piece
+(normally ~0.7 ms) and up to 24 ms adding a forest tile's object shapes.
+* **Background work below normal priority** (`Background.Run`: tiles, tree cells, horizon, weather and wind maps) and
+  fewer builders at once: tiles cores − 2 (at most 12), tree cells cores / 4 (at most 6). Before: cores − 1 and
+  cores / 2, i.e. 47 CPU-bound jobs on Tom's 32 threads, and the main thread lost its core mid-frame.
+* **Collision steps**: object shapes in batches of 128 after the ground is in place (the ground under the player is
+  what holds the player); a frame over its 8 ms budget only forces a step for the tile the player is on or next to.
+* **Quit**: the world scene collects .NET garbage when it exits (tens of thousands of wrappers finalised after
+  Godot's C# layer shut down aborted the quit now and then).
+* Settings unchanged. The `treedetail` results confirm the defaults (simplified tree shadows, full detail 140 m):
+  `docs/PERFORMANCE_TREES.md`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

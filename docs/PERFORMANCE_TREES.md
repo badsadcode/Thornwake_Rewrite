@@ -185,3 +185,39 @@ detail: tree shadows 12 → 1.7 ms, 3D trees 12.9 → 3.9 ms.**
 being committed (10–36 ms on the main thread). The benchmark's "script" column was the whole frame time
 (Godot's TIME_PROCESS); build 44 measures the world's own per-frame code and splits commits into meshes, collision,
 objects, adding to the scene and the tree field, to find which part to spread over frames.
+
+## Tom's benchmarks of builds 44 and 45 (2026-10-11)
+**Build 44** (`standard`): forest 55.0, lake 51.1, flight 53.8 FPS with 1 % low **33** (build 43: 26): the heightmap
+ground collision removed most streaming hitches, but it broke collision (rocks pushed the player back, steep slopes
+became climbable, jitter, no jumping) and was withdrawn in build 45 (D77).
+
+**Build 45** (`standard`, `quick`, `treedetail`, `trees`). The `standard` run had *Tree shadows: detailed* (builds 43
+and 44: simplified), which explains forest 38.7 / lake 43.9 FPS; with simplified shadows `treedetail` gives the build
+43/44 numbers again (forest 53.2 at 140 m):
+
+| treedetail (FPS) | forest, simplified | forest, detailed | lake, simplified | lake, detailed |
+|---|---:|---:|---:|---:|
+| full detail 80 m | 29.9 | 26.3 | **52.9** | 48.8 |
+| full detail 140 m (default) | **53.2** | 38.4 | 50.6 | 43.0 |
+| full detail 220 m | 50.7 | 36.0 | 46.0 | 33.3 |
+
+* **Simplified tree shadows stay the default**: detailed costs 12–15 ms in the forest.
+* **140 m stays the default.** 80 m is far slower *inside* a forest (GPU 32.9 ms against 18.2): standing among trees,
+  the lighter LOD2 models fill the screen up close, and their alpha-tested leaf cards cost more pixels than the LOD1
+  models they replace. From the lake shore (trees farther away) 80 m is slightly faster.
+* `trees` (3D tree range 1–4): 36.6 / 29.4 / 17.4 / 7.8 FPS in the forest, draw calls 5.8k → 50k, CPU render time
+  6.8 → 94.6 ms: confirms the impostors were the right answer for distance; ranges 3 and 4 are for comparison only.
+
+**Flight stutter in build 45** (1,024-triangle ground pieces, objects at once):
+
+| flight | commit frames > 8.5 ms | > 12 ms | > 20 ms |
+|---|---:|---:|---:|
+| build 43 | 667 | 99 | 6 |
+| build 44 (heightmap, withdrawn) | 72 | 7 | 0 |
+| build 45 | 192 | 15 | 1 |
+
+The worst frames were single collision pieces of 35–41 ms (normally ~0.7 ms) and objects up to 24 ms in one frame.
+Measured here: the native shape build has a long tail while every core runs a tile builder: the main thread is pushed
+off the CPU. Build 46: background builders below normal priority and fewer at once (tiles: cores − 2, at most 12;
+tree cells: cores / 4, at most 6; was cores − 1 and cores / 2, i.e. 31 + 16 on Tom's 32 threads), object shapes in
+batches of 128 after the ground, and an over-budget frame only forces a step for the player's own tile.

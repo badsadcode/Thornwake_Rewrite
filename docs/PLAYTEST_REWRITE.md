@@ -78,6 +78,20 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 46 — smoother streaming (from your build 45 benchmarks)
+Thanks for the four runs. What they show:
+* **Your forest drop (56 → 39 FPS) is the Tree shadows setting**: it was on *detailed* in this run (*simplified* in
+  builds 43 and 44). *Settings → Lighting → Tree shadows → simplified* gives the 53–56 FPS back; detailed costs
+  12–15 ms in the forest. Keep detailed only if you prefer how it looks.
+* **Full-detail trees: keep 140 m.** 80 m is much slower inside a forest (the lighter models up close cost more), and
+  220 m costs 1–4 FPS.
+* **Flight stutter**: the remaining hitches were the game's background workers (one per CPU thread, plus the tree
+  field's) taking the CPU away from the main thread mid-frame. They now run at lower priority and fewer at once;
+  trees' and rocks' collision is added in small batches. Collision itself is unchanged from build 45.
+* Fixed a crash that could happen when quitting.
+* Please run **Standard** once more with *Tree shadows: simplified* (and **Quick** if you like): the flight's 1 % low
+  is the number to watch (build 43: 26, build 45: 25 FPS).
+
 ## New in build 45 — collisions fixed
 Thanks for catching this. Build 44's faster collision was wrong: rocks pushed you back, you could walk up slopes you
 could not climb before, you jittered and could not jump.
