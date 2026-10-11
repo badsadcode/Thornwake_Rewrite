@@ -1120,6 +1120,13 @@ is tested and a rollback snapshot is secured.
 * **Not another optimisation project**: then roads, settlements, wildlife, NPCs, resources, caves, gameplay.
 * Known visual artefacts stay tracked (review §10) until fixed.
 
+## D80 — Atmosphere 2.0 M0: capture suite (2026-10-12)
+The milestones are judged on captures, so the captures must be repeatable: the benchmark gains an `atmosphere` suite
+(ten scenes, fixed places, times and weather, in a biome-patch version of Tom's test world; scripted turn / walk /
+flight moves; nine stills per scene in the results folder, HUD hidden). Scenes may name their own world and settings;
+`--bench-scenes` runs a subset; `--find-sites` locates biome sites. Build 47 (branch `pre-atmosphere-2.0`) is the
+baseline every milestone is captured against.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

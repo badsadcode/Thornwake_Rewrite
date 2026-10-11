@@ -730,6 +730,7 @@ public partial class WorldLab : Node3D
         _hudTimer -= delta;
         if (_hudTimer <= 0) { _hudTimer = .2; UpdateHud(); }
         _lastProcessMs = (Time.GetTicksUsec() - _processStartUs) / 1000.0;
+        if (_findSitesPending && _sampler != null && _generation == null && !_holding) { _findSitesPending = false; FindSites(); }
         if (_collisionTestPending && _streamer.Settled && _streamer.PendingCollision == 0 && !_holding && _generation == null)
         {
             // --at=x,z picks the test area (otherwise the world's start).

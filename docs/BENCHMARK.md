@@ -69,3 +69,19 @@ the files stay in the folder until someone shares them.
 distance], `height` above the ground, `hour`, `seconds`; or a flight: `path` [[x, z], …], `altitude`, `speed` (m/s).
 Suites list scenes, optional `variants` (setting values to try in turn) and `ablate`. Keep existing scenes unchanged
 so results stay comparable; add new ones with new ids and raise `version`.
+
+## Atmosphere captures (suite `atmosphere`)
+For Atmosphere 2.0: the same places, times and weather every time, so each milestone can be compared side by side.
+Ten scenes in `patch32`, Tom's test world with biome patches (every biome near the start; the 32 km test world has
+no swamp or desert): temperate forest (morning walk, noon, night), plains evening, taiga morning, desert noon, swamp
+dawn, beside the lake, coast at dusk, and a flight over a mountain ridge through the cloud deck.
+
+* **Camera moves**: `turn` (360° on the spot), `walk` (along a path on the ground at walking pace), `fly` (along a
+  path at an altitude). They are scripted, so a screen recording (ShadowPlay, Win+Alt+R) shows the same move each run.
+* **Stills**: one at the start and eight along each move, `captures/NN-scene-KK.jpg` in the results folder, with the
+  HUD hidden. Frame times are recorded as usual but are not the point (saving a still costs a frame).
+* Scene options in `benchmarks.json`: `"world": "patch32"` (a world from `worlds`), `"move"`, `"settings"` (e.g.
+  cloud cover for this scene only, applied after the frozen conditions).
+* `--bench=atmosphere --bench-scenes=atmo-forest-noon,atmo-lake` runs only some scenes (also from the menu's suite).
+* Sites were found with `--find-sites` (developer tool: nearest dense forest, swamp, taiga, desert, plains, ridge and
+  coast around the player).

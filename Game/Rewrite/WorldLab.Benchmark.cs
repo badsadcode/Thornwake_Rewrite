@@ -27,7 +27,16 @@ public partial class WorldLab
     private enum BenchStage { World, Place, Settle, Warmup, Measure, Ablate, Done }
 
     private sealed record BenchScenario(string Id, string Name, double[]? At, string? Landmark, float[]? View, double Height, double Hour,
-        double Seconds, List<double[]>? Path, double Altitude, double Speed, float Pitch, float Zoom);
+        double Seconds, List<double[]>? Path, double Altitude, double Speed, float Pitch, float Zoom)
+    {
+        /// <summary>Atmosphere captures (M0): "turn" (360° on the spot over <see cref="Seconds"/>), "walk" (along
+        /// <see cref="Path"/> on the ground), "fly" (along the path at <see cref="Altitude"/>), or null (stand still).</summary>
+        public string? Move { get; init; }
+        /// <summary>Settings for this scene only (time, clouds…), applied after the frozen test conditions.</summary>
+        public Dictionary<string, double> Settings { get; init; } = new();
+        /// <summary>Another world than the benchmark's (e.g. one where swamps and deserts exist).</summary>
+        public JsonObject? World { get; init; }
+    }
 
     private sealed record BenchJob(BenchScenario Scene, Dictionary<string, double> Variant, string Label);
 
@@ -42,7 +51,10 @@ public partial class WorldLab
         public required string Suite, Profile, OutDir;
         public required List<BenchJob> Jobs;
         public required Dictionary<string, double> Saved;
-        public bool Ablate, QuitWhenDone;
+        public bool Ablate, QuitWhenDone, Capture;
+        public int Stills = 8, StillsTaken;
+        public readonly List<string> Captures = new();
+        public bool HudWas;
         public int Index;
         public BenchStage Stage = BenchStage.World;
         public double StageTime, StableTime;
@@ -78,13 +90,16 @@ public partial class WorldLab
         var config = BenchConfig();
         var suiteNode = config["suites"]?[suite]?.AsObject() ?? throw new ArgumentException($"no benchmark suite '{suite}'");
         if (profile != "current" && config["profiles"]?[profile] == null) throw new ArgumentException($"no benchmark profile '{profile}'");
-        var scenes = config["scenarios"]!.AsArray().Select(n => ParseScene(n!.AsObject())).ToDictionary(s => s.Id);
+        var scenes = config["scenarios"]!.AsArray().Select(n => ParseScene(n!.AsObject(), config)).ToDictionary(s => s.Id);
         var variants = suiteNode["variants"]?.AsArray().Select(v => v!.AsObject().ToDictionary(p => p.Key, p => p.Value!.GetValue<double>())).ToList()
             ?? new List<Dictionary<string, double>> { new() };
         var jobs = new List<BenchJob>();
         foreach (var id in suiteNode["scenarios"]!.AsArray().Select(n => n!.GetValue<string>()))
             foreach (var v in variants)
                 jobs.Add(new BenchJob(scenes[id], v, v.Count == 0 ? id : id + " " + string.Join(" ", v.Select(p => $"{p.Key}={p.Value.ToString(CultureInfo.InvariantCulture)}"))));
+        // --bench-scenes=id,id: only these scenes of the suite (re-run one capture, tests).
+        if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--bench-scenes="))?[15..].Split(',') is { } only)
+            jobs = jobs.Where(j => only.Contains(j.Scene.Id)).ToList();
         string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
         outDir ??= Path.Combine(OS.GetUserDataDir(), "bench", $"{stamp}-{suite}-{profile}");
         Directory.CreateDirectory(outDir);
@@ -92,16 +107,19 @@ public partial class WorldLab
         {
             Config = config, Suite = suite, Profile = profile, OutDir = outDir, Jobs = jobs, QuitWhenDone = quitWhenDone,
             Ablate = suiteNode["ablate"]?.GetValue<bool>() ?? false,
+            Capture = suiteNode["capture"]?.GetValue<bool>() ?? false,
+            Stills = suiteNode["stills"]?.GetValue<int>() ?? 8,
             Saved = GameSettings.All.ToDictionary(s => s.Key, s => s.Value),
         };
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         _menu.Visible = false;
+        if (_bench.Capture) { _bench.HudWas = _showHud; _showHud = false; _hud.Visible = false; _help.Visible = false; Directory.CreateDirectory(Path.Combine(outDir, "captures")); }
         Input.MouseMode = Input.MouseModeEnum.Captured;
         _benchLabel.Visible = true;
         GD.Print($"BENCH start suite={suite} profile={profile} jobs={jobs.Count} out={outDir}");
     }
 
-    private static BenchScenario ParseScene(JsonObject o)
+    private static BenchScenario ParseScene(JsonObject o, JsonObject config)
     {
         double[]? D(string k) => o[k]?.AsArray().Select(n => n!.GetValue<double>()).ToArray();
         var view = D("view");
@@ -110,7 +128,12 @@ public partial class WorldLab
             o["seconds"]?.GetValue<double>() ?? 15,
             o["path"]?.AsArray().Select(p => p!.AsArray().Select(n => n!.GetValue<double>()).ToArray()).ToList(),
             o["altitude"]?.GetValue<double>() ?? 60, o["speed"]?.GetValue<double>() ?? 60,
-            (float)(o["pitch"]?.GetValue<double>() ?? -.1), (float)(o["zoom"]?.GetValue<double>() ?? 8));
+            (float)(o["pitch"]?.GetValue<double>() ?? -.1), (float)(o["zoom"]?.GetValue<double>() ?? 8))
+        {
+            Move = o["move"]?.GetValue<string>(),
+            Settings = o["settings"]?.AsObject().ToDictionary(p => p.Key, p => p.Value!.GetValue<double>()) ?? new(),
+            World = o["world"] is { } w ? config["worlds"]?[w.GetValue<string>()]?.AsObject() ?? throw new ArgumentException($"no benchmark world '{w}'") : null,
+        };
     }
 
     private void BenchAbort(string why)
@@ -131,6 +154,7 @@ public partial class WorldLab
             foreach (var (k, v) in run.Config["profiles"]![run.Profile]!["settings"]!.AsObject()) values[k] = v!.GetValue<double>();
         }
         foreach (var (k, v) in run.Config["frozen"]!.AsObject()) values[k] = v!.GetValue<double>();
+        foreach (var (k, v) in job.Scene.Settings) values[k] = v;
         foreach (var (k, v) in job.Variant) values[k] = v;
         foreach (var s in GameSettings.All) if (values.TryGetValue(s.Key, out double v)) s.Value = v;
     }
@@ -148,13 +172,14 @@ public partial class WorldLab
         if (run.Index >= run.Jobs.Count) { BenchFinish(); return; }
         var job = run.Jobs[run.Index];
         var scene = job.Scene;
+        _benchLabel.Visible = !run.Capture || run.Stage is not (BenchStage.Measure or BenchStage.Warmup);
         _benchLabel.Text = $"Benchmark {run.Index + 1}/{run.Jobs.Count}: {scene.Name}{(job.Variant.Count > 0 ? " · " + string.Join(", ", job.Variant.Select(p => $"{p.Key} {p.Value}")) : "")}\n" +
                            $"{run.Stage}{(run.Stage == BenchStage.Ablate && run.AblationIndex < run.Ablations.Count ? ": without " + run.Ablations[run.AblationIndex].Name : "")} · Esc stops";
         switch (run.Stage)
         {
             case BenchStage.World:
             {
-                var world = run.Config["world"]!.AsObject();
+                var world = scene.World ?? run.Config["world"]!.AsObject();
                 string key = world.ToJsonString();
                 if (_benchWorldKey == key && _sampler != null && _generation == null) { BenchApplySettings(run, job); Next(BenchStage.Place); break; }
                 if (_generation != null) break;
@@ -215,15 +240,31 @@ public partial class WorldLab
             {
                 BenchRecord(run, frameMs);
                 bool done;
+                double progress;
                 if (scene.Path is { Count: > 1 } path)
                 {
                     run.Distance += scene.Speed * frameMs / 1000.0;
-                    done = !BenchFly(path, run.Distance, scene.Altitude);
+                    done = !BenchFly(path, run.Distance, scene.Move == "walk" ? 0 : scene.Altitude);
+                    progress = Math.Min(1, run.Distance / Math.Max(1, PathLength(path)));
                 }
-                else done = run.StageTime >= scene.Seconds;
+                else
+                {
+                    done = run.StageTime >= scene.Seconds;
+                    progress = Math.Min(1, run.StageTime / scene.Seconds);
+                    if (scene.Move == "turn" && scene.View is { Length: 3 } v0) _yaw = v0[0] + Mathf.Tau * (float)progress;
+                }
+                // Stills: one at the start, then evenly along the move (the last at its end).
+                if (run.Capture && run.StillsTaken <= run.Stills && (progress >= (double)run.StillsTaken / run.Stills || done))
+                {
+                    string file = Path.Combine(run.OutDir, "captures", $"{run.Index + 1:00}-{scene.Id}-{run.StillsTaken:00}.jpg");
+                    var image = GetViewport().GetTexture().GetImage(); // (null when headless: nothing rendered)
+                    if (image != null && !image.IsEmpty()) { image.SaveJpg(file, .9f); run.Captures.Add(Path.GetFileName(file)); }
+                    run.StillsTaken++;
+                }
                 if (done)
                 {
                     run.Current = BenchSummarise(run, job);
+                    if (run.Capture) { run.Current["captures"] = new JsonArray(run.Captures.Select(c => (JsonNode)c!).ToArray()); run.Captures.Clear(); run.StillsTaken = 0; }
                     run.BaseFrame = run.Frame.Average(); run.BaseGpu = run.Gpu.Average();
                     File.WriteAllText(Path.Combine(run.OutDir, $"frames-{run.Index + 1:00}-{scene.Id}.csv"), BenchCsv(run));
                     run.Ablations = run.Ablate && scene.Path == null ? BenchAblations() : new List<BenchAblation>();
@@ -269,6 +310,13 @@ public partial class WorldLab
     }
 
     /// <summary>Move along the flight path; false once past its end.</summary>
+    private static double PathLength(List<double[]> path)
+    {
+        double length = 0;
+        for (int i = 0; i + 1 < path.Count; i++) length += Math.Sqrt(Math.Pow(path[i + 1][0] - path[i][0], 2) + Math.Pow(path[i + 1][1] - path[i][1], 2));
+        return length;
+    }
+
     private bool BenchFly(List<double[]> path, double distance, double altitude)
     {
         for (int i = 0; i + 1 < path.Count; i++)
@@ -571,6 +619,7 @@ public partial class WorldLab
         foreach (var s in GameSettings.All) if (run.Saved.TryGetValue(s.Key, out double v)) s.Value = v;
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), false);
         _benchLabel.Visible = false;
+        if (run.Capture) { _showHud = run.HudWas; _hud.Visible = _showHud; _help.Visible = true; }
         var fps = run.Results.Select(r => r!["fps_avg"]!.GetValue<double>()).Where(f => f > 0).ToList();
         var json = new JsonObject
         {

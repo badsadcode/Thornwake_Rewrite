@@ -491,6 +491,8 @@ public partial class WorldStreamer : Node3D
         // down (an intermittent exit-time crash seen once under Wine).
         var running = _jobs.Values.Select(j => j.Task).Where(t => !t.IsCompleted).ToArray();
         try { if (running.Length > 0) Task.WaitAll(running, 3000); } catch (AggregateException) { }
+        // Collision bodies still being built are not in the scene: free them (a leaked physics body at exit).
+        foreach (var key in _pendingCollision.Keys.ToList()) DropCollision(key);
     }
 }
 

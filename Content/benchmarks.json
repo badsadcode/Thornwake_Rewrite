@@ -16,6 +16,22 @@
       "gen.patch_size": 12
     }
   },
+  "worlds": {
+    "patch32": {
+      "name": "Tom's test world with biome patches (every biome near the start), for the atmosphere captures",
+      "preset": "vast-world",
+      "seed": 42,
+      "gen": {
+        "gen.version": 0, "gen.size": 0, "gen.continents": 0, "gen.islands": -1, "gen.continent_size": 1.6, "gen.coast": 1.3,
+        "gen.ranges": 0, "gen.mountain_height": 1, "gen.mountain_width": 1, "gen.hill_height": 1, "gen.hills": 0.95,
+        "gen.plains": 0.6, "gen.rock": 1, "gen.coast_detail": 1, "gen.erosion": 1, "gen.shores": 1, "gen.rivers": 1,
+        "gen.river_width": 1, "gen.meanders": 1, "gen.wander": 1, "gen.width_variation": 1, "gen.banks": 1,
+        "gen.forest_cover": 2, "gen.forest_density": 1.6, "gen.rocks": 1, "gen.props": 1, "gen.lakes": 1, "gen.deltas": 1,
+        "gen.latitude": 45, "gen.latitude_span": 0, "gen.warmth": 0, "gen.wetness": 1, "gen.biome_placement": 1,
+        "gen.patch_size": 12
+      }
+    }
+  },
   "frozen": {
     "time.paused": 1, "sim.weather": 0, "perf.vsync": 0, "perf.max_fps": 0, "sky.cloud_speed": 0, "sky.clouds": 0.35
   },
@@ -86,6 +102,31 @@
       "name": "Low flight over forest and lake (streaming)",
       "path": [[-5286.068, 4604.638], [-5775.082, 5791.284], [-4200, 6900]], "altitude": 60, "speed": 70, "hour": 12,
       "pitch": -0.12, "zoom": 8
+    },
+    {
+      "id": "atmo-forest-walk", "name": "Temperate forest, morning walk (08:30)", "world": "patch32", "move": "walk",
+      "path": [[-4705.8, 4410.6], [-4655.8, 4410.6]], "altitude": 0, "speed": 2.5, "hour": 8.5, "pitch": -0.05, "zoom": 6
+    },
+    { "id": "atmo-forest-noon", "name": "Temperate forest, noon (12:00), turning", "world": "patch32", "move": "turn",
+      "at": [-4705.8, 4410.6], "view": [0, -0.05, 6], "height": 0, "hour": 12, "seconds": 20 },
+    { "id": "atmo-forest-night", "name": "Temperate forest, night (23:00), turning", "world": "patch32", "move": "turn",
+      "at": [-4705.8, 4410.6], "view": [0, 0, 6], "height": 0, "hour": 23, "seconds": 15 },
+    { "id": "atmo-plains-evening", "name": "Plains, evening (17:30), turning", "world": "patch32", "move": "turn",
+      "at": [-4001.0, 5631.3], "view": [0, -0.03, 8], "height": 0, "hour": 17.5, "seconds": 20 },
+    { "id": "atmo-taiga-morning", "name": "Taiga, morning (09:00), turning", "world": "patch32", "move": "turn",
+      "at": [-1301.3, 3912.6], "view": [0, -0.05, 6], "height": 0, "hour": 9, "seconds": 20 },
+    { "id": "atmo-desert-noon", "name": "Desert, noon (13:00), turning", "world": "patch32", "move": "turn",
+      "at": [13911.8, -11306.2], "view": [0, -0.03, 8], "height": 0, "hour": 13, "seconds": 20 },
+    { "id": "atmo-swamp-dawn", "name": "Swamp, dawn (07:00), turning", "world": "patch32", "move": "turn",
+      "at": [-1399.8, -12060.2], "view": [0, -0.03, 6], "height": 0, "hour": 7, "seconds": 20, "settings": { "sky.clouds": 0.55 } },
+    { "id": "atmo-lake", "name": "Beside the lake, afternoon (16:15), turning", "world": "patch32", "move": "turn",
+      "at": [-5775.082, 5791.284], "view": [0, -0.05, 10], "height": 6, "hour": 16.25, "seconds": 20 },
+    { "id": "atmo-coast-dusk", "name": "Coast at dusk (20:00), turning", "world": "patch32", "move": "turn",
+      "at": [-3663.9, 6643.0], "view": [0, -0.03, 8], "height": 0, "hour": 20, "seconds": 20, "settings": { "sky.clouds": 0.5 } },
+    {
+      "id": "atmo-ridge-clouds", "name": "Mountain ridge, flying through the cloud deck (10:00)", "world": "patch32", "move": "fly",
+      "path": [[-6952.0, -786.4], [-3952.0, -786.4]], "altitude": 260, "speed": 40, "hour": 10, "pitch": -0.08, "zoom": 8,
+      "settings": { "sky.clouds": 0.6 }
     }
   ],
   "suites": {
@@ -106,6 +147,12 @@
       "scenarios": ["forest", "lake"],
       "variants": [ { "view.trees": 1 }, { "view.trees": 2 }, { "view.trees": 3 }, { "view.trees": 4 } ],
       "ablate": true
+    },
+    "atmosphere": {
+      "name": "Atmosphere captures (stills and camera moves at fixed places, times and weather; Atmosphere 2.0 comparisons)",
+      "scenarios": ["atmo-forest-walk", "atmo-forest-noon", "atmo-forest-night", "atmo-plains-evening", "atmo-taiga-morning",
+        "atmo-desert-noon", "atmo-swamp-dawn", "atmo-lake", "atmo-coast-dusk", "atmo-ridge-clouds"],
+      "ablate": false, "capture": true, "stills": 8
     }
   }
 }
