@@ -78,6 +78,25 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 42 — trees: impostors and the tree field; benchmark; Display tab
+* **Dense forests for much less.** Beyond the detailed 3D trees, every tree is now drawn as an *impostor*: a picture of
+  its own 3D model, baked when the game starts from 8 sides and from above, lit and swaying like the 3D tree. It keeps
+  its exact place, species, size and rotation. 3D trees, impostors and the far tree cards hand over to each other with
+  a soft dithered blend on circles around you: no square rings popping in when you fly. Trees are now drawn in their
+  own cells (bigger batches, far fewer draw calls) instead of on the terrain tiles.
+  * *Settings → View distance → Tree impostors* (default ~3.2 km). **off = build 41's trees exactly.**
+  * Try *Detailed trees* ~800 m with *Tree impostors* ~3.2 km (or farther), and compare with build 41's 3.2 km 3D trees.
+* **Less stutter while moving:** new terrain tiles hand their objects to the renderer in one go (the 100–400 ms spikes).
+* **Benchmark** (menu → *Benchmark*): fixed test scenes in your 32 km test world, time and weather frozen, V-Sync off.
+  It measures frame times, GPU and CPU time, stutters, and what each kind of object and effect costs, then opens the
+  results folder (results.json, summary.txt, frame-time CSVs). *Tree range A/B* compares detailed trees 800 m to 6.4 km.
+  For your volunteers: `docs/BENCHMARK.md`. Please send me the whole results folder.
+* **Display tab** (menu → *Display*): windowed, borderless fullscreen or exclusive fullscreen; monitor; window sizes for
+  16:9, 16:10, 21:9, 32:9 (and 4:3) that fit your screen, including its own size (1920 × 1080); UI scale. A change asks
+  to be kept and reverts after 15 s. Saved. The first start opens borderless fullscreen at your screen's resolution.
+  V-Sync, frame limit and render scale moved here. Ultrawide screens get a wider view with the HUD in the corners.
+* Debug dumps of custom worlds replay correctly now.
+
 ## New in build 41 — Godot 4.7.2
 * **The game now runs on Godot 4.7.2** (was 4.5.1). Nothing in the game changed on purpose: same worlds, same
   settings, and the picture was kept the same (fog blending as in 4.5). Please play as usual and tell me if
