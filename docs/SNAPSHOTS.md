@@ -4,7 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
-| **RETURN POINT — before Atmosphere 2.0** (Tom, 2026-10-11: "create a clearly identifiable rollback snapshot") = build 47 (round 30e: last streaming pass — collision in small steps, mesh arrays on the builders, normal-priority builders) | `60c8571` | Thornwake-Rewrite-Preview-47 (v0.9.47) | git: tag `build-47-pre-atmosphere`, branch `pre-atmosphere-2.0` |
+| **RETURN POINT — before Atmosphere 2.0** (Tom, 2026-10-11: "create a clearly identifiable rollback snapshot") = build 47 (round 30e: last streaming pass — collision in small steps, mesh arrays on the builders, normal-priority builders) | `60c8571` | Thornwake-Rewrite-Preview-47 (v0.9.47) | git: branch `pre-atmosphere-2.0` (= `60c8571`) |
 | **Build 46** (round 30d: streaming without starving the main thread — background work at lower priority, fewer builders, collision objects in batches; quit crash fixed) | `6d3f029` | Thornwake-Rewrite-Preview-46 (v0.9.46) | Settings unchanged; build 45 = `a95c4ce` |
 | **Build 45** (round 30c fix: collision back to build 43 — rocks stop you, steep slopes unclimbable — built in pieces; landing on the visible ground at cliff steps; collision test) | `a95c4ce` | Thornwake-Rewrite-Preview-45 (v0.9.45) | Collision = build 43; build 44 collision only in git (`ffa9f45`) |
 | **Build 44** (round 30c: less stutter while moving — heightmap ground collision, collision built after the tile, shapes straight to physics) | `ffa9f45` | Thornwake-Rewrite-Preview-44 (v0.9.44) | (collision withdrawn in build 45) |
