@@ -1334,7 +1334,7 @@ public partial class WorldLab : Node3D
         _smokeTimer += delta;
         bool settled = _streamer.Settled && !_holding && !(_horizon?.Busy ?? false);
         if (!settled && (int)(_smokeTimer / 10) != (int)((_smokeTimer - delta) / 10))
-            GD.Print($"SMOKE_WAIT t={_smokeTimer:0} missing={_streamer.Missing} jobs={_streamer.Pending} impostors={_streamer.Impostors.Ready} field={_streamer.Field.Settled} holding={_holding} horizon={_horizon?.Busy} collision={_streamer.PendingCollision}");
+            GD.Print($"SMOKE_WAIT t={_smokeTimer:0} missing={_streamer.Missing} jobs={_streamer.Pending} impostors={_streamer.Impostors.Ready} field={_streamer.Field.Settled} (missing {_streamer.Field.Missing}, jobs {_streamer.Field.Pending}) holding={_holding} horizon={_horizon?.Busy} collision={_streamer.PendingCollision}");
         if (_shotPath != null)
         {
             if (_shotWet is { } wet && !_shotRain) _atmosphere.SetWetness(wet.Ground, wet.Puddles);
