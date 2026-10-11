@@ -198,3 +198,137 @@ replacement wins an A/B in front of Tom.
 native volumetric fog delivers Valheim-like forest rays at acceptable cost (needs test B; froxel resolution and
 temporal smear are the risks); medium that clouds can be halved in cost without CompositorEffects. **Unknowns:**
 low-end GPU numbers; whether Tom prefers dim or bright forests (changes M1); the water-horizon cause.
+
+## 10. Response to Tom and Noor's concerns (2026-10-11)
+
+Tom and Noor accepted *GO WITH REVISED SCOPE* but asked whether the plan preserves too much, whether clouds and rays
+can reach the look, and for the visual identity to stay the destination. Having gone deeper into the cloud and fog
+code, **I revise the plan**: keep the *pipelines* (where and when things are drawn, the weather data feeding them),
+but **replace several *models*** inside them. "Calibrate" alone would not get there.
+
+### What the code shows about the cloud complaints
+
+| Complaint | Cause in the code (`SkyCommon.gdshaderinc`) | Fixable in the existing pipeline? |
+|---|---|---|
+| Loss of detail and contrast up close | The only 3D noise is 64³ (`CloudNoise3D`), read at 2,600 m (base, ~40 m per texel) and 700 m (detail, ~11 m per texel); the finest octave is dropped (`vdens`). Within a few hundred metres there is simply no finer structure, and linear filtering blurs it. | Needs a new detail noise (higher resolution, curl/erosion noise) — **model change** |
+| Weak internal structure, flat volume | Light march toward the sun: 6 samples from 60 m out, so small-scale self-shadowing is missing; the ambient term is strong and fills shadows. | New lighting model — **model change** |
+| Clouds dissolving near the horizon | Deliberate: aerial perspective up to 92 % plus a horizon band, step-length softening (×0.45 at far steps, to stop flicker), and a fade below 2.3° elevation. | Yes, with a proper far-cloud treatment (more steps via temporal accumulation, less haze, a horizon layer) |
+| Silhouettes dissolving uniformly | Coverage erodes the whole density field evenly (`vremap(base, 1 - cov, …)`); the detail noise erodes everywhere, not mainly at edges; one cloud "type" with a height gradient. | Needs cloud types with their own height profiles and edge-only erosion — **model change** |
+| Unnatural layer / clear-sky transitions | Separate flat layers (cirrus, scud) blended over the volume with their own fades. | Part of the cloud model redesign |
+| Scale near mountains | Base layer 1.6 km, decks 1.3–2.4 km thick from one weather map; few low clouds. | Cloud types (low stratus/fog banks, cumulus, towering) solve this |
+
+**Verdict on clouds:** keep the v2 pipeline (sky march beyond the scene + depth-aware `CloudsNear` + weather map +
+cloud shadows from the same data); **replace the cloud model** (noise set, density function with cloud types, light
+march). This is the part of the existing atmosphere I would rewrite even if preserving it were the priority.
+
+**Will lower resolution and temporal accumulation make it worse?** Done badly, yes: half resolution softens edges in
+front of mountains and trees, and reprojection ghosts on fast camera turns. Done properly it is what *allows* the
+better model: accumulating over frames buys 4–8× the steps per pixel, which is exactly what crisp silhouettes, fine
+detail and a non-dissolving horizon need. Requirements: depth-aware upsampling (full-resolution edges against
+geometry) and history rejection on camera cuts and fast turns. Proper reprojection needs a frame history, which custom
+spatial shaders do not get in Godot: that means moving the cloud pass to a **CompositorEffect** (option B in §4,
+now recommended for clouds).
+
+**M3 acceptance becomes visual first:** six cloud captures (close cumulus, cloud at a summit, horizon at noon and at
+sunset, broken cover, storm deck) judged by Tom against the previous build, plus a 10 s camera turn without ghosting.
+1.7 ms is a target, not a constraint: if the beautiful version costs 2.5 ms, that is a decision for Tom with numbers.
+
+### Forest rays: what native volumetric fog can and cannot do
+
+Tom and Noor are right that today's ~0 ms only proves that *thin* fog is cheap. Facts:
+
+* Godot's volumetric fog is a froxel grid: here 96 × 96 slices over 180 m (`project.godot`). At 1080p one froxel is
+  ~20 pixels wide. It produces **broad, soft shafts** (clearings, large gaps, misty mornings), not the pencil-thin
+  rays through small canopy gaps. Raising the grid to 128–160 costs GPU time (roughly with the cube of the size).
+* Its temporal reprojection (0.9 here) smears shafts when leaves sway or the camera moves fast.
+* **Godot gives custom shaders no access to the sun's shadow map**, so a custom ray march cannot simply ask "is this
+  point in the air shadowed by a tree?". That is the main Godot limitation for this goal.
+
+So I will not assume native fog delivers. **M2 becomes a visual shoot-out at target intensity**, both measured:
+
+1. **Native volumetric fog, tuned for the look**: local density (forest interiors from the tree-field density,
+   hollows, mornings), sun fog energy and anisotropy up, froxel grid 96 vs 128, reprojection 0.9 vs 0.7.
+2. **A canopy shadow map + our own ray march**: render the near trees (their simplified LOD2 proxies) from the sun's
+   direction into a small depth texture around the player (e.g. 256 m at 1024² = 25 cm per pixel, refreshed every few
+   frames), and march the view ray through it at half resolution in the existing world-space beam pass
+   (`LightBeams` already marches the air below the clouds; it gains tree occlusion). Sharp rays from small gaps,
+   visible looking sideways and away from the sun, moving with the sway of the trees (the proxies sway too).
+
+Tom picks from side-by-side captures and a walk-through video, with GPU time for each. My expectation: (2) gives the
+Valheim-like look, (1) remains the right tool for soft volumetric mood (mist, clearings) and can run underneath.
+
+### Bright forests, dark forests, no grey filter
+
+Agreed, and it changes M1's wording: the neutral calibration is a *method* (know what each effect contributes), the
+*destination* is the art direction. Density for rays is **local and conditional** (time, weather, biome, humidity,
+forest density), never a global haze. A temperate forest at noon in clear weather: bright, warm, a little leaf-
+filtered light, no haze; the same forest at 7:00 after rain: mist and shafts; an ancient forest: dim and heavy at any
+hour. These become the M1/M2 acceptance captures.
+
+### Biome identity beyond colour
+
+A profile controls *behaviour*, not just tint: cloud types and their frequencies, cloud base height, haze clarity and
+colour, mist frequency and where it forms, sun/ambient balance, how weather transforms it (e.g. taiga: low decks and
+snow light; desert: high clear air, dust haze, sparse high cumulus; swamp: humid haze, ground fog by default, green-
+filtered light). The data format is open-ended (new fields with defaults), so later biomes add to it without code.
+The five first profiles are the test set, not the limit.
+
+### Lighting and bloom: the identity
+
+The destination is "slightly dreamy stylized fantasy with natural light". Concretely: warm sun vs cool shade, bright
+but never clipped skies, golden evening light on distant mountains, bloom from genuinely bright things only (sun,
+sunlit cloud edges, glints) through a threshold so it never makes the grey blob. Before M1, Tom and Noor pick **5–8
+reference images** (own screenshots or references) for: forest noon, forest morning, plains evening, mountain,
+storm, night. M1 is judged against those, not against "neutral".
+
+### Tracked artefacts
+
+Each one is assigned to the milestone that touches its system and is not "done" until a controlled capture shows it
+fixed:
+
+| Artefact | Milestone |
+|---|---|
+| Water partly transparent above the horizon | M1 (fog and transparency order) |
+| Clouds fading unnaturally near the horizon | M3 |
+| Inconsistent cloud detail with distance | M3 |
+| Sun shafts weak or vanishing | M2 |
+| Sky / atmosphere transition seams (e.g. build 41 diagonal) | M1 capture, fix where it belongs |
+| Grey "blob" around the sun | M1 |
+
+### Godot 4.7 limitations that matter
+
+1. No access to the directional shadow map in custom shaders (→ own canopy shadow map for rays).
+2. Volumetric fog resolution is one global grid, limited to its length (→ soft shafts only; fine rays need option 2).
+3. Sky shaders cannot be depth-aware and have no history (→ `CloudsNear` exists; clouds move to a CompositorEffect).
+4. Transparent sorting: water against full-screen passes and fog (→ the horizon issue; check every new pass).
+None of these blocks the goals; each has a known workaround above.
+
+### Revised milestones (each one build with captures, benchmark and Tom's yes/no)
+
+| | Milestone | Main work | Done when |
+|---|---|---|---|
+| M0 | Baseline | Return point, reference images chosen, captures | — |
+| M1 | Light and identity | One tonemapper and glow model, sun/sky/ambient curves, warm/cool, threshold bloom; water-horizon and sun-blob fixes | Tom's references matched in the 6 scenes |
+| M2 | Forest rays shoot-out | Native fog tuned vs canopy shadow map + march; pick one, finish it | Tom: "this is what I wanted" under the canopy |
+| M3 | New cloud model | Noise set, cloud types, lighting; CompositorEffect with temporal accumulation | Six cloud captures approved; cost reported |
+| M4 | Mist and haze from the land | Terrain/water-anchored mist volumes, per-biome clarity | Valley, swamp, lake read differently |
+| M5 | Biome profiles + weather states | Five behavioural profiles, blending, post-rain/overcast light | Biome tour recognisable without terrain |
+| M6 | Presets | Low/Medium/High from measurements, one low-end data point | Low looks like the same world |
+
+Rough size: one to two builds per milestone, about 8–10 builds in total, then gameplay. If a milestone runs over two
+builds without Tom approving the look, we stop and decide together rather than iterate on sliders.
+
+### Answers to the four questions
+
+* **Can the revised architecture reach the look without another redesign?** Yes, with the changes above. The risky
+  parts (fine forest rays, cloud detail) now get replacement models rather than tuning, and both are proven
+  techniques in shipped games. The remaining risk is cost on low-end GPUs, handled by presets.
+* **Godot limitations?** The four above; none blocking.
+* **Milestone changes?** M1 judged against reference images; M2 a two-technique shoot-out at target intensity; M3 a
+  new cloud model with visual acceptance first; artefacts assigned per milestone; a stop rule at two builds.
+* **What I would replace if preservation were not a priority:** (1) the cloud density/noise/lighting model; (2) the
+  screen-space `SunShafts` as the main ray source (kept as an accent at most); (3) ground mist as one camera-centred
+  box (→ volumes placed by terrain and water); (4) the two-look tonemapping and glow stack (→ one HDR model with a
+  bloom threshold); (5) the scattered constants in `Atmosphere.cs` (→ one atmosphere state driven by time, weather and
+  biome profile). I would keep the weather and wind fields, the night sky, the water renderer, the depth-aware cloud
+  pass structure, the cloud shadows and the world-space beam pass (which grows into the forest rays).
