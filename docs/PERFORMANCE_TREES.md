@@ -94,3 +94,45 @@ Two more things worth knowing:
 
 Expected result: forest B at "~3.2 km" visual range with the cost of today's "~1.6 km" or less. Checking it costs one
 bench run per step.
+
+## Round 30: measured, then built (2026-10-11)
+Tom: "identify the actual bottlenecks rather than blindly reducing visual quality … maintaining beautiful, dense
+forests is important to me."
+
+### Measured (the benchmark's content counts, Tom's test world, game defaults: detailed trees ~800 m)
+| What | Count | Triangles if all drawn |
+|---|---:|---:|
+| 3D trees, levels 0–1 (LOD1, to ~400 m) | 8,758 | 16.8 M (≈1,900 per tree) |
+| 3D trees, level 2 (LOD2, to ~800 m) | 28,609 | 16.8 M (≈590 per tree) |
+| Draw calls per frame (forest) | ≈4,000 | |
+| Near-tree batches on level 0 | 1,533 batches for 9,012 tree parts (≈6 per batch), all casting shadows | |
+| Rocks/bushes/logs batches, levels 0–1 | 1,221 | |
+
+At ~3.2 km the level 3 and 4 rings add ≈115,000 and ≈460,000 more 3D trees (hundreds of millions of triangles),
+each 4–8 px tall at that distance. Two bottlenecks: **GPU geometry** (sub-pixel leaf triangles with alpha cut-outs)
+and **draw calls** (thousands of tiny batches, several times over for the shadow cascades).
+
+### Built (each switchable; *Tree impostors: off* = build 41 exactly)
+1. **Benchmark** (`docs/BENCHMARK.md`): repeatable scenes, frame/GPU/CPU times, hitches, and what each object kind
+   and effect costs, measured by turning it off for a few seconds. Every change below gets judged with it.
+2. **Batch fills in one call** (`MultiMeshFill.cs`): tile commits no longer make one engine call per instance
+   (the 100–420 ms commit spikes). `--legacy-multimesh` brings the old way back for comparison.
+3. **Tree impostors** (`TreeImpostors.cs`, `TreeImpostor.gdshader`): every species is baked at start-up from 8 sides
+   and from above, colour and normals, 128 px (29 species in 3 batches of a few frames each). A distant tree is
+   one lit, swaying quad showing its own model; the two nearest views are blended as the camera moves around it.
+4. **Tree field** (`TreeField.cs`): trees no longer ride on the terrain tile rings. 3D trees sit in 128 m cells
+   (one batch per species and part: 10–50× bigger batches), detailed LOD1 with shadows near the player and LOD2
+   beyond, switched per cell with a dithered fade; impostors sit in 1 km cells. Cells are built on worker threads
+   with ready instance buffers.
+5. **Cross-faded hand-overs** (`TreeFade.gdshaderinc`): 3D trees → impostors → tree cards on circles around the
+   camera with one shared dither, so a pixel shows either the nearer or the farther kind. No square rings, no popping
+   when flying. Each tree keeps its place, species, size and rotation whatever draws it.
+
+Settings: *Detailed trees* is how far the 3D models go (400 m × 2ⁿ); *Tree impostors* how far the impostors go
+(1.6 / 3.2 / 6.4 / 12.8 km, default 3.2 km); *Distant tree cards* beyond. Suggested: detailed trees ~800 m,
+impostors ~3.2 km or more. The forest looks as dense as before at any distance, at the cost of today's ~800 m.
+
+### Still to do
+* Tom's numbers from the benchmark on the 3080 (the cloud machine renders in software, so only counts are real here).
+* Rocks, bushes and logs: the same cell batching (≈1,200 small batches today).
+* Occlusion behind hills (Godot occluders built from the coarse terrain), if the benchmark shows it is worth it.

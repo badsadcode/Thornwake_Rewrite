@@ -1046,6 +1046,22 @@ Tom: "If you will be able to go back to the previous version, then go for it." T
   `tools/setup-cloud.sh`, `project.godot` (feature tag 4.7). The re-import rewrote 52 `.import` files (new importer
   options at their defaults) and added 51 `.uid` files Godot 4.7 wants for every script and shader. No game code changed.
 
+## D76 — Round 30: benchmark, tree field with impostors, Display tab (2026-10-11)
+Tom: tree performance first ("identify the actual bottlenecks … maintaining beautiful, dense forests is important"),
+an automated benchmark for volunteers on many PCs, and a Display tab (native 1920×1080, window modes, ultrawide).
+* **Benchmark** (`docs/BENCHMARK.md`): fixed scenes in one deterministic world, quality profiles, frozen time/weather,
+  V-Sync off; per-frame frame/GPU/CPU/script/commit times, hitches, draw calls, memory, loaded content; then the cost of
+  each object kind (own render layers, hidden instantly) and of each effect. results.json + summary.txt + CSV.
+* **Measured** (`docs/PERFORMANCE_TREES.md`): sub-pixel 3D trees (≈590–1,900 triangles each) and ≈4,000 draw calls
+  are the bottlenecks, not the forest density.
+* **Tree field + impostors + cross-faded hand-overs**: 3D trees in 128 m cells with bigger batches, impostors baked from
+  the real models in 1 km cells, dithered hand-overs on circles. Setting *Tree impostors* (default ~3.2 km); *off*
+  keeps build 41's renderer exactly. Batch fills in one call (commit spikes).
+* **Display tab**: windowed / borderless / exclusive fullscreen, monitor, sizes for every aspect ratio that fit, UI scale,
+  keep-or-revert; stretch aspect "expand" so ultrawide screens get more room, not black bars. Fullscreen always uses the
+  monitor's resolution (Godot does not change video modes); Render scale lowers the 3D resolution instead.
+* Debug dumps' Reproduce lines fixed (custom worlds replay).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
