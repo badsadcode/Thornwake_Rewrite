@@ -48,7 +48,12 @@ public partial class WorldStreamer : Node3D
         public readonly TileData Data = data;
         public StaticBody3D? Body;
         public int Next; // next ground piece
+        public bool GroundDone; // the body (ground) is in the scene; trunks, rocks, logs and bushes follow in batches
+        public IEnumerator<CollisionShape3D>? Objects;
     }
+
+    // Object shapes added per step (a dense forest tile has ~1,000; all at once took up to 15 ms).
+    private const int ObjectBatch = 128;
 
     // The ground's triangle shape is built in pieces of this many triangles (a whole 64 m tile, 8,192 triangles, took
     // ~18 ms in one go: a hitch whenever a tile arrived).
@@ -56,7 +61,9 @@ public partial class WorldStreamer : Node3D
 
     private void DropCollision(TileKey key)
     {
-        if (_pendingCollision.Remove(key, out var p)) p.Body?.Free(); // a half-built body is not in the scene yet
+        if (!_pendingCollision.Remove(key, out var p)) return;
+        p.Objects?.Dispose();
+        if (!p.GroundDone) p.Body?.Free(); // a half-built body is not in the scene yet (otherwise it goes with its tile)
     }
     public int PendingCollision => _pendingCollision.Count;
     public long Triangles { get; private set; }
@@ -202,7 +209,7 @@ public partial class WorldStreamer : Node3D
     public bool HasGround(double x, double z)
     {
         var key = new TileKey(0, (long)Math.Floor(x / TileBuilder.BaseTile), (long)Math.Floor(z / TileBuilder.BaseTile));
-        return _tiles.ContainsKey(key) && !_pendingCollision.ContainsKey(key);
+        return _tiles.ContainsKey(key) && (!_pendingCollision.TryGetValue(key, out var p) || p.GroundDone);
     }
 
     public void Update(double px, double pz)
@@ -244,11 +251,14 @@ public partial class WorldStreamer : Node3D
                 // the player back and let the player walk up slopes that could not be climbed before): triangle shapes
                 // for the ground, a CollisionShape3D per trunk, rock, log and bush. Only *when* it is built changed:
                 // after the tile appears, in pieces, nearest tile first; the ground under the player waits for it.
+                // Over the frame's budget, only the tile the player is on (or next to) still gets a step.
+                bool urgent = Distance(key, px, pz) < TileBuilder.BaseTile * 1.5;
+                bool Over() => (CommitCollisionMs > 0 || !urgent) && timer.Elapsed.TotalMilliseconds > 8;
                 var faces = p.Data.CollisionFaces!;
                 int pieces = (faces.Length / 3 + GroundPieceTriangles - 1) / GroundPieceTriangles;
                 while (p.Next < pieces)
                 {
-                    if (CommitCollisionMs > 0 && timer.Elapsed.TotalMilliseconds > 8) goto budget;
+                    if (Over()) goto budget;
                     long t0 = Stopwatch.GetTimestamp();
                     p.Body ??= new StaticBody3D { CollisionLayer = 1, CollisionMask = 0 };
                     int start = p.Next * GroundPieceTriangles * 3, count = Math.Min(GroundPieceTriangles * 3, faces.Length - start);
@@ -257,13 +267,22 @@ public partial class WorldStreamer : Node3D
                     double ms = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
                     CommitGroundMs += ms; CommitCollisionMs += ms;
                 }
+                if (!p.GroundDone)
                 {
-                    if (CommitCollisionMs > 0 && timer.Elapsed.TotalMilliseconds > 8) goto budget;
                     long t0 = Stopwatch.GetTimestamp();
-                    ObjectCollision.Add(p.Body!, p.Data);
                     p.Root.AddChild(p.Body);
-                    _pendingCollision.Remove(key);
+                    p.GroundDone = true;
+                    p.Objects = ObjectCollision.Shapes(p.Data).GetEnumerator();
                     CommitCollisionMs += Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+                }
+                while (true)
+                {
+                    if (Over()) goto budget;
+                    long t0 = Stopwatch.GetTimestamp();
+                    bool more = true;
+                    for (int i = 0; i < ObjectBatch && (more = p.Objects!.MoveNext()); i++) p.Body!.AddChild(p.Objects.Current);
+                    CommitCollisionMs += Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+                    if (!more) { p.Objects!.Dispose(); _pendingCollision.Remove(key); break; }
                 }
             }
             budget:;

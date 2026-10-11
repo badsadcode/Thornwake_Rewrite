@@ -45,13 +45,19 @@ public static class ObjectCollision
 
     public static void Add(StaticBody3D body, TileData data)
     {
+        foreach (var shape in Shapes(data)) body.AddChild(shape);
+    }
+
+    /// <summary>The tile's object shapes, one at a time (the streamer adds them in batches across frames).</summary>
+    public static IEnumerable<CollisionShape3D> Shapes(TileData data)
+    {
         foreach (var tree in data.Trees)
         {
             float radius = tree.Species < Trunk.Length ? Trunk[tree.Species] : .3f;
             if (radius <= 0) continue;
             float scale = tree.Transform.Basis.X.Length();
             var at = tree.Transform.Origin + Vector3.Up * 2f;
-            body.AddChild(new CollisionShape3D { Shape = Cylinder(radius * scale, 4), Position = at });
+            yield return new CollisionShape3D { Shape = Cylinder(radius * scale, 4), Position = at };
         }
         foreach (var rock in data.Rocks)
         {
@@ -64,7 +70,7 @@ public static class ObjectCollision
             var unit = RockMeshes.HullPoints(rock.Kind);
             var points = new Vector3[unit.Length];
             for (int i = 0; i < unit.Length; i++) points[i] = b * unit[i];
-            body.AddChild(new CollisionShape3D { Shape = new ConvexPolygonShape3D { Points = points }, Position = rock.Transform.Origin });
+            yield return new CollisionShape3D { Shape = new ConvexPolygonShape3D { Points = points }, Position = rock.Transform.Origin };
         }
         foreach (var prop in data.Props)
         {
@@ -74,17 +80,17 @@ public static class ObjectCollision
             {
                 case GroundCover.Log:
                     // Lying along its local X, 3.4 m long.
-                    body.AddChild(new CollisionShape3D
+                    yield return new CollisionShape3D
                     {
                         Shape = new CapsuleShape3D { Radius = .24f * scale, Height = 3.4f * scale },
                         Transform = new Transform3D(t.Basis.Orthonormalized() * new Basis(Vector3.Back, Mathf.Pi / 2), t.Origin + Vector3.Up * .2f * scale),
-                    });
+                    };
                     break;
                 case GroundCover.Stump:
-                    body.AddChild(new CollisionShape3D { Shape = Cylinder(.4f * scale, 1), Position = t.Origin + Vector3.Up * .3f });
+                    yield return new CollisionShape3D { Shape = Cylinder(.4f * scale, 1), Position = t.Origin + Vector3.Up * .3f };
                     break;
                 default: // bushes: a low, soft-edged obstacle
-                    body.AddChild(new CollisionShape3D { Shape = Cylinder(.45f * scale, 1), Position = t.Origin + Vector3.Up * .5f });
+                    yield return new CollisionShape3D { Shape = Cylinder(.45f * scale, 1), Position = t.Origin + Vector3.Up * .5f };
                     break;
             }
         }
