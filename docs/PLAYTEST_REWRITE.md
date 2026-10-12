@@ -78,6 +78,18 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 50 — Light by biome (Atmosphere 2.0 M1)
+* **Light model → Atmosphere 2.0 (experimental)** now takes its colours from **light profiles by biome**
+  (`Content/light_profiles.json`): temperate forest, plains, taiga and cold lands, desert and dry rock, swamp and wet
+  lowland. Each has its own shade colour and haze by time of day, its own overcast and storm colours, sun tint, sun glow
+  in the haze and exposure. Walking into another biome blends the light over ~3 s.
+* The temperate forest profile is tuned to Tom's reference images (teal shade, lavender dusk, deep teal night, warm
+  haze toward the sun); the other four are first proposals.
+* The haze glows warm toward a low sun and stays cool away from it (stronger than before, light model 1 only).
+* Atmosphere captures: forest noon and night moved to a small clearing, so the camera no longer passes through crowns.
+* **Please test on the gaming PC:** Benchmark → suite *atmosphere* (all ten scenes, every still with both light
+  models), and play a while with *Light model: Atmosphere 2.0* through a day and through different biomes.
+
 ## New in build 49 — Atmosphere 2.0, first light proposal (M1)
 * **Settings → Lighting and effects → Light model**: *build 47* (default, unchanged) or *Atmosphere 2.0
   (experimental)*. The new model:

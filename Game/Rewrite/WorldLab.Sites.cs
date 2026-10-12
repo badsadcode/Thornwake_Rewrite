@@ -15,6 +15,46 @@ namespace Thornwake.Rewrite;
 public partial class WorldLab
 {
     private bool _findSitesPending = OS.GetCmdlineUserArgs().Contains("--find-sites");
+    private bool _clearSpotPending = OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--clear-spot"));
+
+    /// <summary><c>--clear-spot[=x,z]</c>: the nearest point (within 80 m of x, z or the player) with no tree within 9.5 m, so a camera
+    /// circling 6 m behind the player stays out of the crowns, preferring dense forest around it; printed, then quit.</summary>
+    private void ClearSpot()
+    {
+        var s = _sampler!;
+        var config = DetailConfig.For(s);
+        double px = PlayerX, pz = PlayerZ;
+        if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--clear-spot="))?[13..].Split(',') is [var ax, var az])
+        { px = double.Parse(ax, CultureInfo.InvariantCulture); pz = double.Parse(az, CultureInfo.InvariantCulture); }
+        long tx = (long)Math.Floor(px / TileBuilder.BaseTile), tz = (long)Math.Floor(pz / TileBuilder.BaseTile);
+        var trees = new List<Vector2>();
+        int reach = (int)Math.Ceiling(110 / TileBuilder.BaseTile);
+        for (long z = tz - reach; z <= tz + reach; z++)
+            for (long x = tx - reach; x <= tx + reach; x++)
+            {
+                var key = new TileKey(0, x, z);
+                foreach (var t in TileBuilder.Build(s, key, config).Trees)
+                    trees.Add(new Vector2((float)(key.MinX + t.Transform.Origin.X), (float)(key.MinZ + t.Transform.Origin.Z)));
+            }
+        (double Score, double X, double Z, int Near)? best = null;
+        for (double dz = -80; dz <= 80; dz += 2)
+            for (double dx = -80; dx <= 80; dx += 2)
+            {
+                double x = px + dx, z = pz + dz;
+                var t = s.Sample(x, z);
+                if (t.Water != WaterKind.None) continue;
+                var at = new Vector2((float)x, (float)z);
+                float nearest = float.MaxValue; int around = 0;
+                foreach (var tree in trees) { float d = tree.DistanceTo(at); nearest = Math.Min(nearest, d); if (d < 25) around++; }
+                if (nearest < 9.5f) continue;
+                double score = around - Math.Sqrt(dx * dx + dz * dz) * .15;
+                if (best == null || score > best.Value.Score) best = (score, x, z, around);
+            }
+        GD.Print(best is { } b
+            ? $"CLEAR_SPOT {b.X.ToString("0.0", CultureInfo.InvariantCulture)}, {b.Z.ToString("0.0", CultureInfo.InvariantCulture)} ({b.Near} trees within 25 m, {Math.Sqrt((b.X - px) * (b.X - px) + (b.Z - pz) * (b.Z - pz)):0} m away)"
+            : "CLEAR_SPOT none within 80 m");
+        GetTree().Quit();
+    }
 
     private void FindSites()
     {
