@@ -336,6 +336,8 @@ public partial class Atmosphere : Node3D
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
         SkyParam("quality", GameSettings.CloudQuality.Index);
         SkyParam("cloud_blend", GameSettings.CloudBlend.Index);
+        var nearShader = GD.Load<Shader>(GameSettings.CloudBlend.Index == 0 ? "res://Game/Rewrite/CloudsNear52.gdshader" : "res://Game/Rewrite/CloudsNear.gdshader");
+        if (_cloudsNear.Shader != nearShader) _cloudsNear.Shader = nearShader;
         _cloudsNear.SetShaderParameter("cloud_light_linear", GameSettings.CloudBlend.Index);
         SkyParam("split_test", OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--cloud-split-test")) is { } split
             ? split.Contains('=') ? int.Parse(split[(split.IndexOf('=') + 1)..]) : 1 : 0);
@@ -853,6 +855,7 @@ public partial class Atmosphere : Node3D
         var fogLight = env.FogLightColor.SrgbToLinear() * env.FogLightEnergy;
         RenderingServer.GlobalShaderParameterSet("cloud_fog", new Vector4(fogLight.R, fogLight.G, fogLight.B, env.FogEnabled ? env.FogSkyAffect : 0));
         RenderingServer.GlobalShaderParameterSet("cloud_fog2", new Vector4(env.FogSunScatter, env.FogAerialPerspective, 0, 0));
+        _cloudsNear.SetShaderParameter("fog_depth", env.VolumetricFogLength * 1.02f + 1);
     }
     // ---- simulated weather (round 27): steering wind, nearby thunderstorm cells, wind-built sea
     private Vector2? _steer;

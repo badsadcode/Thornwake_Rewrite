@@ -4,7 +4,12 @@
 // from the camera to the scene's depth, over geometry only — the sky pixels keep the sky's own half-resolution march.
 // Rays that never reach the cloud layer (most of them, under a high deck) cost one slab test.
 shader_type spatial;
-render_mode unshaded, blend_premul_alpha, depth_test_disabled, depth_draw_never, cull_disabled, fog_disabled, shadows_disabled;
+// Fog on (round 31): Godot's volumetric fog veils the sky, its clouds included; these clouds take the same veil (the
+// fragment sits just past the fog's length, where the sky reads it — fog_depth). Colour leaves this shader
+// unpremultiplied with PREMUL_ALPHA_FACTOR = opacity, so Godot's colour × transmittance + in-scatter comes out as
+// cloud × T + in-scatter × opacity, as over the sky. (Build 52, fog off: CloudsNear52.gdshader.)
+render_mode unshaded, blend_premul_alpha, depth_test_disabled, depth_draw_never, cull_disabled, shadows_disabled, skip_vertex_transform;
+uniform float fog_depth = 200.0;
 
 uniform sampler2D depth_tex : hint_depth_texture, filter_nearest, repeat_disable;
 // The sun light as the sky sees it (LIGHT0): colour (rgb, as set on the light: sRGB) and energy (a); direction toward it (xyz).
@@ -35,6 +40,10 @@ uniform int max_steps = 128;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
+	// The view-space point fog_depth metres deep along this corner's ray (fog reads the fragment's position).
+	vec4 near = INV_PROJECTION_MATRIX * vec4(VERTEX.xy, 1.0, 1.0);
+	vec3 v = near.xyz / near.w;
+	VERTEX = v * (fog_depth / max(-v.z, 1e-4));
 }
 
 void fragment() {
@@ -65,12 +74,13 @@ void fragment() {
 		// Godot's sky fog (sky.glsl fog_process): the fog light colour, toward the pixel's own colour by the aerial
 		// perspective, plus the sun scattered around it; mixed in by the sky affect.
 		vec3 own = v.rgb / v.a;
-		vec3 fog = mix(cloud_fog.rgb, own, cloud_fog2.y) + sun_col * pow(max(dot(dir, sun_dir), 0.0), 8.0) * cloud_fog2.x;
+		vec3 fog = mix(cloud_fog.rgb, own, cloud_fog2.y) + sun_col * pow(max(dot(dir, sun_dir), 0.0), 8.0) * PI * cloud_fog2.x;
 		v.rgb = mix(v.rgb, fog * v.a, cloud_fog.a);
 	}
 	// Probe (--cloud-split-test=2): the sun as this pass sees it, beside the sky's (Sky.gdshader).
 	if (probe) v = vec4(SCREEN_UV.y < 0.06 ? sun_col * 0.2 : sun_dir * 0.5 + 0.5, 1.0);
 	if (split_test == 3 && test) v = vec4(vec3(v.a), 1.0);
-	ALBEDO = v.rgb;
+	ALBEDO = v.rgb / max(v.a, 1e-4);
 	ALPHA = v.a;
+	PREMUL_ALPHA_FACTOR = v.a;
 }
