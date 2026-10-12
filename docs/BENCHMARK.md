@@ -83,7 +83,8 @@ dawn, beside the lake, coast at dusk, and a flight over a mountain ridge through
 * Scene options in `benchmarks.json`: `"world": "patch32"` (a world from `worlds`), `"move"`, `"settings"` (e.g.
   cloud cover for this scene only, applied after the frozen conditions).
 * `--bench=atmosphere --bench-scenes=atmo-forest-noon,atmo-lake` runs only some scenes (also from the menu's suite).
-* **A/B stills**: `--bench-compare=fx.light_model=0,1` (or `"compare": "fx.light_model=0,1"` in a suite) takes every
+* **A/B stills** (on in the `atmosphere` suite for M1: build 47's light vs light model 1): `--bench-compare=fx.light_model=0,1`
+  (or `"compare": "fx.light_model=0,1"` in a suite) takes every
   still once per value, `captures/NN-scene-KK-light_model-0.jpg` and `…-1.jpg`: the same frame, the move and the clock
   paused while it renders 8 frames per value (TAA and fog history settle), then the setting goes back.
   `--bench-stills=N` changes the number of stills per scene; `--bench-settle=S` how long a scene may take to load

@@ -2,7 +2,7 @@ config_version=5
 
 [application]
 config/name="Thornwake"
-config/version="0.9.48"
+config/version="0.9.49"
 run/main_scene="res://Game/Launcher.tscn"
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
 config/description="A life at the edge of the wild. First playable prototype."

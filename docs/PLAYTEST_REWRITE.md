@@ -78,6 +78,20 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 49 — Atmosphere 2.0, first light proposal (M1)
+* **Settings → Lighting and effects → Light model**: *build 47* (default, unchanged) or *Atmosphere 2.0
+  (experimental)*. The new model:
+  * the sun by time of day: blue hour, golden hour (warm and low), morning, high noon (white, strongest);
+  * warm sun, cool shade: a blue fill in the shadows by time of day, near-neutral grey under overcast;
+  * the eye adapts a little: up to +½ stop inside a closed forest, up to +¼ stop at a dim golden hour or on an overcast
+    day, never at night; over ~1.5 s (instant after a teleport). Your *Brightness* stays on top of it.
+  Nothing else changed (glow, shafts, beams, fog, clouds are as in build 47: they come at the next pause points).
+* **Benchmark → suite "atmosphere"** now takes every still twice, once with each light model, on the same frame:
+  `captures/NN-scene-KK-light_model-0.jpg` and `…-1.jpg` in the results folder. Please run it once (all ten scenes,
+  about 10–15 minutes) and send the zip; with your reference images that is pause point 2.
+* A scene's stills can show the camera inside a tree crown (forest noon, part of the turn): known, the scene framing
+  will be adjusted.
+
 ## New in build 48 — Quit from the Esc menu
 * **Resume, Back to launcher and Quit game** now sit under the tabs of the Esc menu, on every tab (the Quit button
   used to be at the bottom of the World tab only). No more Alt+F4 in fullscreen.

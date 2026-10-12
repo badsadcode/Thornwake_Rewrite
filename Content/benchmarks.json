@@ -152,7 +152,7 @@
       "name": "Atmosphere captures (stills and camera moves at fixed places, times and weather; Atmosphere 2.0 comparisons)",
       "scenarios": ["atmo-forest-walk", "atmo-forest-noon", "atmo-forest-night", "atmo-plains-evening", "atmo-taiga-morning",
         "atmo-desert-noon", "atmo-swamp-dawn", "atmo-lake", "atmo-coast-dusk", "atmo-ridge-clouds"],
-      "ablate": false, "capture": true, "stills": 8
+      "ablate": false, "capture": true, "stills": 8, "compare": "fx.light_model=0,1"
     }
   }
 }
