@@ -1280,6 +1280,33 @@ by day (golden hour as before), tops near-neutral with the sun high, a little mo
 (86 vs 91 fps). Artistic: Tom picks; defaults unchanged. Test switches kept for later tuning: `--cloud-split-test=4`,
 `--cloud-fog-off`, `--cloud-dev=x,y`.
 
+## D95 — Tom's first play of the reference clouds: tree hole, horizon line, far land (2026-10-12)
+Tom played the source build with *Cloud look: reference* ("clouds look good with these settings") and sent dumps
+220450–222024. Fixed (technical), each checked on his dumps in an isolated user folder:
+* **A hole in the forest under the camera** (dumps 220524, 221042: from 120–155 m up, bare ground in a ring around a
+  square of trees). A regression shown by D93, not made by it: Godot switches each tree batch by the **3D** distance to
+  its box's centre (`_visibility_range_check`, 4.7.2 source), while D86's dither measured the **horizontal** distance
+  per pixel; from above, the detailed batches went off while the lighter ones still left the band to them. Before D93
+  most lighter batches had lost their role to the instance-uniform overflow and drew in full, hiding it (commit 5c45cda
+  renders the dump whole). Now the dither measures 3D, and the two models' ranges are padded by a cell's half 3D
+  diagonal (~95 m) so both are on wherever the dither needs them. The ground forest matches `main` (difference 0.5,
+  run noise 0.1); cost in the densest forest at *Full-detail trees* 130 m: 60 → 56 fps. The simplified-shadow twin is
+  not padded (+40 % of that cost for little): its shadows end by cell as in builds 51–53. A free alternative (switch
+  whole cells, a visible cell edge between the two models at 60–110 m) is kept in reserve.
+* **A stepped line along the horizon inside clouds** (dumps 220450, 221259, 221314): water writes no depth, and beyond
+  the farthest seabed the far sea reads as sky — CloudsNear left those pixels to the sky, whose clouds are drawn behind
+  everything, and the sea was then drawn over them: a strip of clear sea. With *Cloud look: reference*, CloudsNear draws
+  every pixel below the horizon, sky ones included, and the sky's composite leaves them (both now match: D94). *Build 53*
+  unchanged.
+* **Horizon land cut at 90 km**: the camera's far plane was 90 km whatever *Horizon land* said (~100 / ~250 km). The far
+  plane now follows the horizon land, which also reaches at least the true horizon for the camera's height (+10 %, in
+  25 km steps, at most 400 km: ~160 km from 2 km up).
+Explained, not changed (Tom decides): the see-through cap on a summit (dumps 222017 / 222024) — the cap wraps the summit,
+so a ray toward the slope crosses only the thin layer of cloud in front of the rock; the near pass's step budget is not
+the cause (128 vs 512 steps: identical); caps are not dense enough to hide what is inside them. The repeating pattern
+from 20 km up (dump 221223): the tileable cloud map, dozens of periods in view (M3). The lens disk: open item (HANDOFF 2).
+Wish: turbulence inside clouds. Test tools: `--cloud-dev=x,y,z` (z: CloudsNear step budget).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

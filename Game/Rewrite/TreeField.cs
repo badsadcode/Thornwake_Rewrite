@@ -257,6 +257,13 @@ public sealed partial class TreeField : Node3D
         }
         var node = new Node3D { Name = $"C{key.Level}_{key.X}_{key.Z}", Position = data.Centre - new Vector3((float)_originX, 0, (float)_originZ) };
         float diagonal = (float)(key.Size * .5 * Math.Sqrt(2));
+        // Godot switches a batch by the 3D distance to its box's centre, the shaders dither each pixel by its own distance
+        // (TreeFade.gdshaderinc, tree_lod_out): a pixel can be up to half the cell's diagonal (plus the trees' spread in
+        // height) nearer or farther than the centre, so both models stay on that much beyond the band and the dither
+        // decides. (Unpadded, the detailed model went off under a camera 120 m up while the lighter one still left the
+        // band to it: a hole in the forest — Tom, dump 220524.)
+        // (a cell's box: half its diagonal across, ~30 m half-height of terrain and crowns)
+        float lodPad = Mathf.Sqrt(diagonal * diagonal + 30 * 30);
         bool shadows = GameSettings.Shadows.Index > 0;
         foreach (var (species, lod, part, buffer, count) in data.Batches)
         {
@@ -269,12 +276,12 @@ public sealed partial class TreeField : Node3D
             if (lod == 1)
             {
                 mmi.CastShadow = shadows && detailedShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
-                mmi.VisibilityRangeEnd = NearRange + LodBand; // (the shaders dither the hand-over: tree_lod)
+                mmi.VisibilityRangeEnd = NearRange + LodBand + lodPad; // (the shaders dither the hand-over: tree_lod)
             }
             else
             {
                 mmi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
-                if (data.Near) mmi.VisibilityRangeBegin = Math.Max(0, NearRange - LodBand);
+                if (data.Near) mmi.VisibilityRangeBegin = Math.Max(0, NearRange - LodBand - lodPad);
                 mmi.VisibilityRangeEnd = DetailRange + Fade + diagonal; // beyond: impostors (the shader fades the edge)
                 if (data.Near && shadows && !detailedShadows)
                 {
@@ -289,7 +296,7 @@ public sealed partial class TreeField : Node3D
                     node.AddChild(new MultiMeshInstance3D
                     {
                         Multimesh = shadowMulti, Layers = RenderLayers.TreesNear, CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly,
-                        VisibilityRangeEnd = NearRange + LodBand,
+                        VisibilityRangeEnd = NearRange + LodBand, // (not padded: shadows end by cell as before; padded cost ~3 fps)
                     });
                 }
             }

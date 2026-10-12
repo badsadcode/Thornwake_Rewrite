@@ -478,7 +478,7 @@ float vhg(float c, float g) { float g2 = g * g; return (1.0 - g2) / pow(max(1.0 
 
 // Test only (--cloud-dev=x,y; the cloud look investigation, round 32): x scales the clouds' aerial perspective (1 = as
 // in play), y strengthens the self-shadowing (0 = as in play): more light used up toward the sun, darker bases, brighter
-// sunlit tops. Not a setting; play always runs with (1, 0, 0, 0).
+// sunlit tops; z > 0 replaces CloudsNear's step budget (max_steps). Not a setting; play always runs with (1, 0, 0, 0).
 global uniform vec4 cloud_dev;
 
 // The march through the volume from t0 to t1 along dir (camera-relative): premultiplied light, opacity.

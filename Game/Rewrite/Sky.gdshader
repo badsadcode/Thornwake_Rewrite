@@ -113,6 +113,7 @@ void sky() {
 				far = vec4(0.0);
 				vec4 v = HALF_RES_COLOR;
 				if (cloud_look == 1) v.rgb /= max(QUARTER_RES_COLOR.rgb, vec3(1.0)); // fogged once, not twice (FOG_UNDO_K)
+				if (cloud_look == 1 && up < 0.0) v = vec4(0.0); // (below the horizon CloudsNear draws them, over the far sea too)
 				if (split_test >= 1 && quality == 3 && (split_test == 4 || SCREEN_UV.x < 0.5)) v = vec4(0.0); // (4: CloudsNear draws all clouds)
 				col = col * (1.0 - v.a) + v.rgb;
 				disc *= 1.0 - v.a;

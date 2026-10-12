@@ -718,7 +718,9 @@ public partial class WorldLab : Node3D
         if (_sampler == null) return;
         Rebase(PlayerX, PlayerZ);
         _streamer.Update(PlayerX, PlayerZ);
-        _horizon?.Step(PlayerX, PlayerZ, _originX, _originZ, _streamer.Levels, WorldStreamer.TopRadius);
+        _horizon?.Step(PlayerX, PlayerZ, _originX, _originZ, _streamer.Levels, WorldStreamer.TopRadius, _camera.GlobalPosition.Y);
+        // The far plane covers the horizon land (it was 90 km whatever its range: land beyond was cut off).
+        _camera.Far = Math.Max(90000, (_horizon?.Range ?? 0) * 1.05f);
         if (_holding && _streamer.HasGround(PlayerX, PlayerZ))
         {
             // Snap to the generated ground once its collision exists: onto the collision surface, which at cliffs (a

@@ -43,10 +43,13 @@ bool tree_fade_in(vec3 world, vec2 frag, float r) {
 	return tree_ranges.w > 0.5 && tree_bayer(frag) >= tree_band(tree_distance(world), r);
 }
 // The same dither between the detailed and the lighter model (each pixel shows one or the other, both stay opaque).
+// Measured in 3D, as Godot measures the visibility ranges that switch each model's batches on and off (TreeField pads
+// them by a cell's size): horizontally, from 120 m up, the detailed model's batches were already off below the camera
+// while the lighter one still left the band to it — a hole in the forest under the player (Tom, dump 220524).
 #ifndef TREE_NO_LOD_ROLE
 bool tree_lod_out(vec3 world, vec2 frag) {
 	if (tree_lod_role < 0.5 || tree_lod.y <= 0.0) return false;
-	float t = clamp((tree_distance(world) - (tree_lod.x - tree_lod.y)) / (2.0 * tree_lod.y), 0.0, 1.0);
+	float t = clamp((length(world - tree_camera.xyz) - (tree_lod.x - tree_lod.y)) / (2.0 * tree_lod.y), 0.0, 1.0);
 	return tree_lod_role < 1.5 ? tree_bayer(frag) < t : tree_bayer(frag) >= t;
 }
 #endif

@@ -42,10 +42,14 @@ void fragment() {
 	bool sky = cloud_blend == 1 ? depth <= 0.0 : depth < 1e-6;
 	bool test = split_test == 4 || (split_test >= 1 && SCREEN_UV.x < 0.5); // (4: the whole screen)
 	bool probe = split_test == 2 && test && SCREEN_UV.y < 0.12;
-	if (((sky && !test) || quality != 3) && !probe) discard; // sky pixels: the sky draws them
 	// Direction from the near plane (a sky pixel's depth 0 is at infinity); distance to the scene.
 	vec4 near = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, 1.0, 1.0);
 	vec3 dir = normalize((INV_VIEW_MATRIX * vec4(normalize(near.xyz / near.w), 0.0)).xyz);
+	// Cloud look reference: below the horizon this pass draws the clouds of sky pixels too (Sky.gdshader leaves them).
+	// Water writes no depth, and beyond the farthest seabed the far sea's pixels read as sky: the sky's clouds were drawn
+	// behind it and the sea over them — a stepped strip of clear sea along the horizon inside clouds (Tom, dump 220450).
+	bool below = cloud_look == 1 && dir.y < 0.0;
+	if (((sky && !test && !below) || quality != 3) && !probe) discard; // sky pixels: the sky draws them
 	float scene = 1e9;
 	if (!sky) {
 		vec4 view = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, depth, 1.0);
@@ -54,7 +58,7 @@ void fragment() {
 	vec3 sun_dir = normalize(cloud_light_dir.xyz);
 	vec3 sun_col = cloud_light_rgb() * cloud_light.a;
 	float day = clamp(sun_dir.y * 4.0 + 0.35, 0.08, 1.0);
-	vec4 v = volumetric_v2(dir, scene, cloud_jitter(FRAGCOORD.xy, TIME), sky ? 150 : max_steps, sun_dir, sun_col, day, dot(dir, sun_dir), cloud_state.z, cloud_state.w);
+	vec4 v = volumetric_v2(dir, scene, cloud_jitter(FRAGCOORD.xy, TIME), sky ? 150 : (cloud_dev.z > 0.5 ? int(cloud_dev.z) : max_steps), sun_dir, sun_col, day, dot(dir, sun_dir), cloud_state.z, cloud_state.w);
 	if (v.a < 0.002 && !probe && !(split_test == 3 && test)) discard;
 	// The sky's biome haze over its clouds (Sky.gdshader, "Biome haze"), here too: without it these clouds stayed
 	// white in front of distant land while the same clouds in the sky above were veiled in dust, and the land's

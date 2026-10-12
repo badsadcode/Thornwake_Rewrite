@@ -57,13 +57,23 @@ void fragment() {
         _built = (long.MinValue, 0, 0, 0, -1);
     }
 
+    /// <summary>How far the land reaches now (m; 0 = off): the camera's far plane must cover it.</summary>
+    public int Range { get; private set; }
+
     /// <summary>
     /// Per frame. <paramref name="levels"/>: the streamer's level count (the top level's tiles set the inner edge);
-    /// <paramref name="topRadius"/>: its top ring radius in tiles.
+    /// <paramref name="topRadius"/>: its top ring radius in tiles; <paramref name="height"/>: the camera above sea level.
     /// </summary>
-    public void Step(double px, double pz, double originX, double originZ, int levels, int topRadius)
+    public void Step(double px, double pz, double originX, double originZ, int levels, int topRadius, double height)
     {
         int range = GameSettings.HorizonLand.Index switch { 0 => 0, 1 => 100000, _ => 250000 };
+        // At least out to the true horizon (+10 %), in 25 km steps (a rebuild only when climbing that much), at most
+        // 400 km: from 2 km up the horizon is ~160 km away, and beyond ~100 km of land the rays that pass over its edge
+        // but not yet over the horizon hit nothing — sky below the horizon, with the sky's clouds instead of the land's:
+        // a stepped line along the horizon inside clouds (Tom, dumps 221259 / 221314).
+        if (range > 0)
+            range = (int)Math.Min(400000, Math.Max(range, Math.Ceiling(Math.Sqrt(2 * EarthRadius * Math.Max(height, 0)) * 1.1 / 25000) * 25000));
+        Range = range;
         Visible = range > 0 && Mesh != null;
         if (_sampler == null || range == 0) return;
         double size = TileBuilder.BaseTile * (1L << (levels - 1));
