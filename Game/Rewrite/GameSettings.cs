@@ -253,6 +253,17 @@ public static class GameSettings
         "strong wind, crisper cauliflower edges, flat blue-grey bases and bright tops (the M3 references). Build 53: the " +
         "clouds as before.",
         options: new[] { "build 53", "reference" }));
+    public static readonly Setting CloudCaps = Add(new("sky.cloud_caps", "Sky", "Cloud caps", 0, 1, 1, 0,
+        "Volumetric v2: the cloud that mountains catch. Dense: thick enough to hide the summit it sits on (from a distance " +
+        "the rock no longer shows through). Build 54: as before.",
+        options: new[] { "build 54", "dense" }));
+    public static readonly Setting CloudTurbulence = Add(new("sky.cloud_turbulence", "Sky", "Cloud turbulence", 0, 1, 1, 0,
+        "Volumetric v2: near you a cloud churns — wisps and eddies drifting by when you walk or fly through cloud.",
+        options: new[] { "off", "on" }));
+    public static readonly Setting LensStyle = Add(new("sky.lens_style", "Sky", "Lens clouds", 0, 1, 1, 0,
+        "Lens clouds over high peaks. Stacked: a pile of thinner, smaller plates with uneven rims and a second lens " +
+        "downwind. Build 54: four large elliptical plates.",
+        options: new[] { "build 54", "stacked" }));
     public static readonly Setting BiomeMoods = Add(new("sky.biome_moods", "Sky", "Biome skies", 0, 2, 1, 0,
         "Each biome tints the sky and haze a little (jungle humid, desert dusty, volcanic ashen, blighted swamp gloomy). " +
         "Off keeps the realistic sky everywhere.", options: new[] { "off (realistic)", "subtle", "strong" }));

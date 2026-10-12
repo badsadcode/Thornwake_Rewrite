@@ -347,6 +347,9 @@ public partial class Atmosphere : Node3D
         SkyParam("quality", GameSettings.CloudQuality.Index);
         SkyParam("cloud_blend", GameSettings.CloudBlend.Index);
         SkyParam("cloud_look", GameSettings.CloudLook.Index);
+        SkyParam("cloud_caps", GameSettings.CloudCaps.Index);
+        SkyParam("cloud_turbulence", GameSettings.CloudTurbulence.Index);
+        SkyParam("lens_style", GameSettings.LensStyle.Index);
         // Tests (cloud look investigation, round 32): --cloud-fog-off draws CloudsNear without Godot's fog (with
         // --cloud-split-test=4 it draws every cloud, so the sky keeps its veil and the clouds lose theirs);
         // --cloud-dev=x,y sets cloud_dev (SkyCommon.gdshaderinc: aerial perspective scale, extra self-shadowing).

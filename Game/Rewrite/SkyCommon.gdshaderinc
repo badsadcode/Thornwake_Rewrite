@@ -355,13 +355,19 @@ uniform int cloud_blend = 1;
 uniform int cloud_look = 0;
 // How streaked by the wind (0 calm … 1 stretched): build 53 from ~4 m/s (wind.y = speed / 8), so a Wind strength above 1
 // streaked every cloud; reference only from ~12 m/s (a strong breeze) to full at ~20 m/s.
+// Cloud caps (setting): 0 = build 54; 1 = dense — the cloud mountains catch is up to 3.5× denser, so a cap hides the
+// summit it sits on instead of showing the rock through a thin layer (Tom, dumps 222017 / 222024).
+uniform int cloud_caps = 0;
+// Cloud turbulence (setting): 0 = off; 1 = within ~600 m of the camera the cloud churns — eddies ~60 m across drifting
+// and turning at a few m/s, so walking or flying through cloud shows wisps going by (Tom: "some kind of turbulence").
+uniform int cloud_turbulence = 0;
 float cloud_windy() { return cloud_look == 1 ? smoothstep(1.5, 2.5, wind.y) : smoothstep(0.5, 1.6, wind.y); }
 float cloud_map(vec2 uv, float lod, int ch) {
 	vec4 c = lod >= 0.0 ? textureLod(cloud_tex, uv, lod) : texture(cloud_tex, uv);
 	return ch == 0 ? c.r : c.g;
 }
 
-vec3 vweather(vec2 xz, float coverage, float dist) {
+vec3 vweather(vec2 xz, float coverage, float dist, out float land) {
 	// Simulated weather: cover from the map, rain thickens the deck, thunderstorm cells grow towers (up to ~5 km).
 	vec3 wm = weather_frame.w > 0.5 ? wmap(xz - cloud_state.xy) : vec3(coverage, cloud_state.w, 0.0);
 	coverage = mix(coverage, wm.r, weather_frame.w * 0.85);
@@ -375,6 +381,7 @@ vec3 vweather(vec2 xz, float coverage, float dist) {
 	float core = smoothstep(edge + 0.05, edge + 0.4, n);
 	float tower = cloud_types.x > 0.001 ? cloud_types.x * core * (0.35 + 0.65 * cloud_map(uv * 0.5 + vec2(0.7, 0.2), lod < 0.0 ? lod : max(lod - 1.0, 0.0), 1)) : 0.0;
 	vec3 extra = land_and_front(xz - cloud_state.xy);
+	land = extra.x;
 	// (only where the land holds cloud does the base come down toward the ridges; elsewhere it stays put)
 	float base = mix(VBOTTOM, clamp(extra.z, max(VBOTTOM - 500.0, VLOW_MIN), VBOTTOM), clamp(extra.x / 0.85, 0.0, 1.0));
 	mass = max(mass, extra.x * (0.75 + 0.5 * n));
@@ -391,7 +398,8 @@ float vdens(vec3 p, bool detail) {
 	vec4 n = texture(cloud_noise, p / 2600.0 + vec3(0.0, cloud_more.z * 0.00005, 0.0));
 	// The map is read through a 3D warp: a cloud's sides bulge in and out with height instead of standing as walls.
 	vec2 warp = (vec2(n.g, n.b) - 0.5) * (500.0 + above * 0.18);
-	vec3 wx = vweather(p.xz - lean * above + warp, cloud_state.z, length(vec3(p.x - cloud_state.x, p.y, p.z - cloud_state.y)));
+	float land;
+	vec3 wx = vweather(p.xz - lean * above + warp, cloud_state.z, length(vec3(p.x - cloud_state.x, p.y, p.z - cloud_state.y)), land);
 	if (wx.x <= 0.0) return -1.0; // clear sky here at every height: the march may stride
 	// A full deck is not flat paint: thick and thin patches over kilometres, and a lumpy base (rolls of stratocumulus).
 	float full = smoothstep(0.6, 0.9, cloud_state.z) * (1.0 - 0.75 * smoothstep(7000.0, 22000.0, length(p.xz - cloud_state.xy))); // (far away the 3D noise would repeat visibly)
@@ -407,6 +415,18 @@ float vdens(vec3 p, bool detail) {
 	float base = clamp(vremap(n.r, wf - 1.0, 1.0, 0.0, 1.0), 0.0, 1.0);
 	base = base * base * (3.0 - 2.0 * base); // rounder lumps
 	float d = clamp(vremap(base, 1.0 - cov, 1.0, 0.0, 1.0), 0.0, 1.0) * cov * (1.0 + 0.9 * wx.x); // thick parts denser
+	if (cloud_caps == 1) d *= 1.0 + 2.5 * land; // (dense caps)
+	if (cloud_turbulence == 1 && detail && d > 0.0) {
+		float k = 1.0 - smoothstep(150.0, 600.0, length(vec3(p.x - cloud_state.x, p.y, p.z - cloud_state.y)));
+		if (k > 0.0) {
+			// Two octaves moving against each other and rising slowly: eddies forming and coming apart.
+			float tt = cloud_more.z;
+			vec3 q = p / 60.0;
+			float eddy = texture(cloud_noise, q + vec3(tt * 0.035, tt * 0.02, -tt * 0.025)).g * 0.6
+				+ texture(cloud_noise, q * 2.3 + vec3(-tt * 0.06, tt * 0.03, tt * 0.05)).b * 0.4;
+			d *= mix(1.0, 0.2 + 1.6 * eddy, k);
+		}
+	}
 	if (d <= 0.0 || !detail) return d;
 	// Fine detail: billowy on top, wispy underneath; in wind stretched along it (smudged streaks).
 	float windy = cloud_windy();

@@ -1316,6 +1316,14 @@ Players' saved settings keep their own choice. Benchmark profiles do not pin the
 the new clouds (compare older captures with `--set=sky.cloud_look=0`). Also tagged `handoff-2026-10-12` (= `67771ba`),
 which the handoff asked to create on the PC.
 
+## D97 — Open cloud choices as switchable drafts (2026-10-12)
+Tom: "start working on the open choices". Each is a setting next to the current look, default unchanged, for his pick:
+*Sky → Cloud caps* (build 54 / dense: the cloud mountains catch up to 3.5× denser, so a cap hides its summit — works on
+dumps 222017 / 222024), *Sky → Cloud turbulence* (off / on: churning eddies ~60 m across within ~600 m of the camera —
+draft: not yet visible in the stills, needs a test inside a cloud), *Sky → Lens clouds* (build 54 / stacked: smaller,
+thinner plates with wandering rims and a second lens downwind — draft: from below the thin plates read as hard blades,
+worse than the disk; to be reworked). Dumps now carry `--cloud-drift`, so cloud scenes rebuild exactly.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

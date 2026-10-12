@@ -159,9 +159,60 @@ vec4 ct_storm(vec3 dir, float az0, float d, float b, float s, float side, float 
 
 // Lenticular clouds: a stack of thin smooth plates over the peak (cloud_lens), long across the wind, nearly the same
 // size, so they merge into one smooth lens with faint layering; soft translucent rims frayed a little by the noise.
+// Lens clouds (setting): 0 = build 54 (four 13 × 6.4 km elliptical plates almost on top of each other: from a few km
+// below, one smooth disk filling half the sky — Tom, dump 215924); 1 = stacked: a pile of thinner, smaller plates
+// (~6 × 2.8 km, shrinking upward, gaps between them), rims that wander instead of a perfect ellipse, darker undersides,
+// and a smaller second lens downwind at the next crest of the mountain wave.
+uniform int lens_style = 0;
+
+vec4 ct_lens_stacked(vec3 dir, vec3 sun_dir, vec3 sun_col, vec3 ambient, vec3 glow, float s) {
+	float wa = cloud_more.y;
+	vec3 along = vec3(cos(wa), 0.0, sin(wa)), across = vec3(-sin(wa), 0.0, cos(wa));
+	vec4 res = vec4(0.0);
+	for (int i = 0; i < 7; i++) {
+		float fi = float(i);
+		bool second = i >= 5; // the downwind lens: two plates, ~7 km on, a little lower and smaller
+		float k = second ? fi - 5.0 : fi;
+		float n = second ? 2.0 : 5.0;
+		vec3 c = cloud_lens.xyz + along * (second ? 7000.0 : 0.0) + vec3(0.0, (second ? -150.0 : 0.0) + (k - (n - 1.0) * 0.5) * 230.0, 0.0)
+			+ along * (k - (n - 1.0) * 0.5) * 120.0;
+		float shrink = (1.0 - 0.13 * k) * (second ? 0.55 : 1.0);
+		vec3 rad = vec3(3000.0, 85.0 + 25.0 * ct_hash(fi * 3.1 + 0.4), 1400.0) * shrink;
+		vec3 o = -c, ol = vec3(dot(o, across), o.y, dot(o, along)) / rad;
+		vec3 dl = vec3(dot(dir, across), dir.y, dot(dir, along)) / rad;
+		float a = dot(dl, dl), bq = dot(ol, dl), cq = dot(ol, ol) - 1.0;
+		float disc = bq * bq - a * cq;
+		if (disc <= 0.0) continue;
+		float sr = sqrt(disc);
+		float t0 = max((-bq - sr) / a, 0.0), t1 = (-bq + sr) / a;
+		if (t1 <= 0.0) continue;
+		vec3 pl = ol + dl * (t0 + t1) * 0.5; // the middle of the chord
+		// A wandering rim: the plate's edge in or out by up to ~25 % with the angle around it, and frayed finer.
+		float ang = atan(pl.z, pl.x);
+		float wob = 0.78 + 0.14 * sin(ang * 3.0 + fi * 1.7) + 0.08 * sin(ang * 7.0 + fi * 2.9)
+			+ (texture(cloud_tex, pl.xz * 0.6 + fi * 0.37).g - 0.5) * 0.18;
+		float r = length(pl.xz) / wob;
+		float chord = (t1 - t0) * sqrt(a);
+		float dens = smoothstep(1.0, 0.82, r) * smoothstep(0.02, 0.5, chord) * 0.9 * s;
+		if (dens <= 0.001) continue;
+		vec3 nl = normalize(pl / rad);
+		vec3 nw = normalize(across * nl.x + vec3(0.0, nl.y, 0.0) + along * nl.z);
+		float l = clamp(dot(nw, sun_dir) * 0.5 + 0.5, 0.0, 1.0);
+		// Lit tops, darker undersides (seen from below the pile is grey with bright rims toward the sun).
+		vec3 col = sun_col * l * 0.85 * smoothstep(-0.1, 0.2, sun_dir.y + 0.1) + ambient * (0.55 + 0.45 * clamp(nl.y * 0.5 + 0.5, 0.0, 1.0)) + glow * 1.1;
+		col += sun_col * pow(max(dot(dir, sun_dir), 0.0), 6.0) * smoothstep(0.85, 1.0, r) * 0.8;
+		res = vec4(res.rgb + col * dens * (1.0 - res.a), res.a + dens * (1.0 - res.a));
+	}
+	return res;
+}
+
 vec4 ct_lens(vec3 dir, vec3 sun_dir, vec3 sun_col, vec3 ambient, vec3 glow) {
 	float s = cloud_lens.w;
 	if (s <= 0.001) return vec4(0.0);
+	if (lens_style == 1) {
+		float dist = length(cloud_lens.xz);
+		return ct_lens_stacked(dir, sun_dir, sun_col, ambient, glow, s) * mix(1.0, 0.55, smoothstep(10000.0, 60000.0, dist));
+	}
 	float wa = cloud_more.y;
 	vec3 along = vec3(cos(wa), 0.0, sin(wa)), across = vec3(-sin(wa), 0.0, cos(wa));
 	vec4 res = vec4(0.0);
