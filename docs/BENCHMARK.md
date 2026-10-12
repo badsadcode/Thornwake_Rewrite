@@ -92,6 +92,8 @@ dawn, beside the lake, coast at dusk, and a flight over a mountain ridge through
 * **Artefact shots (suite `artefacts`)**: fixed shots of the tracked artefacts — far water against the sky (sea and
   lake), glare around a low sun, sun shafts into the forest, sky seams (looking up into broken cloud, turning). Scene
   option `"face": "sun"` / `"sea"` turns the camera toward the sun or the most open water when the shot starts.
+* **Forest rays (suite `rays`, M2)**: forest shafts facing the sun, forest walk and forest noon, every still with
+  *Forest rays* build 47 / A / B (`…-forest_rays-0.jpg`, `-1`, `-2`).
 * `--clear-spot=x,z` (developer tool): the nearest small clearing in dense forest (no tree within 9.5 m), so a capture
   camera circling behind the player stays out of the crowns.
 * Sites were found with `--find-sites` (developer tool: nearest dense forest, swamp, taiga, desert, plains, ridge and

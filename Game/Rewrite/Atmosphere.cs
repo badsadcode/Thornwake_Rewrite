@@ -553,6 +553,7 @@ public partial class Atmosphere : Node3D
         UpdateMood(delta);
         UpdateCloudTypes(delta, sky, cameraWorldX, cameraWorldZ, cameraLocal);
         UpdateMist(delta, hour, originX, originZ);
+        UpdateForestRays(delta);
         RenderingServer.GlobalShaderParameterSet("sun_dir_world", toSun);
         // The real sun, also below the horizon (the light stops at −4°): twilight colours follow it (Sky.gdshader).
         var trueSun = GameClock.Direction(sky.SunElevation, sky.SunAzimuth);
@@ -1040,6 +1041,57 @@ public partial class Atmosphere : Node3D
             e.VolumetricFogTemporalReprojectionAmount = GameSettings.FogSmoothing.F;
             e.VolumetricFogDensity = GameSettings.VolumetricFog.On ? (Natural ? .002f : .0035f) : 0;
         }
+    }
+
+    // ---- forest rays (M2 shoot-out, fx.forest_rays): A = volumetric forest air, B = stronger screen-space shafts.
+    private FogVolume? _forestAir;
+    private ShaderMaterial? _forestAirMaterial;
+    private float _forest;
+    private bool _forestAirOn;
+    private Vector3 _forestDrift;
+
+    private void UpdateForestRays(double delta)
+    {
+        int mode = GameSettings.ForestRays.Index;
+        // How much "forest by day" there is: the canopy around the player (0 when flying), the sun up, no storm.
+        float target = mode == 0 ? 0 : Mathf.Clamp(Canopy, 0, 1) * Mathf.SmoothStep(-1, 8, _sunElevation) * (1 - _storm);
+        _forest = StillShot || SnapExposure ? target : Mathf.MoveToward(_forest, target, (float)delta / 3);
+        if (mode == 2 && _shaftQuad != null)
+        {
+            // B: the screen-space shafts, up to 2.5× inside a closed forest (and on in forests even when the setting is 0).
+            float baseShafts = Math.Max(GameSettings.SunShafts.F, .6f * _forest);
+            _shafts.SetShaderParameter("intensity", baseShafts * (1 + 1.5f * _forest));
+            _shaftQuad.Visible = baseShafts > 0;
+        }
+        bool air = mode == 1 && _forest > .01f && !float.IsNaN(_mistGround);
+        if (!air && _forestAirOn)
+        {
+            // Back to what the settings say (ApplyAll only runs when a setting changes).
+            Sun.LightVolumetricFogEnergy = 1 + .8f * GameSettings.GodRayContrast.F;
+            Environment.VolumetricFogEnabled = GameSettings.VolumetricFog.On || (_mistVolume?.Visible ?? false);
+        }
+        _forestAirOn = air;
+        if (air && _forestAir == null)
+        {
+            _forestAirMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/ForestAir.gdshader") };
+            _forestAirMaterial.SetShaderParameter("noise3d", _cloudNoise);
+            _forestAir = new FogVolume { Size = new Vector3(160, 60, 160), Material = _forestAirMaterial, Shape = RenderingServer.FogVolumeShape.Box };
+            AddChild(_forestAir);
+        }
+        if (_forestAir == null || _forestAirMaterial == null) return;
+        _forestAir.Visible = air;
+        if (!air) return;
+        // A: a thin haze under the crowns around the camera, lit by the sun through the shadow map; the sun's light into
+        // the fog is raised there so the shafts stand out (only near the camera: the box is 160 m wide).
+        var cam = GetViewport()?.GetCamera3D();
+        if (cam != null) _forestAir.GlobalPosition = new Vector3(cam.GlobalPosition.X, _mistGround + 25, cam.GlobalPosition.Z);
+        _forestDrift += new Vector3(Wind.Direction.X, 0, Wind.Direction.Y) * (float)(delta * Wind.Speed * .05);
+        _forestAirMaterial.SetShaderParameter("density", .014f * _forest);
+        _forestAirMaterial.SetShaderParameter("ground", _mistGround);
+        _forestAirMaterial.SetShaderParameter("drift", _forestDrift);
+        _forestAirMaterial.SetShaderParameter("albedo", new Color("ece6da").Lerp(Sun.LightColor, .25f));
+        Environment.VolumetricFogEnabled = true;
+        Sun.LightVolumetricFogEnergy = (1 + .8f * GameSettings.GodRayContrast.F) * (1 + 1.8f * _forest);
     }
 
     // ---- biome moods (option): the sky, haze and fog drift toward the biome around the player over a few seconds.

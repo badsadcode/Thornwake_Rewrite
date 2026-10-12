@@ -626,7 +626,9 @@ public partial class WorldLab : Node3D
             double px = x + Math.Cos(a) * r, pz = z + Math.Sin(a) * r;
             sum += Vegetation.ForestDensity(_sampler, px, pz, _sampler.Sample(px, pz), cover) * (i == 0 ? 2 : 1);
         }
-        return (float)Math.Clamp(sum / 8 * _sampler.Plan.Style.ForestDensity, 0, 1);
+        // (none when flying over the forest: the forest look is for being under the crowns)
+        double above = _player.Position.Y - _sampler.Sample(x, z).Height;
+        return (float)(Math.Clamp(sum / 8 * _sampler.Plan.Style.ForestDensity, 0, 1) * (1 - DetMath.Smooth((above - 12) / 18)));
     }
 
     private void Teleport(double x, double z)

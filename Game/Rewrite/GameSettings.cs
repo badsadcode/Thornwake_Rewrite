@@ -181,6 +181,11 @@ public static class GameSettings
         "Natural: stronger colour and contrast (ACES tone mapping), deeper shade, glow only on real highlights (no " +
         "spilling light), less grey haze. Classic: the look of build 29.",
         options: new[] { "classic", "natural" }));
+    public static readonly Setting ForestRays = Add(new("fx.forest_rays", "Lighting and effects", "Forest rays", 0, 2, 1, 0,
+        "Atmosphere 2.0 M2, two candidates to compare: A = a thin volumetric haze under the canopy, lit through the gaps in " +
+        "the crowns (real shafts, needs volumetric fog's cost); B = the screen-space sun shafts, stronger inside forests. " +
+        "Build 47 = as until now.",
+        options: new[] { "build 47", "A: volumetric forest air", "B: screen-space shafts" }));
     public static readonly Setting LightModel = Add(new("fx.light_model", "Lighting and effects", "Light model", 0, 1, 1, 0,
         "Atmosphere 2.0 (experimental, M1): sunlight by phase of the day — golden hour, a softer morning and afternoon, " +
         "a stronger white noon — with the sky light following. Build 47 = the light until now.",

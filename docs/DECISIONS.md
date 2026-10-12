@@ -1163,6 +1163,16 @@ reference is dark but readable (silhouettes against teal mist, a moon halo). Mod
 benchmark now waits at least 30 frames before measuring: the sky's radiance map follows a jump in the time of day over
 several frames, and on a slow machine the 3 s warm-up was one frame (the first night still was lit by the noon sky).
 
+## D85 — M2 forest rays shoot-out: two candidates behind *Forest rays* (2026-10-12)
+The approval asked to compare both forest-ray approaches before choosing. Setting `fx.forest_rays`: *build 47*
+(default, unchanged), **A — volumetric forest air**: a thin 3D-noise haze under the crowns in a 160 m box around the
+camera (`ForestAir.gdshader`, a FogVolume), lit by Godot's volumetric fog through the sun's shadow map, so the shafts
+are real (they come through actual gaps, also with the sun off screen), with the sun's light into the fog raised up to
+2.8× in a closed forest; costs the volumetric fog pass. **B — screen-space shafts**: the existing radial shafts, up to
+2.5× inside a closed forest (on there even when *Sun shafts* is 0); cheap, but only with the sun on screen. Both follow
+the canopy around the player (none when flying above it), the sun's height (none at night) and storms. Captures:
+suite `rays` (forest shafts facing the sun, forest walk, forest noon; every still in all three modes). Tom chooses.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

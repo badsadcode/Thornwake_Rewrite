@@ -168,6 +168,11 @@
       "name": "Atmosphere 2.0: the tracked artefacts, fixed shots (far water, low sun glare, forest sun shafts, sky seams)",
       "scenarios": ["art-water-horizon", "art-lake-horizon", "art-sun-low", "art-forest-shafts", "art-sky-seams"],
       "ablate": false, "capture": true, "stills": 3
+    },
+    "rays": {
+      "name": "Atmosphere 2.0 M2: forest rays shoot-out — every still with build 47, A (volumetric forest air) and B (screen-space shafts)",
+      "scenarios": ["art-forest-shafts", "atmo-forest-walk", "atmo-forest-noon"],
+      "ablate": false, "capture": true, "stills": 4, "compare": "fx.forest_rays=0,1,2"
     }
   }
 }
