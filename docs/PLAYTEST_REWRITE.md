@@ -78,6 +78,21 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 53 — lake crater fixed, clouds over land match the sky, tree batches fixed
+* **Fixed: the crater in the benchmark lake** (Tom's dump 182351, terrain revision 16). The coastline cut a small pocket
+  of "sea" out of a lake near the coast, so the water dropped from the lake's 13 m to sea level inside it, with walls of
+  water around. Sea inside a lake's reach is now lake. *World settings → Terrain version → Build 52* brings the old
+  terrain back; *Build 51* can now actually be chosen (it fell back to Build 5).
+* **Sky → Cloud blend (v2)** (new, default *matched*): clouds in front of land now look like the same clouds over the
+  sky: the sun's true colour (not pale pink-white at sunset), the same haze and fog, no mountain outline through them,
+  no cloudless band under the horizon, also over land beyond ~47 km. *build 52* brings the old near clouds back.
+* **Fixed: trees losing their detail hand-over** at high settings. Godot reported up to thousands of errors a run
+  ("Too many instances using shader instance variables") and the tree batches past its limit switched model without
+  the dithered cross-fade. No setting changes; trees look as before.
+* **Benchmark:** the camera turns to each shot's direction before the warm-up (the first still of every scene had a
+  beige veil of fog left over from the previous view).
+* *Lighting and effects → Forest rays*: **A** is the one going forward (your pick); B stays selectable for now.
+
 ## New in build 52 — water tools, rain erosion, lake fixes
 * **Water size: `,` smaller · `.` bigger** (1–4, shown at the top). Size 1 is as before. Each step ×4: **G** pours up to
   160 m³/s spread over a disc up to 8 m across; **J** springs give up to 38 m³/s over the same disc (J on a spring removes it).
