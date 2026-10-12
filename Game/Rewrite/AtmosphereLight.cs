@@ -19,8 +19,9 @@ public static class AtmosphereLight
 
     /// <param name="elevation">Sun elevation in degrees (the light stops at −4°).</param>
     /// <param name="gloom">0 clear … 1 storm (overcast counts 0.7).</param>
+    /// <param name="storm">0 … 1 rain storm (part of the gloom; light model 1 gives it its own colour).</param>
     /// <param name="natural">Look natural (ACES) rather than classic.</param>
-    public static State Compute(float elevation, float gloom, bool natural)
+    public static State Compute(float elevation, float gloom, float storm, bool natural)
     {
         if (!Modern)
         {
@@ -34,12 +35,14 @@ public static class AtmosphereLight
         // By phase: blue hour (below 0°), golden hour (0–10°: warm, low), morning/afternoon (10–35°: rising),
         // high noon (above 35°: white, strongest). Overcast takes most of the sun and flattens toward the sky light.
         float sun = Curve(elevation, SunEnergyCurve) * Mathf.Lerp(1, .28f, gloom);
-        var color = CurveColor(elevation).Lerp(new Color("e8ecf2"), gloom * .6f);
+        var mix = LightProfiles.At(elevation);
+        var color = (CurveColor(elevation) * mix.SunTint).Lerp(new Color("e8ecf2"), gloom * .6f);
         float sky = Curve(elevation, SkyEnergyCurve) * (natural ? 1 : 1.3f) * Mathf.Lerp(1, .82f, gloom);
-        // Warm sun, cool shade: a teal fill in the sky light by day, lavender at dusk, deep teal at night (Tom's references,
-        // docs/ATMOSPHERE_2_0_REFERENCES.md), near-neutral under overcast; a bigger share of it at night.
-        var shade = CurveColor(elevation, ShadeCurve).Lerp(new Color("b4b9c2"), gloom * (elevation > -2 ? 1 : .5f));
-        float share = Mathf.Lerp(.5f, .7f, Mathf.SmoothStep(-8, 0, elevation));
+        // Warm sun, cool shade: a fill colour in the sky light from the biome's light profile (teal shade in a temperate
+        // forest by day, lavender at dusk, …; Content/light_profiles.json), toward its overcast colour under cloud and its
+        // storm colour in a storm; a bigger share of it at night.
+        var shade = mix.Shade.Lerp(mix.Overcast, gloom * (elevation > -2 ? 1 : .5f)).Lerp(mix.Storm, storm * .8f);
+        float share = 1 - Mathf.Lerp(mix.NightShare, mix.ShadeShare, Mathf.SmoothStep(-8, 0, elevation));
         return new State(color, sun, sky, shade, Mathf.Lerp(share, .88f, gloom));
     }
 
@@ -55,7 +58,8 @@ public static class AtmosphereLight
         float day = Mathf.Clamp(Mathf.Pow(Mathf.Max(key, .05f), -.25f), 1, 1.19f);
         day = Mathf.Lerp(1, day, Mathf.SmoothStep(-4, 2, elevation));
         float forest = Mathf.Pow(Mathf.Lerp(1, .5f, Mathf.Clamp(canopy, 0, 1)), -.5f);
-        return Mathf.Clamp(day * forest, 1, 1.41f);
+        // (plus the biome's bias in stops: a bright desert a little darker, a swamp a little lighter)
+        return Mathf.Clamp(day * forest, 1, 1.41f) * Mathf.Pow(2, LightProfiles.At(elevation).Exposure);
     }
 
     // (elevation °, value): sun energy and sky-light energy (natural look).
@@ -78,28 +82,15 @@ public static class AtmosphereLight
         return table[^1].V;
     }
 
-    // (elevation °, colour of the shade fill), measured from the references: night teal (Valheim night, hue ~195),
-    // blue hour violet-blue, dusk lavender (plains at dusk, hue ~250), then teal-cyan by day (Valheim shade, hue 185–200).
-    private static readonly (float E, Color C)[] ShadeCurve =
-    {
-        (-10, new Color("2e6c84")), (-4, new Color("6f7cc8")), (2, new Color("a69ad6")), (8, new Color("9fc0de")),
-        (20, new Color("a3d3e3")), (90, new Color("b4dcea")),
-    };
-
-    // (elevation °, colour of the haze away from the sun): lavender at dusk, soft blue-teal by day.
-    private static readonly (float E, Color C)[] FogCurve =
-    {
-        (-4, new Color("8f86b8")), (2, new Color("b8a2c4")), (10, new Color("b4bccc")), (25, new Color("aac4d2")), (90, new Color("a9c6d6")),
-    };
-
-    /// <summary>Light model 1: the haze colour away from the sun and how much sunlight it scatters toward the sun
-    /// (warm toward a low sun, cool away from it); null in build 47's model.</summary>
-    public static (Color Color, float SunScatter, Color Night)? Fog(float elevation, float gloom)
+    /// <summary>Light model 1: the haze colour away from the sun (the biome's, toward its overcast and storm colours),
+    /// how much sunlight it scatters toward the sun (warm toward a low sun), and the night haze; null in build 47's model.</summary>
+    public static (Color Color, float SunScatter, Color Night)? Fog(float elevation, float gloom, float storm)
     {
         if (!Modern) return null;
-        var color = CurveColor(elevation, FogCurve).Lerp(new Color("aeb6bc"), gloom);
-        float scatter = Mathf.Lerp(.42f, .2f, Mathf.SmoothStep(15, 50, elevation)) * (1 - gloom * .8f);
-        return (color, scatter, new Color("0d2a36"));
+        var mix = LightProfiles.At(elevation);
+        var color = mix.Fog.Lerp(mix.Overcast, gloom).Lerp(mix.Storm, storm * .8f);
+        float scatter = Mathf.Lerp(.42f, .2f, Mathf.SmoothStep(15, 50, elevation)) * (1 - gloom * .8f) * mix.Scatter;
+        return (color, scatter, mix.NightFog);
     }
 
     private static Color CurveColor(float x) => CurveColor(x, SunColorCurve);

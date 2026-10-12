@@ -998,6 +998,7 @@ public partial class WorldLab : Node3D
         where += $"\nBiome {biomes.Pool[ba].Def.Name}" + (bb != ba && share < .95 ? $" ({share * 100:0} %, → {biomes.Pool[bb].Def.Name})" : "") +
             $" · {temperature:0} °C, {rain:0} mm/yr" + (_atmosphere.MistAmount > .02f ? $" · mist {_atmosphere.MistAmount:0.00}" : "");
         _atmosphere.SetBiomeMood(Mood(biomes.Pool[ba]) * (float)share + Mood(biomes.Pool[bb]) * (float)(1 - share));
+        LightProfiles.SetTarget(LightProfiles.For(biomes.Pool[ba].Def.Id), LightProfiles.For(biomes.Pool[bb].Def.Id), (float)share);
         static float MistOf(ResolvedBiome b) => (float)Math.Clamp(b.Def.Atmosphere.Mist + .5 * b.Def.Atmosphere.Fog, 0, 1);
         float nearWater = t.Water != WaterKind.None ? 1 : _sampler.Plan.Hydrology.NearestRiver(PlayerX, PlayerZ, 300, out var near) ? 1 - (float)(near.Distance / 300) : 0;
         _atmosphere.SetMist((float)t.Height, MistOf(biomes.Pool[ba]) * (float)share + MistOf(biomes.Pool[bb]) * (float)(1 - share), nearWater);

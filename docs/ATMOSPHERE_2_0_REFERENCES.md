@@ -28,6 +28,11 @@ were measured from them and are what the curve tables in `AtmosphereLight.cs` ar
 
 ## By milestone
 
+*These are examples of moods, not one palette (Tom: the colours depend on the biome, the time of day and the weather).
+They are the starting point of the light profiles in `Content/light_profiles.json` (D83): the temperate forest profile
+carries the values below; plains take the lavender dusk and golden ground, taiga the cold blue-white, desert a warm
+dusty haze, swamp an olive-green haze.*
+
 * **M1 light (now, light model 1).** Shade fill teal-cyan by day (hue ~195), lavender at dusk (~250), deep teal at
   night (~195, a bigger share of the ambient); haze lavender/blue-teal away from the sun and the sun's colour scattered
   toward it (fog sun scatter 0.42 at a low sun, 0.2 at noon, was 0.15 for all). Night haze deep teal instead of

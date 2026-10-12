@@ -451,7 +451,8 @@ public partial class Atmosphere : Node3D
         float overcast = Mathf.SmoothStep(.7f, .95f, Coverage);
         float gloom = Math.Max(_storm, overcast * .7f);
         _gloom = gloom;
-        var light = AtmosphereLight.Compute(elevation, gloom, Natural);
+        LightProfiles.Update(dt, StillShot || SnapExposure);
+        var light = AtmosphereLight.Compute(elevation, gloom, _storm, Natural);
         Sun.LightEnergy = light.SunEnergy;
         _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, gloom);
         UpdateWaterSky(elevation);
@@ -471,7 +472,7 @@ public partial class Atmosphere : Node3D
         float exposure = AtmosphereLight.Exposure(light, elevation, Canopy);
         _adapted = StillShot || SnapExposure ? exposure : Mathf.Lerp(_adapted, exposure, 1 - Mathf.Exp(-dt / 1.5f));
         SnapExposure = false;
-        LightInfo = $"sun {light.SunEnergy:0.00} sky {light.AmbientEnergy:0.00}×{light.SkyShare:0.00} canopy {Canopy:0.00} exposure ×{_adapted:0.00} (target {exposure:0.00}) base {_baseExposure:0.00}";
+        LightInfo = $"profile {LightProfiles.Dominant} sun {light.SunEnergy:0.00} sky {light.AmbientEnergy:0.00}×{light.SkyShare:0.00} canopy {Canopy:0.00} exposure ×{_adapted:0.00} (target {exposure:0.00}) base {_baseExposure:0.00}";
         Environment.TonemapExposure = _baseExposure * _adapted;
         UpdateCoverage();
         if (_rainParticles != null)
@@ -1061,7 +1062,7 @@ public partial class Atmosphere : Node3D
         var tint = new Color(_mood.X, _mood.Y, _mood.Z);
         // Fog takes the light of the hour: grey-blue by day, warm at a low sun, dim moonlit blue at night.
         float light = Mathf.Clamp(_daylight * 1.1f, 0, 1);
-        if (AtmosphereLight.Fog(_sunElevation, _gloom) is var (fog1, scatter, night1))
+        if (AtmosphereLight.Fog(_sunElevation, _gloom, _storm) is var (fog1, scatter, night1))
         {
             // Light model 1: haze cool away from the sun, the sun's own colour scattered toward it, deep teal at night.
             Environment.FogLightColor = (fog1 * tint * light).Lerp(night1, _night * .85f);

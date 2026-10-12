@@ -1146,6 +1146,16 @@ toward the sun. Model 1 now uses those hues (shade fill, a bigger fill share at 
 scatter 0.42 at a low sun → 0.2 at noon, night haze `0d2a36`). Build 47's model is untouched. Bloom, rays, clouds and
 distance haze from the same references are assigned to pause point 3, M2, M3 and M4.
 
+## D83 — Light by biome, time and weather: light profiles (2026-10-12)
+Tom: "colors depend on the biome the player will be in, the time of day, weather — that was just an example." So light
+model 1 has no global palette: `Content/light_profiles.json` holds five profiles (temperate forest, plains, taiga and
+cold lands, desert and dry rock, swamp and wet lowland; every one of the 18 biomes is assigned, unlisted ones use
+temperate). Each profile: shade-fill and haze curves over the sun elevation, night haze, overcast and storm colours,
+sun tint, fill share by day and night, sun scatter and an exposure bias. The profiles of the biomes at the player are
+blended by weight, drifting over ~3 s (snapped on teleports and A/B stills); overcast and storm move each profile
+toward its own overcast/storm colours. The temperate profile carries D82's values, so the references still hold
+there; the others are first proposals to be judged in captures. Tuning is editing the JSON, not code.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
