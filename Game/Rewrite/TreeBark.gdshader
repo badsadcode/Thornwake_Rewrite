@@ -13,6 +13,7 @@ void vertex() {
 }
 void fragment() {
 	if (tree_fade_out(world_position, FRAGCOORD.xy, tree_ranges.x)) discard;
+	if (tree_lod_out(world_position, FRAGCOORD.xy)) discard;
 	vec4 c = (has_texture ? texture(albedo_tex, UV) : vec4(1.0)) * tint;
 	ALBEDO = c.rgb;
 	ROUGHNESS = 0.9;

@@ -53,6 +53,10 @@ tree_camera={
 "type": "vec4",
 "value": Vector4(0, 0, 0, 0)
 }
+tree_lod={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
 leaf_translucency={
 "type": "float",
 "value": 0.0

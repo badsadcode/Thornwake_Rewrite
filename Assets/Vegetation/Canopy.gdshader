@@ -41,6 +41,7 @@ void vertex() {
 }
 void fragment() {
     if (tree_fade_out(world_position, FRAGCOORD.xy, tree_ranges.x)) discard; // rewrite: hand-over to impostors
+    if (tree_lod_out(world_position, FRAGCOORD.xy)) discard; // rewrite: detailed ↔ lighter model
     vec4 pixel = texture(pixel_map, UV) * tint;
     ALBEDO = pixel.rgb;
     ROUGHNESS = 0.93;

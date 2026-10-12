@@ -1173,6 +1173,17 @@ are real (they come through actual gaps, also with the sun off screen), with the
 the canopy around the player (none when flying above it), the sun's height (none at night) and storms. Captures:
 suite `rays` (forest shafts facing the sun, forest walk, forest noon; every still in all three modes). Tom chooses.
 
+## D86 — Tree detail hand-over dithered in the shaders; no stale weather map (2026-10-12)
+Tom's dump 104752: a grey-blue band at eye height across tree crowns. Cause: the detailed → lighter tree model
+hand-over (at *Full-detail trees*, 80 m there) used Godot's visibility-range fade *Self*, which draws a fading object
+in the transparent pass — out of the depth buffer the full-screen effects read. The distant rain (a full-screen pass
+that only draws beyond 1.5 km) saw those crown pixels as open air and painted its haze over them; it was on although
+the weather was off, because switching the weather off left the last weather map active. Fixes: the hand-over now
+uses the same per-pixel ordered dither as the 3D tree → impostor hand-over (`TreeFade.gdshaderinc`, global `tree_lod`,
+per-MultiMesh `tree_lod_role`; canopy, bark and placeholder-plant shaders), so the trees stay opaque and in the depth
+buffer; with the weather off the weather and wind maps are disabled. Grass and scatter still use Godot's fade at their
+own distance limit (near the ground, below the horizon; noted).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

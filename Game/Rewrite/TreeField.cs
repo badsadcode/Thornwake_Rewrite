@@ -25,6 +25,7 @@ public sealed partial class TreeField : Node3D
 {
     public const int FineLevel = 1, CoarseLevel = 4; // TileKey levels: 128 m and 1024 m cells
     private const float Fade = 40;                   // half-width of the cross-fade bands (m)
+    private const float LodBand = 20;                // half-width of the detailed → lighter model band (m)
 
     /// <summary>Detailed (LOD1, shadows) out to here; LOD2 3D trees to <see cref="DetailRange"/>; impostors to <see cref="ImpostorRange"/>.</summary>
     public float NearRange { get; private set; } = 220;
@@ -84,6 +85,7 @@ public sealed partial class TreeField : Node3D
         ImpostorRange = Math.Max(DetailRange, 800f * (1 << GameSettings.TreeImpostors.Index));
         NearRange = Math.Min(GameSettings.TreeFullDetail.F, DetailRange * .5f);
         RenderingServer.GlobalShaderParameterSet("tree_ranges", Enabled ? new Vector4(DetailRange, ImpostorRange, Fade, 1) : Vector4.Zero);
+        RenderingServer.GlobalShaderParameterSet("tree_lod", Enabled ? new Vector4(NearRange, LodBand, 0, 0) : Vector4.Zero);
     }
 
     public void Configure(TerrainSampler sampler, DetailConfig config, double originX, double originZ)
@@ -111,7 +113,7 @@ public sealed partial class TreeField : Node3D
         _cells.Clear();
         _desired.Clear();
         Instances3D = ImpostorInstances = 0;
-        if (!Enabled) RenderingServer.GlobalShaderParameterSet("tree_ranges", Vector4.Zero);
+        if (!Enabled) { RenderingServer.GlobalShaderParameterSet("tree_ranges", Vector4.Zero); RenderingServer.GlobalShaderParameterSet("tree_lod", Vector4.Zero); }
     }
 
     public void Rebase(double originX, double originZ)
@@ -259,25 +261,27 @@ public sealed partial class TreeField : Node3D
             if (lod == 1)
             {
                 mmi.CastShadow = shadows && detailedShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
-                mmi.VisibilityRangeEnd = NearRange; mmi.VisibilityRangeEndMargin = 30;
+                mmi.VisibilityRangeEnd = NearRange + LodBand; // (the shaders dither the hand-over: tree_lod)
+                mmi.SetInstanceShaderParameter("tree_lod_role", 1);
             }
             else
             {
                 mmi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
-                if (data.Near) { mmi.VisibilityRangeBegin = NearRange; mmi.VisibilityRangeBeginMargin = 30; }
+                if (data.Near) { mmi.VisibilityRangeBegin = Math.Max(0, NearRange - LodBand); mmi.SetInstanceShaderParameter("tree_lod_role", 2); }
                 mmi.VisibilityRangeEnd = DetailRange + Fade + diagonal; // beyond: impostors (the shader fades the edge)
                 if (data.Near && shadows && !detailedShadows)
                 {
                     // Simplified tree shadows: the near trees' shadows come from this lighter model of the same trees
                     // (same instances, shadow only), while the detailed model is what the camera sees.
-                    node.AddChild(new MultiMeshInstance3D
+                    var shadow = new MultiMeshInstance3D
                     {
                         Multimesh = multi, Layers = RenderLayers.TreesNear, CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly,
-                        VisibilityRangeEnd = NearRange + 30,
-                    });
+                        VisibilityRangeEnd = NearRange + LodBand,
+                    };
+                    shadow.SetInstanceShaderParameter("tree_lod_role", 1);
+                    node.AddChild(shadow);
                 }
             }
-            mmi.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self;
             node.AddChild(mmi);
         }
         if (data.Impostors != null && data.ImpostorCount > 0)

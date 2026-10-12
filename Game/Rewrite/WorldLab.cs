@@ -381,6 +381,8 @@ public partial class WorldLab : Node3D
         if (!GameSettings.WeatherOn.On || _sampler == null)
         {
             _atmosphere.Precipitation = 0; _atmosphere.Snowing = false; _atmosphere.Thunder = false; _atmosphere.WeatherClouds = float.NaN;
+            // (and no weather map left from before: the distant rain kept drawing it — Tom's dump 104752)
+            WeatherMap.Disable(); WindMap.Disable();
             return;
         }
         double elevation = _sampler.Height(PlayerX, PlayerZ, 8) - _sampler.Plan.Profile.SeaLevel;
