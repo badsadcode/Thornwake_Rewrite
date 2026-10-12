@@ -1138,6 +1138,14 @@ teleports and A/B stills. The scripted version is deterministic, costs nothing, 
 editing numbers. Bloom (pause point 3) is not touched yet. The benchmark gains A/B stills (`--bench-compare`), so the
 two models are compared on identical frames.
 
+## D82 — Light model 1 tuned to Tom's references (2026-10-12)
+Tom's nine references (six Valheim screenshots, three painted skies; `docs/ATMOSPHERE_2_0_REFERENCES.md`) were
+measured region by region. They disagree with model 1's first guess in one clear way: the shade is **teal-cyan**
+(hue 185–200), not violet-blue; dusk is lavender to pink-violet; night is deep saturated teal; the haze glows warm
+toward the sun. Model 1 now uses those hues (shade fill, a bigger fill share at night, haze colour by phase, fog sun
+scatter 0.42 at a low sun → 0.2 at noon, night haze `0d2a36`). Build 47's model is untouched. Bloom, rays, clouds and
+distance haze from the same references are assigned to pause point 3, M2, M3 and M4.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

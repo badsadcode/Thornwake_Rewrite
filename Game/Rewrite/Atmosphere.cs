@@ -450,6 +450,7 @@ public partial class Atmosphere : Node3D
         // weaker, flatter sunlight, greyer and hazier air.
         float overcast = Mathf.SmoothStep(.7f, .95f, Coverage);
         float gloom = Math.Max(_storm, overcast * .7f);
+        _gloom = gloom;
         var light = AtmosphereLight.Compute(elevation, gloom, Natural);
         Sun.LightEnergy = light.SunEnergy;
         _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, gloom);
@@ -958,7 +959,7 @@ public partial class Atmosphere : Node3D
     /// <summary>Jump to the exposure target on the next frame (teleports, A/B stills).</summary>
     public bool SnapExposure { get; set; }
 
-    private float _baseExposure = 1, _adapted = 1;
+    private float _baseExposure = 1, _adapted = 1, _gloom;
 
     /// <summary>The light state of the last frame, for logs (benchmark A/B stills).</summary>
     public string LightInfo { get; private set; } = "";
@@ -1060,8 +1061,18 @@ public partial class Atmosphere : Node3D
         var tint = new Color(_mood.X, _mood.Y, _mood.Z);
         // Fog takes the light of the hour: grey-blue by day, warm at a low sun, dim moonlit blue at night.
         float light = Mathf.Clamp(_daylight * 1.1f, 0, 1);
-        var fog = new Color("aebfc2").Lerp(new Color("e0b090"), (1 - Mathf.Clamp(_sunElevation / 12, 0, 1)) * (1 - _night) * .5f);
-        Environment.FogLightColor = (fog * tint * light).Lerp(new Color("0b0f18"), _night * .9f);
+        if (AtmosphereLight.Fog(_sunElevation, _gloom) is var (fog1, scatter, night1))
+        {
+            // Light model 1: haze cool away from the sun, the sun's own colour scattered toward it, deep teal at night.
+            Environment.FogLightColor = (fog1 * tint * light).Lerp(night1, _night * .85f);
+            Environment.FogSunScatter = scatter;
+        }
+        else
+        {
+            var fog = new Color("aebfc2").Lerp(new Color("e0b090"), (1 - Mathf.Clamp(_sunElevation / 12, 0, 1)) * (1 - _night) * .5f);
+            Environment.FogLightColor = (fog * tint * light).Lerp(new Color("0b0f18"), _night * .9f);
+            Environment.FogSunScatter = .15f;
+        }
         Sun.LightColor *= new Color(1, 1, 1).Lerp(tint, .35f);
         Environment.VolumetricFogAlbedo = new Color("dfe6ea") * new Color(1, 1, 1).Lerp(tint, .6f);
         Environment.FogDensity *= 1 + 2.5f * _mood.W;
