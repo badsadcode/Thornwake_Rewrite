@@ -344,17 +344,29 @@ vec3 land_and_front(vec2 rel) {
 float vremap(float v, float a, float b, float c, float d) { return c + (v - a) / max(b - a, 1e-4) * (d - c); }
 
 // The cloud map at xz: x = mass (0..1), y = how high the cloud grows above VBOTTOM (m), z = base (m above the camera).
-vec3 vweather(vec2 xz, float coverage) {
+// Cloud blend (setting, v2): 0 = build 52; 1 = the sky's and CloudsNear's clouds matched (CloudsNear.gdshader). Here:
+// the cloud map's detail level inside the march follows the distance (one pixel's footprint there), not the screen
+// derivatives — those are meaningless in a ray march and twice as large in the sky's half-resolution pass, which
+// blurred its clouds into a thin even veil over the whole sky while the same clouds in front of the land stayed crisp.
+uniform int cloud_blend = 1;
+float cloud_map(vec2 uv, float lod, int ch) {
+	vec4 c = lod >= 0.0 ? textureLod(cloud_tex, uv, lod) : texture(cloud_tex, uv);
+	return ch == 0 ? c.r : c.g;
+}
+
+vec3 vweather(vec2 xz, float coverage, float dist) {
 	// Simulated weather: cover from the map, rain thickens the deck, thunderstorm cells grow towers (up to ~5 km).
 	vec3 wm = weather_frame.w > 0.5 ? wmap(xz - cloud_state.xy) : vec3(coverage, cloud_state.w, 0.0);
 	coverage = mix(coverage, wm.r, weather_frame.w * 0.85);
 	vec2 uv = xz / cloud_period;
-	float n = texture(cloud_tex, uv).r * 0.8 + texture(cloud_tex, uv * 4.0 + vec2(0.31, 0.17)).g * 0.2;
+	// (texel: the map's size over its period; a pixel covers ~1/800 of the distance)
+	float lod = cloud_blend == 1 ? log2(max(dist * 0.00125 / (cloud_period / float(textureSize(cloud_tex, 0).x)), 1.0)) : -1.0;
+	float n = cloud_map(uv, lod, 0) * 0.8 + cloud_map(uv * 4.0 + vec2(0.31, 0.17), lod < 0.0 ? lod : lod + 2.0, 1) * 0.2;
 	float edge = 1.0 - coverage;
 	// (graded, not saturated: the denser the map, the more and higher the cloud)
 	float mass = clamp((n - edge + 0.1) / 0.35, 0.0, 1.0) * step(0.001, coverage);
 	float core = smoothstep(edge + 0.05, edge + 0.4, n);
-	float tower = cloud_types.x > 0.001 ? cloud_types.x * core * (0.35 + 0.65 * texture(cloud_tex, uv * 0.5 + vec2(0.7, 0.2)).g) : 0.0;
+	float tower = cloud_types.x > 0.001 ? cloud_types.x * core * (0.35 + 0.65 * cloud_map(uv * 0.5 + vec2(0.7, 0.2), lod < 0.0 ? lod : max(lod - 1.0, 0.0), 1)) : 0.0;
 	vec3 extra = land_and_front(xz - cloud_state.xy);
 	// (only where the land holds cloud does the base come down toward the ridges; elsewhere it stays put)
 	float base = mix(VBOTTOM, clamp(extra.z, max(VBOTTOM - 500.0, VLOW_MIN), VBOTTOM), clamp(extra.x / 0.85, 0.0, 1.0));
@@ -372,7 +384,7 @@ float vdens(vec3 p, bool detail) {
 	vec4 n = texture(cloud_noise, p / 2600.0 + vec3(0.0, cloud_more.z * 0.00005, 0.0));
 	// The map is read through a 3D warp: a cloud's sides bulge in and out with height instead of standing as walls.
 	vec2 warp = (vec2(n.g, n.b) - 0.5) * (500.0 + above * 0.18);
-	vec3 wx = vweather(p.xz - lean * above + warp, cloud_state.z);
+	vec3 wx = vweather(p.xz - lean * above + warp, cloud_state.z, length(vec3(p.x - cloud_state.x, p.y, p.z - cloud_state.y)));
 	if (wx.x <= 0.0) return -1.0; // clear sky here at every height: the march may stride
 	// A full deck is not flat paint: thick and thin patches over kilometres, and a lumpy base (rolls of stratocumulus).
 	float full = smoothstep(0.6, 0.9, cloud_state.z) * (1.0 - 0.75 * smoothstep(7000.0, 22000.0, length(p.xz - cloud_state.xy))); // (far away the 3D noise would repeat visibly)

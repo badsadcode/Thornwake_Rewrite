@@ -335,7 +335,8 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
         SkyParam("quality", GameSettings.CloudQuality.Index);
-        _cloudsNear.SetShaderParameter("cloud_blend", GameSettings.CloudBlend.Index);
+        SkyParam("cloud_blend", GameSettings.CloudBlend.Index);
+        _cloudsNear.SetShaderParameter("cloud_light_linear", GameSettings.CloudBlend.Index);
         SkyParam("split_test", OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--cloud-split-test")) is { } split
             ? split.Contains('=') ? int.Parse(split[(split.IndexOf('=') + 1)..]) : 1 : 0);
         bool v2 = GameSettings.CloudQuality.Index == 3;

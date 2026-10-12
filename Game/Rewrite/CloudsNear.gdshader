@@ -21,12 +21,13 @@ global uniform vec4 cloud_fog2;
 //   * the sun's colour is linear here as in the sky (it was the light's sRGB colour: paler, brighter, pink-white at sunset
 //     where the sky's clouds glow orange);
 //   * Godot's fog veils the sky, its clouds included, but not this pass: the same veil is applied here.
-uniform int cloud_blend = 1;
+// (the uniform cloud_blend is declared in SkyCommon.gdshaderinc; the sky reads it too)
 // Test (--cloud-split-test): this pass also draws the sky's clouds on the left half of the screen, the sky on the right,
 // so the two can be compared side by side at the middle.
 uniform int split_test = 0;
 vec3 srgb_to_lin(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c)); }
-vec3 cloud_light_rgb() { return cloud_blend == 1 ? srgb_to_lin(cloud_light.rgb) : cloud_light.rgb; }
+uniform int cloud_light_linear = 1; // = cloud_blend (set together by Atmosphere.cs; SkyCommon declares cloud_blend after this)
+vec3 cloud_light_rgb() { return cloud_light_linear == 1 ? srgb_to_lin(cloud_light.rgb) : cloud_light.rgb; }
 #define SKY_LIGHT0_COLOR cloud_light_rgb()
 #include "res://Game/Rewrite/SkyCommon.gdshaderinc"
 
