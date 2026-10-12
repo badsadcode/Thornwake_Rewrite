@@ -11,6 +11,9 @@ Standing rules from Tom for any Claude session in this repository (cloud or loca
 ## How to work
 * Decide without asking; log every decision with its reason in `docs/DECISIONS.md` (next number after the last `## D…`).
 * Commit small, push often. No pull requests unless Tom asks.
+* **Never rewrite history on `main`**: no force-push, rebase, amend of pushed commits, or `git reset --hard` onto an
+  older commit. Undo with a new commit (`git revert`), so every earlier state stays reachable. Return points per build
+  are in `docs/SNAPSHOTS.md`.
 * Keep the headless tests passing: `dotnet run --project Tests/WorldGen/Thornwake.WorldGen.Tests.csproj -c Release`
   (`-- --filter=<text>` for some tests, `-- --record` re-records the current terrain fingerprints: generator changes only).
 * **Never change existing world types or the terrain of existing worlds.** A generator change gets a new terrain revision
