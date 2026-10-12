@@ -8,6 +8,7 @@ internal static class SimulationTests
     public static void Register(string? filter)
     {
         T.Run("Lakes: no dry ground below the surface at the lake's edge (revision 10 and later)", LakeEdges, filter);
+        T.Run("Lakes: outlets keep the lake's level inside the lake (revision 15)", LakeOutlets, filter);
         T.Run("Wetlands: real pools, never dry ground below a pool surface (revision 11)", Wetlands, filter);
         T.Run("Landforms: dunes, mesas and needle spires where their biomes are (revision 12)", Landforms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
@@ -695,6 +696,43 @@ internal static class SimulationTests
             T.Check(tooDeep == 0, $"{name}: pools no deeper than the biome's depth ({tooDeep})");
             T.Check(oldPonds == 0, $"{name}: revision 10 has no pools");
         }
+    }
+
+    // Revision 15 (Tom: "holes in lakes … steep walls of water"): an outlet river ran through its lake following the
+    // lake bed, 3–113 m below the surface. Now every outlet point inside its lake is at the lake's level, and the
+    // sampler sees lake water (at the lake level) wherever an outlet lies inside its lake.
+    private static void LakeOutlets()
+    {
+        int lakes = 0, inside = 0, below = 0, trench = 0, oldTrench = 0;
+        foreach (var (id, seed) in new[] { ("mountainous", 42), ("balanced", 42) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            var s14 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 14 }));
+            var hy = s.Plan.Hydrology;
+            foreach (var lake in hy.Lakes)
+            {
+                if (lake.OutletReach < 0) continue;
+                lakes++;
+                var reach = hy.Reaches[lake.OutletReach];
+                for (int k = 0; k < reach.Points.Length; k++)
+                {
+                    var p = reach.Points[k];
+                    if (!(hy.LakeDistance(p.X, p.Z, out double cells) == lake.Id && cells < 1.6)) break;
+                    inside++;
+                    // (a reach ending inside its lake takes its downstream reach's level at the last point: the sampler check
+                    // below covers what that reach does inside the lake)
+                    if (k < reach.Points.Length - 1 && reach.Surface[k] < lake.Level - .05) below++;
+                    var t = s.Sample(p.X, p.Z);
+                    if (!double.IsNaN(t.WaterLevel) && t.WaterLevel < lake.Level - .5) trench++;
+                    var t14 = s14.Sample(p.X, p.Z);
+                    if (!double.IsNaN(t14.WaterLevel) && t14.WaterLevel < lake.Level - .5) oldTrench++;
+                }
+            }
+        }
+        T.Note($"{lakes} lakes with outlets, {inside} outlet points inside them; water below the lake level: revision 14 {oldTrench}, now {trench}");
+        T.Check(lakes > 5 && inside > 0, "lakes with outlets found");
+        T.Check(below == 0, "outlet surface at the lake level inside the lake");
+        T.Check(trench == 0, "no water trench inside a lake");
     }
 
     private static void LakeEdges()
