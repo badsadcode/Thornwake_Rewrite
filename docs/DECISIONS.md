@@ -1194,8 +1194,10 @@ the land alike, and these two shots (dumps 115949 / 120402, Tom's office PC) bec
 Tom's dumps 131735 / 131752 / 131957: water standing metres above flooded lake margins, with walls where it met a
 river. Water experimental 3/4 give lakes fetch-limited FFT chop that grows with the sea state, but, unlike the sea's,
 with no shallow-water fade: in 0.3–2 m of water a big lake carried full storm waves. They now fade between 0.15 and 3 m
-of depth. The storm itself was stale: with the weather off the last simulated wind (26–29 m/s) kept blowing; turning
-the weather off now hands the wind back to the classic model.
+of depth (verified on dump 131752's spot: a calm, clear margin; the deep lake keeps its waves). The gale itself was
+Tom's *Wind strength* at 4 (the maximum: the classic wind's 5–10 m/s × 4, with the weather off); not a bug. Turning the
+weather off now also hands the wind explicitly back to the classic model (the early return left the last simulated
+steering in place).
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
