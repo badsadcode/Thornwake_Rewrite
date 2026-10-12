@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Handoff 2026-10-12** (work moves from the cloud session to Tom's PC: crater fix, terrain revision 16, Cloud blend matched, forest rays A chosen; no new EXE — `docs/HANDOFF.md`) | `67771ba` | — (tag `handoff-2026-10-12`, create on the PC) | Terrain: *Terrain version → Build 52*; clouds: *Cloud blend → build 52* |
 | **Build 52** (water tool sizes, rain erosion, lake outlets at the lake level: terrain revision 15, calm lake shallows, cloud haze) | `06a7650` | Thornwake-Rewrite-Preview-52 (v0.9.52) | Terrain: *Terrain version → Build 51* (revision 14); erosion: *Rain erosion* 0; build 51 = `3d09ee2` |
 | **Build 51** (tree band fix: dithered detail hand-over; readable nights in light model 1; *Forest rays* A/B; rays and artefacts suites) | `6f7e3d8` | Thornwake-Rewrite-Preview-51 (v0.9.51) | Light model 0 and Forest rays build 47 (defaults) = build 47's look; the tree hand-over change has no switch (a fix): build 50 = `da601e4` |
 | **Build 50** (light profiles by biome for light model 1; forest captures in a clearing) | `fa3ba27` | Thornwake-Rewrite-Preview-50 (v0.9.50) | Light model 0 (default) = build 47's light; return point: branch `pre-atmosphere-2.0` |
