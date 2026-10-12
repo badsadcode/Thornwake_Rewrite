@@ -40,12 +40,8 @@ void fragment() {
 	float depth = textureLod(depth_tex, SCREEN_UV, 0.0).r;
 	bool sky = cloud_blend == 1 ? depth <= 0.0 : depth < 1e-6;
 	bool test = split_test >= 1 && SCREEN_UV.x < 0.5;
-	if (split_test == 2 && test && SCREEN_UV.y < 0.12) {
-		vec3 probe = SCREEN_UV.y < 0.06 ? cloud_light_rgb() * cloud_light.a * 0.2 : normalize(cloud_light_dir.xyz) * 0.5 + 0.5;
-		ALBEDO = probe; ALPHA = 1.0;
-		return;
-	}
-	if ((sky && !test) || quality != 3) discard; // sky pixels: the sky draws them
+	bool probe = split_test == 2 && test && SCREEN_UV.y < 0.12;
+	if (((sky && !test) || quality != 3) && !probe) discard; // sky pixels: the sky draws them
 	// Direction from the near plane (a sky pixel's depth 0 is at infinity); distance to the scene.
 	vec4 near = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, 1.0, 1.0);
 	vec3 dir = normalize((INV_VIEW_MATRIX * vec4(normalize(near.xyz / near.w), 0.0)).xyz);
@@ -58,7 +54,7 @@ void fragment() {
 	vec3 sun_col = cloud_light_rgb() * cloud_light.a;
 	float day = clamp(sun_dir.y * 4.0 + 0.35, 0.08, 1.0);
 	vec4 v = volumetric_v2(dir, scene, cloud_jitter(FRAGCOORD.xy, TIME), sky ? 150 : max_steps, sun_dir, sun_col, day, dot(dir, sun_dir), cloud_state.z, cloud_state.w);
-	if (v.a < 0.002) discard;
+	if (v.a < 0.002 && !probe) discard;
 	// The sky's biome haze over its clouds (Sky.gdshader, "Biome haze"), here too: without it these clouds stayed
 	// white in front of distant land while the same clouds in the sky above were veiled in dust, and the land's
 	// silhouette showed as a hard seam (Tom, dumps 115949 / 120402, Needle Rocks). Premultiplied colour.
@@ -71,6 +67,8 @@ void fragment() {
 		vec3 fog = mix(cloud_fog.rgb, own, cloud_fog2.y) + sun_col * pow(max(dot(dir, sun_dir), 0.0), 8.0) * cloud_fog2.x;
 		v.rgb = mix(v.rgb, fog * v.a, cloud_fog.a);
 	}
+	// Probe (--cloud-split-test=2): the sun as this pass sees it, beside the sky's (Sky.gdshader).
+	if (probe) v = vec4(SCREEN_UV.y < 0.06 ? sun_col * 0.2 : sun_dir * 0.5 + 0.5, 1.0);
 	ALBEDO = v.rgb;
 	ALPHA = v.a;
 }
