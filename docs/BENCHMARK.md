@@ -89,5 +89,10 @@ dawn, beside the lake, coast at dusk, and a flight over a mountain ridge through
   paused while it renders 8 frames per value (TAA and fog history settle), then the setting goes back.
   `--bench-stills=N` changes the number of stills per scene; `--bench-settle=S` how long a scene may take to load
   (default 900 s, 1800 s for captures). Each A/B still logs the light state (`BENCH still …`).
+* **Artefact shots (suite `artefacts`)**: fixed shots of the tracked artefacts — far water against the sky (sea and
+  lake), glare around a low sun, sun shafts into the forest, sky seams (looking up into broken cloud, turning). Scene
+  option `"face": "sun"` / `"sea"` turns the camera toward the sun or the most open water when the shot starts.
+* `--clear-spot=x,z` (developer tool): the nearest small clearing in dense forest (no tree within 9.5 m), so a capture
+  camera circling behind the player stays out of the crowns.
 * Sites were found with `--find-sites` (developer tool: nearest dense forest, swamp, taiga, desert, plains, ridge and
   coast around the player).

@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Godot;
+using Thornwake.WorldGen;
 
 namespace Thornwake.Rewrite;
 
@@ -36,6 +37,9 @@ public partial class WorldLab
         public Dictionary<string, double> Settings { get; init; } = new();
         /// <summary>Another world than the benchmark's (e.g. one where swamps and deserts exist).</summary>
         public JsonObject? World { get; init; }
+        /// <summary>Turn the camera at the start of the measurement: "sun" (toward the sun's azimuth, for glare and sun
+        /// shafts) or "sea" (toward the most open water within 2 km, for the horizon); the view's pitch is kept.</summary>
+        public string? Face { get; init; }
     }
 
     private sealed record BenchJob(BenchScenario Scene, Dictionary<string, double> Variant, string Label);
@@ -150,6 +154,7 @@ public partial class WorldLab
             (float)(o["pitch"]?.GetValue<double>() ?? -.1), (float)(o["zoom"]?.GetValue<double>() ?? 8))
         {
             Move = o["move"]?.GetValue<string>(),
+            Face = o["face"]?.GetValue<string>(),
             Settings = o["settings"]?.AsObject().ToDictionary(p => p.Key, p => p.Value!.GetValue<double>()) ?? new(),
             World = o["world"] is { } w ? config["worlds"]?[w.GetValue<string>()]?.AsObject() ?? throw new ArgumentException($"no benchmark world '{w}'") : null,
         };
@@ -256,7 +261,7 @@ public partial class WorldLab
             case BenchStage.Warmup:
                 // Wait until shaders stop compiling (each new material compiles once; that stall is not the scene's cost).
                 if (BenchCompileDelta() > 0) run.StableTime = 0; else run.StableTime += frameMs / 1000.0;
-                if ((run.StageTime > BenchWarmup && run.StableTime > 1) || run.StageTime > 30) { BenchBeginMeasure(run); Next(BenchStage.Measure); }
+                if ((run.StageTime > BenchWarmup && run.StableTime > 1) || run.StageTime > 30) { BenchFace(scene); BenchBeginMeasure(run); Next(BenchStage.Measure); }
                 break;
             case BenchStage.Measure:
             {
@@ -329,6 +334,31 @@ public partial class WorldLab
         }
 
         void Next(BenchStage stage) { run.Stage = stage; run.StageTime = 0; run.StableTime = 0; }
+    }
+
+    /// <summary>A scene's "face": the yaw toward the sun or the open sea (camera forward at yaw θ is (−sin θ, −cos θ)).</summary>
+    private void BenchFace(BenchScenario scene)
+    {
+        if (scene.Face == "sun")
+        {
+            var toSun = _atmosphere.Sun.GlobalTransform.Basis.Z;
+            if (new Vector2(toSun.X, toSun.Z).Length() > .01f) _yaw = Mathf.Atan2(-toSun.X, -toSun.Z);
+        }
+        else if (scene.Face == "sea" && _sampler != null)
+        {
+            int best = -1, bestCount = 0;
+            for (int i = 0; i < 48; i++)
+            {
+                float a = i * Mathf.Tau / 48;
+                double dx = -Math.Sin(a), dz = -Math.Cos(a);
+                int count = 0;
+                for (double d = 100; d <= 2000; d += 100)
+                    if (_sampler.Sample(PlayerX + dx * d, PlayerZ + dz * d).Water is WaterKind.Ocean or WaterKind.Lake) count++;
+                if (count > bestCount) { bestCount = count; best = i; }
+            }
+            if (best >= 0) _yaw = best * Mathf.Tau / 48;
+        }
+        GD.Print($"BENCH face {scene.Id}: {scene.Face ?? "view"} yaw {_yaw:0.00}");
     }
 
     private void BenchSaveStill(BenchRun run, string name)
