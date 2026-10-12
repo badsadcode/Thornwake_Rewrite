@@ -1184,6 +1184,12 @@ per-MultiMesh `tree_lod_role`; canopy, bark and placeholder-plant shaders), so t
 buffer; with the weather off the weather and wind maps are disabled. Grass and scatter still use Godot's fade at their
 own distance limit (near the ground, below the horizon; noted).
 
+## D87 — Cloud seams wait for M3 (2026-10-12)
+Tom and Noor agree: the remaining cloud artefacts (quality *volumetric*: mountains cut their silhouettes out of
+clouds; *volumetric v2*: a flat, hard-edged patch where clouds in front of far land meet the sky's clouds) are not
+patched further in the current renderer. M3 replaces the cloud model with one cloud pass drawn in front of and behind
+the land alike, and these two shots (dumps 115949 / 120402, Tom's office PC) become its acceptance captures.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
