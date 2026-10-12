@@ -375,6 +375,9 @@ public partial class WorldLab : Node3D
     /// <summary>The weather at the player: fronts over game time, rain amount from the local climate, snow when cold.</summary>
     private void UpdateWeather(double delta, SkyState sky)
     {
+        // How closed the forest is around the player, for the exposure of light model 1 (4× a second; with the weather off too, so a switch
+        // to model 1 starts from the right value).
+        if ((_canopyTimer -= delta) <= 0) { _canopyTimer = .25; _atmosphere.Canopy = CanopyAround(PlayerX, PlayerZ); }
         if (!GameSettings.WeatherOn.On || _sampler == null)
         {
             _atmosphere.Precipitation = 0; _atmosphere.Snowing = false; _atmosphere.Thunder = false; _atmosphere.WeatherClouds = float.NaN;
@@ -428,8 +431,6 @@ public partial class WorldLab : Node3D
         _atmosphere.StormComing = _weather.StormComing;
         _atmosphere.Mackerel = _weather.Mackerel;
         _atmosphere.FrontHours = _weather.FrontHours;
-        // Atmosphere 2.0 light model: how closed the forest is around the player, for the exposure (4× a second).
-        if (AtmosphereLight.Modern && (_canopyTimer -= delta) <= 0) { _canopyTimer = .25; _atmosphere.Canopy = CanopyAround(PlayerX, PlayerZ); }
         _atmosphere.FrontStrength = _weather.FrontStrength;
     }
 

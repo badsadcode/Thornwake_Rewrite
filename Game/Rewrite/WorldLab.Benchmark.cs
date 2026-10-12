@@ -60,6 +60,7 @@ public partial class WorldLab
         public double[] CompareValues = Array.Empty<double>();
         public int CompareStep = -1, CompareWait;
         public bool CompareArmed;
+        public double SettleLimit = 900;
         public double CompareWas;
         public int Index;
         public BenchStage Stage = BenchStage.World;
@@ -121,6 +122,8 @@ public partial class WorldLab
         // --bench-stills=N: stills per scene; --bench-compare=key=a,b: A/B stills of one setting (also "compare" in the suite).
         string? Arg(string name) => OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith(name))?[name.Length..];
         if (int.TryParse(Arg("--bench-stills="), out int stills)) _bench.Stills = Math.Max(1, stills);
+        // --bench-settle=S: how long a scene may take to load (default 900 s, captures 1800 s; slow test machines).
+        _bench.SettleLimit = double.TryParse(Arg("--bench-settle="), NumberStyles.Float, CultureInfo.InvariantCulture, out double settle) ? settle : _bench.Capture ? 1800 : 900;
         string? compare = Arg("--bench-compare=") ?? suiteNode["compare"]?.GetValue<string>();
         if (_bench.Capture && compare?.Split('=') is [var key, var list] && GameSettings.All.Any(s => s.Key == key))
         {
@@ -247,7 +250,7 @@ public partial class WorldLab
                 if ((int)(run.StageTime / 30) != (int)((run.StageTime - frameMs / 1000.0) / 30))
                     GD.Print($"BENCH settling t={run.StageTime:0}s missing={_streamer.Missing} jobs={_streamer.Pending} field={_streamer.Field.Settled} (missing {_streamer.Field.Missing}, jobs {_streamer.Field.Pending}) impostors={_streamer.Impostors.Ready} collision={_streamer.PendingCollision} holding={_holding} horizon={_horizon?.Busy} generating={_generation != null}");
                 if (run.StableTime > 2) Next(BenchStage.Warmup);
-                else if (run.StageTime > (run.Capture ? 1800 : 900)) { run.Status = $"terrain never settled in '{scene.Id}'"; BenchFinish(); }
+                else if (run.StageTime > run.SettleLimit) { run.Status = $"terrain never settled in '{scene.Id}'"; BenchFinish(); }
                 break;
             }
             case BenchStage.Warmup:
@@ -276,7 +279,8 @@ public partial class WorldLab
                 // Stills: one at the start, then evenly along the move (the last at its end).
                 if (run.Capture && run.StillsTaken <= run.Stills && (progress >= (double)run.StillsTaken / run.Stills || done))
                 {
-                    if (run.CompareKey != null) { run.CompareStep = 0; run.CompareWas = GameSettings.All.First(s => s.Key == run.CompareKey).Value; BenchCompareStep(run, scene); }
+                    // (A/B: the scene does not end on this frame; the still is finished first, then the move goes on)
+                    if (run.CompareKey != null) { run.CompareStep = 0; run.CompareWas = GameSettings.All.First(s => s.Key == run.CompareKey).Value; BenchCompareStep(run, scene); break; }
                     else { BenchSaveStill(run, $"{run.Index + 1:00}-{scene.Id}-{run.StillsTaken:00}.jpg"); run.StillsTaken++; }
                 }
                 if (done)
@@ -345,6 +349,7 @@ public partial class WorldLab
         if (run.CompareWait > 0) { run.CompareWait--; return; }
         string tag = run.CompareKey![(run.CompareKey.LastIndexOf('.') + 1)..] + "-" + value.ToString(CultureInfo.InvariantCulture);
         BenchSaveStill(run, $"{run.Index + 1:00}-{scene.Id}-{run.StillsTaken:00}-{tag}.jpg");
+        GD.Print($"BENCH still {scene.Id} {run.StillsTaken} {run.CompareKey}={value}: {_atmosphere.LightInfo}");
         run.CompareArmed = false;
         if (++run.CompareStep < run.CompareValues.Length) return;
         setting.Value = run.CompareWas;

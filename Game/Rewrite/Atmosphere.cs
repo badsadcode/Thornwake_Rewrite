@@ -470,6 +470,7 @@ public partial class Atmosphere : Node3D
         float exposure = AtmosphereLight.Exposure(light, elevation, Canopy);
         _adapted = StillShot || SnapExposure ? exposure : Mathf.Lerp(_adapted, exposure, 1 - Mathf.Exp(-dt / 1.5f));
         SnapExposure = false;
+        LightInfo = $"sun {light.SunEnergy:0.00} sky {light.AmbientEnergy:0.00}×{light.SkyShare:0.00} canopy {Canopy:0.00} exposure ×{_adapted:0.00} (target {exposure:0.00}) base {_baseExposure:0.00}";
         Environment.TonemapExposure = _baseExposure * _adapted;
         UpdateCoverage();
         if (_rainParticles != null)
@@ -958,6 +959,9 @@ public partial class Atmosphere : Node3D
     public bool SnapExposure { get; set; }
 
     private float _baseExposure = 1, _adapted = 1;
+
+    /// <summary>The light state of the last frame, for logs (benchmark A/B stills).</summary>
+    public string LightInfo { get; private set; } = "";
     private ImageTexture3D? _cloudNoise;
     private ShaderMaterial? _mistMaterial;
 
