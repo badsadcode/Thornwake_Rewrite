@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using Godot;
 using Thornwake.WorldGen;
@@ -335,7 +336,8 @@ public partial class Atmosphere : Node3D
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
         SkyParam("quality", GameSettings.CloudQuality.Index);
         _cloudsNear.SetShaderParameter("cloud_blend", GameSettings.CloudBlend.Index);
-        SkyParam("split_test", System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--cloud-split-test") >= 0 ? 1 : 0);
+        SkyParam("split_test", OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--cloud-split-test")) is { } split
+            ? split.Contains('=') ? int.Parse(split[(split.IndexOf('=') + 1)..]) : 1 : 0);
         bool v2 = GameSettings.CloudQuality.Index == 3;
         // (2: a temporal anti-aliasing averages the clouds' moving ray offsets — TAA, FSR 2)
         bool temporal = GameSettings.AntiAliasing.Index is 2 or 4;

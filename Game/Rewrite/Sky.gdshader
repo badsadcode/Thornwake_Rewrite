@@ -37,6 +37,9 @@ void sky() {
 		// v2: the same volume from any height; nearer than the scene it is drawn by CloudsNear.gdshader.
 		if (quality == 3) { vec4 v = volumetric_v2(dir, 1e9, cloud_jitter(FRAGCOORD.xy, cloud_more.z), 150, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
 	} else {
+		// Probe (--cloud-split-test=2): the sun as the sky sees it in a strip at the top (right half; CloudsNear the left).
+		if (split_test == 2 && SCREEN_UV.y < 0.06) { COLOR = sun_col * 0.2; return; }
+		if (split_test == 2 && SCREEN_UV.y < 0.12) { COLOR = sun_dir * 0.5 + 0.5; return; }
 		vec3 col = sky_colour(dir, sun_dir, sun_col, day, mu);
 		float night = 1.0 - smoothstep(-0.16, 0.04, sun_dir.y);
 		if (!AT_CUBEMAP_PASS) {
@@ -101,7 +104,7 @@ void sky() {
 				disc *= 1.0 - far.a;
 				far = vec4(0.0);
 				vec4 v = HALF_RES_COLOR;
-				if (split_test == 1 && quality == 3 && SCREEN_UV.x < 0.5) v = vec4(0.0);
+				if (split_test >= 1 && quality == 3 && SCREEN_UV.x < 0.5) v = vec4(0.0);
 				col = col * (1.0 - v.a) + v.rgb;
 				disc *= 1.0 - v.a;
 			} else {

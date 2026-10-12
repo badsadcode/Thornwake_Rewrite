@@ -39,7 +39,12 @@ void vertex() {
 void fragment() {
 	float depth = textureLod(depth_tex, SCREEN_UV, 0.0).r;
 	bool sky = cloud_blend == 1 ? depth <= 0.0 : depth < 1e-6;
-	bool test = split_test == 1 && SCREEN_UV.x < 0.5;
+	bool test = split_test >= 1 && SCREEN_UV.x < 0.5;
+	if (split_test == 2 && test && SCREEN_UV.y < 0.12) {
+		vec3 probe = SCREEN_UV.y < 0.06 ? cloud_light_rgb() * cloud_light.a * 0.2 : normalize(cloud_light_dir.xyz) * 0.5 + 0.5;
+		ALBEDO = probe; ALPHA = 1.0;
+		return;
+	}
 	if ((sky && !test) || quality != 3) discard; // sky pixels: the sky draws them
 	// Direction from the near plane (a sky pixel's depth 0 is at infinity); distance to the scene.
 	vec4 near = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, 1.0, 1.0);
