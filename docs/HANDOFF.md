@@ -28,7 +28,7 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   volumetric fog history of the old view — a beige veil; in the rays A/B, only still 00 per scene was affected).
 
 ## Next
-0. **Done on Tom's PC (2026-10-12):** step 1 below (captures on branch `captures/cloud-blend`; Tom accepted the fix), the tree instance-uniform overflow (D93), build 53. Clouds weak: causes found (D94: Godot fogs the sky's half-resolution clouds twice; wind smear at Wind strength 4; weak self-shadowing); *Sky → Cloud look* (build 53 / reference) added, default build 53 — **waiting for Tom's pick**.
+0. **Done on Tom's PC (2026-10-12):** step 1 below (captures on branch `captures/cloud-blend`; Tom accepted the fix), the tree instance-uniform overflow (D93), build 53. Clouds weak: causes found (D94: Godot fogs the sky's half-resolution clouds twice; wind smear at Wind strength 4; weak self-shadowing); *Sky → Cloud look* added; Tom played it, fixes from his dumps (D95: forest hole under a high camera, horizon line inside clouds, far land cut at 90 km); **reference is the default (D96)**, return point `pre-cloud-look-reference`. Open, Tom to decide: denser cloud caps (a cap should hide the summit), turbulence inside clouds, the lens disk (reshape / interim / M3). Not yet in a build: next is build 54.
 1. **Check the cloud fix on Tom's case** (GPU, minutes instead of an hour). Tom's world from dump 182351 (the
    benchmark lake, ground −2.1 m), the camera 400 m up so clouds stand in front of land, cumulus towers forced, four
    directions, build 52 blend vs matched (`--fly-height` counts from the ground, not the water; the lens peak printed

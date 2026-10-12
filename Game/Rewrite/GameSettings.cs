@@ -247,10 +247,11 @@ public static class GameSettings
         "same sun colour and haze as the sky's clouds, and clouds also over the farthest land (no seam at the mountains' " +
         "outline, no cloudless band under the horizon). Build 52: as before.",
         options: new[] { "build 52", "matched" }));
-    public static readonly Setting CloudLook = Add(new("sky.cloud_look", "Sky", "Cloud look", 0, 1, 1, 0,
-        "Volumetric clouds. Build 53: as before. Reference (experimental, round 32): the sky's clouds take Godot's fog once " +
+    public static readonly Setting CloudLook = Add(new("sky.cloud_look", "Sky", "Cloud look", 0, 1, 1, 1,
+        "Volumetric clouds. Reference (default since D96, round 32): the sky's clouds take Godot's fog once " +
         "instead of twice (brighter, clearer, and the same as the clouds in front of the land), wind streaks only in " +
-        "strong wind, crisper cauliflower edges, flat blue-grey bases and bright tops (the M3 references).",
+        "strong wind, crisper cauliflower edges, flat blue-grey bases and bright tops (the M3 references). Build 53: the " +
+        "clouds as before.",
         options: new[] { "build 53", "reference" }));
     public static readonly Setting BiomeMoods = Add(new("sky.biome_moods", "Sky", "Biome skies", 0, 2, 1, 0,
         "Each biome tints the sky and haze a little (jungle humid, desert dusty, volcanic ashen, blighted swamp gloomy). " +

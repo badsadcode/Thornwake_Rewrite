@@ -1307,6 +1307,15 @@ the cause (128 vs 512 steps: identical); caps are not dense enough to hide what 
 from 20 km up (dump 221223): the tileable cloud map, dozens of periods in view (M3). The lens disk: open item (HANDOFF 2).
 Wish: turbulence inside clouds. Test tools: `--cloud-dev=x,y,z` (z: CloudsNear step budget).
 
+## D96 — *Cloud look: reference* is the default (2026-10-12)
+Tom, after playing it: "keep the clouds because they are the best so far, but make a snapshot … so that we can go back".
+Return point first: branch `pre-cloud-look-reference` and tag `return-pre-cloud-look-reference` = `72b98d9` (D95, with
+*Cloud look* defaulting to *build 53*); in game *Sky → Cloud look → build 53* keeps the old clouds. Then the default
+became *reference* (a fresh install renders as an explicit *reference*: difference 1.0, run noise 2.8; *build 53*: 17).
+Players' saved settings keep their own choice. Benchmark profiles do not pin the setting: captures from here on use
+the new clouds (compare older captures with `--set=sky.cloud_look=0`). Also tagged `handoff-2026-10-12` (= `67771ba`),
+which the handoff asked to create on the PC.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
