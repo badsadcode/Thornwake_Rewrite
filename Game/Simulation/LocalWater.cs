@@ -49,6 +49,10 @@ public sealed class LocalWater
     // Ground that held water stays dark for a few minutes (1 = wet now, fades to 0), as in GangTheGAME.
     private float[] _wet = new float[Side * Side], _wetShown = new float[Side * Side];
     private float[] _soil = new float[Side * Side]; // water held in the soil (m), up to SoilCapacity
+    // Rain erosion (round 31, Tom: "streams that form during rain could erode the ground — REALLY SLOWLY"): soil carried
+    // by the water (m³ per cell) and the floor change since it was last handed to the terrain edits (m).
+    private float[] _sediment = new float[Side * Side], _eroded = new float[Side * Side];
+    private readonly List<(double X, double Z, float Dz)> _erodedLeaving = new();
     private const float WetThreshold = .01f, DryingPerSecond = 1f / 150f;
     private float _dryClock;
     private readonly Dictionary<(long, long), float[]> _dormant = new();
@@ -80,7 +84,14 @@ public sealed class LocalWater
     public float Evaporation { get; set; } = 8e-8f;      // ~0.3 mm an hour
     /// <summary>Rain over the whole window (m/s of water depth; 0 = dry).</summary>
     public float RainRate { get; set; }
-    public sealed class Source { public double X, Z; public float Rate; }
+    /// <summary>Erosion speed (0 = off, 1 = the default "really slowly": a strong rain stream cuts ~2 cm an hour).</summary>
+    public float ErosionRate { get; set; }
+    /// <summary>Soil carried off by the water into rivers, lakes and the sea, or out of the window (m³).</summary>
+    public double SedimentLost { get; private set; }
+    /// <summary>Soil the water is carrying now (m³).</summary>
+    public double Suspended { get { double s = 0; foreach (var v in _sediment) s += v; return s; } }
+    /// <summary>A spring: water welling up over a disc of <see cref="Radius"/> metres (0: one cell).</summary>
+    public sealed class Source { public double X, Z; public float Rate, Radius; }
     /// <summary>Point sources (springs, pipes): world position, m³/s.</summary>
     public List<Source> Sources { get; } = new();
     public int DormantChunks => _dormant.Count;
@@ -161,6 +172,7 @@ public sealed class LocalWater
         var floor = new float[Side * Side]; var depth = new float[Side * Side]; var sink = new bool[Side * Side]; var level = new float[Side * Side]; var edited = new bool[Side * Side]; var seaCells = new bool[Side * Side];
         var left = new float[Side * Side]; var right = new float[Side * Side]; var up = new float[Side * Side]; var down = new float[Side * Side];
         var shown = new float[Side * Side]; var wet = new float[Side * Side]; var wetShown = new float[Side * Side]; var soil = new float[Side * Side];
+        var sediment = new float[Side * Side]; var eroded = new float[Side * Side];
         // Chunks leaving the window go dormant (if wet).
         if (_placed)
             for (int wz = 0; wz < WindowChunks; wz++)
@@ -172,7 +184,11 @@ public sealed class LocalWater
                     for (int j = 0; j < ChunkCells; j++)
                         for (int i = 0; i < ChunkCells; i++)
                         {
-                            float d = _depth[Index(wx * ChunkCells + i, wz * ChunkCells + j)];
+                            int c = Index(wx * ChunkCells + i, wz * ChunkCells + j);
+                            // (ground worn away or built up there still goes to the terrain; carried soil settles)
+                            float change = _eroded[c] + _sediment[c] / CellArea;
+                            if (change != 0) _erodedLeaving.Add(((gx * ChunkCells + i + .5) * Cell, (gz * ChunkCells + j + .5) * Cell, change));
+                            float d = _depth[c];
                             if (d <= Dry) continue;
                             saved ??= new float[ChunkCells * ChunkCells];
                             saved[j * ChunkCells + i] = d;
@@ -196,7 +212,7 @@ public sealed class LocalWater
                         {
                             int o = Index((int)px * ChunkCells + i, (int)pz * ChunkCells + j);
                             floor[n] = _floor[o]; depth[n] = _depth[o]; sink[n] = _sink[o]; shown[n] = _shown[o]; level[n] = _level[o]; edited[n] = _edited[o]; seaCells[n] = _sea[o];
-                            wet[n] = _wet[o]; wetShown[n] = _wetShown[o]; soil[n] = _soil[o];
+                            wet[n] = _wet[o]; wetShown[n] = _wetShown[o]; soil[n] = _soil[o]; sediment[n] = _sediment[o]; eroded[n] = _eroded[o];
                             left[n] = _left[o]; right[n] = _right[o]; up[n] = _up[o]; down[n] = _down[o];
                         }
                         else
@@ -213,7 +229,7 @@ public sealed class LocalWater
                     }
                 if (!kept && resumed != null) _dirty.Add((gx, gz));
             }
-        _floor = floor; _depth = depth; _sink = sink; _level = level; _edited = edited; _sea = seaCells; _shown = shown; _wet = wet; _wetShown = wetShown; _soil = soil; _left = left; _right = right; _up = up; _down = down;
+        _floor = floor; _depth = depth; _sink = sink; _level = level; _edited = edited; _sea = seaCells; _shown = shown; _wet = wet; _wetShown = wetShown; _soil = soil; _sediment = sediment; _eroded = eroded; _left = left; _right = right; _up = up; _down = down;
         OriginChunkX = ox; OriginChunkZ = oz; _placed = true;
         RecomputeBounds();
         RecomputeFeeders();
@@ -248,6 +264,20 @@ public sealed class LocalWater
         _depth[Index(ix, iz)] += (float)(volume / CellArea);
         Added += volume;
         Grow(ix, iz);
+    }
+
+    /// <summary>Pour <paramref name="volume"/> m³ evenly over a disc of <paramref name="radius"/> metres (a big pour
+    /// spreads instead of standing as a column of water on one cell).</summary>
+    public void AddDisc(double x, double z, double radius, double volume)
+    {
+        if (radius <= Cell * .5) { Add(x, z, volume); return; }
+        int n = 0;
+        for (double dz = -radius; dz <= radius; dz += Cell)
+            for (double dx = -radius; dx <= radius; dx += Cell)
+                if (dx * dx + dz * dz <= radius * radius) n++;
+        for (double dz = -radius; dz <= radius; dz += Cell)
+            for (double dx = -radius; dx <= radius; dx += Cell)
+                if (dx * dx + dz * dz <= radius * radius) Add(x + dx, z + dz, volume / n);
     }
 
     /// <summary>The ground changed (terrain edit) inside a world rectangle: reload floor and sinks there, keep the water.</summary>
@@ -321,6 +351,9 @@ public sealed class LocalWater
 
     public void Clear()
     {
+        // Soil the water was carrying settles where it is (the ground change still goes to the terrain).
+        for (int i = 0; i < _sediment.Length; i++)
+            if (_sediment[i] > 0) { _floor[i] += _sediment[i] / CellArea; _eroded[i] += _sediment[i] / CellArea; _sediment[i] = 0; }
         Array.Clear(_depth); Array.Clear(_wet); Array.Clear(_soil); Array.Clear(_left); Array.Clear(_right); Array.Clear(_up); Array.Clear(_down);
         foreach (var key in _dormant.Keys) _dirty.Add(key);
         _dormant.Clear(); Sources.Clear(); RainRate = 0;
@@ -332,7 +365,7 @@ public sealed class LocalWater
     public void Step(float dt)
     {
         if (!_placed) return;
-        foreach (var s in Sources) Add(s.X, s.Z, s.Rate * dt);
+        foreach (var s in Sources) AddDisc(s.X, s.Z, s.Radius, s.Rate * dt);
         if (RainRate > 0)
         {
             float rain = RainRate * dt;
@@ -411,6 +444,7 @@ public sealed class LocalWater
                 if (d > Dry) { nx0 = Math.Min(nx0, x); nx1 = Math.Max(nx1, x); nz0 = Math.Min(nz0, z); nz1 = Math.Max(nz1, z); }
                 if (Math.Abs(d - _shown[i]) > RenderTolerance) { _shown[i] = d; _dirty.Add((OriginChunkX + x / ChunkCells, OriginChunkZ + z / ChunkCells)); }
             }
+        if (ErosionRate > 0) Erode(dt, x0, x1, z0, z1);
         _minX = nx0; _maxX = nx1; _minZ = nz0; _maxZ = nz1;
         if (_maxX < 0) _minX = _minZ = 0;
         // Wetness: water marks the ground at once; drying is slow, so it is updated over the whole window twice a second.
@@ -436,6 +470,97 @@ public sealed class LocalWater
                     MarkWet(x, z, i);
                 }
         }
+    }
+
+    // Erosion constants: transport capacity per unit (depth × speed²), pick-up and settling rates (1/s).
+    private const float Capacity = .05f, PickUp = 2.2e-3f, Settle = 9e-3f, ErodeDepth = .004f, MaxCut = 1e-5f; // (MaxCut: at most 3.6 cm an hour at rate 1)
+    private float[] _sedimentNext = new float[Side * Side];
+
+    /// <summary>
+    /// Rain erosion: flowing water picks up soil where it can carry more than it holds (capacity ∝ depth × speed²) and
+    /// drops it where it slows (pools, the foot of a slope); the soil moves with the water's flow and is lost into
+    /// rivers, lakes and the sea. Rates are low: a strong rain stream (5 cm deep, 1 m/s) cuts ~2 cm an hour at rate 1.
+    /// </summary>
+    private void Erode(float dt, int x0, int x1, int z0, int z1)
+    {
+        float k = ErosionRate, area = CellArea;
+        for (int z = z0; z <= z1; z++)
+            for (int x = x0; x <= x1; x++)
+            {
+                int i = Index(x, z);
+                if (_sink[i] || _sea[i]) { _sediment[i] = 0; continue; }
+                float d = _depth[i], s = _sediment[i];
+                if (d <= ErodeDepth)
+                {
+                    // Water gone: what it carried settles here.
+                    if (s > 0) { _floor[i] += s / area; _eroded[i] += s / area; _sediment[i] = 0; }
+                    continue;
+                }
+                float q = _left[i] + _right[i] + _up[i] + _down[i];
+                float v = Math.Min(q / (d * (float)Cell + 1e-4f), MaxSpeed);
+                float cap = Capacity * d * v * v * area;
+                if (cap > s)
+                {
+                    float cut = Math.Min(PickUp * k * (cap - s) * dt, MaxCut * area * dt); // m³
+                    _floor[i] -= cut / area; _eroded[i] -= cut / area; s += cut;
+                }
+                else
+                {
+                    float drop = Math.Min(s, Settle * k * (s - cap) * dt);
+                    _floor[i] += drop / area; _eroded[i] += drop / area; s -= drop;
+                }
+                _sediment[i] = s;
+            }
+        // Transport: each cell's soil leaves in the share of its water that leaves this step, split like the flow.
+        Array.Copy(_sediment, _sedimentNext, _sediment.Length);
+        for (int z = z0; z <= z1; z++)
+            for (int x = x0; x <= x1; x++)
+            {
+                int i = Index(x, z);
+                float s = _sediment[i];
+                if (s <= 0) continue;
+                float q = _left[i] + _right[i] + _up[i] + _down[i];
+                if (q <= 0) continue;
+                float leaving = q * dt, held = _depth[i] * area + leaving;
+                float moved = s * Math.Min(1, leaving / Math.Max(held, 1e-9f));
+                _sedimentNext[i] -= moved;
+                void To(int nx, int nz, float share)
+                {
+                    if (share <= 0) return;
+                    float part = moved * share / q;
+                    if (nx < 0 || nz < 0 || nx >= Side || nz >= Side) { SedimentLost += part; return; }
+                    int n = Index(nx, nz);
+                    if (_sink[n] || _sea[n]) { SedimentLost += part; return; }
+                    _sedimentNext[n] += part;
+                }
+                To(x - 1, z, _left[i]); To(x + 1, z, _right[i]); To(x, z - 1, _up[i]); To(x, z + 1, _down[i]);
+            }
+        (_sediment, _sedimentNext) = (_sedimentNext, _sediment);
+    }
+
+    /// <summary>
+    /// Floor changes from erosion since the last call, as world cell centres and metres (negative = worn away), once
+    /// some cell has changed by at least <paramref name="threshold"/> metres (null before: the terrain is rebuilt only for
+    /// changes worth seeing). Clears what it returns; the simulation's own floor already carries the change.
+    /// </summary>
+    public List<(double X, double Z, float Dz)>? TakeErosion(float threshold)
+    {
+        if (!_placed) return null;
+        float most = 0;
+        for (int i = 0; i < _eroded.Length; i++) most = Math.Max(most, Math.Abs(_eroded[i]));
+        foreach (var e in _erodedLeaving) most = Math.Max(most, Math.Abs(e.Dz));
+        if (most < threshold) return null;
+        var list = new List<(double, double, float)>(_erodedLeaving);
+        _erodedLeaving.Clear();
+        for (int z = 0; z < Side; z++)
+            for (int x = 0; x < Side; x++)
+            {
+                int i = Index(x, z);
+                if (_eroded[i] == 0) continue;
+                list.Add(((OriginChunkX * ChunkCells + x + .5) * Cell, (OriginChunkZ * ChunkCells + z + .5) * Cell, _eroded[i]));
+                _eroded[i] = 0;
+            }
+        return list;
     }
 
     private void MarkWet(int x, int z, int i)

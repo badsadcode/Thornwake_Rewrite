@@ -267,6 +267,10 @@ public static class GameSettings
     // ---- simulation (live)
     public static readonly Setting WaterSimulation = Add(new("sim.water", "Simulation", "Local water simulation", 0, 1, 1, 1,
         "Simulated water around the player (G pour, J spring, H rain, K clear). Runs in a 128 m area that follows you.", rebuild: true));
+    public static readonly Setting RainErosion = Add(new("sim.erosion", "Simulation", "Rain erosion", 0, 10, .25, 1,
+        "Streams of rain water slowly wear the ground away and leave the soil where they slow down: at 1 a strong rain " +
+        "stream cuts about 2 cm an hour, so gullies take many storms. 0 = off. Around the player (the water simulation's " +
+        "128 m), stored like digging.", "×"));
     public static readonly Setting WeatherOn = Add(new("sim.weather", "Simulation", "Weather", 0, 1, 1, 1,
         "Simulated weather: fronts every few game hours bring clouds, rain, storms or snow, more often in wet climates. " +
         "Off: the Cloud cover setting and H (rain) only."));

@@ -12,6 +12,7 @@ internal static class SimulationTests
         T.Run("Wetlands: real pools, never dry ground below a pool surface (revision 11)", Wetlands, filter);
         T.Run("Landforms: dunes, mesas and needle spires where their biomes are (revision 12)", Landforms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
+        T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
         T.Run("Water: generated rivers absorb it", Sinks, filter);
         T.Run("Water: window moves, dormant chunks resume", Window, filter);
@@ -47,6 +48,33 @@ internal static class SimulationTests
 
     private static void Balance(LocalWater w, string label) =>
         T.Near(w.Volume() + w.Absorbed + w.Spilled + w.Soaked, w.Added + w.Drawn, Math.Max(1e-3, w.Added * 2e-4 + w.Drawn * 2e-6), label + ": volume balance");
+
+    // Round 31 (Tom: streams that form in the rain "could erode the ground — REALLY SLOWLY"): a spring's stream down a
+    // shallow groove for 10 minutes. Off: nothing changes. On: the bed is worn, by millimetres to centimetres, and every
+    // bit of soil is accounted for (worn = settled + carried off + still in the water).
+    private static void Erosion()
+    {
+        LocalWater Run(float rate)
+        {
+            var w = new LocalWater(Ground((x, z) => 100 - x * .05 + .03 * Math.Abs(z))) { ErosionRate = rate };
+            w.Follow(0, 0);
+            w.Sources.Add(new LocalWater.Source { X = -50, Z = 0, Rate = .6f });
+            for (int i = 0; i < 600 * 30; i++) w.Step(1 / 30f);
+            return w;
+        }
+        var off = Run(0);
+        T.Check(off.TakeErosion(0) is not { Count: > 0 }, "erosion off: the ground does not change");
+        var on = Run(1);
+        double suspended = on.Suspended, lost = on.SedimentLost;
+        var cells = on.TakeErosion(0) ?? new();
+        double cut = cells.Where(c => c.Dz < 0).Sum(c => -c.Dz) * LocalWater.Cell * LocalWater.Cell;
+        double fill = cells.Where(c => c.Dz > 0).Sum(c => c.Dz) * LocalWater.Cell * LocalWater.Cell;
+        double deepest = cells.Count > 0 ? -cells.Min(c => c.Dz) : 0;
+        T.Note($"10 min of a 0.6 m³/s stream: worn {cut * 1000:0.0} L, settled {fill * 1000:0.0} L, carried off {lost * 1000:0.0} L, in the water {suspended * 1000:0.0} L; deepest cut {deepest * 100:0.00} cm (≈ {deepest * 600:0.0} cm an hour)");
+        T.Check(cut > 0 && deepest > 1e-4, "the stream wears its bed");
+        T.Check(deepest * 6 < .1, "slowly: under 10 cm an hour where the stream is strongest");
+        T.Near(cut, fill + lost + suspended, Math.Max(1e-6, cut * 1e-3), "soil conserved (worn = settled + carried off + in the water)");
+    }
 
     private static void Downhill()
     {

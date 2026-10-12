@@ -1211,6 +1211,19 @@ physically waterfalls, drawn as a steep sheet for now). *Terrain version* gains 
 point; its fingerprints are frozen (`terrain-build51.json`, with the build 51 biome catalogue), the current ones
 re-recorded.
 
+## D90 — Water tool sizes and slow rain erosion (2026-10-12)
+Tom: bigger water tools, and "streams that form during rain could erode the ground — REALLY SLOWLY so the whole world
+won't turn into river world on day 2". **Water size** (`,` smaller · `.` bigger, 1–4): G pours 2.5 → 160 m³/s spread over
+a disc up to 8 m across (not a column on one cell); J springs give 0.6 → 38 m³/s over the same disc. **Rain erosion**
+(setting *Rain erosion*, default 1, 0 = off): a sediment model in the local water simulation — flowing water picks up soil
+where it can carry more than it holds (capacity ∝ depth × speed²), drops it where it slows (pools, the foot of a slope,
+when the water dries up), carries it with the flow, and loses it into rivers, lakes and the sea. At 1 the bed is cut by
+at most 3.6 cm an hour even under a creek-sized stream (rain runoff is far less), so gullies need many storms. Every
+10 s, once some cell has changed by 4 mm, the change goes into the terrain edits (as digging: the 1 m vertex takes the
+mean of its four 0.5 m cells) and the touched tiles are rebuilt; the simulation's own floor already carries it. Test:
+off changes nothing; on, a 0.6 m³/s stream for 10 min cuts 0.6 cm at most, and worn = settled + carried off + in the
+water.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

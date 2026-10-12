@@ -928,7 +928,15 @@ public partial class WorldLab : Node3D
         sim.RainRate = precip > .1f && !_atmosphere.Snowing ? 6e-5f * GameSettings.RainStrength.F * precip / .7f : 0;
         _atmosphere.Raining = _rain;
         _water.Step(dt, PlayerX, PlayerZ);
-        if (!typing && Input.IsKeyPressed(Key.G) && Aim() is { } at) sim.Add(at.X, at.Z, 2.5 * dt);
+        // G pours where you look; the water size (, .) makes it bigger: 2.5 → 160 m³/s over a 0.5 → 4 m disc.
+        if (!typing && Input.IsKeyPressed(Key.G) && Aim() is { } at) sim.AddDisc(at.X, at.Z, WaterRadius, WaterPour * dt);
+        // Rain erosion: the ground the streams wore away (or built up) goes to the terrain edits, a few mm at a time.
+        sim.ErosionRate = GameSettings.RainErosion.F;
+        if ((_erosionTimer -= dt) <= 0)
+        {
+            _erosionTimer = 10;
+            if (sim.TakeErosion(.004f) is { Count: > 0 } worn) ApplyErosion(worn);
+        }
         // Terrain tools (1–5): left mouse = primary, right = secondary, while the cursor is captured.
         bool captured = Input.MouseMode == Input.MouseModeEnum.Captured && !typing;
         var aim = AimLocal();
@@ -968,9 +976,44 @@ public partial class WorldLab : Node3D
     {
         var sim = _water.Sim;
         if (sim == null || Aim() is not { } at) return;
-        var near = sim.Sources.Find(s => Math.Abs(s.X - at.X) < 4 && Math.Abs(s.Z - at.Z) < 4);
+        var near = sim.Sources.Find(s => Math.Abs(s.X - at.X) < 4 + s.Radius && Math.Abs(s.Z - at.Z) < 4 + s.Radius);
         if (near != null) { sim.Sources.Remove(near); _status = "Spring removed."; }
-        else { sim.Sources.Add(new Thornwake.Hydraulics.LocalWater.Source { X = at.X, Z = at.Z, Rate = .6f }); _status = "Spring placed (J on it again removes it)."; }
+        else
+        {
+            sim.Sources.Add(new Thornwake.Hydraulics.LocalWater.Source { X = at.X, Z = at.Z, Rate = WaterSpring, Radius = WaterRadius });
+            _status = $"Spring placed, size {_waterSize} ({WaterSpring:0.#} m³/s; J on it again removes it).";
+        }
+    }
+
+    // Water tools' size (, smaller · . bigger): 1 = as before (G 2.5 m³/s on one spot, spring 0.6 m³/s), each step ×4.
+    private int _waterSize = 1;
+    private double _erosionTimer = 10;
+    private float WaterPour => 2.5f * MathF.Pow(4, _waterSize - 1);
+    private float WaterSpring => .6f * MathF.Pow(4, _waterSize - 1);
+    private float WaterRadius => _waterSize == 1 ? 0 : .5f * MathF.Pow(2, _waterSize - 1);
+
+    private void WaterSize(int step)
+    {
+        _waterSize = Math.Clamp(_waterSize + step, 1, 4);
+        _status = $"Water size {_waterSize}: G pours {WaterPour:0.#} m³/s, J springs give {WaterSpring:0.#} m³/s" +
+            (WaterRadius > 0 ? $", over {WaterRadius * 2:0.#} m" : "") + " (, smaller · . bigger).";
+    }
+
+    /// <summary>Rain erosion's floor changes (0.5 m cells) into the terrain edits (1 m vertices: the mean of the four
+    /// cells around each), and the touched tiles rebuilt.</summary>
+    private void ApplyErosion(List<(double X, double Z, float Dz)> cells)
+    {
+        var sums = new Dictionary<(long, long), (double Sum, int Count)>();
+        double minX = double.MaxValue, minZ = double.MaxValue, maxX = double.MinValue, maxZ = double.MinValue;
+        foreach (var (x, z, dz) in cells)
+        {
+            var key = ((long)Math.Round(x), (long)Math.Round(z));
+            sums[key] = sums.TryGetValue(key, out var v) ? (v.Sum + dz, v.Count + 1) : (dz, 1);
+            minX = Math.Min(minX, x); minZ = Math.Min(minZ, z); maxX = Math.Max(maxX, x); maxZ = Math.Max(maxZ, z);
+        }
+        _sampler!.Edits.Modify(minX - 1, minZ - 1, maxX + 1, maxZ + 1,
+            (vx, vz, current) => sums.TryGetValue((vx, vz), out var v) ? current + v.Sum / 4 : current);
+        _streamer.Invalidate(minX - 2, minZ - 2, maxX + 2, maxZ + 2);
     }
 
     private void Limb(string name, float angle)
@@ -1063,6 +1106,8 @@ public partial class WorldLab : Node3D
             case Key.F3: _gridShown = !_gridShown; _streamer.ShowGrid(_gridShown); break;
             case Key.F4: _biomeTint = !_biomeTint; _streamer.ShowBiomes(_biomeTint); break;
             case Key.J: if (!_menu.Visible) ToggleSpring(); break;
+            case Key.Comma: if (!_menu.Visible) WaterSize(-1); break;
+            case Key.Period: if (!_menu.Visible) WaterSize(1); break;
             case >= Key.Key1 and <= Key.Key5: if (!_menu.Visible && _tools.Select((int)(key.Keycode - Key.Key1))) _status = _tools.Status; break;
             case Key.T or Key.Y or Key.Bracketleft or Key.Bracketright or Key.Minus or Key.Equal: if (!_menu.Visible) _tools.DevKey(key.Keycode); break;
             case Key.H: if (!_menu.Visible) { _rain = !_rain; _status = _rain ? "Rain on (H stops it)." : "Rain stopped."; } break;
@@ -1199,7 +1244,7 @@ public partial class WorldLab : Node3D
         {
             Text = "WASD move · Shift sprint · Space jump/swim up · C dive · mouse look (Tab frees cursor) · wheel zoom\n" +
                    "F fly (Space/C up/down, Shift faster, Ctrl ×6) · N noclip · Esc menu: teleport, new world, time of day\n" +
-                   "Water: hold G pour where you look · J spring · H rain · K clear\n" +
+                   "Water: hold G pour where you look · J spring · , . water size · H rain · K clear\n" +
                    "Tools: 1 hands · 2 shovel · 3 pickaxe · 4 hoe · 5 terraform (dev) — left/right mouse use\n" +
                    "M world map (right-click teleports) · F1 hide help · F2 hide HUD · F3 tile grid · F4 biome colours · F9 debug dump · F12 screenshot",
             AnchorTop = 1, AnchorBottom = 1, OffsetTop = -122, OffsetLeft = 14, OffsetRight = 900,
