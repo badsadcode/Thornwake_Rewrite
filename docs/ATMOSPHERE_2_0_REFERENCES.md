@@ -45,5 +45,10 @@ dusty haze, swamp an olive-green haze.*
 * **M3 clouds.** The painted references: cauliflower cumulus with bright tops and flat, blue-grey bases; cirrus
   streaks above; a cloud bank on the horizon; low cloud clinging to mountains and lying in valleys; warm-lit edges and
   dark-grey cores at golden hour; towering storm cells with rain shafts.
+  *Tracked (Tom, dumps 115949 / 120402, cloud quality volumetric v2 in Needle Rocks):* the clouds drawn in front of
+  far land did not match the same clouds in the sky — white (fixed in 1cafa04: the biome haze now applies to both),
+  and still a flat, featureless patch with hard vertical edges under the towers. The two halves of the v2 renderer
+  (half-resolution sky pass, full-resolution front pass) disagree along near-horizontal views; M3's single cloud pass
+  removes the seam rather than patching it.
 * **M4 haze and distance.** Strong aerial perspective (far forest teal-blue, mountains fading to the horizon colour),
   valley mist, warm haze toward the sun.
