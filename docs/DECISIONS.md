@@ -1224,6 +1224,24 @@ mean of its four 0.5 m cells) and the touched tiles are rebuilt; the simulation'
 off changes nothing; on, a 0.6 m³/s stream for 10 min cuts 0.6 cm at most, and worn = settled + carried off + in the
 water.
 
+## D91 — Terrain revision 16: no sea pockets inside lakes (2026-10-12)
+Tom (dump 182351, the benchmark lake): still a crater in a lake — inside it the sea, around it walls of lake water.
+`--probe-water` showed a different cause from D89: the lake (level 13 m) lies near the coast, and the coastline's
+fractal wiggle cut a small patch of "sea" (land ≤ 0) out of its basin; the sampler returns sea for such points before it
+looks for lakes, so the water surface dropped from 13 m to 0 m over a bed at −2.1 m. Revision 16: a sea point inside a
+lake's reach (within 1.6 cells, as the lake fill) with its bed below the lake surface is part of the lake. Test: Tom's
+world rebuilt from the dump parameters (his spot is now lake at 13 m), and rings of probes around every lake of four
+worlds — sea inside a lake: 2 before, 0 now. The preset worlds' fingerprints did not change (none had a pocket).
+*Terrain version* gains **Build 52** (revision 15); its fingerprints are frozen (`terrain-build52.json`). Also fixed:
+*Terrain version* stopped at index 4, so **Build 51** could not be chosen (it fell back to Build 5).
+
+## D92 — Forest rays: candidate A (2026-10-12)
+Tom compared the rays suite (build 52): "both are good, but A looks a little bit better". Cost on his RTX 3080 is the
+same within ~1 fps (57 fps over the forest scenes either way). M2 goes on with **A** (volumetric forest air lit through
+the canopy's shadow map). B (screen-space shafts) stays selectable until M2 is finished, then becomes a fallback for
+weaker GPUs if it is still useful. The defaults do not change while Atmosphere 2.0 is experimental. His remaining note,
+"an issue with mountains in the background", is taken as the cloud/mountain seam of D87 (M3) unless a dump says other.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

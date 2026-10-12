@@ -86,6 +86,15 @@ public sealed class TerrainSampler
             double seabed = _p.SeaLevel - depth, plume = 0;
             if (_style.MouthBlend > 0) seabed = MouthChannel(x, z, seabed, -1, out plume);
             seabed += Edits.Delta(x, z);
+            // Revision 16: the coastline wiggle can cut a small pocket of "sea" out of a lake basin near the coast; the
+            // sea's level then punched a hole in the lake, a crater with 13 m walls of water in Tom's dump 182351
+            // (benchmark lake, level 13 m, ground -2.1 m). Inside a lake's reach the pocket is part of the lake.
+            if (_style.Revision >= 16)
+            {
+                int lake = _hydrology.LakeDistance(x, z, out double cells);
+                if (lake >= 0 && cells < 1.6 && _hydrology.Lakes[lake].Level > _p.SeaLevel + .05 && seabed < _hydrology.Lakes[lake].Level)
+                    return new(seabed, land, 0, 0, WaterKind.Lake, _hydrology.Lakes[lake].Level, lake, 0);
+            }
             return seabed < _p.SeaLevel ? new(seabed, land, 0, 0, WaterKind.Ocean, _p.SeaLevel, -1, plume)
                 : new(seabed, land, 0, 0, WaterKind.None, double.NaN, -1);
         }

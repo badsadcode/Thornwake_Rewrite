@@ -27,9 +27,9 @@ public sealed class WorldGenOptions
     public WorldGenOptions()
     {
         const string S = "World shape", T = "Terrain", W = "Rivers and lakes";
-        Classic = Add(new("gen.version", S, "Terrain version", 0, 4, 1, 0,
-            "Generate the world as in an earlier build, to compare or go back: Build 9 (before biomes), Build 8 (before estuaries and gentler bulging banks), Preview 7 (before smooth river mouths), Build 5 (before natural banks and steeper shores), Build 51 (before rivers inside lakes took the lake's level).",
-            options: new[] { "current", "Build 9", "Build 8", "Preview 7", "Build 5", "Build 51" }));
+        Classic = Add(new("gen.version", S, "Terrain version", 0, 6, 1, 0,
+            "Generate the world as in an earlier build, to compare or go back: Build 9 (before biomes), Build 8 (before estuaries and gentler bulging banks), Preview 7 (before smooth river mouths), Build 5 (before natural banks and steeper shores), Build 51 (before rivers inside lakes took the lake's level), Build 52 (before sea pockets inside lakes became lake).",
+            options: new[] { "current", "Build 9", "Build 8", "Preview 7", "Build 5", "Build 51", "Build 52" }));
         Size = Add(new("gen.size", S, "World size", 0, WorldRecipe.Sizes.Length - 1, 1, 4, "Width and length of the world. The world type adapts to any size.",
             options: Array.ConvertAll(WorldRecipe.Sizes, k => $"{k:0} km × {k:0} km")));
         var counts = new string[WorldRecipe.MaxContinents + 1];
@@ -133,9 +133,9 @@ public sealed class WorldGenOptions
 
     public WorldChoices Choices => ChoicesBase with { ScaleRevision = Era >= 2 ? 8 : 9 };
 
-    /// <summary>The terrain version as an age: 0 = current or Build 51 (the same apart from <see cref="WorldStyle.Revision"/>),
-    /// 1 = Build 9, 2 = Build 8, 3 = Preview 7, 4 = Build 5 (Build 51 was added after them, at index 5).</summary>
-    private int Era => Classic.Index == 5 ? 0 : Classic.Index;
+    /// <summary>The terrain version as an age: 0 = current, Build 51 or Build 52 (the same apart from <see cref="WorldStyle.Revision"/>),
+    /// 1 = Build 9, 2 = Build 8, 3 = Preview 7, 4 = Build 5 (Builds 51 and 52 were added after them, at indices 5 and 6).</summary>
+    private int Era => Classic.Index >= 5 ? 0 : Classic.Index;
 
     private WorldChoices ChoicesBase => new()
     {
@@ -172,7 +172,7 @@ public sealed class WorldGenOptions
             BankVariation = Era == 4 ? 0 : Banks.Value,
             ShoreSlope = Era == 4 ? 0 : Shores.Value,
             MouthBlend = Era >= 3 ? 0 : 1,
-            Revision = Era >= 2 ? 8 : Era == 1 ? 9 : Classic.Index == 5 ? 14 : 15,
+            Revision = Era >= 2 ? 8 : Era == 1 ? 9 : Classic.Index == 5 ? 14 : Classic.Index == 6 ? 15 : 16,
             ForestCover = ForestCover.Value, ForestDensity = ForestDensity.Value, RockAmount = Rocks.Value, PropAmount = Props.Value,
             LakeShare = b.LakeShare * Lakes.Value,
             DeltaMinCatchmentKm2 = Deltas.Value <= 0 ? double.PositiveInfinity : b.DeltaMinCatchmentKm2 / Deltas.Value,

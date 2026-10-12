@@ -9,6 +9,7 @@ internal static class SimulationTests
     {
         T.Run("Lakes: no dry ground below the surface at the lake's edge (revision 10 and later)", LakeEdges, filter);
         T.Run("Lakes: outlets keep the lake's level inside the lake (revision 15)", LakeOutlets, filter);
+        T.Run("Lakes: no sea pocket inside a lake (revision 16)", LakeSeaPockets, filter);
         T.Run("Wetlands: real pools, never dry ground below a pool surface (revision 11)", Wetlands, filter);
         T.Run("Landforms: dunes, mesas and needle spires where their biomes are (revision 12)", Landforms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
@@ -761,6 +762,49 @@ internal static class SimulationTests
         T.Check(lakes > 5 && inside > 0, "lakes with outlets found");
         T.Check(below == 0, "outlet surface at the lake level inside the lake");
         T.Check(trench == 0, "no water trench inside a lake");
+    }
+
+    /// <summary>Tom's dump 182351: the coastline wiggle cut a pocket of sea (level 0) out of a lake at 13 m, a crater
+    /// with walls of water. Probes every lake above sea level out to its reach; none may sample as sea.</summary>
+    private static void LakeSeaPockets()
+    {
+        int samples = 0, oldSea = 0, sea = 0, lakes = 0;
+        // Tom's world (dump 182351): vast continents, 32 km, seed 42, continent size 1.6, coast 1.3, rolling ground .95.
+        var recipe = WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == "vast-world");
+        var profile = recipe.Resolve(new WorldChoices { SizeKm = 32, ContinentSize = 1.6, CoastRoughness = 1.3 });
+        var basis = TerrainStyle.For(profile);
+        var tom = new TerrainSampler(new WorldPlan(WorldManifest.Create(42, profile, worldId: CoreTests.FixedWorldId),
+            style: basis with { LowlandDetail = basis.LowlandDetail * .95, ForestCover = 2, ForestDensity = 1.6 }));
+        var tomSea = tom.Sample(-5669.182, 5738.657);
+        T.Note($"Tom's spot: {tomSea.Water} at {tomSea.WaterLevel:0.0} m, ground {tomSea.Height:0.0} m");
+        T.Check(tomSea.Water == WaterKind.Lake, "Tom's spot is lake water");
+        foreach (var s in new[] { tom, CoreTests.Sampler("vast-world", 42), CoreTests.Sampler("balanced", 42), CoreTests.Sampler("archipelago", 42) })
+        {
+            var s15 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 15 }));
+            var hy = s.Plan.Hydrology;
+            double cell = s.Plan.Macro.Cell;
+            foreach (var lake in hy.Lakes)
+            {
+                if (lake.Level < s.Plan.Profile.SeaLevel + .05) continue;
+                lakes++;
+                for (int a = 0; a < 48; a++)
+                {
+                    double ang = a * Math.Tau / 48;
+                    for (double r = 0; r < 40 * cell; r += cell * .25)
+                    {
+                        double x = lake.Center.X + Math.Cos(ang) * r, z = lake.Center.Z + Math.Sin(ang) * r;
+                        if (hy.LakeDistance(x, z, out double d) != lake.Id) continue;
+                        if (d > 1.6) break;
+                        samples++;
+                        if (s15.Sample(x, z).Water == WaterKind.Ocean) oldSea++;
+                        if (s.Sample(x, z).Water == WaterKind.Ocean) sea++;
+                    }
+                }
+            }
+        }
+        T.Note($"{lakes} lakes, {samples} probes within their reach; sampled as sea — revision 15: {oldSea}, now: {sea}");
+        T.Check(samples > 1000, "probes inside lakes");
+        T.Check(sea == 0, "no sea inside a lake's reach");
     }
 
     private static void LakeEdges()
