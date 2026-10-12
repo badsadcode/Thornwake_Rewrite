@@ -161,3 +161,11 @@ cloud_light_dir={
 "type": "vec4",
 "value": Vector4(0, 1, 0, 0)
 }
+cloud_fog={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+cloud_fog2={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}

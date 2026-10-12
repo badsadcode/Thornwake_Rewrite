@@ -242,6 +242,11 @@ public static class GameSettings
     public static readonly Setting CloudResolution = Add(new("sky.cloud_resolution", "Sky", "Cloud resolution", 0, 2, 1, 1,
         "Detail of the cloud texture: crisper edges and finer wisps at higher settings (a little more memory and start-up time).",
         options: new[] { "256", "512", "1024" }));
+    public static readonly Setting CloudBlend = Add(new("sky.cloud_blend", "Sky", "Cloud blend (v2)", 0, 1, 1, 1,
+        "Volumetric v2 only: how the clouds in front of the land are blended with the same clouds in the sky. Matched: the " +
+        "same sun colour and haze as the sky's clouds, and clouds also over the farthest land (no seam at the mountains' " +
+        "outline, no cloudless band under the horizon). Build 52: as before.",
+        options: new[] { "build 52", "matched" }));
     public static readonly Setting BiomeMoods = Add(new("sky.biome_moods", "Sky", "Biome skies", 0, 2, 1, 0,
         "Each biome tints the sky and haze a little (jungle humid, desert dusty, volcanic ashen, blighted swamp gloomy). " +
         "Off keeps the realistic sky everywhere.", options: new[] { "off (realistic)", "subtle", "strong" }));

@@ -334,6 +334,8 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
         SkyParam("quality", GameSettings.CloudQuality.Index);
+        _cloudsNear.SetShaderParameter("cloud_blend", GameSettings.CloudBlend.Index);
+        SkyParam("split_test", System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--cloud-split-test") >= 0 ? 1 : 0);
         bool v2 = GameSettings.CloudQuality.Index == 3;
         // (2: a temporal anti-aliasing averages the clouds' moving ray offsets — TAA, FSR 2)
         bool temporal = GameSettings.AntiAliasing.Index is 2 or 4;
@@ -843,6 +845,11 @@ public partial class Atmosphere : Node3D
         var toLight = Sun.GlobalTransform.Basis.Z.Normalized();
         RenderingServer.GlobalShaderParameterSet("cloud_light", new Vector4(Sun.LightColor.R, Sun.LightColor.G, Sun.LightColor.B, Sun.LightEnergy));
         RenderingServer.GlobalShaderParameterSet("cloud_light_dir", new Vector4(toLight.X, toLight.Y, toLight.Z, 0));
+        // Godot's fog as it falls on the sky (sky.glsl), so CloudsNear can veil its clouds the same way.
+        var env = Environment;
+        var fogLight = env.FogLightColor.SrgbToLinear() * env.FogLightEnergy;
+        RenderingServer.GlobalShaderParameterSet("cloud_fog", new Vector4(fogLight.R, fogLight.G, fogLight.B, env.FogEnabled ? env.FogSkyAffect : 0));
+        RenderingServer.GlobalShaderParameterSet("cloud_fog2", new Vector4(env.FogSunScatter, env.FogAerialPerspective, 0, 0));
     }
     // ---- simulated weather (round 27): steering wind, nearby thunderstorm cells, wind-built sea
     private Vector2? _steer;

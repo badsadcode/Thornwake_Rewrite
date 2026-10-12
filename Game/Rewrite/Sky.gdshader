@@ -17,6 +17,8 @@ shader_type sky;
 render_mode use_debanding, use_half_res_pass;
 
 #define SKY_LIGHT0_COLOR LIGHT0_COLOR
+// Test (--cloud-split-test, CloudsNear.gdshader): the left half of the screen leaves its volumetric clouds to CloudsNear.
+uniform int split_test = 0;
 #include "res://Game/Rewrite/SkyCommon.gdshaderinc"
 
 void sky() {
@@ -99,6 +101,7 @@ void sky() {
 				disc *= 1.0 - far.a;
 				far = vec4(0.0);
 				vec4 v = HALF_RES_COLOR;
+				if (split_test == 1 && quality == 3 && SCREEN_UV.x < 0.5) v = vec4(0.0);
 				col = col * (1.0 - v.a) + v.rgb;
 				disc *= 1.0 - v.a;
 			} else {
