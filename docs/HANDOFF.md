@@ -4,7 +4,7 @@ Written when the work moved from the cloud session (CPU rendering only, ~17 s a 
 heavy Atmosphere 2.0 tests can run on a real GPU. Everything below is on `main`.
 
 ## Last build Tom has
-Build 52 (v0.9.52, commit 06a7650). Since then on `main`, for **build 53**:
+Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Since then: the cloud look investigation (below). What went into build 53:
 * **Terrain revision 16** (D91): a sea pocket inside a lake's reach is lake water — the "crater" in the benchmark lake
   (dump 182351). *Terrain version* gains **Build 52**; **Build 51** can now actually be chosen (the range stopped at 4).
 * **Forest rays: A** (D92) — Tom's pick. M2 continues with A; B stays selectable until M2 is done.
@@ -28,6 +28,7 @@ Build 52 (v0.9.52, commit 06a7650). Since then on `main`, for **build 53**:
   volumetric fog history of the old view — a beige veil; in the rays A/B, only still 00 per scene was affected).
 
 ## Next
+0. **Done on Tom's PC (2026-10-12):** step 1 below (captures on branch `captures/cloud-blend`; Tom accepted the fix), the tree instance-uniform overflow (D93), build 53. In progress: why the clouds look weak (wind smear, sky fog, aerial perspective, self-shadowing) and a *Cloud look* setting aimed at the M3 references — Tom picks.
 1. **Check the cloud fix on Tom's case** (GPU, minutes instead of an hour). Tom's world from dump 182351 (the
    benchmark lake, ground −2.1 m), the camera 400 m up so clouds stand in front of land, cumulus towers forced, four
    directions, build 52 blend vs matched (`--fly-height` counts from the ground, not the water; the lens peak printed
