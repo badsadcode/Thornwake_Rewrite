@@ -255,7 +255,9 @@ public partial class WorldLab
                 run.StableTime = BenchSettledNow ? run.StableTime + frameMs / 1000.0 : 0;
                 if ((int)(run.StageTime / 30) != (int)((run.StageTime - frameMs / 1000.0) / 30))
                     GD.Print($"BENCH settling t={run.StageTime:0}s missing={_streamer.Missing} jobs={_streamer.Pending} field={_streamer.Field.Settled} (missing {_streamer.Field.Missing}, jobs {_streamer.Field.Pending}) impostors={_streamer.Impostors.Ready} collision={_streamer.PendingCollision} holding={_holding} horizon={_horizon?.Busy} generating={_generation != null}");
-                if (run.StableTime > 2) Next(BenchStage.Warmup);
+                // Face the shot's direction before the warm-up, not after: the volumetric fog keeps a history per view
+                // (perf.fog_smoothing), and turning just before the first still left it veiled in the old view's fog.
+                if (run.StableTime > 2) { BenchFace(scene); Next(BenchStage.Warmup); }
                 else if (run.StageTime > run.SettleLimit) { run.Status = $"terrain never settled in '{scene.Id}'"; BenchFinish(); }
                 break;
             }
@@ -265,7 +267,7 @@ public partial class WorldLab
                 // (and at least 30 frames: the sky's radiance map catches up with a new time of day over several frames —
                 // on a slow machine 3 s can be a single frame)
                 run.WarmupFrames++;
-                if (((run.StageTime > BenchWarmup && run.StableTime > 1) || run.StageTime > 30) && run.WarmupFrames >= 30) { run.WarmupFrames = 0; BenchFace(scene); BenchBeginMeasure(run); Next(BenchStage.Measure); }
+                if (((run.StageTime > BenchWarmup && run.StableTime > 1) || run.StageTime > 30) && run.WarmupFrames >= 30) { run.WarmupFrames = 0; BenchBeginMeasure(run); Next(BenchStage.Measure); }
                 break;
             case BenchStage.Measure:
             {
