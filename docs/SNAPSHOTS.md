@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 51** (tree band fix: dithered detail hand-over; readable nights in light model 1; *Forest rays* A/B; rays and artefacts suites) | `6f7e3d8` | Thornwake-Rewrite-Preview-51 (v0.9.51) | Light model 0 and Forest rays build 47 (defaults) = build 47's look; the tree hand-over change has no switch (a fix): build 50 = `da601e4` |
 | **Build 50** (light profiles by biome for light model 1; forest captures in a clearing) | `fa3ba27` | Thornwake-Rewrite-Preview-50 (v0.9.50) | Light model 0 (default) = build 47's light; return point: branch `pre-atmosphere-2.0` |
 | **Build 49** (Atmosphere 2.0 M1: *Light model* switch, A/B stills in the atmosphere suite) | `262e60a` | Thornwake-Rewrite-Preview-49 (v0.9.49) | Light model 0 (default) = build 47's light; return point for M1: branch `pre-atmosphere-2.0` |
 | **Build 48** (Esc menu: Resume, Back to launcher, Quit game under every tab) | `f4dbce5` | Thornwake-Rewrite-Preview-48 (v0.9.48) | UI only; baseline stays build 47 |
