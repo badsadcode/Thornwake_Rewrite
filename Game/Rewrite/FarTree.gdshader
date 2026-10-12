@@ -7,6 +7,7 @@ render_mode skip_vertex_transform, cull_disabled, diffuse_burley, specular_disab
 global uniform float leaf_translucency;
 global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
+#define TREE_NO_LOD_ROLE // (no detailed ↔ lighter hand-over here: no instance uniform)
 #include "res://Game/Rewrite/TreeFade.gdshaderinc"
 varying vec3 card_world;
 varying vec3 crown;

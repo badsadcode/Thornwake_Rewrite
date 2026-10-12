@@ -11,7 +11,14 @@ global uniform vec4 tree_camera;
 // over crowns in the band — Tom's dump 104752): tree_lod.x = the hand-over distance (m), y = half-width of the band.
 // tree_lod_role per MultiMesh: 1 = the detailed model (leaves the band), 2 = the lighter one (takes it), 0 = no hand-over.
 global uniform vec4 tree_lod;
-instance uniform float tree_lod_role = 0.0;
+// The role comes from the instance's custom data (INSTANCE_CUSTOM.x, set by TreeField; 0 for anything else): each
+// shader's vertex() does `tree_lod_role = INSTANCE_CUSTOM.x;`. It was an instance uniform (D86), but every instance of
+// such a shader holds 16 slots of Godot's global shader buffer: thousands of tree batches overflowed it ("Too many
+// instances using shader instance variables"), and those batches lost the hand-over. Shaders without the hand-over
+// define TREE_NO_LOD_ROLE first.
+#ifndef TREE_NO_LOD_ROLE
+varying flat float tree_lod_role;
+#endif
 
 float tree_bayer(vec2 frag) {
 	ivec2 p = ivec2(mod(frag, 4.0));
@@ -36,8 +43,10 @@ bool tree_fade_in(vec3 world, vec2 frag, float r) {
 	return tree_ranges.w > 0.5 && tree_bayer(frag) >= tree_band(tree_distance(world), r);
 }
 // The same dither between the detailed and the lighter model (each pixel shows one or the other, both stay opaque).
+#ifndef TREE_NO_LOD_ROLE
 bool tree_lod_out(vec3 world, vec2 frag) {
 	if (tree_lod_role < 0.5 || tree_lod.y <= 0.0) return false;
 	float t = clamp((tree_distance(world) - (tree_lod.x - tree_lod.y)) / (2.0 * tree_lod.y), 0.0, 1.0);
 	return tree_lod_role < 1.5 ? tree_bayer(frag) < t : tree_bayer(frag) >= t;
 }
+#endif

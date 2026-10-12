@@ -1242,6 +1242,19 @@ the canopy's shadow map). B (screen-space shafts) stays selectable until M2 is f
 weaker GPUs if it is still useful. The defaults do not change while Atmosphere 2.0 is experimental. His remaining note,
 "an issue with mountains in the background", is taken as the cloud/mountain seam of D87 (M3) unless a dump says other.
 
+## D93 — Tree hand-over role in the instance data, not an instance uniform (2026-10-12)
+First GPU runs on Tom's PC (dump 182351, his settings): ~1,020 Godot errors per run, "Too many instances using
+shader instance variables"; in the benchmark forest ~1,200–1,360; with *Trees* 3 / *Far trees* 4, 15,710. D86's
+`tree_lod_role` was an `instance uniform`, and Godot gives every instance of such a shader 16 slots of the global
+shader buffer (65,536 slots: ~4,000 instances), set or not, so the canopy, bark and placeholder-plant batches and also
+every impostor and far-tree batch (whose shaders never read it) took slots. Batches past the limit got none and lost
+the detailed → lighter dither. Raising the buffer 4× still overflowed at the heavier settings, so the role now travels
+in each 3D tree instance's custom data (`INSTANCE_CUSTOM.x`, 16 floats an instance instead of 12) and reaches the
+fragment as a flat varying; the impostor and far-tree shaders define `TREE_NO_LOD_ROLE`. The simplified-shadow twin,
+which shared the lighter model's MultiMesh but needs role 1, gets its own copy of the buffer (near cells only).
+Result: no errors at either setting; the benchmark forest matches `main` within run-to-run noise (only swaying grass
+differs). A fix, no switch (as D86).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

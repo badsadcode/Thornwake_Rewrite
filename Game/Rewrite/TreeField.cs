@@ -26,6 +26,7 @@ public sealed partial class TreeField : Node3D
     public const int FineLevel = 1, CoarseLevel = 4; // TileKey levels: 128 m and 1024 m cells
     private const float Fade = 40;                   // half-width of the cross-fade bands (m)
     private const float LodBand = 20;                // half-width of the detailed → lighter model band (m)
+    private const int Stride = 16;                   // floats per 3D tree instance: transform 12 + custom 4 (x = role)
 
     /// <summary>Detailed (LOD1, shadows) out to here; LOD2 3D trees to <see cref="DetailRange"/>; impostors to <see cref="ImpostorRange"/>.</summary>
     public float NearRange { get; private set; } = 220;
@@ -217,11 +218,17 @@ public sealed partial class TreeField : Node3D
                 foreach (int lod in near ? new[] { 1, 2 } : new[] { 2 })
                 {
                     var parts = _parts[(group.Key, lod)];
+                    // Hand-over role in the custom data (TreeFade.gdshaderinc): 1 = detailed model, 2 = the lighter one
+                    // in a near cell (takes over across the band), 0 = no hand-over.
+                    float role = lod == 1 ? 1 : near ? 2 : 0;
                     for (int p = 0; p < parts.Length; p++)
                     {
-                        var buffer = new float[list.Length * 12];
+                        var buffer = new float[list.Length * Stride];
                         for (int i = 0; i < list.Length; i++)
-                            MultiMeshFill.Put(buffer, i * 12, list[i].Transform.Translated(offset) * parts[p].Transform);
+                        {
+                            MultiMeshFill.Put(buffer, i * Stride, list[i].Transform.Translated(offset) * parts[p].Transform);
+                            buffer[i * Stride + 12] = role;
+                        }
                         data.Batches.Add((group.Key, lod, p, buffer, list.Length));
                     }
                 }
@@ -253,7 +260,8 @@ public sealed partial class TreeField : Node3D
         bool shadows = GameSettings.Shadows.Index > 0;
         foreach (var (species, lod, part, buffer, count) in data.Batches)
         {
-            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, Mesh = _parts[(species, lod)][part].Mesh };
+            var mesh = _parts[(species, lod)][part].Mesh;
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = mesh };
             multi.InstanceCount = count;
             multi.Buffer = buffer;
             var mmi = new MultiMeshInstance3D { Multimesh = multi, Layers = lod == 1 ? RenderLayers.TreesNear : RenderLayers.TreesFar };
@@ -262,24 +270,27 @@ public sealed partial class TreeField : Node3D
             {
                 mmi.CastShadow = shadows && detailedShadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
                 mmi.VisibilityRangeEnd = NearRange + LodBand; // (the shaders dither the hand-over: tree_lod)
-                mmi.SetInstanceShaderParameter("tree_lod_role", 1);
             }
             else
             {
                 mmi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
-                if (data.Near) { mmi.VisibilityRangeBegin = Math.Max(0, NearRange - LodBand); mmi.SetInstanceShaderParameter("tree_lod_role", 2); }
+                if (data.Near) mmi.VisibilityRangeBegin = Math.Max(0, NearRange - LodBand);
                 mmi.VisibilityRangeEnd = DetailRange + Fade + diagonal; // beyond: impostors (the shader fades the edge)
                 if (data.Near && shadows && !detailedShadows)
                 {
                     // Simplified tree shadows: the near trees' shadows come from this lighter model of the same trees
-                    // (same instances, shadow only), while the detailed model is what the camera sees.
-                    var shadow = new MultiMeshInstance3D
+                    // (shadow only), while the detailed model is what the camera sees. Its own copy of the instances,
+                    // with role 1: the shadow leaves the band like the detailed model, not takes it like this model.
+                    var twin = (float[])buffer.Clone();
+                    for (int i = 0; i < count; i++) twin[i * Stride + 12] = 1;
+                    var shadowMulti = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = mesh };
+                    shadowMulti.InstanceCount = count;
+                    shadowMulti.Buffer = twin;
+                    node.AddChild(new MultiMeshInstance3D
                     {
-                        Multimesh = multi, Layers = RenderLayers.TreesNear, CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly,
+                        Multimesh = shadowMulti, Layers = RenderLayers.TreesNear, CastShadow = GeometryInstance3D.ShadowCastingSetting.ShadowsOnly,
                         VisibilityRangeEnd = NearRange + LodBand,
-                    };
-                    shadow.SetInstanceShaderParameter("tree_lod_role", 1);
-                    node.AddChild(shadow);
+                    });
                 }
             }
             node.AddChild(mmi);

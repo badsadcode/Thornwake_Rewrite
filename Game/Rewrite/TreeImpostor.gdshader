@@ -18,6 +18,7 @@ global uniform float leaf_translucency;
 global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
 global uniform vec4 wind;
+#define TREE_NO_LOD_ROLE // (no detailed ↔ lighter hand-over here: no instance uniform)
 #include "res://Game/Rewrite/TreeFade.gdshaderinc"
 
 varying vec3 card_world;

@@ -16,6 +16,7 @@ global uniform vec4 wind;
 #include "res://Game/Rewrite/TreeFade.gdshaderinc"
 varying vec3 world_position;
 void vertex() {
+    tree_lod_role = INSTANCE_CUSTOM.x; // detailed ↔ lighter model role (TreeFade.gdshaderinc)
     vec3 base = MODEL_MATRIX[3].xyz;
     vec3 wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
     if (wind.y > 0.0 && wind_sim()) {

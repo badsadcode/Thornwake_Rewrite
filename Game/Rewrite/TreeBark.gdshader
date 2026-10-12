@@ -9,6 +9,7 @@ uniform bool has_texture = true;
 #include "res://Game/Rewrite/TreeFade.gdshaderinc"
 varying vec3 world_position;
 void vertex() {
+	tree_lod_role = INSTANCE_CUSTOM.x; // detailed ↔ lighter model role (TreeFade.gdshaderinc)
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 void fragment() {
