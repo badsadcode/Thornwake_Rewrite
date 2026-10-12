@@ -289,6 +289,9 @@ vec3 gerstner(vec2 p, float depth, float sea, float lake, float fetch_m, float e
 	// Lakes: fetch-limited chop, growing with the wind (only the sea's short waves reach them, and those barely grow
 	// with the sea state: a windy lake looked like a calm one).
 	float lake_amp = lake * clamp(fetch_m / 1500.0, 0.15, 0.75) * (0.6 + 2.4 * pow(sea_state, 1.5));
+	// (and, like the sea's, smaller in the shallows: at full size in 0.3–2 m of water they stood metres above the land,
+	// with walls where they met a river — Tom's dumps 131735 / 131752 / 131957, a gale over flooded lake margins)
+	lake_amp *= smoothstep(0.15, 3.0, depth);
 	float a1 = sea * mix(0.5, 1.0, expo) * smoothstep(0.2, 3.0, depth) + lake_amp;
 	float a2 = sea * smoothstep(0.05, 1.0, depth) + lake_amp;
 	// A cascade fades once its longest waves are only a few pixels (vertices) long: its detail would only shimmer.

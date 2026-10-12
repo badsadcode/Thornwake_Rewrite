@@ -1190,6 +1190,13 @@ clouds; *volumetric v2*: a flat, hard-edged patch where clouds in front of far l
 patched further in the current renderer. M3 replaces the cloud model with one cloud pass drawn in front of and behind
 the land alike, and these two shots (dumps 115949 / 120402, Tom's office PC) become its acceptance captures.
 
+## D88 — Lake waves fade in the shallows; weather off resets the wind (2026-10-12)
+Tom's dumps 131735 / 131752 / 131957: water standing metres above flooded lake margins, with walls where it met a
+river. Water experimental 3/4 give lakes fetch-limited FFT chop that grows with the sea state, but, unlike the sea's,
+with no shallow-water fade: in 0.3–2 m of water a big lake carried full storm waves. They now fade between 0.15 and 3 m
+of depth. The storm itself was stale: with the weather off the last simulated wind (26–29 m/s) kept blowing; turning
+the weather off now hands the wind back to the classic model.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
