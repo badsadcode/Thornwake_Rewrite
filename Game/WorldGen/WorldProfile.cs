@@ -139,7 +139,7 @@ public sealed record TerrainStyle
     /// ground (round 8); 12 = biome landforms: dunes, mesas, needle spires (round 9); 13 = a river crossing another river's
     /// lower valley floor flows at that floor instead of perching above it (round 14); 14 = wetland water follows the
     /// pool mask, not the ground's gullies (no straight parallel channels; round 20).</summary>
-    public int Revision { get; init; } = 14;
+    public int Revision { get; init; } = 15;
 
     /// <summary>Climate of the world (latitudes, warmer/colder, wetter/drier): drives biomes (D42).</summary>
     public ClimateSettings Climate { get; init; } = new();

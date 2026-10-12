@@ -217,6 +217,18 @@ public sealed class TerrainSampler
         else height = Math.Max(baseHeight + detail, floor); // generated land never dips below the sea
 
         double lakePlume = 0, lakeCells = double.PositiveInfinity;
+        // Revision 15: a river running through a lake below the lake's surface is the lake there. Rivers were resolved
+        // first and the lake only filled points no river claimed, so a river crossing a lake kept its own lower level
+        // and the water dropped into a trench along it — 11.7 m in Tom's dump 131957 (river 260.9 m in a lake at
+        // 272.6 m), a "crater" where a short stretch lies inside a lake. A river entering a lake from above is kept.
+        if (_style.Revision >= 15 && water == WaterKind.River)
+        {
+            int lake = _hydrology.LakeDistance(x, z, out double cells);
+            if (lake >= 0 && cells < 1.6 && _hydrology.Lakes[lake].Level > level + .05 && _p.SeaLevel + height < _hydrology.Lakes[lake].Level)
+            {
+                water = WaterKind.Lake; level = _hydrology.Lakes[lake].Level; body = lake; lakeCells = cells;
+            }
+        }
         if (water == WaterKind.None && _style.Revision >= 10)
         {
             // Revision 10: the lake fills every point below its surface within ~1 cell of its cells (round reach);

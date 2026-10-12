@@ -15,6 +15,47 @@ namespace Thornwake.Rewrite;
 public partial class WorldLab
 {
     private bool _findSitesPending = OS.GetCmdlineUserArgs().Contains("--find-sites");
+    private bool _probeWaterPending = OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--probe-water="));
+
+    /// <summary><c>--probe-water=x,z[,radius[,step]]</c>: the water kind and surface level on a grid around a point
+    /// (developer tool: steps in the water surface, such as a river inside a lake at its own lower level).</summary>
+    private void ProbeWater()
+    {
+        var v = OS.GetCmdlineUserArgs().First(a => a.StartsWith("--probe-water="))[14..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray();
+        double cx = v[0], cz = v[1], r = v.Length > 2 ? v[2] : 60, step = v.Length > 3 ? v[3] : 10;
+        for (double z = cz - r; z <= cz + r; z += step)
+        {
+            var line = new System.Text.StringBuilder($"{z - cz,5:0} ");
+            for (double x = cx - r; x <= cx + r; x += step)
+            {
+                var t = _sampler!.Sample(x, z);
+                string k = t.Water switch { WaterKind.Lake => "L", WaterKind.River => "R", WaterKind.Pond => "P", WaterKind.Ocean => "O", _ => "." };
+                line.Append(t.Water == WaterKind.None ? $"   .{t.Height,6:0.0}" : $"   {k}{t.WaterLevel,6:0.0}");
+            }
+            GD.Print("PROBE " + line);
+        }
+        int lk = _sampler!.Plan.Hydrology.LakeDistance(cx, cz, out double cells);
+        GD.Print($"PROBE revision {_sampler.Plan.Style.Revision}, nearest lake {lk} at {cells:0.00} cells" + (lk >= 0 ? $", level {_sampler.Plan.Hydrology.Lakes[lk].Level:0.0}, outlet reach {_sampler.Plan.Hydrology.Lakes[lk].OutletReach}" : ""));
+        // Every lake: its level against its outlet river where the river leaves the lake (first point > 1.6 cells out).
+        var hyd = _sampler.Plan.Hydrology;
+        foreach (var lake in hyd.Lakes)
+        {
+            if (lake.OutletReach < 0) { GD.Print($"PROBE lake {lake.Id} level {lake.Level:0.0} area {lake.Area / 1e6:0.00} km² no outlet"); continue; }
+            var reach = hyd.Reaches[lake.OutletReach];
+            double inside = double.PositiveInfinity, exit = double.NaN;
+            for (int k = 0; k < reach.Points.Length; k++)
+            {
+                int l = hyd.LakeDistance(reach.Points[k].X, reach.Points[k].Z, out double c);
+                bool inLake = l == lake.Id && c < 1.6;
+                if (inLake) inside = Math.Min(inside, reach.Surface[k]);
+                else { exit = reach.Surface[k]; break; }
+            }
+            GD.Print($"PROBE lake {lake.Id} level {lake.Level:0.0} area {lake.Area / 1e6:0.00} km²: outlet lowest inside {inside:0.0} ({lake.Level - inside:0.0} m below), at exit {exit:0.0} ({lake.Level - exit:0.0} m below)");
+        }
+        if (v.Length > 4) { var t = _sampler.Sample(v[4], v[5]); GD.Print($"PROBE at {v[4]:0},{v[5]:0}: {t.Water} body {t.WaterBody} level {t.WaterLevel:0.0} ground {t.Height:0.0}"); }
+        GetTree().Quit();
+    }
+
     private bool _clearSpotPending = OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--clear-spot"));
 
     /// <summary><c>--clear-spot[=x,z]</c>: the nearest point (within 80 m of x, z or the player) with no tree within 9.5 m, so a camera

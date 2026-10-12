@@ -461,8 +461,17 @@ public sealed class Hydrology
             if (r.StartLake >= 0) previous = _lakes[r.StartLake].Level - _seaLevel + .01;
             else if (r.UpstreamReaches.Count > 0) previous = r.UpstreamReaches.Min(u => _reaches[u].Surface[^1] - _seaLevel) + .01;
             else previous = double.PositiveInfinity;
+            // Revision 15: a lake's outlet keeps the lake's level while its course still runs inside the lake (it
+            // followed the lake bed down: every lake had its outlet sunk 3–113 m below its surface — a trench of water
+            // across the lake, a "crater" where a short stretch lay inside it; Tom, round 31).
+            bool inStartLake = style.Revision >= 15 && r.StartLake >= 0;
             for (int k = 0; k < pts.Length; k++)
             {
+                if (inStartLake)
+                {
+                    inStartLake = LakeDistance(pts[k].X, pts[k].Z, out double cells) == r.StartLake && cells < 1.6;
+                    if (inStartLake && k > 0) { surface[k] = previous = previous - 1e-4; continue; }
+                }
                 // Lowest ground across the channel at this point (centre and both edges).
                 double tx = pts[Math.Min(k + 1, pts.Length - 1)].X - pts[Math.Max(k - 1, 0)].X, tz = pts[Math.Min(k + 1, pts.Length - 1)].Z - pts[Math.Max(k - 1, 0)].Z;
                 double len = Math.Max(1e-9, Math.Sqrt(tx * tx + tz * tz)), half = r.Width[k] * .5 + 25; // channel plus a margin

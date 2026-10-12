@@ -1199,6 +1199,18 @@ Tom's *Wind strength* at 4 (the maximum: the classic wind's 5–10 m/s × 4, wit
 weather off now also hands the wind explicitly back to the classic model (the early return left the last simulated
 steering in place).
 
+## D89 — Terrain revision 15: lake outlets keep the lake's level inside the lake (2026-10-12)
+Tom: "holes in lakes … like a crater in water, steep walls of water". `--probe-water` (new developer tool) showed it on
+every lake of his world: `RefineSurfaces` started each lake's outlet river at the lake level and then let it follow
+the ground along its course, which inside the lake is the lake bed — all 15 outlets ran 3–113 m below their lake's
+surface, a trench of water across the lake (a crater where a short stretch lies inside). Revision 15: the outlet keeps
+the lake's level while its course is inside the lake (within 1.6 cells, as the lake's own reach); and in the sampler a
+river point inside a lake reach, under the lake surface and below the lake's level, is lake water (outlets that leave
+and re-enter). After: no trench in any lake; at the outlet most lakes step down 0–4 m, three by 8–114 m (perched lakes:
+physically waterfalls, drawn as a steep sheet for now). *Terrain version* gains **Build 51** (revision 14) as the return
+point; its fingerprints are frozen (`terrain-build51.json`, with the build 51 biome catalogue), the current ones
+re-recorded.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

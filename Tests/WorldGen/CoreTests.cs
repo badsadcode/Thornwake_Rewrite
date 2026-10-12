@@ -50,6 +50,7 @@ internal static class CoreTests
         T.Run("Build 13 terrain still reproducible", () => Fingerprints(false, "terrain-build13.json", build13: true), filter);
         T.Run("Build 19 terrain still reproducible", () => Fingerprints(false, "terrain-build19.json", build19: true), filter);
         T.Run("Build 25 terrain still reproducible", () => Fingerprints(false, "terrain-build25.json", build25: true), filter);
+        T.Run("Build 51 terrain still reproducible", () => Fingerprints(false, "terrain-build51.json", build51: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -306,7 +307,7 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false, bool build25 = false)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false, bool build25 = false, bool build51 = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
         string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
@@ -332,6 +333,8 @@ internal static class CoreTests
                 if (build19) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 12 }, biomes: Build19Biomes.Value));
                 // Build 25 (commit a075047, v0.9.25): terrain revision 13, before wetland water followed the pool mask.
                 if (build25) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 13 }, biomes: Build25Biomes.Value));
+                // Build 51 (commit 6f7e3d8, v0.9.51): terrain revision 14, before lake outlets kept the lake's level inside the lake.
+                if (build51) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 14 }, biomes: Build51Biomes.Value));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];
@@ -358,6 +361,9 @@ internal static class CoreTests
         foreach (var c in cases) T.Check(expected.Single(e => e.Case == c.Case).Hash == c.Hash, "fingerprint " + c.Case);
     }
 
+    private static readonly Lazy<BiomeRegistry> Build51Biomes = new(() => BiomeRegistry.Parse(
+        File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/biomes-build51.json")),
+        File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/asset_sets-build51.json"))));
     private static readonly Lazy<BiomeRegistry> Build25Biomes = new(() => BiomeRegistry.Parse(
         File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/biomes-build25.json")),
         File.ReadAllText(Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures/asset_sets-build25.json"))));
