@@ -28,14 +28,16 @@ Build 52 (v0.9.52, commit 06a7650). Since then on `main`, for **build 53**:
   volumetric fog history of the old view — a beige veil; in the rays A/B, only still 00 per scene was affected).
 
 ## Next
-1. **Check the cloud fix on Tom's case** (GPU, minutes instead of an hour). Tom's world from dump 182351 on the lens
-   peak, cumulus towers forced, four directions, build 52 blend vs matched:
+1. **Check the cloud fix on Tom's case** (GPU, minutes instead of an hour). Tom's world from dump 182351 (the
+   benchmark lake, ground −2.1 m), the camera 400 m up so clouds stand in front of land, cumulus towers forced, four
+   directions, build 52 blend vs matched (`--fly-height` counts from the ground, not the water; the lens peak printed
+   in the log is relative to the camera):
    ```
    godot --path . res://Game/Rewrite/WorldLab.tscn -- <Reproduce args of dump 182351 without --at --view --fly-height --day --hour sky.clouds time.paused fx.dof>
-     --at=-9600,3700 --fly-height=40 --view=0,-0.12,8 --extra-yaws=1.57,3.14,4.71 --day=1 --hour=15
+     --at=-5669.182,5738.657 --fly-height=400 --view=0,-0.1,8 --extra-yaws=1.57,3.14,4.71 --day=1 --hour=15
      --set=sky.clouds=0.5 --set=time.paused=1 --set=fx.dof=0 --clouds=0.8,0,0,0 --set=sky.cloud_blend=1 --world-shot=peak/blend1.png
    ```
-   Also look at a sunset (hour ~19.5) — Tom's second screenshot. Then build 53.
+   (and `--set=sky.cloud_blend=0` for build 52). Also a sunset (`--hour=19.5`) — Tom's second screenshot. Then build 53.
 2. **Lens cloud** (Tom's second screenshot): `ct_lens` in `CloudShapes.gdshaderinc` draws four perfectly elliptical
    13 × 6.4 km plates; from ~5 km away it fills half the sky with stepped rims. Part of M3 (cloud types in the volume);
    artistic — ask Tom before reshaping.
