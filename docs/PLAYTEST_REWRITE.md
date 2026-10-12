@@ -78,6 +78,23 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 52 — water tools, rain erosion, lake fixes
+* **Water size: `,` smaller · `.` bigger** (1–4, shown at the top). Size 1 is as before. Each step ×4: **G** pours up to
+  160 m³/s spread over a disc up to 8 m across; **J** springs give up to 38 m³/s over the same disc (J on a spring removes it).
+* **Rain erosion** (Settings → Simulation → *Rain erosion*, default 1, 0 = off): streams of rain water (and springs)
+  slowly wear the ground away and leave the soil where they slow down, in pools and at the foot of slopes; what reaches
+  rivers and lakes is gone. At 1 even a creek cuts at most ~3.6 cm an hour, so gullies take many storms (up to 10× for
+  impatient tests). Around the player (the water simulation's 128 m), saved like digging; the ground updates every ~10 s.
+* **Fixed: trenches and "craters" of water in lakes** (terrain revision 15). Every lake's outlet river ran through the
+  lake below its surface; now it keeps the lake's level. Most outlets now step down 0–4 m where the river leaves; a few
+  perched lakes step down more (a steep sheet for now, a waterfall later). *World settings → Terrain version → Build 51*
+  brings the old terrain back.
+* **Fixed: walls of water in lake shallows** (water experimental 3/4): lake waves now fade in shallow water like the
+  sea's. (The gale in those shots was *Wind strength* at 4, the maximum.)
+* **Clouds (volumetric v2):** clouds in front of far land now take the biome's haze like the sky's (no white band in
+  dusty biomes). The remaining seam waits for the new cloud model (M3).
+* With the weather off, the wind is the classic wind again (no left-over simulated wind).
+
 ## New in build 51 — tree band fix, nights, forest rays switch, artefact shots
 * **Fixed: the grey-blue band across tree crowns at eye height** (Tom's dump 104752). Trees switching from the
   detailed to the lighter model (around *Full-detail trees*) were drawn as transparent while they faded, and the
