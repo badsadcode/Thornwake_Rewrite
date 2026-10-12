@@ -153,6 +153,7 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--dig=")) { var v = arg[6..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray(); _shotDigs.Add((v[0], v[1], v[2], v[3], v[4])); }
             // --clouds=cumulus,storm,mackerel,lens: force the cloud types (0..1 each) for screenshots; --storm-at=deg: the
             // distant storms' bearing (0 = +X, 90 = +Z); --cloud-flash: lightning in a distant cell
+            if (arg.StartsWith("--cloud-drift=")) _atmosphere.CloudDrift = arg[14..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray();
             if (arg.StartsWith("--clouds=")) { var v = arg[9..].Split(',').Select(t => float.Parse(t, CultureInfo.InvariantCulture)).ToArray(); _atmosphere.ForceClouds = new Vector4(v[0], v[1], v[2], v[3]); }
             if (arg.StartsWith("--storm-at=")) _atmosphere.ForceStormAzimuth = Mathf.DegToRad(float.Parse(arg[11..], CultureInfo.InvariantCulture));
             if (arg == "--cloud-flash") _atmosphere.ShotFlash = true;
@@ -1190,7 +1191,8 @@ public partial class WorldLab : Node3D
         }
         sb.AppendLine("Reproduce:");
         sb.AppendLine($"  {_worldArgs} --at={F(PlayerX)},{F(PlayerZ)} --view={F(_yaw)},{F(_pitch)},{F(_zoom)} --day={_clock.Day} --hour={F(_clock.Hour)}" +
-            (_fly ? $" --fly-height={F(fly)}" : "") + (_rain ? " --rain" : "") + $" {settings}");
+            (_fly ? $" --fly-height={F(fly)}" : "") + (_rain ? " --rain" : "") +
+            $" --cloud-drift={string.Join(",", _atmosphere.CloudDrift.Select(v => v.ToString("R", c)))} {settings}");
         File.WriteAllText(path, sb.ToString());
         Screenshot(Path.Combine(dir, $"dump-{stamp}.png"));
         _status = $"Debug dump saved: {path} (send me the .txt and .png)";

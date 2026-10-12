@@ -71,6 +71,16 @@ public partial class Atmosphere : Node3D
     public float SeaLevel { get; set; }
     /// <summary>Screenshots: cloud types forced to (cumulus, distant storm, mackerel, lens); null = from the weather.</summary>
     public Vector4? ForceClouds { get; set; }
+
+    /// <summary>Where the clouds have drifted to (main deck x/z, high layer x/z, low layer x/z, cloud time): written into
+    /// debug dumps and set back by --cloud-drift, which also holds them still, so a dump's clouds come back exactly
+    /// (round 32: without it a rebuilt dump showed other clouds).</summary>
+    public double[] CloudDrift
+    {
+        get => new[] { _windX, _windZ, _highX, _highZ, _lowX, _lowZ, _cloudTime };
+        set { (_windX, _windZ, _highX, _highZ, _lowX, _lowZ, _cloudTime) = (value[0], value[1], value[2], value[3], value[4], value[5], value[6]); _driftHeld = true; }
+    }
+    private bool _driftHeld;
     /// <summary>The next rain front (Weather.FrontHours / FrontStrength): hours until it arrives (NaN none), strength.</summary>
     public double FrontHours { get; set; } = double.NaN;
     public float FrontStrength { get; set; }
@@ -554,15 +564,18 @@ public partial class Atmosphere : Node3D
         }
         else Wind.Update(delta, sky.Day * 24 + sky.Hour, _storm, 77);
         double wind = Wind.Speed * 1.5; // m/s at cloud height
-        _windX += delta * wind * Wind.Direction.X; _windZ += delta * wind * Wind.Direction.Y;
+        if (!_driftHeld) { _windX += delta * wind * Wind.Direction.X; _windZ += delta * wind * Wind.Direction.Y; }
         _windX %= CloudPeriod; _windZ %= CloudPeriod;
         double cx = Wrap(cameraWorldX + _windX), cz = Wrap(cameraWorldZ + _windZ);
         RenderingServer.GlobalShaderParameterSet("cloud_state", new Vector4((float)cx, (float)cz, Coverage, _storm));
         // Layers ride different winds: high cirrus slow on a veered heading, low clouds faster than the main deck.
         // High winds veer ~50° from the surface wind; low clouds race along it.
         var high = Wind.Direction.Rotated(.9f);
-        _highX += delta * wind * .35 * high.X; _highZ += delta * wind * .35 * high.Y;
-        _lowX += delta * wind * 1.9 * Wind.Direction.X; _lowZ += delta * wind * 1.9 * Wind.Direction.Y;
+        if (!_driftHeld)
+        {
+            _highX += delta * wind * .35 * high.X; _highZ += delta * wind * .35 * high.Y;
+            _lowX += delta * wind * 1.9 * Wind.Direction.X; _lowZ += delta * wind * 1.9 * Wind.Direction.Y;
+        }
         // Wrap where each layer's pattern repeats exactly (see Sky.gdshader), keeping float precision with no jump.
         double highPeriod = CloudPeriod * 25, lowPeriod = CloudPeriod * .45 * 40;
         _highX %= highPeriod; _highZ %= highPeriod; _lowX %= lowPeriod; _lowZ %= lowPeriod;
@@ -782,7 +795,7 @@ public partial class Atmosphere : Node3D
 
     private void UpdateCloudTypes(double delta, SkyState sky, double cameraWorldX, double cameraWorldZ, Vector3 cameraLocal)
     {
-        _cloudTime = (_cloudTime + delta) % 100000;
+        if (!_driftHeld) _cloudTime = (_cloudTime + delta) % 100000;
         var force = ForceClouds;
         float cumulus = force?.X ?? Cumulus * (1 - _storm);
         float storm = force?.Y ?? DistantStorm * (1 - _storm * .9f);
