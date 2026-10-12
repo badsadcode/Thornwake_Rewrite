@@ -187,5 +187,7 @@ void sky() {
 		COLOR = col + disc;
 		// Probe (--cloud-split-test=2): the sun as the sky sees it in a strip at the top (right half; CloudsNear the left).
 		if (split_test == 2 && SCREEN_UV.y < 0.12) COLOR = SCREEN_UV.y < 0.06 ? sun_col * 0.2 : sun_dir * 0.5 + 0.5;
+		// Probe (--cloud-split-test=3): the clouds' opacity as grey (right half: this pass; left: CloudsNear).
+		if (split_test == 3 && SCREEN_UV.x >= 0.5 && quality == 3) COLOR = vec3(HALF_RES_COLOR.a);
 	}
 }

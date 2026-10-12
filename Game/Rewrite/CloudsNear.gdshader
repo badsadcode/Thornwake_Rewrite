@@ -55,7 +55,7 @@ void fragment() {
 	vec3 sun_col = cloud_light_rgb() * cloud_light.a;
 	float day = clamp(sun_dir.y * 4.0 + 0.35, 0.08, 1.0);
 	vec4 v = volumetric_v2(dir, scene, cloud_jitter(FRAGCOORD.xy, TIME), sky ? 150 : max_steps, sun_dir, sun_col, day, dot(dir, sun_dir), cloud_state.z, cloud_state.w);
-	if (v.a < 0.002 && !probe) discard;
+	if (v.a < 0.002 && !probe && !(split_test == 3 && test)) discard;
 	// The sky's biome haze over its clouds (Sky.gdshader, "Biome haze"), here too: without it these clouds stayed
 	// white in front of distant land while the same clouds in the sky above were veiled in dust, and the land's
 	// silhouette showed as a hard seam (Tom, dumps 115949 / 120402, Needle Rocks). Premultiplied colour.
@@ -70,6 +70,7 @@ void fragment() {
 	}
 	// Probe (--cloud-split-test=2): the sun as this pass sees it, beside the sky's (Sky.gdshader).
 	if (probe) v = vec4(SCREEN_UV.y < 0.06 ? sun_col * 0.2 : sun_dir * 0.5 + 0.5, 1.0);
+	if (split_test == 3 && test) v = vec4(vec3(v.a), 1.0);
 	ALBEDO = v.rgb;
 	ALPHA = v.a;
 }
