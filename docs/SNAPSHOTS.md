@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 49** (Atmosphere 2.0 M1: *Light model* switch, A/B stills in the atmosphere suite) | `262e60a` | Thornwake-Rewrite-Preview-49 (v0.9.49) | Light model 0 (default) = build 47's light; return point for M1: branch `pre-atmosphere-2.0` |
 | **Build 48** (Esc menu: Resume, Back to launcher, Quit game under every tab) | `f4dbce5` | Thornwake-Rewrite-Preview-48 (v0.9.48) | UI only; baseline stays build 47 |
 | **RETURN POINT — before Atmosphere 2.0** (Tom, 2026-10-11: "create a clearly identifiable rollback snapshot") = build 47 (round 30e: last streaming pass — collision in small steps, mesh arrays on the builders, normal-priority builders) | `60c8571` | Thornwake-Rewrite-Preview-47 (v0.9.47) | git: branch `pre-atmosphere-2.0` (= `60c8571`) |
 | **Build 46** (round 30d: streaming without starving the main thread — background work at lower priority, fewer builders, collision objects in batches; quit crash fixed) | `6d3f029` | Thornwake-Rewrite-Preview-46 (v0.9.46) | Settings unchanged; build 45 = `a95c4ce` |
