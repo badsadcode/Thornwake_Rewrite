@@ -313,7 +313,8 @@ public partial class Atmosphere : Node3D
         bool natural = Natural;
         e.TonemapMode = natural ? Godot.Environment.ToneMapper.Aces : Godot.Environment.ToneMapper.Filmic;
         e.TonemapWhite = natural ? 6 : 1;
-        e.TonemapExposure = .95f * GameSettings.Exposure.F * (natural ? 1.15f : 1);
+        _baseExposure = .95f * GameSettings.Exposure.F * (natural ? 1.15f : 1);
+        e.TonemapExposure = _baseExposure * _adapted;
         e.SsilIntensity = natural ? .55f : .8f;
         // Natural: only the sun disc and real highlights glow (round 24, Tom's dumps 174752/174828: at 1.3 the bright sky
         // and sunlit clouds around a low sun all glowed and merged into a white blob over half the screen).
@@ -463,6 +464,13 @@ public partial class Atmosphere : Node3D
         // The sky's radiance map is not re-baked for the storm (global uniform), so dim the ambient light directly.
         // (natural look: less sky light in the shade, so lit and shaded ground differ)
         Environment.AmbientLightEnergy = light.AmbientEnergy;
+        Environment.AmbientLightSkyContribution = light.SkyShare;
+        Environment.AmbientLightColor = light.ShadeTint;
+        // Eye adaptation (light model 1): toward the target over ~1.5 s; build 47's model keeps 1.
+        float exposure = AtmosphereLight.Exposure(light, elevation, Canopy);
+        _adapted = StillShot || SnapExposure ? exposure : Mathf.Lerp(_adapted, exposure, 1 - Mathf.Exp(-dt / 1.5f));
+        SnapExposure = false;
+        Environment.TonemapExposure = _baseExposure * _adapted;
         UpdateCoverage();
         if (_rainParticles != null)
         {
@@ -942,6 +950,14 @@ public partial class Atmosphere : Node3D
     private static bool Natural => GameSettings.Look.Index == 1;
     /// <summary>Scripted screenshots (a few frames at ~1 FPS): no temporal fog smoothing, which would still be fading in.</summary>
     public bool StillShot { get; set; }
+
+    /// <summary>0 open … 1 closed forest around the camera (WorldLab, for the exposure of light model 1).</summary>
+    public float Canopy { get; set; }
+
+    /// <summary>Jump to the exposure target on the next frame (teleports, A/B stills).</summary>
+    public bool SnapExposure { get; set; }
+
+    private float _baseExposure = 1, _adapted = 1;
     private ImageTexture3D? _cloudNoise;
     private ShaderMaterial? _mistMaterial;
 

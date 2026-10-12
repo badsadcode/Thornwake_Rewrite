@@ -428,6 +428,8 @@ public partial class WorldLab : Node3D
         _atmosphere.StormComing = _weather.StormComing;
         _atmosphere.Mackerel = _weather.Mackerel;
         _atmosphere.FrontHours = _weather.FrontHours;
+        // Atmosphere 2.0 light model: how closed the forest is around the player, for the exposure (4× a second).
+        if (AtmosphereLight.Modern && (_canopyTimer -= delta) <= 0) { _canopyTimer = .25; _atmosphere.Canopy = CanopyAround(PlayerX, PlayerZ); }
         _atmosphere.FrontStrength = _weather.FrontStrength;
     }
 
@@ -610,9 +612,27 @@ public partial class WorldLab : Node3D
         return (float)h;
     }
 
+    private double _canopyTimer;
+
+    /// <summary>0 open … 1 closed forest: forest density at the player and six points 10 m around.</summary>
+    private float CanopyAround(double x, double z)
+    {
+        if (_sampler == null) return 0;
+        double cover = _sampler.Plan.Style.ForestCover, sum = 0;
+        for (int i = 0; i < 7; i++)
+        {
+            double a = i * Math.Tau / 6, r = i == 0 ? 0 : 10;
+            double px = x + Math.Cos(a) * r, pz = z + Math.Sin(a) * r;
+            sum += Vegetation.ForestDensity(_sampler, px, pz, _sampler.Sample(px, pz), cover) * (i == 0 ? 2 : 1);
+        }
+        return (float)Math.Clamp(sum / 8 * _sampler.Plan.Style.ForestDensity, 0, 1);
+    }
+
     private void Teleport(double x, double z)
     {
         if (_sampler == null) return;
+        _canopyTimer = 0;
+        _atmosphere.SnapExposure = true;
         var t = _sampler.Sample(x, z);
         double y = Math.Max(t.Height, double.IsNaN(t.WaterLevel) ? t.Height : t.WaterLevel) + 1.0;
         Rebase(x, z, force: true);

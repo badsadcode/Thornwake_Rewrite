@@ -7,11 +7,13 @@ namespace Thornwake.Rewrite;
 /// Atmosphere 2.0 M1 (docs/ATMOSPHERE_2_0_M1_PLAN.md): the light of the frame in one place — sun colour and energy,
 /// the sky light's energy — from the sun elevation and the cloud gloom. Setting <c>fx.light_model</c>: 0 = build 47's
 /// formulas exactly (the return point), 1 = the new sun curve by phase (candidate values, tuned against Tom and Noor's
-/// reference images). Later M1 steps add the warm/cool split, exposure and bloom here.
+/// reference images), a cool fill in the shade (warm sun, cool shade) and a narrow exposure adaptation (forest interiors,
+/// golden hour). Bloom comes later (pause point 3).
 /// </summary>
 public static class AtmosphereLight
 {
-    public readonly record struct State(Color SunColor, float SunEnergy, float AmbientEnergy);
+    /// <param name="ShadeTint">Colour mixed into the sky light (1 − <paramref name="SkyShare"/> of it): the cool shade.</param>
+    public readonly record struct State(Color SunColor, float SunEnergy, float AmbientEnergy, Color ShadeTint, float SkyShare);
 
     public static bool Modern => GameSettings.LightModel.Index == 1;
 
@@ -27,14 +29,31 @@ public static class AtmosphereLight
             return new State(
                 new Color("fff3df").Lerp(new Color("ffc58a"), warm * .8f),
                 Mathf.Clamp(elevation / 25, 0.05f, 1.1f) * Mathf.Lerp(1, .3f, gloom),
-                natural ? Mathf.Lerp(.42f, .3f, gloom) : Mathf.Lerp(.55f, .38f, gloom));
+                natural ? Mathf.Lerp(.42f, .3f, gloom) : Mathf.Lerp(.55f, .38f, gloom), Colors.White, 1);
         }
         // By phase: blue hour (below 0°), golden hour (0–10°: warm, low), morning/afternoon (10–35°: rising),
         // high noon (above 35°: white, strongest). Overcast takes most of the sun and flattens toward the sky light.
         float sun = Curve(elevation, SunEnergyCurve) * Mathf.Lerp(1, .28f, gloom);
         var color = CurveColor(elevation).Lerp(new Color("e8ecf2"), gloom * .6f);
         float sky = Curve(elevation, SkyEnergyCurve) * (natural ? 1 : 1.3f) * Mathf.Lerp(1, .82f, gloom);
-        return new State(color, sun, sky);
+        // Warm sun, cool shade: a blue fill in the sky light, deepest in the blue hour, near-neutral under overcast.
+        var shade = CurveColor(elevation, ShadeCurve).Lerp(new Color("b4b9c2"), gloom);
+        return new State(color, sun, sky, shade, Mathf.Lerp(.7f, .88f, gloom));
+    }
+
+    /// <summary>Exposure multiplier the eye adapts toward (1 in build 47's model): a forest interior is lifted up to
+    /// +0.5 stop and a dim golden hour or overcast day up to +0.25 stop, so neither needs the Brightness slider, while
+    /// night stays dark and noon on open ground stays as it is.</summary>
+    /// <param name="canopy">0 open … 1 closed forest around the camera.</param>
+    public static float Exposure(in State light, float elevation, float canopy)
+    {
+        if (!Modern) return 1;
+        // How much light reaches open ground, relative to a clear noon (sun on flat ground plus the sky).
+        float key = (light.SunEnergy * .75f + light.AmbientEnergy * 1.6f) / (1.3f * .75f + .44f * 1.6f);
+        float day = Mathf.Clamp(Mathf.Pow(Mathf.Max(key, .05f), -.25f), 1, 1.19f);
+        day = Mathf.Lerp(1, day, Mathf.SmoothStep(-4, 2, elevation));
+        float forest = Mathf.Pow(Mathf.Lerp(1, .5f, Mathf.Clamp(canopy, 0, 1)), -.5f);
+        return Mathf.Clamp(day * forest, 1, 1.41f);
     }
 
     // (elevation °, value): sun energy and sky-light energy (natural look).
@@ -57,9 +76,17 @@ public static class AtmosphereLight
         return table[^1].V;
     }
 
-    private static Color CurveColor(float x)
+    // (elevation °, colour of the shade fill): night blue, blue hour, violet-blue at golden hour, sky blue by day.
+    private static readonly (float E, Color C)[] ShadeCurve =
     {
-        var t = SunColorCurve;
+        (-8, new Color("50608f")), (-2, new Color("7482c4")), (4, new Color("9ea6dc")), (15, new Color("a9c0ea")),
+        (40, new Color("b6cdf2")), (90, new Color("bcd2f4")),
+    };
+
+    private static Color CurveColor(float x) => CurveColor(x, SunColorCurve);
+
+    private static Color CurveColor(float x, (float E, Color C)[] t)
+    {
         if (x <= t[0].E) return t[0].C;
         for (int i = 1; i < t.Length; i++)
             if (x <= t[i].E) return t[i - 1].C.Lerp(t[i].C, Mathf.SmoothStep(t[i - 1].E, t[i].E, x));

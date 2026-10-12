@@ -1127,6 +1127,17 @@ flight moves; nine stills per scene in the results folder, HUD hidden). Scenes m
 `--bench-scenes` runs a subset; `--find-sites` locates biome sites. Build 47 (branch `pre-atmosphere-2.0`) is the
 baseline every milestone is captured against.
 
+## D81 — Atmosphere 2.0 M1: light model 1 proposal behind the switch (2026-10-12)
+*Light model* (`fx.light_model`) 0 stays build 47 exactly (sky contribution 1, exposure multiplier 1): the return
+point. Model 1 is the M1 proposal for pause point 2, all numbers in curve tables in `AtmosphereLight.cs`: the sun by
+phase (blue hour, golden hour, morning, high noon); a cool fill in the shade (12–30 % of the sky light replaced by a
+blue tint by phase, near-neutral grey under overcast); and a narrow, scripted eye adaptation instead of Godot's auto
+exposure (which washed out overcast): up to +0.5 stop in a closed forest (forest density around the player, sampled
+4× a second) and up to +0.25 stop for a dim golden hour or overcast day, never at night, adapting over ~1.5 s, snapped on
+teleports and A/B stills. The scripted version is deterministic, costs nothing, and can be matched to references by
+editing numbers. Bloom (pause point 3) is not touched yet. The benchmark gains A/B stills (`--bench-compare`), so the
+two models are compared on identical frames.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

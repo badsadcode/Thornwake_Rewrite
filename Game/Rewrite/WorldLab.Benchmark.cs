@@ -341,7 +341,7 @@ public partial class WorldLab
     {
         var setting = GameSettings.All.First(s => s.Key == run.CompareKey);
         double value = run.CompareValues[run.CompareStep];
-        if (!run.CompareArmed) { setting.Value = value; run.CompareWait = BenchCompareFrames; run.CompareArmed = true; return; }
+        if (!run.CompareArmed) { setting.Value = value; _atmosphere.SnapExposure = true; run.CompareWait = BenchCompareFrames; run.CompareArmed = true; return; }
         if (run.CompareWait > 0) { run.CompareWait--; return; }
         string tag = run.CompareKey![(run.CompareKey.LastIndexOf('.') + 1)..] + "-" + value.ToString(CultureInfo.InvariantCulture);
         BenchSaveStill(run, $"{run.Index + 1:00}-{scene.Id}-{run.StillsTaken:00}-{tag}.jpg");
