@@ -57,16 +57,18 @@ public static class AtmosphereLight
         float key = (light.SunEnergy * .75f + light.AmbientEnergy * 1.6f) / (1.3f * .75f + .44f * 1.6f);
         float day = Mathf.Clamp(Mathf.Pow(Mathf.Max(key, .05f), -.25f), 1, 1.19f);
         day = Mathf.Lerp(1, day, Mathf.SmoothStep(-4, 2, elevation));
+        // Night: dark but readable (Tom's night reference: silhouettes against teal mist), up to +¼ stop.
+        day *= Mathf.Lerp(1, 1.19f, Mathf.SmoothStep(-1, -8, elevation));
         float forest = Mathf.Pow(Mathf.Lerp(1, .5f, Mathf.Clamp(canopy, 0, 1)), -.5f);
         // (plus the biome's bias in stops: a bright desert a little darker, a swamp a little lighter)
-        return Mathf.Clamp(day * forest, 1, 1.41f) * Mathf.Pow(2, LightProfiles.At(elevation).Exposure);
+        return Mathf.Clamp(day * forest, 1, 1.5f) * Mathf.Pow(2, LightProfiles.At(elevation).Exposure);
     }
 
     // (elevation °, value): sun energy and sky-light energy (natural look).
     private static readonly (float E, float V)[] SunEnergyCurve =
         { (-4, .02f), (0, .16f), (5, .42f), (10, .68f), (20, .92f), (35, 1.12f), (60, 1.28f), (90, 1.32f) };
     private static readonly (float E, float V)[] SkyEnergyCurve =
-        { (-6, .16f), (0, .24f), (10, .33f), (35, .40f), (60, .43f), (90, .44f) };
+        { (-6, .2f), (0, .24f), (10, .33f), (35, .40f), (60, .43f), (90, .44f) };
     // (elevation °, colour): deep orange at sunrise, gold, warm white, white at noon.
     private static readonly (float E, Color C)[] SunColorCurve =
     {

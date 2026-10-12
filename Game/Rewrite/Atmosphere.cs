@@ -930,7 +930,8 @@ public partial class Atmosphere : Node3D
         _night = 1 - Mathf.SmoothStep(-10, 4, sunElevation);
         float moonUp = Mathf.SmoothStep(-2, 8, (float)sky.MoonElevation);
         _moon.Basis = Basis.LookingAt(-moonDir, Mathf.Abs(moonDir.Y) > .99f ? Vector3.Forward : Vector3.Up);
-        _moon.LightEnergy = .14f * lit * moonUp * _night * Mathf.Lerp(1, .25f, _storm);
+        // (light model 1: brighter moonlight, so a night is dark but readable)
+        _moon.LightEnergy = .14f * lit * moonUp * _night * Mathf.Lerp(1, .25f, _storm) * (AtmosphereLight.Modern ? 1.5f : 1);
         _moon.Visible = _moon.LightEnergy > .002f;
         RenderingServer.GlobalShaderParameterSet("night_sky", new Vector4(moonDir.X, moonDir.Y, moonDir.Z, (float)sky.MoonPhase));
         RenderingServer.GlobalShaderParameterSet("star_rotation", sky.Stars);

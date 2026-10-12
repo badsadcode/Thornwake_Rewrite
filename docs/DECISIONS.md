@@ -1156,6 +1156,13 @@ blended by weight, drifting over ~3 s (snapped on teleports and A/B stills); ove
 toward its own overcast/storm colours. The temperate profile carries D82's values, so the references still hold
 there; the others are first proposals to be judged in captures. Tuning is editing the JSON, not code.
 
+## D84 — Light model 1 nights: dark but readable; captures wait 30 frames (2026-10-12)
+A/B night captures: build 47's night forest is near black (mean ~3/255), model 1 only slightly lighter. Tom's night
+reference is dark but readable (silhouettes against teal mist, a moon halo). Model 1: moonlight ×1.5, sky light at night
+0.16 → 0.2, up to +¼ stop of night exposure (on top of the forest lift; cap ×1.5). Build 47's model unchanged. The
+benchmark now waits at least 30 frames before measuring: the sky's radiance map follows a jump in the time of day over
+several frames, and on a slow machine the 3 s warm-up was one frame (the first night still was lit by the noon sky).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

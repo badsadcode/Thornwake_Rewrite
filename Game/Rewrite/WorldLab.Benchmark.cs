@@ -65,6 +65,7 @@ public partial class WorldLab
         public int CompareStep = -1, CompareWait;
         public bool CompareArmed;
         public double SettleLimit = 900;
+        public int WarmupFrames;
         public double CompareWas;
         public int Index;
         public BenchStage Stage = BenchStage.World;
@@ -261,7 +262,10 @@ public partial class WorldLab
             case BenchStage.Warmup:
                 // Wait until shaders stop compiling (each new material compiles once; that stall is not the scene's cost).
                 if (BenchCompileDelta() > 0) run.StableTime = 0; else run.StableTime += frameMs / 1000.0;
-                if ((run.StageTime > BenchWarmup && run.StableTime > 1) || run.StageTime > 30) { BenchFace(scene); BenchBeginMeasure(run); Next(BenchStage.Measure); }
+                // (and at least 30 frames: the sky's radiance map catches up with a new time of day over several frames —
+                // on a slow machine 3 s can be a single frame)
+                run.WarmupFrames++;
+                if (((run.StageTime > BenchWarmup && run.StableTime > 1) || run.StageTime > 30) && run.WarmupFrames >= 30) { run.WarmupFrames = 0; BenchFace(scene); BenchBeginMeasure(run); Next(BenchStage.Measure); }
                 break;
             case BenchStage.Measure:
             {
