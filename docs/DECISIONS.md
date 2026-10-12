@@ -1324,6 +1324,18 @@ draft: not yet visible in the stills, needs a test inside a cloud), *Sky → Len
 thinner plates with wandering rims and a second lens downwind — draft: from below the thin plates read as hard blades,
 worse than the disk; to be reworked). Dumps now carry `--cloud-drift`, so cloud scenes rebuild exactly.
 
+## D98 — Alden's torch (R) and first person (2026-10-12)
+Tom: "nights are looking really nice … can we give Alden a torch? Nice and flickering on the wind, with a little bit of
+smoke" and "zooming in to the maximum, could it go into first-person mode?". **Torch** (`Torch.cs`, R lights / puts it
+out, `--torch` for shots, dumps record it): a stick with a glowing wrap; a flame of 72 small additive particles living in
+the world (it trails behind when walking) that leans and streams downwind with the gusts; thin smoke drifting off with
+the wind, unshaded (warm just above the flame, then dim grey: lit by the torch it burned to white balls); a warm omni
+light (16 m, shadows) whose brightness breathes and licks and whose position trembles a few cm, so the shadows move.
+Held in the right hand, the arm raised and the torch tilted away from the head. Particle billboards need
+`billboard_keep_scale` (without it every particle was 1 m wide: a white ball). **First person**: one wheel step in from
+the closest zoom; the camera at the eyes, the body faces where you look and stays as a shadow (its meshes shadow-only),
+the torch at the lower right of the view; one step out returns. Not yet in a build.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

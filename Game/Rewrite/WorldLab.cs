@@ -20,6 +20,12 @@ public partial class WorldLab : Node3D
     private WorldStreamer _streamer = null!;
     private CharacterBody3D _player = null!;
     private Node3D _avatar = null!;
+    private Torch _torch = null!;
+    // First person (round 32, Tom: "zooming in to the maximum, could it go into first-person mode?"): one wheel step in
+    // from the closest third-person zoom. The body still casts its shadow; the torch moves to the lower right of the view.
+    private bool FirstPerson => _zoom < .5f;
+    private bool _fpApplied;
+    private Node3D _fpHold = null!;
     private Node3D _pivot = null!;
     private SpringArm3D _arm = null!;
     private Camera3D _camera = null!;
@@ -911,12 +917,13 @@ public partial class WorldLab : Node3D
         if (flat.LengthSquared() > .05f)
         {
             float target = Mathf.Atan2(flat.X, flat.Z);
-            _avatar.Rotation = new Vector3(0, Mathf.LerpAngle(_avatar.Rotation.Y, target, 1 - Mathf.Exp(-12 * dt)), 0);
+            if (!FirstPerson) _avatar.Rotation = new Vector3(0, Mathf.LerpAngle(_avatar.Rotation.Y, target, 1 - Mathf.Exp(-12 * dt)), 0);
             _walkPhase += flat.Length() * dt * 1.6f;
         }
         else _walkPhase = Mathf.Lerp(_walkPhase, Mathf.Round(_walkPhase / Mathf.Pi) * Mathf.Pi, 1 - Mathf.Exp(-10 * dt));
         float swing = Mathf.Sin(_walkPhase) * (_fly ? 0 : .55f);
-        Limb("LeftLeg", swing); Limb("RightLeg", -swing); Limb("LeftArm", -swing * .8f); Limb("RightArm", swing * .8f);
+        // (with the torch the right arm is held up and forward, swinging only a little)
+        Limb("LeftLeg", swing); Limb("RightLeg", -swing); Limb("LeftArm", -swing * .8f); Limb("RightArm", _torch.Lit ? -.6f + swing * .12f : swing * .8f);
     }
 
     /// <summary>Local water: simulate, and the debug tools (G pour at the aimed point, J toggle a spring there).</summary>
@@ -1026,10 +1033,34 @@ public partial class WorldLab : Node3D
 
     private void UpdateCamera()
     {
-        _pivot.Position = _player.Position + Vector3.Up * 1.55f;
         _pivot.Rotation = new Vector3(_pitch, _yaw, 0);
-        _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, _zoom, .2f);
+        if (FirstPerson)
+        {
+            // At the eyes, a little in front of the face; the body faces where you look.
+            var forward = new Vector3(-Mathf.Sin(_yaw), 0, -Mathf.Cos(_yaw));
+            _pivot.Position = _player.Position + Vector3.Up * 1.64f + forward * .12f;
+            _arm.SpringLength = 0;
+            _avatar.Rotation = new Vector3(0, _yaw + Mathf.Pi, 0);
+        }
+        else
+        {
+            _pivot.Position = _player.Position + Vector3.Up * 1.55f;
+            _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, _zoom, .2f);
+        }
+        if (_fpApplied != FirstPerson)
+        {
+            _fpApplied = FirstPerson;
+            // First person: the body is only a shadow; the torch goes from the hand to the view.
+            foreach (var mesh in _avatar.FindChildren("*", "MeshInstance3D", true, false))
+                if (mesh is MeshInstance3D m && !_torch.IsAncestorOf(m))
+                    m.CastShadow = _fpApplied ? GeometryInstance3D.ShadowCastingSetting.ShadowsOnly : GeometryInstance3D.ShadowCastingSetting.On;
+            if (_fpApplied) { _torch.Reparent(_fpHold, false); _torch.Position = Vector3.Zero; _torch.Rotation = Vector3.Zero; }
+            else { _torch.Reparent(_avatar.GetNode<Node3D>("RightArm"), false); TorchInHand(); }
+        }
     }
+
+    /// <summary>In the right fist, the stick up and a little forward while the arm is raised (Limb: RightArm).</summary>
+    private void TorchInHand() { _torch.Position = new Vector3(0, -.51f, .02f); _torch.Rotation = new Vector3(.85f, 0, -.3f); } // (tilted out, away from the head)
 
     private void UpdateHud()
     {
@@ -1087,8 +1118,9 @@ public partial class WorldLab : Node3D
         }
         if (e is InputEventMouseButton button && button.Pressed)
         {
-            if (button.ButtonIndex == MouseButton.WheelUp) _zoom = Mathf.Max(1.8f, _zoom * .88f);
-            if (button.ButtonIndex == MouseButton.WheelDown) _zoom = Mathf.Min(60f, _zoom * 1.14f);
+            // (one step in from the closest zoom: first person; one step out of it: the closest zoom again)
+            if (button.ButtonIndex == MouseButton.WheelUp) _zoom = _zoom <= 1.85f ? 0 : Mathf.Max(1.8f, _zoom * .88f);
+            if (button.ButtonIndex == MouseButton.WheelDown) _zoom = FirstPerson ? 1.8f : Mathf.Min(60f, _zoom * 1.14f);
             if (button.ButtonIndex == MouseButton.Left && !_menu.Visible) Input.MouseMode = Input.MouseModeEnum.Captured;
         }
         if (e is not InputEventKey { Pressed: true, Echo: false } key) return;
@@ -1113,6 +1145,7 @@ public partial class WorldLab : Node3D
             case Key.Period: if (!_menu.Visible) WaterSize(1); break;
             case >= Key.Key1 and <= Key.Key5: if (!_menu.Visible && _tools.Select((int)(key.Keycode - Key.Key1))) _status = _tools.Status; break;
             case Key.T or Key.Y or Key.Bracketleft or Key.Bracketright or Key.Minus or Key.Equal: if (!_menu.Visible) _tools.DevKey(key.Keycode); break;
+            case Key.R: if (!_menu.Visible) { _torch.Lit = !_torch.Lit; _status = _torch.Lit ? "Torch lit (R puts it out)." : "Torch out."; } break;
             case Key.H: if (!_menu.Visible) { _rain = !_rain; _status = _rain ? "Rain on (H stops it)." : "Rain stopped."; } break;
             case Key.K: if (!_menu.Visible) { _water.Clear(); _rain = false; _status = "Simulated water cleared."; } break;
             case Key.L: if (!_menu.Visible && _lightning != null)
@@ -1191,7 +1224,7 @@ public partial class WorldLab : Node3D
         }
         sb.AppendLine("Reproduce:");
         sb.AppendLine($"  {_worldArgs} --at={F(PlayerX)},{F(PlayerZ)} --view={F(_yaw)},{F(_pitch)},{F(_zoom)} --day={_clock.Day} --hour={F(_clock.Hour)}" +
-            (_fly ? $" --fly-height={F(fly)}" : "") + (_rain ? " --rain" : "") +
+            (_fly ? $" --fly-height={F(fly)}" : "") + (_rain ? " --rain" : "") + (_torch.Lit ? " --torch" : "") +
             $" --cloud-drift={string.Join(",", _atmosphere.CloudDrift.Select(v => v.ToString("R", c)))} {settings}");
         File.WriteAllText(path, sb.ToString());
         Screenshot(Path.Combine(dir, $"dump-{stamp}.png"));
@@ -1218,12 +1251,19 @@ public partial class WorldLab : Node3D
         _player.AddChild(new CollisionShape3D { Position = Vector3.Up * .9f, Shape = new CapsuleShape3D { Radius = .3f, Height = 1.8f } });
         _avatar = Visuals.Person(new Color("526b61"));
         _player.AddChild(_avatar);
+        _torch = new Torch();
+        _torch.Follow(_atmosphere.Wind);
+        _avatar.GetNode<Node3D>("RightArm").AddChild(_torch);
+        TorchInHand();
+        _torch.Lit = OS.GetCmdlineUserArgs().Contains("--torch");
         AddChild(_player);
         _pivot = new Node3D { Name = "CameraPivot" };
         _arm = new SpringArm3D { SpringLength = _zoom, CollisionMask = 1, Margin = .3f };
         _arm.AddExcludedObject(_player.GetRid());
         _camera = new Camera3D { Current = true, Fov = GameSettings.Fov.F, Near = .1f, Far = 90000 };
         _arm.AddChild(_camera);
+        _fpHold = new Node3D { Name = "FirstPersonHold", Position = new Vector3(.36f, -.66f, -.8f), Rotation = new Vector3(-.25f, 0, -.12f) };
+        _camera.AddChild(_fpHold);
         _pivot.AddChild(_arm);
         AddChild(_pivot);
     }
@@ -1246,7 +1286,7 @@ public partial class WorldLab : Node3D
         };
         _help = new Label
         {
-            Text = "WASD move · Shift sprint · Space jump/swim up · C dive · mouse look (Tab frees cursor) · wheel zoom\n" +
+            Text = "WASD move · Shift sprint · Space jump/swim up · C dive · mouse look (Tab frees cursor) · wheel zoom (all the way in: first person) · R torch\n" +
                    "F fly (Space/C up/down, Shift faster, Ctrl ×6) · N noclip · Esc menu: teleport, new world, time of day\n" +
                    "Water: hold G pour where you look · J spring · , . water size · H rain · K clear\n" +
                    "Tools: 1 hands · 2 shovel · 3 pickaxe · 4 hoe · 5 terraform (dev) — left/right mouse use\n" +
