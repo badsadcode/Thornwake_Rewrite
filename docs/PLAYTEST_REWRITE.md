@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 54 — new clouds, no forest hole from above, land to the horizon
+* **Sky → Cloud look** (new, default *reference*): brighter, clearer clouds. The sky's clouds were veiled by the fog
+  twice (Godot fogs the sky's half-resolution pass too) — now once, like the clouds in front of the land, so the two
+  match. Wind streaks only in strong wind (~12 m/s and up), crisper cauliflower edges, flat blue-grey bases, bright tops,
+  golden hour as before. *build 53* brings the old clouds back.
+* **Fixed: a hole in the forest under you** when flying 100+ m above the trees (bare ground in a ring around a square
+  of trees). Costs a few fps in the densest forests at high *Full-detail trees*.
+* **Fixed: a stepped line along the horizon inside clouds** (a strip of clear far sea; *Cloud look: reference*).
+* **Horizon land now reaches the horizon:** it was cut at 90 km whatever the setting; it now goes at least to the true
+  horizon for your height (~160 km from 2 km up).
+
 ## New in build 53 — lake crater fixed, clouds over land match the sky, tree batches fixed
 * **Fixed: the crater in the benchmark lake** (Tom's dump 182351, terrain revision 16). The coastline cut a small pocket
   of "sea" out of a lake near the coast, so the water dropped from the lake's 13 m to sea level inside it, with walls of
