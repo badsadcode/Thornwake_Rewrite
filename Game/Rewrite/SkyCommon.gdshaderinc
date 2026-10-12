@@ -349,6 +349,13 @@ float vremap(float v, float a, float b, float c, float d) { return c + (v - a) /
 // derivatives — those are meaningless in a ray march and twice as large in the sky's half-resolution pass, which
 // blurred its clouds into a thin even veil over the whole sky while the same clouds in front of the land stayed crisp.
 uniform int cloud_blend = 1;
+// Cloud look (setting): 0 = build 53; 1 = reference (round 32, aimed at the M3 references, docs/ATMOSPHERE_2_0_REFERENCES.md:
+// bright tops, flat blue-grey bases, crisp cauliflower edges, wind streaks only in strong wind). Here the shape and the
+// light; the sky's double fog is undone in Sky.gdshader (FOG_UNDO_K).
+uniform int cloud_look = 0;
+// How streaked by the wind (0 calm … 1 stretched): build 53 from ~4 m/s (wind.y = speed / 8), so a Wind strength above 1
+// streaked every cloud; reference only from ~12 m/s (a strong breeze) to full at ~20 m/s.
+float cloud_windy() { return cloud_look == 1 ? smoothstep(1.5, 2.5, wind.y) : smoothstep(0.5, 1.6, wind.y); }
 float cloud_map(vec2 uv, float lod, int ch) {
 	vec4 c = lod >= 0.0 ? textureLod(cloud_tex, uv, lod) : texture(cloud_tex, uv);
 	return ch == 0 ? c.r : c.g;
@@ -402,14 +409,15 @@ float vdens(vec3 p, bool detail) {
 	float d = clamp(vremap(base, 1.0 - cov, 1.0, 0.0, 1.0), 0.0, 1.0) * cov * (1.0 + 0.9 * wx.x); // thick parts denser
 	if (d <= 0.0 || !detail) return d;
 	// Fine detail: billowy on top, wispy underneath; in wind stretched along it (smudged streaks).
-	float windy = smoothstep(0.5, 1.6, wind.y);
+	float windy = cloud_windy();
 	vec2 wd = normalize(vec2(wind.x, wind.z) + vec2(1e-4));
 	vec2 along = vec2(dot(p.xz, wd), dot(p.xz, vec2(-wd.y, wd.x)));
 	vec3 dp = vec3(along.x / mix(1.0, 3.5, windy), p.y - cloud_more.z * 2.0, along.y);
 	vec4 m = texture(cloud_noise, dp / 700.0);
 	float df = m.g * 0.75 + m.b * 0.25; // (the finest octave would only sparkle at sky distances)
-	df = mix(1.0 - df, df, smoothstep(0.1, 0.45, h));
-	return clamp(vremap(d, df * mix(0.42, 0.25, windy), 1.0, 0.0, 1.0), 0.0, 1.0);
+	// (reference: billowy almost to the base, which stays flat, and cut deeper: cauliflower edges)
+	df = cloud_look == 1 ? mix(1.0 - df, df, smoothstep(0.0, 0.1, h)) : mix(1.0 - df, df, smoothstep(0.1, 0.45, h));
+	return clamp(vremap(d, df * mix(cloud_look == 1 ? 0.52 : 0.42, 0.25, windy), 1.0, 0.0, 1.0), 0.0, 1.0);
 }
 
 // Distance along dir to an approaching front (a vertical curtain cloud_front.z metres away; 1e9 if none or behind).
@@ -468,6 +476,11 @@ vec4 front_wall(vec3 dir, vec3 ambient, vec3 sun_dir, vec3 sun_col, vec3 haze) {
 
 float vhg(float c, float g) { float g2 = g * g; return (1.0 - g2) / pow(max(1.0 + g2 - 2.0 * g * c, 1e-4), 1.5); }
 
+// Test only (--cloud-dev=x,y; the cloud look investigation, round 32): x scales the clouds' aerial perspective (1 = as
+// in play), y strengthens the self-shadowing (0 = as in play): more light used up toward the sun, darker bases, brighter
+// sunlit tops. Not a setting; play always runs with (1, 0, 0, 0).
+global uniform vec4 cloud_dev;
+
 // The march through the volume from t0 to t1 along dir (camera-relative): premultiplied light, opacity.
 vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, float min_step, vec3 sun_dir, vec3 sun_col, float day, float mu, float storm) {
 	vec2 cam = cloud_state.xy;
@@ -482,14 +495,16 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 	// Light bounced up from the sunlit land: warm, a little green (Tom: more colour variance).
 	vec3 ground = mix(ground_color, vec3(0.55, 0.47, 0.36), 0.5) * (0.06 + 0.6 * max(sun_dir.y, 0.0)) * (1.0 - storm * 0.6);
 	// Sunlight on clouds: a touch warmer than white by day, golden low down.
-	light_col *= mix(vec3(1.0), vec3(1.06, 1.0, 0.9), 0.6 * (1.0 - night));
+	// (reference: near-neutral tops with the sun high, as in the midday references; golden as before with it low)
+	float warm_k = cloud_look == 1 ? mix(0.6, 0.2, smoothstep(0.25, 0.6, sun_dir.y)) : 0.6;
+	light_col *= mix(vec3(1.0), vec3(1.06, 1.0, 0.9), warm_k * (1.0 - night));
 	vec3 glow = underlight(dir);
 	if (night > 0.5) { sky_top = vec3(0.012, 0.016, 0.03); sky_side = sky_top; ground = vec3(0.004); }
 	// (v2 also looks down onto clouds below: their haze is the horizon's; identical to before for rays climbing)
 	vec3 hdir = normalize(vec3(dir.x, max(dir.y, 0.0), dir.z));
 	vec3 haze = sky_colour(hdir, sun_dir, sun_col, day, dot(hdir, sun_dir));
-	float calm = 1.0 - smoothstep(0.5, 1.6, wind.y);
-	float sigma_k = mix(0.011, 0.019, calm) * (1.0 + storm); // calm cumulus: denser, crisper edges; real cloud is opaque within ~100 m
+	float calm = 1.0 - cloud_windy();
+	float sigma_k = mix(0.011, 0.019, calm) * (1.0 + storm) * (cloud_look == 1 ? 1.25 : 1.0); // (reference: denser, crisper) // calm cumulus: denser, crisper edges; real cloud is opaque within ~100 m
 	float trans = 1.0;
 	vec3 light = vec3(0.0);
 	float phase_f = mix(vhg(lmu, 0.6), vhg(lmu, -0.25), 0.4);
@@ -511,6 +526,7 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 			od += max(vdens(lp, false), 0.0) * sl;
 			sl *= 1.75;
 		}
+		od *= (1.0 + cloud_dev.y) * (cloud_look == 1 ? 1.15 : 1.0); // (test / reference: deeper self-shadow)
 		float h = clamp((p.y - VBOTTOM) / 3000.0, 0.0, 1.0);
 		// Multiple scattering (three orders, each spreading wider and reaching deeper) and the "powder" darkening of
 		// the cloud's sunlit face when seen from the shadow side.
@@ -528,7 +544,16 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		float deep = 1.0 - exp(-od * sigma_k * 0.45);
 		amb *= mix(1.0, 0.45, deep) * mix(0.75, 1.0, hb);
 		amb = mix(amb, amb * vec3(0.86, 0.9, 1.12), deep * 0.6);
-		vec3 s = light_col * sun_e * powder * 1.3 + amb;
+		amb *= mix(1.0 - 0.45 * cloud_dev.y, 1.0, hb); // (test: darker bases)
+		if (cloud_look == 1) {
+			// Reference: flat bases blue-grey (#aeb6c8, hue ~221°), lit by the sky rather than darkened to slate: the
+			// base's light keeps its brightness and turns toward the sky's blue-grey, less of the warm ground bounce.
+			// (at golden hour the bases stay as before: warm-lit edges, dark-grey cores)
+			float gl = dot(amb, vec3(0.2126, 0.7152, 0.0722));
+			amb = mix(amb, gl * vec3(0.88, 0.94, 1.12) * 1.3, (1.0 - hb) * 0.75 * smoothstep(0.1, 0.45, sun_dir.y));
+		}
+		// (test / reference: brighter sunlit tops)
+		vec3 s = light_col * sun_e * powder * 1.3 * (1.0 + (0.35 * cloud_dev.y + (cloud_look == 1 ? 0.25 : 0.0)) * h) + amb;
 		// v2 (round 29): seen from inside a thick deck the light comes from every side, scattered many times — grey-
 		// white, not the blue of the sky overhead (the first render inside the deck was a deep blue fog).
 		if (cloud_v2 > 0.5) {
@@ -541,7 +566,7 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		// Under a full deck the dense parts are darker, the thin ones brighter (light through them).
 		s *= mix(1.0, 1.35 - 0.6 * clamp(d, 0.0, 1.0), smoothstep(0.6, 0.9, cloud_state.z));
 		// Aerial perspective, thicker toward the horizon where the clouds meet it (Noor).
-		s = mix(s, haze, clamp(1.0 - exp(-t / 36000.0) + (1.0 - smoothstep(0.0, 0.12, abs(dir.y))) * 0.25, 0.0, 0.92));
+		s = mix(s, haze, clamp(1.0 - exp(-t / 36000.0) + (1.0 - smoothstep(0.0, 0.12, abs(dir.y))) * 0.25, 0.0, 0.92) * cloud_dev.x);
 		// Far away a step is longer than a cloud edge is thick: soften there so samples do not flicker on and off.
 		float sigma = d * sigma_k * mix(1.0, 0.45, smoothstep(150.0, 450.0, step_len));
 		float ab = exp(-sigma * step_len);

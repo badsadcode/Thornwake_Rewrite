@@ -1255,6 +1255,31 @@ which shared the lighter model's MultiMesh but needs role 1, gets its own copy o
 Result: no errors at either setting; the benchmark forest matches `main` within run-to-run noise (only swaying grass
 differs). A fix, no switch (as D86).
 
+## D94 — Why the clouds look weak; *Cloud look* proposal (2026-10-12)
+Tom: the clouds look weak (low contrast, little detail, smeared); find the cause before changing anything. Tested on
+dump 182351 (400 m up, cumulus forced, 15:00 north and west), one variant at a time against build 53:
+* **(a) Wind strength 1 instead of 4**: crisper, lumpier edges and fewer streaks (+3–13 % contrast, +7–8 % detail).
+  `wind.y` = speed / 8 and the detail streaking ramps 0.5 → 1.6, so Tom's *Wind strength* 4 (~13 m/s) streaked every
+  cloud fully and lowered the clouds' density (softer edges). A real, moderate cause.
+* **(b) Godot's fog off for clouds only** (test: CloudsNear draws every cloud, from a twin with `fog_disabled`): by far
+  the largest change — bright, clear clouds instead of grey-pink ones. Found while testing it: **Godot fogs the sky's
+  half-resolution pass as well as its full pass** (`sky.glsl` skips fog only in cubemap passes; Godot 4.7.2 source), so
+  the sky's clouds took the depth fog's sky affect and the volumetric fog twice, and its in-scatter was added even where
+  there is no cloud. Clouds in front of the land (CloudsNear) are fogged once: with volumetric fog on, a seam of ~49/765
+  across a cloud (split test), ~10 with it off. (The cloud session's split test had no volumetric fog veil.)
+* **(c) Cloud aerial perspective halved**: no visible change (±1 %): at 5–15 km it is 0.1–0.3. Not a cause.
+* **(d) Stronger self-shadowing**: darker bases, a little more relief (+5–27 % contrast). Helps, but the references'
+  bases are light blue-grey (#aeb6c8), not dark.
+* Also ruled out: the sky's half resolution (fog off, half vs full resolution: same detail).
+**Proposal: setting *Sky → Cloud look*** — *build 53* (default, unchanged; verified identical) or *reference*:
+(1) the double fog undone: Godot's fog is x·A + B per pixel; the half-resolution pass writes the clouds × 2048 (B becomes
+negligible), a new quarter-resolution pass writes 2048 alone (≈ A × 2048), the full pass divides — the clouds are fogged
+once, like the rest of the sky and like CloudsNear (seam 49 → 9); (2) wind streaks from ~12 m/s, full at ~20 m/s;
+(3) crisper cauliflower edges (denser, deeper erosion, billows down to a flat base); (4) bases lit blue-grey by the sky
+by day (golden hour as before), tops near-neutral with the sun high, a little more self-shadow. Cost: none measurable
+(86 vs 91 fps). Artistic: Tom picks; defaults unchanged. Test switches kept for later tuning: `--cloud-split-test=4`,
+`--cloud-fog-off`, `--cloud-dev=x,y`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

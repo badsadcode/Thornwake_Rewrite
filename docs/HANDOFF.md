@@ -28,7 +28,7 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   volumetric fog history of the old view — a beige veil; in the rays A/B, only still 00 per scene was affected).
 
 ## Next
-0. **Done on Tom's PC (2026-10-12):** step 1 below (captures on branch `captures/cloud-blend`; Tom accepted the fix), the tree instance-uniform overflow (D93), build 53. In progress: why the clouds look weak (wind smear, sky fog, aerial perspective, self-shadowing) and a *Cloud look* setting aimed at the M3 references — Tom picks.
+0. **Done on Tom's PC (2026-10-12):** step 1 below (captures on branch `captures/cloud-blend`; Tom accepted the fix), the tree instance-uniform overflow (D93), build 53. Clouds weak: causes found (D94: Godot fogs the sky's half-resolution clouds twice; wind smear at Wind strength 4; weak self-shadowing); *Sky → Cloud look* (build 53 / reference) added, default build 53 — **waiting for Tom's pick**.
 1. **Check the cloud fix on Tom's case** (GPU, minutes instead of an hour). Tom's world from dump 182351 (the
    benchmark lake, ground −2.1 m), the camera 400 m up so clouds stand in front of land, cumulus towers forced, four
    directions, build 52 blend vs matched (`--fly-height` counts from the ground, not the water; the lens peak printed
@@ -50,6 +50,7 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
 ## Developer tools added recently
 * `--cloud-split-test[=1|2|3]`: 1 = left half clouds by the near pass, right half by the sky; 2 = also a probe strip with
   the sun colour/direction each pass sees; 3 = each pass's cloud opacity as grey.
+* `--cloud-split-test=4`: CloudsNear draws every cloud, sky ones included (the sky draws none); `--cloud-fog-off`: CloudsNear from `CloudsNearNoFog.gdshader` (no Godot fog); `--cloud-dev=x,y`: global `cloud_dev` (x aerial perspective scale, y extra self-shadowing) — D94.
 * `--probe-water=x,z,r,step` (grid of water kinds and levels, lake/outlet stats), `--clear-spot=x,z`.
 * Capture suites: `--bench=<suite> --bench-out=<dir> --bench-scenes=a,b --bench-stills=N --bench-compare=key=v1,v2`
   (see `docs/BENCHMARK.md`).

@@ -14,7 +14,14 @@
 //                   interleaved gradient noise. The sky draws the part beyond the scene.
 // Biome moods: a global tint (rgb) and haze (a) set by Atmosphere.cs from the biome around the player (option).
 shader_type sky;
-render_mode use_debanding, use_half_res_pass;
+render_mode use_debanding, use_half_res_pass, use_quarter_res_pass;
+// Cloud look "reference" (round 32): Godot fogs the half-resolution pass as well as the full one (sky.glsl: only the
+// cubemap passes skip fog), so the clouds drawn there were veiled twice — depth fog and volumetric fog — and in front of
+// the land (CloudsNear) only once: greyer, flatter clouds in the sky and a seam between the two. Both fogs are affine per
+// pixel, x·A + B. The half-resolution pass writes the clouds × FOG_UNDO_K (B becomes negligible), the quarter-resolution
+// pass writes FOG_UNDO_K alone (its fogged value is K·A + B ≈ K·A), and the full pass divides: the clouds unfogged, fogged
+// once there with the rest of the sky. (FOG_UNDO_K keeps bright clouds × K well inside the half floats' range.)
+#define FOG_UNDO_K 2048.0
 
 #define SKY_LIGHT0_COLOR LIGHT0_COLOR
 // Test (--cloud-split-test, CloudsNear.gdshader): the left half of the screen leaves its volumetric clouds to CloudsNear.
@@ -36,6 +43,10 @@ void sky() {
 		if (quality == 2) { vec4 v = volumetric(dir, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
 		// v2: the same volume from any height; nearer than the scene it is drawn by CloudsNear.gdshader.
 		if (quality == 3) { vec4 v = volumetric_v2(dir, 1e9, cloud_jitter(FRAGCOORD.xy, cloud_more.z), 150, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
+		if (cloud_look == 1 && !AT_CUBEMAP_PASS) COLOR *= FOG_UNDO_K;
+	} else if (AT_QUARTER_RES_PASS) {
+		// The fog's own transmittance A, measured (cloud look reference; see FOG_UNDO_K).
+		COLOR = vec3(cloud_look == 1 && !AT_CUBEMAP_PASS ? FOG_UNDO_K : 0.0); ALPHA = 1.0;
 	} else {
 		vec3 col = sky_colour(dir, sun_dir, sun_col, day, mu);
 		float night = 1.0 - smoothstep(-0.16, 0.04, sun_dir.y);
@@ -101,7 +112,8 @@ void sky() {
 				disc *= 1.0 - far.a;
 				far = vec4(0.0);
 				vec4 v = HALF_RES_COLOR;
-				if (split_test >= 1 && quality == 3 && SCREEN_UV.x < 0.5) v = vec4(0.0);
+				if (cloud_look == 1) v.rgb /= max(QUARTER_RES_COLOR.rgb, vec3(1.0)); // fogged once, not twice (FOG_UNDO_K)
+				if (split_test >= 1 && quality == 3 && (split_test == 4 || SCREEN_UV.x < 0.5)) v = vec4(0.0); // (4: CloudsNear draws all clouds)
 				col = col * (1.0 - v.a) + v.rgb;
 				disc *= 1.0 - v.a;
 			} else {

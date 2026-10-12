@@ -336,11 +336,23 @@ public partial class Atmosphere : Node3D
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
         SkyParam("quality", GameSettings.CloudQuality.Index);
         SkyParam("cloud_blend", GameSettings.CloudBlend.Index);
-        var nearShader = GD.Load<Shader>(GameSettings.CloudBlend.Index == 0 ? "res://Game/Rewrite/CloudsNear52.gdshader" : "res://Game/Rewrite/CloudsNear.gdshader");
+        SkyParam("cloud_look", GameSettings.CloudLook.Index);
+        // Tests (cloud look investigation, round 32): --cloud-fog-off draws CloudsNear without Godot's fog (with
+        // --cloud-split-test=4 it draws every cloud, so the sky keeps its veil and the clouds lose theirs);
+        // --cloud-dev=x,y sets cloud_dev (SkyCommon.gdshaderinc: aerial perspective scale, extra self-shadowing).
+        var args = OS.GetCmdlineUserArgs();
+        var nearShader = GD.Load<Shader>(GameSettings.CloudBlend.Index == 0 ? "res://Game/Rewrite/CloudsNear52.gdshader"
+            : args.Contains("--cloud-fog-off") ? "res://Game/Rewrite/CloudsNearNoFog.gdshader" : "res://Game/Rewrite/CloudsNear.gdshader");
         if (_cloudsNear.Shader != nearShader) _cloudsNear.Shader = nearShader;
         _cloudsNear.SetShaderParameter("cloud_light_linear", GameSettings.CloudBlend.Index);
-        SkyParam("split_test", OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--cloud-split-test")) is { } split
+        SkyParam("split_test", args.FirstOrDefault(a => a.StartsWith("--cloud-split-test")) is { } split
             ? split.Contains('=') ? int.Parse(split[(split.IndexOf('=') + 1)..]) : 1 : 0);
+        if (args.FirstOrDefault(a => a.StartsWith("--cloud-dev=")) is { } dev)
+        {
+            var given = dev[12..].Split(',').Select(t => float.Parse(t, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+            var v = given.Concat(new[] { 1f, 0, 0, 0 }.Skip(given.Length)).ToArray();
+            RenderingServer.GlobalShaderParameterSet("cloud_dev", new Vector4(v[0], v[1], v[2], v[3]));
+        }
         bool v2 = GameSettings.CloudQuality.Index == 3;
         // (2: a temporal anti-aliasing averages the clouds' moving ray offsets — TAA, FSR 2)
         bool temporal = GameSettings.AntiAliasing.Index is 2 or 4;
