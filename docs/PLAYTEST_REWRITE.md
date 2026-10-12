@@ -78,6 +78,26 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 51 — tree band fix, nights, forest rays switch, artefact shots
+* **Fixed: the grey-blue band across tree crowns at eye height** (Tom's dump 104752). Trees switching from the
+  detailed to the lighter model (around *Full-detail trees*) were drawn as transparent while they faded, and the
+  distant rain painted over them. The switch is now a dithered cross-fade that keeps the trees solid. Also: with the
+  weather off, the distant rain no longer keeps drawing the last weather.
+* **Light model → Atmosphere 2.0:** nights are dark but readable (more moonlight and night sky light, up to +¼ stop),
+  as in Tom's night reference. Build 47's light is unchanged.
+* **Lighting and effects → Forest rays** (M2, two candidates to compare): *build 47* (default), *A: volumetric forest
+  air* (a thin haze under the crowns lit through the gaps: real shafts, also with the sun off screen; costs the
+  volumetric fog), *B: screen-space shafts* (the sun shafts, stronger in forests; only with the sun on screen). Only
+  under the canopy, by day.
+* **Benchmark suites:** *rays* (forest shots, every still with build 47 / A / B) and *artefacts* (fixed shots of the
+  tracked artefacts: far water against the sky, low sun glare, forest shafts, sky seams). The atmosphere captures now
+  wait at least 30 frames after a time jump (the first night still could show the noon sky's light).
+* **Clouds in front of mountains:** cloud quality *volumetric v2* draws the clouds in front of the land too (quality
+  *volumetric* only draws them in the sky, so a mountain cuts its silhouette out of a cloud). Please compare on the
+  gaming PC.
+* **Tonight's test:** Benchmark → *atmosphere*, *rays* (and *artefacts* if there is time); then play with *Light
+  model: Atmosphere 2.0* through a day and different biomes, and try *Cloud quality: volumetric v2*.
+
 ## New in build 50 — Light by biome (Atmosphere 2.0 M1)
 * **Light model → Atmosphere 2.0 (experimental)** now takes its colours from **light profiles by biome**
   (`Content/light_profiles.json`): temperate forest, plains, taiga and cold lands, desert and dry rock, swamp and wet
