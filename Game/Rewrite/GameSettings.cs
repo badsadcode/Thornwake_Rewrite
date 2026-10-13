@@ -236,10 +236,10 @@ public static class GameSettings
     public static readonly Setting Exposure = Add(new("fx.exposure", "Lighting and effects", "Brightness", .5, 1.6, .05, 1,
         "Camera exposure.", "×"));
     // Tom (2026-10-13): full overcast and storms, dense woods and nights may be darker. 0 / normal = build 56's light.
-    public static readonly Setting StormDarkness = Add(new("fx.storm_darkness", "Lighting and effects", "Overcast and storm darkness", 0, 1, .05, 0,
+    public static readonly Setting StormDarkness = Add(new("fx.storm_darkness", "Lighting and effects", "Overcast and storm darkness", 0, 1, .05, .5,
         "How dark a fully overcast or stormy day is: less light through the deck, and the eye adapts to it less. 0 = build 56. " +
         "The clouds themselves darken with it.", "×"));
-    public static readonly Setting ForestDarkness = Add(new("fx.forest_darkness", "Lighting and effects", "Forest darkness", 0, 1, .05, 0,
+    public static readonly Setting ForestDarkness = Add(new("fx.forest_darkness", "Lighting and effects", "Forest darkness", 0, 1, .05, .5,
         "How dark dense woods are: the eye lifts the exposure less (0 = build 56: up to +½ stop under a closed canopy) and " +
         "less sky light reaches the ground under the crowns.", "×"));
     public static readonly Setting GroundFog = Add(new("fx.ground_fog", "Lighting and effects", "Ground fog and mist", 0, 2, 1, 1,

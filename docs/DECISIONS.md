@@ -1504,6 +1504,9 @@ defaults from the captures):
   very dark / pitch black = the sky light on the land at night × 1.8 / 1 / 0.5 / 0.25 / 0.06 and the moonlight the
   same. The exposure is not touched, so the sky, moon, stars and clouds look identical at every level (checked in the
   forest night captures). A torch matters at night now.
+Defaults (Tom agreed with the proposal from the captures): storm 0.5, forest 0.5, night *normal*. 0 / normal brings
+build 56's light back. Storms are to get more atmosphere later (Tom: "Storms have to be atmospheric, but we can work on
+that later").
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
