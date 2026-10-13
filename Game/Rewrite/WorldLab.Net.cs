@@ -96,6 +96,9 @@ public partial class WorldLab : IWorldHost, IClientGame
             _probeTimer = 2;
             var v = probe[12..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray();
             _net.Stats.Event(string.Format(CultureInfo.InvariantCulture, "test: ground at {0}, {1} is {2:0.000} m ({3} edit chunks)", v[0], v[1], _sampler.Height(v[0], v[1]), _sampler.Edits.ChunkCount));
+            // (and the weather here, to compare between host and client at the same game time)
+            var weather = _atmosphere.DebugInfo().Split('\n').Where(l => l.StartsWith("Storm") || l.StartsWith("Wind:") || l.StartsWith("Weather input")).Select(l => l.Trim());
+            _net.Stats.Event(string.Format(CultureInfo.InvariantCulture, "test: weather at day {0} hour {1:0.000}: ", _clock.Day, _clock.Hour) + string.Join(" · ", weather));
         }
     }
 
