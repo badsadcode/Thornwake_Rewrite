@@ -1336,6 +1336,19 @@ Held in the right hand, the arm raised and the torch tilted away from the head. 
 the closest zoom; the camera at the eyes, the body faces where you look and stays as a shadow (its meshes shadow-only),
 the torch at the lower right of the view; one step out returns. Not yet in a build.
 
+## D99 — Gameplay direction: building blocks, sandbox settings, PZ survival (2026-10-13)
+Planned with Tom in conversation, no code: `docs/GAMEPLAY_DESIGN.md`. Project Zomboid survival; tools and opportunities,
+never goals ("as many game mechanics as possible that will allow them to live in the world of Thornwake as they
+want"); every rule a sandbox setting with presets; expandable, so professions are not systems but emerge from a few
+generic blocks (tagged items, one action/recipe pipeline, stations, skills by use, needs, one effects system, world
+changes keyed by position, creatures, trade and reputation, written knowledge) with the content as data. Decided:
+traits but no occupations; on death the gear drops at the body and skills carry over only through journals the player
+chose to write (automatic share as a setting); books written by people of Thornwake are the tutorial; regrowth,
+spoilage, wear with lossy repair, quality from the crafter; alchemy from ingredient properties; magic open to everyone,
+spells built from parts, mana plus reagents, acting on the world's simulations; combat like Valheim / Conan /
+Soulmask; climbing (important); Valheim-style sailing on the real wind and waves. Replaces the step order of
+`GAMEPLAY_PLAN.md`; first slice: chop → campfire → cook a fish → survive a cold, rainy night, with a first book.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

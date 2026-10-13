@@ -1,3 +1,7 @@
+> **2026-10-13: the gameplay direction is now `docs/GAMEPLAY_DESIGN.md`** (building blocks instead of
+> professions, sandbox settings, Project Zomboid survival). Its first playable slice replaces the step order below; the
+> roadmap after the prototype (roads, settlement sites, premade POIs) still stands.
+
 # First gameplay prototype (planned, after the dedicated repo) and the road to a complete world
 
 Tom, 2026-10-08: "after that we need to introduce some basic game mechanics… proper swimming, sailing and survival
