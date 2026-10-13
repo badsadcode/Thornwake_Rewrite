@@ -1411,6 +1411,18 @@ sent. Tom's network (for checkpoint 3): public address 83.175.178.135; the route
 public address (84.116.254.65), so most likely no CGNAT; the router does not answer UPnP (off), so port 7777 must be
 forwarded by hand (steps in PLAYTEST_REWRITE.md, build 55). A later option: open the port by UPnP when hosting.
 
+## D104 — Tom's line is DS-Lite: hosting over IPv6 (correction to D103) (2026-10-13)
+The first internet test failed: the friend's client tried for 36 s and got no answer; Tom's host log for the same session
+shows nothing arrived. The router page (UPC/Play Connect Box, CH7465PLAY) says **IPv6 DS-Lite: Enabled** (aftr01.play.pl):
+the router has no IPv4 internet address of its own; 83.175.178.135 is the provider's shared gateway, so IPv4 port
+forwarding cannot work. D103's "most likely no CGNAT" was wrong — the traceroute's first public hop was the DS-Lite
+gateway itself. Ways ahead for Tom, in order: (1) **IPv6** — the PC has a stable global address, the game's host already
+listens on IPv6 (tested over ::1) and the join screen takes IPv6 addresses (bare in build 55, also `[addr]:port` since
+9b0ea58); needs the friend to have IPv6 and UDP 7777 allowed in the router's IPv6 firewall and Windows Firewall;
+(2) the friend hosts if their line has its own IPv4; (3) a tunnel (playit.gg handles UDP); (4) ask the provider for a
+public IPv4 (no DS-Lite). For a later build: say on the Multiplayer page that DS-Lite / CGNAT lines must host over IPv6
+or a tunnel, and show the host's own IPv6 address there to copy.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
