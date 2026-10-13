@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace Thornwake.Rewrite.Net;
@@ -16,6 +18,7 @@ public sealed partial class NetSession : Node
     public NetClient Client { get; private set; } = null!;
     public bool IsHost => Server != null;
     public string Status { get; private set; } = "";
+    public NetStats Stats { get; } = new();
     private ENetMultiplayerPeer? _peer;
     private SceneMultiplayer _mp = null!;
     private Func<PlayerState?> _hostState = () => null;
@@ -27,16 +30,18 @@ public sealed partial class NetSession : Node
         Setup(name, version);
         _peer = new ENetMultiplayerPeer();
         var error = _peer.CreateServer(port, 32);
-        if (error != Error.Ok) { Status = $"Could not host on port {port}: {error} (is another game hosting already?)"; return error; }
+        Stats.Role = $"host {name} port {port}";
+        if (error != Error.Ok) { Status = $"Could not host on port {port}: {error} (is another game hosting already?)"; Stats.Event(Status); return error; }
         _mp.MultiplayerPeer = _peer;
         Server = new NetServer(world, SendFromServer, version);
         Server.SetHostName(name);
+        Server.Log = Stats.Event;
         Client = new NetClient(game, (data, _) => Server.Receive(NetServer.HostPeer, data), isHost: true);
         _hostState = game.LocalState;
-        _mp.PeerConnected += id => { GD.Print($"NET peer {id} connected"); Server.Connected(id); };
-        _mp.PeerDisconnected += id => { GD.Print($"NET peer {id} disconnected"); Server.Disconnected(id); };
+        _mp.PeerConnected += id => { Stats.Event($"peer #{id} connected"); Server.Connected(id); };
+        _mp.PeerDisconnected += id => { Stats.Event($"peer #{id} ({Client.Names.GetValueOrDefault((int)id, "?")}) disconnected"); Server.Disconnected(id); };
         Status = $"Hosting on UDP port {port}";
-        GD.Print("NET " + Status);
+        Stats.Event(Status + $" (version {version})");
         return Error.Ok;
     }
 
@@ -46,14 +51,15 @@ public sealed partial class NetSession : Node
         Setup(name, version);
         _peer = new ENetMultiplayerPeer();
         var error = _peer.CreateClient(address, port);
-        if (error != Error.Ok) { Status = $"Could not connect to {address}:{port}: {error}"; return error; }
+        Stats.Role = $"client {name} to {address}:{port}";
+        if (error != Error.Ok) { Status = $"Could not connect to {address}:{port}: {error}"; Stats.Event(Status); return error; }
         _mp.MultiplayerPeer = _peer;
         Client = new NetClient(game, (data, reliable) => Send(NetServer.HostPeer, data, reliable), isHost: false);
-        _mp.ConnectedToServer += () => { Status = $"Connected to {address}:{port}"; GD.Print("NET " + Status); Client.Hello(_name, _version); };
-        _mp.ConnectionFailed += () => { Status = $"Could not reach {address}:{port} (wrong address, the host not running, or a port not forwarded)"; GD.Print("NET " + Status); };
-        _mp.ServerDisconnected += () => { Status = "The host closed the game or the connection dropped."; GD.Print("NET " + Status); };
+        _mp.ConnectedToServer += () => { Status = $"Connected to {address}:{port}"; Stats.Event(Status); Client.Hello(_name, _version); };
+        _mp.ConnectionFailed += () => { Status = $"Could not reach {address}:{port} (wrong address, the host not running, or a port not forwarded)"; Stats.Event(Status); };
+        _mp.ServerDisconnected += () => { Status = "The host closed the game or the connection dropped."; Stats.Event(Status); };
         Status = $"Connecting to {address}:{port}…";
-        GD.Print("NET " + Status);
+        Stats.Event(Status + $" (version {version})");
         return Error.Ok;
     }
 
@@ -67,7 +73,9 @@ public sealed partial class NetSession : Node
 
     private void OnPacket(long id, byte[] packet)
     {
-        if (packet.Length > 0 && (Msg)packet[0] is not (Msg.State or Msg.Players or Msg.Clock)) GD.Print($"NET {(Msg)packet[0]} from {id} ({packet.Length} bytes)");
+        if (packet.Length == 0) return;
+        Stats.Counted((Msg)packet[0], false, packet.Length);
+        if ((Msg)packet[0] is Msg.Hello or Msg.Welcome or Msg.World or Msg.Refused) Stats.Event($"{(Msg)packet[0]} from #{id} ({packet.Length} bytes)");
         if (Server != null) Server.Receive(id, packet);     // host: everything from the network is for the server part
         else if (id == NetServer.HostPeer) Client.Receive(packet); // client: only the host speaks
     }
@@ -78,14 +86,34 @@ public sealed partial class NetSession : Node
         else Send(peer, data, reliable);
     }
 
-    private void Send(long peer, byte[] data, bool reliable) =>
+    private void Send(long peer, byte[] data, bool reliable)
+    {
+        Stats.Counted((Msg)data[0], true, data.Length);
         _mp.SendBytes(data, (int)peer, reliable ? MultiplayerPeer.TransferModeEnum.Reliable : MultiplayerPeer.TransferModeEnum.Unreliable, reliable ? 0 : 1);
+    }
+
+    /// <summary>Every connected peer with its name, round trip, jitter (ms) and packet loss (%) as ENet measures them.</summary>
+    public List<(long Id, string Name, int Rtt, int Jitter, double Loss)> Peers()
+    {
+        var list = new List<(long, string, int, int, double)>();
+        if (_peer == null || _peer.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Connected) return list;
+        foreach (long id in IsHost ? _mp.GetPeers().Select(p => (long)p) : new[] { NetServer.HostPeer })
+        {
+            var p = _peer.GetPeer((int)id);
+            if (p == null) continue;
+            list.Add((id, Client.Names.GetValueOrDefault((int)id, IsHost ? "?" : "host"),
+                (int)p.GetStatistic(ENetPacketPeer.PeerStatistic.RoundTripTime), (int)p.GetStatistic(ENetPacketPeer.PeerStatistic.RoundTripTimeVariance),
+                p.GetStatistic(ENetPacketPeer.PeerStatistic.PacketLoss) / 65536.0 * 100));
+        }
+        return list;
+    }
 
     public override void _Process(double delta)
     {
         if (_peer == null) return;
         Server?.Tick(delta, _hostState());
         Client.Tick(delta);
+        Stats.Tick(delta, Peers());
     }
 
     /// <summary>Round trip to the host in ms (a joining client), or -1.</summary>

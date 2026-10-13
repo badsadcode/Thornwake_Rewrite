@@ -58,7 +58,7 @@ public sealed class NetClient
     {
         if (!_welcomed || _isHost) return; // the host's own state goes to its server part directly
         if ((_stateTimer -= dt) > 0) return;
-        _stateTimer = .05;
+        _stateTimer = Math.Max(_stateTimer + .05, 0); // (20 a second on average, at most one a frame)
         if (_game.LocalState() is { } s) _send(NetMessages.Build(Msg.State, w => w.Write(s)), false);
     }
 
@@ -82,6 +82,13 @@ public sealed class NetClient
                 break;
             }
             case Msg.Refused: _game.Refused(r.ReadString()); break;
+            case Msg.World when !_isHost:
+            {
+                string args = r.ReadString(), type = r.ReadString();
+                PlayerState? spawn = r.ReadBoolean() ? r.ReadState() : null;
+                _game.LoadWorld(args, type.Length > 0 ? type : null, spawn);
+                break;
+            }
             case Msg.Joined: { int id = r.ReadInt32(); string name = r.ReadString(); Names[id] = name; _game.PlayerJoined(id, name); break; }
             case Msg.Left: { int id = r.ReadInt32(); Names.Remove(id); _game.PlayerLeft(id); break; }
             case Msg.Players:

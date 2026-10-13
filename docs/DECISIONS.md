@@ -1382,6 +1382,25 @@ bag); the hole reaches everyone as chunks. A client runs no rain erosion (only t
 same world, appeared beside the host and showed them. Not shared yet: local water (as agreed), the simulated weather's
 own state (to verify).
 
+## D102 — Multiplayer: join screen, network log, no player limit, digs verified (2026-10-13)
+Tom confirmed checkpoint 1 (two windows see each other move) and asked, before an internet test with a friend in
+France, for more players, a join screen and network diagnostics. **Player limit**: none in the code; ENet accepts up to
+32 connections; the real limits are the host's upload (positions: ~1 KB/s per player in, the host sends everyone's to
+everyone — ~1.9 Mbit/s for 16 players) and its CPU (§14.1); left as it is (Tom). **Join screen**: the launcher's
+*Multiplayer…* page — name, UDP port, *Host a game*, the host's address (IP or name, `:port` optional), *Join*;
+remembered in `user://multiplayer.cfg` (`Net/NetLaunch.cs`); the joining screen shows the connection's state and why it
+failed. **The host changes world** (Esc → new world): everyone builds the new world and comes back beside the host
+(message `World`; protocol 2). **Network log** (`Net/NetStats.cs`): while a session runs, one line a second to
+`user://debug/net-<time>-<role>.log` — every peer's round trip, jitter and loss, bytes and messages by kind in and out,
+the clock's offset to the host, how regularly positions arrive and how often a player was drawn guessed ahead, chunks
+received — and every event (connected, welcome, joined, left, refused, world changed, digs applied or refused) with its
+time; F9 dumps add a summary, the latest events and the log's path. First reading (two windows on one PC): round trip
+40–90 ms (ENet is serviced once a frame in each game), positions every 60–80 ms → the send timers now keep their
+remainder (20 a second on average). **Digging (checkpoint 2)**: a test (`--net-dig`, `--net-probe`) found a client's dig
+dropped when it arrived before the client's first position (reliable and unreliable messages travel separately); now
+accepted, and every dig decision is logged. Verified: the host's trench reaches a player joining 15 s later, the
+client's dig is applied by the host (5.6 m³) and both read the same ground height after it (19.327 m).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
