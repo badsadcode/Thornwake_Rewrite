@@ -54,6 +54,9 @@ public sealed class GameRules
     /// <summary>The players whose inventories changed since the last call (the host sends them theirs).</summary>
     public List<int> TakeInventoryChanges() { var l = _inventoryChanged.ToList(); _inventoryChanged.Clear(); return l; }
 
+    /// <summary>Send this player's inventory again with the next changes (they were not there to receive it).</summary>
+    public void InventoryChanged(int player) => _inventoryChanged.Add(player);
+
     /// <summary>Fell the tree of lattice cell (cx, cz): an axe (tag <c>chopping</c>) in the pack, within reach; logs and
     /// branches by the tree's size.</summary>
     public ActionResult Chop(int player, long cx, long cz, double px, double pz)

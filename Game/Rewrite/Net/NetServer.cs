@@ -234,8 +234,12 @@ public sealed class NetServer
             if (rules.Objects.TakeChanged() is { Count: > 0 } ids)
                 Broadcast(NetMessages.Build(Msg.Objects, w => { w.Write(ids.Count); foreach (long id in ids) rules.Objects.Write(w, id); }), true);
             foreach (int owner in rules.TakeInventoryChanges())
+            {
                 if (_players.TryGetValue(owner, out var p) && p.Welcomed)
                     _send(owner, NetMessages.Build(Msg.Inventory, w => rules.Inventory(owner).Write(w)), true);
+                else if (owner == HostPeer || p != null) rules.InventoryChanged(owner); // (not in yet — the host's own player
+                                                                                        // before its first frame: later)
+            }
         }
         if (_world.Edits is not { } edits) return;
         var changed = edits.TakeChanged();

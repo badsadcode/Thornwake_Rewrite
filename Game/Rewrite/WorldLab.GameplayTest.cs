@@ -45,6 +45,7 @@ public partial class WorldLab
                 Next(2.5); break;
             }
             case 1:
+                Check(_myInv.HasTag("chopping"), "the start kit arrived (an axe in the pack)");
                 if (!_axeHeld) ToggleAxe();
                 _gtLogs = _myInv.Count("log");
                 Act(new ActionRequest(ActionKind.Chop, _gtTree.Cx, _gtTree.Cz, "", 0, 0, 0, 0));
