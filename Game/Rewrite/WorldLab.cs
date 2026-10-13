@@ -1191,6 +1191,7 @@ public partial class WorldLab : Node3D
         sb.AppendLine(_atmosphere.DebugInfo());
         if (_water.Sim is { Added: > 0 } sim) sb.AppendLine($"Water simulation: {F(sim.Volume())} m³ on the land, {sim.Sources.Count} spring(s){(_rain ? ", raining" : "")}");
         sb.AppendLine();
+        if (_net != null) { sb.AppendLine(_net.Stats.Summary(_net.Peers())); }
         sb.AppendLine("Settings:");
         foreach (var g in GameSettings.All) sb.AppendLine($"  {g.Key} = {F(g.Value)}{(g.Options != null ? $" ({g.Options[Math.Clamp((int)g.Value, 0, g.Options.Length - 1)]})" : "")}");
         sb.AppendLine();

@@ -25,13 +25,21 @@ public partial class WorldLab : IWorldHost, IClientGame
     /// <summary>A joining player (the world, its settings, time and edits come from the host).</summary>
     private bool IsNetClient => _net is { IsHost: false };
 
-    /// <summary>From the command line: host or join (before the world is generated).</summary>
+    /// <summary>Host or join (before the world is generated): from the launcher's Multiplayer page, or for tests from the
+    /// command line (--host[=port], --join=address[:port], --name=…).</summary>
     private bool StartNetwork()
     {
         var args = OS.GetCmdlineUserArgs();
-        string name = args.FirstOrDefault(a => a.StartsWith("--name="))?[7..] ?? System.Environment.UserName;
+        NetLaunch.Load();
+        string name = args.FirstOrDefault(a => a.StartsWith("--name="))?[7..] ?? NetLaunch.Name;
         string version = (string)ProjectSettings.GetSetting("application/config/version", "?");
-        if (args.FirstOrDefault(a => a == "--host" || a.StartsWith("--host=")) is { } host)
+        var pending = NetLaunch.Pending;
+        NetLaunch.Pending = NetLaunch.Role.None;
+        string? host = args.FirstOrDefault(a => a == "--host" || a.StartsWith("--host="))
+            ?? (pending == NetLaunch.Role.Host ? $"--host={NetLaunch.Port}" : null);
+        string? join = args.FirstOrDefault(a => a.StartsWith("--join="))
+            ?? (pending == NetLaunch.Role.Join ? $"--join={NetLaunch.Address}:{NetLaunch.Port}" : null);
+        if (host != null)
         {
             int port = host.Contains('=') ? int.Parse(host[7..], CultureInfo.InvariantCulture) : NetSession.DefaultPort;
             _net = new NetSession { Name = "Net" };
@@ -39,7 +47,7 @@ public partial class WorldLab : IWorldHost, IClientGame
             _net.Host(port, this, this, name, version);
             return false; // the host builds its own world as usual
         }
-        if (args.FirstOrDefault(a => a.StartsWith("--join=")) is { } join)
+        if (join != null)
         {
             string target = join[7..];
             int port = NetSession.DefaultPort;
@@ -67,12 +75,37 @@ public partial class WorldLab : IWorldHost, IClientGame
         if (_smokeDirectory != null && _joinWait > 90) { GD.PushError("NET join timed out: " + _net.Status); GetTree().Quit(1); }
     }
 
+    // Tests: --net-dig=x,z,radius,depth (a client asks the host to dig there once it stands in the world),
+    // --net-probe=x,z (the ground height there, into the network log every 2 s: host and client must agree).
+    private bool _netDigSent;
+    private double _probeTimer;
+
+    private void NetTests(double delta)
+    {
+        if (_net == null || _sampler == null) return;
+        var args = OS.GetCmdlineUserArgs();
+        if (!_netDigSent && IsNetClient && ((IClientGame)this).LocalState() != null && args.FirstOrDefault(a => a.StartsWith("--net-dig=")) is { } dig)
+        {
+            var v = dig[10..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray();
+            _net.Client.SendDig(new DigRequest(BrushMode.Dig, BrushShape.Round, v[2], v[3], 1, double.PositiveInfinity, v[0], _sampler.Height(v[0], v[1]), v[1], 0, -1, 0));
+            _net.Stats.Event($"test: asked the host to dig at {v[0]}, {v[1]}");
+            _netDigSent = true;
+        }
+        if (args.FirstOrDefault(a => a.StartsWith("--net-probe=")) is { } probe && (_probeTimer -= delta) <= 0)
+        {
+            _probeTimer = 2;
+            var v = probe[12..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray();
+            _net.Stats.Event(string.Format(CultureInfo.InvariantCulture, "test: ground at {0}, {1} is {2:0.000} m ({3} edit chunks)", v[0], v[1], _sampler.Height(v[0], v[1]), _sampler.Edits.ChunkCount));
+        }
+    }
+
     /// <summary>Per frame: draw the other players where they are now.</summary>
     private void StepRemotes(double delta)
     {
+        NetTests(delta);
         if (_remotes.Count == 0) return;
         double now = Time.GetTicksMsec() / 1000.0;
-        foreach (var r in _remotes.Values) r.Step(now, (float)delta, _originX, _originZ);
+        foreach (var r in _remotes.Values) if (r.Step(now, (float)delta, _originX, _originZ) && _net != null) _net.Stats.Extrapolated++;
     }
 
     private string NetHud()
@@ -111,6 +144,7 @@ public partial class WorldLab : IWorldHost, IClientGame
     void IClientGame.LoadWorld(string worldArgs, string? worldTypeJson, PlayerState? spawn)
     {
         _netSpawn = spawn;
+        _net?.Stats.Event($"building the host's world: {worldArgs}");
         if (worldTypeJson != null)
         {
             var type = WorldRecipe.FromJson(worldTypeJson);
@@ -147,6 +181,7 @@ public partial class WorldLab : IWorldHost, IClientGame
     void IClientGame.ApplyClock(in ClockState c, bool snap)
     {
         double dt = GetProcessDeltaTime();
+        if (_net != null) _net.Stats.ClockOffset = ((c.Day - _clock.Day) + (c.Phase - _clock.Phase)) * GameSettings.DayLength.Value * 60;
         _clock.Follow(c.Day, c.Phase, Math.Max(dt, 1), snap); // (once a second: close the gap over ~2 s)
         _atmosphere.FollowOceanTime(c.OceanTime, 1, snap);
         _atmosphere.Wind.Time = c.WindTime;
@@ -155,6 +190,7 @@ public partial class WorldLab : IWorldHost, IClientGame
 
     void IClientGame.ApplyChunks(IReadOnlyList<(long X, long Z, float[]? Offsets)> chunks)
     {
+        if (_net != null) _net.Stats.ChunksIn += chunks.Count;
         if (_sampler == null || _generation != null) { _pendingChunks.AddRange(chunks); return; }
         ApplyChunksNow(chunks);
     }
@@ -171,9 +207,15 @@ public partial class WorldLab : IWorldHost, IClientGame
     }
 
     /// <summary>After the host's world finished generating here: its edits so far, and the place next to the host.</summary>
+    private int _hostWorlds;
+
     private void NetWorldReady()
     {
+        // The host started another world (Esc menu): everyone builds it and comes back beside the host.
+        if (_net?.Server is { } server && _hostWorlds++ > 0)
+            server.WorldChanged(new PlayerState(PlayerX, _player.Position.Y, PlayerZ, _me.Facing, 0, 0, 0, PlayerFlags.None));
         if (!IsNetClient || _sampler == null) return;
+        _net!.Stats.Event($"the host's world is ready here ({_pendingChunks.Count} edit chunks waiting)");
         if (_pendingChunks.Count > 0) { ApplyChunksNow(_pendingChunks.ToList()); _pendingChunks.Clear(); }
         if (_netSpawn is { } s) Teleport(s.X + 3, s.Z + 2); // beside the host, not inside them
         _netSpawn = null;
@@ -186,12 +228,14 @@ public partial class WorldLab : IWorldHost, IClientGame
         _remotes[id] = remote;
         AddChild(remote);
         _status = $"{name} joined.";
+        _net?.Stats.Event($"{name} (#{id}) is in the game");
     }
 
     void IClientGame.PlayerLeft(int id)
     {
         if (!_remotes.Remove(id, out var gone)) return;
         _status = $"{gone.PlayerName} left.";
+        _net?.Stats.Event($"{gone.PlayerName} (#{id}) left");
         gone.QueueFree();
     }
 
@@ -203,6 +247,7 @@ public partial class WorldLab : IWorldHost, IClientGame
             remote = _remotes[id];
         }
         remote.Push(state, Time.GetTicksMsec() / 1000.0);
+        _net?.Stats.Arrived(id);
     }
 
     void IClientGame.DigDone(double volume, double hardness) => _tools.RemoteDone(volume, hardness);

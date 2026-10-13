@@ -39,10 +39,12 @@ public sealed partial class RemotePlayer : Node3D
         if (_states.Count > 40) _states.RemoveAt(0);
     }
 
-    /// <summary>Per frame: place and animate at <paramref name="now"/> − 100 ms, in the scene's floating origin.</summary>
-    public void Step(double now, float dt, double originX, double originZ)
+    /// <summary>Per frame: place and animate at <paramref name="now"/> − 100 ms, in the scene's floating origin. Returns
+    /// true when the newest position was already older than that (drawn guessed ahead: a position came late).</summary>
+    public bool Step(double now, float dt, double originX, double originZ)
     {
-        if (_states.Count == 0) return;
+        if (_states.Count == 0) return false;
+        bool guessed = false;
         double t = now - Delay;
         PlayerState s;
         int after = _states.FindIndex(e => e.Time >= t);
@@ -58,6 +60,7 @@ public sealed partial class RemotePlayer : Node3D
         else
         {
             var (tl, last) = _states[^1];
+            guessed = true;
             double ahead = System.Math.Min(t - tl, Extrapolate);
             s = last with { X = last.X + last.Vx * ahead, Y = last.Y + last.Vy * ahead, Z = last.Z + last.Vz * ahead };
         }
@@ -66,5 +69,6 @@ public sealed partial class RemotePlayer : Node3D
         _character.Facing = s.Facing;
         _character.Torch.Lit = (s.Flags & PlayerFlags.Torch) != 0;
         _character.Animate(dt, new Vector3(s.Vx, s.Vy, s.Vz), (s.Flags & PlayerFlags.Flying) != 0, holdFacing: true);
+        return guessed;
     }
 }

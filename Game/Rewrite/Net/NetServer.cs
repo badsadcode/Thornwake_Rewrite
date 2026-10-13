@@ -51,6 +51,9 @@ public sealed class NetServer
         _world = world; _send = send; _version = version;
     }
 
+    /// <summary>Notable things the server decided (digs applied or refused…), for the network log.</summary>
+    public Action<string>? Log { get; set; }
+
     public int PlayerCount => _players.Count(p => p.Value.Welcomed);
     public IEnumerable<string> PlayerNames => _players.Values.Where(p => p.Welcomed).Select(p => p.Name);
 
@@ -90,11 +93,13 @@ public sealed class NetServer
             case Msg.Dig when player.Welcomed && _world.Edits != null:
             {
                 var dig = r.ReadDig();
-                // Checks: a sane brush, and digging near where the player stands (no reaching across the world).
-                if (dig.Radius is <= 0 or > 8 || dig.Strength is <= 0 or > 2 || !player.HasState) break;
+                // Checks: a sane brush, and digging near where the player stands (no reaching across the world). (A dig can
+                // arrive before the player's first position — reliable and unreliable messages travel separately.)
+                if (dig.Radius is <= 0 or > 8 || dig.Strength is <= 0 or > 2) { Log?.Invoke(FormattableString.Invariant($"dig from {player.Name} refused: brush {dig.Radius:0.##} m, strength {dig.Strength:0.##}")); break; }
                 double dx = dig.X - player.State.X, dz = dig.Z - player.State.Z;
-                if (dx * dx + dz * dz > 420 * 420) break;
+                if (player.HasState && dx * dx + dz * dz > 420 * 420) { Log?.Invoke(FormattableString.Invariant($"dig from {player.Name} refused: {Math.Sqrt(dx * dx + dz * dz):0} m from them")); break; }
                 var (volume, hardness) = _world.Dig(dig);
+                Log?.Invoke(FormattableString.Invariant($"dig from {player.Name} at {dig.X:0.0}, {dig.Z:0.0}: {volume:0.###} m³ moved"));
                 _send(peer, NetMessages.Build(Msg.DigDone, w => { w.Write(volume); w.Write(hardness); }), true);
                 SendChanges(); // at once: the digger sees the hole without waiting for the next tick
                 break;
@@ -113,7 +118,7 @@ public sealed class NetServer
         if ((_chunkTimer -= dt) <= 0) { _chunkTimer = .05; SendChanges(); }
         if ((_stateTimer -= dt) <= 0)
         {
-            _stateTimer = .05;
+            _stateTimer = Math.Max(_stateTimer + .05, 0); // (20 a second on average, at most one a frame)
             var moving = _players.Where(p => p.Value.Welcomed && p.Value.HasState).ToList();
             if (moving.Count > 1)
                 Broadcast(NetMessages.Build(Msg.Players, w =>
@@ -129,6 +134,21 @@ public sealed class NetServer
     /// <summary>The host changed a world-affecting setting: everyone takes it.</summary>
     public void SettingsChanged() =>
         Broadcast(NetMessages.Build(Msg.Settings, w => w.WriteSettings(_world.WorldSettings())), true, except: HostPeer);
+
+    /// <summary>The host started another world: everyone builds it; the edits of the old one are gone.</summary>
+    public void WorldChanged(PlayerState hostPlace)
+    {
+        _world.Edits?.TakeChanged();
+        var spawn = (PlayerState?)hostPlace;
+        if (_players.TryGetValue(HostPeer, out var host)) host.State = hostPlace;
+        Broadcast(NetMessages.Build(Msg.World, w =>
+        {
+            w.Write(_world.WorldArgs);
+            w.Write(_world.WorldTypeJson ?? "");
+            w.Write(spawn != null);
+            if (spawn is { } s) w.Write(s);
+        }), true, except: HostPeer);
+    }
 
     /// <summary>The host's own player is named after the host (shown above them to the others).</summary>
     public void SetHostName(string name)

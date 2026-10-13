@@ -24,6 +24,7 @@ public enum Msg : byte
     Settings = 16,  // world-affecting settings (on joining and whenever the host changes one)
     DigDone = 17,   // the result of your dig (volume moved, hardness)
     Refused = 18,   // you cannot join (reason)
+    World = 19,     // the host started another world: build it (arguments, type, where the host is)
 }
 
 /// <summary>One player's movement as others need it to draw them (world coordinates, not the floating origin).</summary>
@@ -45,7 +46,7 @@ public readonly record struct DigRequest(BrushMode Mode, BrushShape Shape, doubl
 public static class NetMessages
 {
     /// <summary>Changes whenever the messages change: a client and host with different versions do not connect.</summary>
-    public const int Protocol = 1;
+    public const int Protocol = 2;
 
     public static byte[] Build(Msg kind, Action<BinaryWriter> body)
     {
