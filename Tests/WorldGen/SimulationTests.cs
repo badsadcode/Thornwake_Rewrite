@@ -23,6 +23,7 @@ internal static class SimulationTests
         T.Run("Water: a rain film on a bank does not redraw the river beside it", RainBank, filter);
         T.Run("Rivers: no river perched above the dry ground beside it (revision 13 confluences)", Perched, filter);
         T.Run("Edits: dig and raise the generated ground", Edits, filter);
+        T.Run("Edits: chunks copied to another world give the same ground (multiplayer)", EditsCopied, filter);
         T.Run("Edits: water follows a dug channel", DugChannel, filter);
         T.Run("Edits: a channel dug from a river fills from it", RiverFed, filter);
         T.Run("Edits: real river and lake feed dug ground", RealRiverFed, filter);
@@ -263,6 +264,34 @@ internal static class SimulationTests
         s.Edits.Clear();
         T.Near(s.Height(x, z), before, 0, "clearing edits restores the generated ground");
         T.Check(s.Sample(p.X, p.Z).Water == WaterKind.River, "and the river");
+    }
+
+    /// <summary>Multiplayer spike: the host sends changed chunks; a player applying them has the same ground, a late
+    /// joiner who receives every chunk too, and an emptied chunk removes the edit.</summary>
+    private static void EditsCopied()
+    {
+        var host = CoreTests.Sampler("mountainous", 42);
+        var f = host.Plan.Layout.Land[0];
+        double x = Math.Round(f.Center.X + 333), z = Math.Round(f.Center.Z + 211);
+        host.Edits.TakeChanged();
+        host.Edits.Apply(x, z, 3, -1.2);
+        host.Edits.Apply(x + 31, z, 2, .8); // across a chunk edge
+        var changed = host.Edits.TakeChanged();
+        T.Check(changed.Count >= 2, $"the edits touch {changed.Count} chunks, reported as changed");
+        T.Check(host.Edits.TakeChanged().Count == 0, "taken once");
+        var client = CoreTests.Sampler("mountainous", 42);
+        foreach (var (cx, cz) in changed) client.Edits.SetChunk(cx, cz, host.Edits.GetChunk(cx, cz));
+        double worst = 0;
+        for (double dx = -6; dx <= 40; dx += .37) for (double dz = -6; dz <= 6; dz += .41)
+            worst = Math.Max(worst, Math.Abs(host.Height(x + dx, z + dz) - client.Height(x + dx, z + dz)));
+        T.Near(worst, 0, 0, "the client's ground matches the host's");
+        T.Check(client.Edits.TakeChanged().Count == 0, "chunks from the host are not sent back");
+        var late = CoreTests.Sampler("mountainous", 42);
+        foreach (var (cx, cz) in host.Edits.ChunkKeys()) late.Edits.SetChunk(cx, cz, host.Edits.GetChunk(cx, cz));
+        T.Near(late.Height(x, z), host.Height(x, z), 0, "a late joiner gets the same ground");
+        host.Edits.Clear();
+        foreach (var (cx, cz) in host.Edits.TakeChanged()) client.Edits.SetChunk(cx, cz, host.Edits.GetChunk(cx, cz));
+        T.Check(client.Edits.ChunkCount == 0, "clearing on the host clears the client");
     }
 
     private static void DugChannel()

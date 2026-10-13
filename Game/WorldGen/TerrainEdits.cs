@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Thornwake.WorldGen;
 
@@ -13,6 +15,8 @@ public sealed class TerrainEdits
 {
     public const int ChunkVertices = 32;
     private readonly ConcurrentDictionary<(long, long), float[]> _chunks = new();
+    // Chunks changed since the last TakeChanged (multiplayer: the host sends them; GAMEPLAY_DESIGN.md §14.0).
+    private readonly ConcurrentDictionary<(long, long), byte> _changed = new();
     /// <summary>Incremented by every edit.</summary>
     public long Version { get; private set; }
     public int ChunkCount => _chunks.Count;
@@ -63,7 +67,7 @@ public sealed class TerrainEdits
                         next[k] = (float)Math.Clamp(next[k] + amount * falloff, -limit, limit);
                         changed = true;
                     }
-                if (changed) _chunks[(cx, cz)] = next;
+                if (changed) { _chunks[(cx, cz)] = next; _changed[(cx, cz)] = 0; }
             }
         Version++;
         return (x0, z0, x1, z1);
@@ -95,7 +99,7 @@ public sealed class TerrainEdits
                         next[k] = (float)value;
                         volume += next[k] - current;
                     }
-                if (next != null) _chunks[(cx, cz)] = next;
+                if (next != null) { _chunks[(cx, cz)] = next; _changed[(cx, cz)] = 0; }
             }
         Version++;
         return volume;
@@ -104,7 +108,39 @@ public sealed class TerrainEdits
     /// <summary>Raw offset at an edit vertex (1 m grid).</summary>
     public double At(long x, long z) => Vertex(x, z);
 
-    public void Clear() { _chunks.Clear(); Version++; }
+    public void Clear() { foreach (var key in _chunks.Keys) _changed[key] = 0; _chunks.Clear(); Version++; }
+
+    // ---- multiplayer: whole chunks (32 × 32 offsets, row by row) as they cross the network
+
+    /// <summary>The chunks changed since the last call (and forgets them): what the host sends to everyone.</summary>
+    public List<(long X, long Z)> TakeChanged()
+    {
+        var keys = _changed.Keys.ToList();
+        foreach (var key in keys) _changed.TryRemove(key, out _);
+        return keys;
+    }
+
+    /// <summary>A copy of a chunk's offsets, or null if it holds no edits (all zero).</summary>
+    public float[]? GetChunk(long x, long z) => _chunks.TryGetValue((x, z), out var chunk) ? (float[])chunk.Clone() : null;
+
+    /// <summary>Every chunk with edits (a player joining late receives them all).</summary>
+    public List<(long X, long Z)> ChunkKeys() => _chunks.Keys.ToList();
+
+    /// <summary>
+    /// Replace a chunk with offsets from the host (null or all zero: no edits there). Not counted as a local change.
+    /// Returns the touched world rectangle (vertex coordinates).
+    /// </summary>
+    public (double MinX, double MinZ, double MaxX, double MaxZ) SetChunk(long x, long z, float[]? offsets)
+    {
+        if (offsets == null || offsets.All(v => v == 0)) _chunks.TryRemove((x, z), out _);
+        else
+        {
+            if (offsets.Length != ChunkVertices * ChunkVertices) throw new ArgumentException("a chunk has 32 × 32 offsets", nameof(offsets));
+            _chunks[(x, z)] = (float[])offsets.Clone();
+        }
+        Version++;
+        return (x * ChunkVertices, z * ChunkVertices, x * ChunkVertices + ChunkVertices - 1, z * ChunkVertices + ChunkVertices - 1);
+    }
 
     private static long Chunk(long vertex) => (long)Math.Floor(vertex / (double)ChunkVertices);
 }
