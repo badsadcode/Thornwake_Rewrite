@@ -1401,6 +1401,16 @@ dropped when it arrived before the client's first position (reliable and unrelia
 accepted, and every dig decision is logged. Verified: the host's trench reaches a player joining 15 s later, the
 client's dig is applied by the host (5.6 m³) and both read the same ground height after it (19.327 m).
 
+## D103 — Multiplayer: the weather needs no syncing; Tom's router checked (2026-10-13)
+§14.0 done-criterion 3 (same time, weather and clouds). `WeatherField` is deterministic in seed, position and game
+hours (nothing stepped; storm cells carry ids shared by everyone), and the clock is the host's, so the weather follows
+by itself; the local easing toward it converges. Measured with `--net-probe` (simulated weather on, day 3, 15:00):
+host and client both cloud cover 0.586, no rain, no storm, wind from the west 0.984 / 0.985 (they stand 3 m apart);
+gusts differ only between moments sampled at different times (their clock is synced once a second). Nothing more is
+sent. Tom's network (for checkpoint 3): public address 83.175.178.135; the route's first hop after the router is a
+public address (84.116.254.65), so most likely no CGNAT; the router does not answer UPnP (off), so port 7777 must be
+forwarded by hand (steps in PLAYTEST_REWRITE.md, build 55). A later option: open the port by UPnP when hosting.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
