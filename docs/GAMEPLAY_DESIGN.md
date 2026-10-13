@@ -99,6 +99,30 @@ One kind of item, *written knowledge*, with several uses:
 * **Recipe books** (alchemy recipes a player discovered — knowledge to sell), **grimoires** (spells a player built),
   possibly **hand-drawn maps** of what a player explored.
 
+## 5a. Felling a tree (agreed with Tom, 2026-10-13)
+
+Felling should feel like an achievement and real work — a few satisfying steps, not deep, not tedious. Three acts:
+
+1. **Felling — you choose where it lands.** The first hits cut a **notch** on the side you stand; it grows visibly
+   with every hit (progress on the tree itself, no bar). The tree falls **toward the notch** — the wind still has a
+   say (Old Berta: "the wind decides where a tree lands") — so you notch the side you want it to fall, then finish from
+   behind. Near the end it **creaks and leans**, leaves drift down: step aside. A tree coming down on you hurts.
+2. **The fall — short and heavy.** It tips over its base, faster and faster (scripted, not rigid-body physics: a
+   whole tree with its crown tumbling stiffly looks wrong). On impact the crown **breaks up** — a burst of leaves and
+   twigs, dust, a thud, a small camera shake nearby — and leaves a heap of branches; the tree becomes a **bare trunk**
+   lying there (its own bark, no branches).
+3. **Processing — the work that pays.** The bare trunk is a **physical log**: it rolls down slopes and can be pushed
+   with effort (real physics only from here: a log, nothing stiff to hide). A few axe cuts split it into logs, each cut
+   visible on the trunk. Logs are heavy (how many one carries, rolling or dragging them home: later, with building).
+
+**Tree size sets the effort and the yield.** Hits to fell grow with the tree; the trunk's logs follow its real volume
+(length × girth: a young birch gives a couple, an old oak many) and the crown's branches its size. A better axe and the
+felling skill make it faster, never impossible (§2: skills are never a hard lock). Values in code and content are
+placeholders to tune.
+
+**Assets (Tom, later)**: Tom will make handmade tree assets; a guide to what each tree needs for this (the standing
+model and its LODs, the bare trunk log, the stump, cut faces) and what can be generated comes when he starts.
+
 ## 6. Survival, the world's memory, crafting quality
 
 * **Needs** as in §2; survival feeds everything else: hungry, cold, wet or exhausted means less stamina and slower
