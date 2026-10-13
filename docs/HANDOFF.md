@@ -30,8 +30,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
 ## Next
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
-  launcher's Multiplayer page and the network log. Next: checkpoint 3 — Tom checks CGNAT and forwards UDP 7777, then
-  an internet test with a friend in France (ask for both players' F9 dump and net-…log). Still open: same weather
+  launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
+  through playit.gg, Poland ↔ Brazil, ~320 ms, ~2 KB/s per player (D105). Still open: same weather
   check (§14.0 done-criterion 3), sharing poured water / springs (Tom to decide).
 * **Parked (2026-10-13) for the multiplayer spike** (`docs/GAMEPLAY_DESIGN.md` §14.0, branch `multiplayer-spike`): the
   cloud drafts of D97 stay behind their settings, off by default — *Cloud caps: dense* works (waiting for Tom's pick),
