@@ -36,6 +36,16 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   other players and a go-to list, Esc → Host this world, join-failure crash and send spam fixed — in **build 56**
   (`404a9c5`, `dist/Preview-56`; host and guests must switch builds together, protocol 3). Still open: same weather
   check (§14.0 done-criterion 3), sharing poured water / springs (Tom to decide).
+* **Step 1 in progress (2026-10-13, D108–D110)**: done and tested headless: felled trees as a world change
+  (`ObjectRemovals`, `Vegetation.TreeAt/TreesNear`, trees bit-identical), the engine-free gameplay core in
+  `Game/Gameplay` (Catalog, Inventory, Needs, PlacedObjects, GameRules; content `Content/gameplay_*.json`; tests
+  `GameplayTests`). **Next**: wire it into the game — `WorldLab.Gameplay.cs` (GameRules on the host / single player with
+  an `IWorldQuery` from `Vegetation.TreeAt` + `_sampler.Removals` + the clock; E to chop the tree in front (hold, progress),
+  I for inventory/crafting, needs line in the HUD, campfire view reusing `Torch`), and the network: new messages Action
+  (client → host), Result, Inventory (to its owner), Objects and Removals (to all, and all of them in Welcome like the
+  edit chunks); bump `NetMessages.Protocol`; invalidate tiles around a felled tree (`_streamer.Invalidate`). Then log
+  D110 (gameplay core) in DECISIONS (the commits cite it, the entry is not written yet). Also from Tom: storms to get
+  more atmosphere later (D109).
 * **Parked (2026-10-13) for the multiplayer spike** (`docs/GAMEPLAY_DESIGN.md` §14.0, branch `multiplayer-spike`): the
   cloud drafts of D97 stay behind their settings, off by default — *Cloud caps: dense* works (waiting for Tom's pick),
   *Lens clouds: stacked* reads as hard blades from below (rework: softer, thicker lens shapes), *Cloud turbulence* not
