@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 59 — felling a tree in three acts
+**In multiplayer everyone needs build 59** (build 58 and 59 do not connect).
+* **Notch and fall side:** your first axe hits cut a notch on the side you stand; the tree will fall **toward the
+  notch** (the wind has some say). When the notch is done you are told to finish from behind — near the end it creaks,
+  leans and drops leaves. Stay out of where it lands: a tree coming down on you hurts.
+* **The fall:** it comes down faster and faster; on impact the crown breaks up (leaves, twigs, dust, the camera shakes
+  if you are close) and leaves a heap of branches (E picks them up).
+* **The trunk:** a bare log is left lying there. It rolls down slopes, you can push it by walking into it, and a log
+  rolling into you fast hurts. Cut it up with the axe (each cut shows as a ring); it splits into logs (E). Bigger trees
+  take more hits and give more logs.
+
 ## New in build 58 — chopping with hits, a falling tree, log piles; torch in the left hand
 **In multiplayer everyone needs build 58** (build 57 and 58 do not connect).
 * **Chopping** (axe: 6, hold the left mouse on a tree in front of you): every stroke that lands is a hit, wood chips
