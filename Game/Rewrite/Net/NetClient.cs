@@ -26,6 +26,8 @@ public interface IClientGame
     void ApplyObjects(BinaryReader r);
     /// <summary>Generated objects taken out or put back (felled trees).</summary>
     void ApplyRemovals(IReadOnlyList<(int Layer, long X, long Z, double? RemovedAt)> removals);
+    /// <summary>A tree was hit (shake it) or felled (it falls that way).</summary>
+    void TreeHit(in Thornwake.Gameplay.TreeEvent e);
     /// <summary>This player's state now (null while there is none yet: the world is still loading).</summary>
     PlayerState? LocalState();
 }
@@ -123,6 +125,10 @@ public sealed class NetClient
             case Msg.Inventory: _game.ApplyInventory(r); break;
             case Msg.Objects: _game.ApplyObjects(r); break;
             case Msg.Removals: _game.ApplyRemovals(r.ReadRemovals()); break;
+            case Msg.TreeHits:
+                for (int n = r.ReadInt32(); n > 0; n--)
+                    _game.TreeHit(new Thornwake.Gameplay.TreeEvent(r.ReadInt64(), r.ReadInt64(), r.ReadInt16(), r.ReadBoolean(), r.ReadSingle(), r.ReadSingle()));
+                break;
         }
     }
 }

@@ -20,6 +20,7 @@ public partial class WorldLab
     private Vegetation.LatticeTree _gtTree;
     private int _gtLogs;
     private string? _gtShot;
+    private bool _gtMoved;
 
     private void GameplayTest(double delta)
     {
@@ -36,6 +37,8 @@ public partial class WorldLab
         {
             case 0:
             {
+                // (--at=x,z: start from there, e.g. a forest)
+                if (_shotAt is { } start && !_gtMoved) { _gtMoved = true; Teleport(start.X, start.Z); _gtTimer = 3; return; }
                 var trees = Vegetation.TreesNear(_sampler, PlayerX, PlayerZ, 120, DetailConfig.For(_sampler));
                 if (trees.Count == 0) trees = Vegetation.TreesNear(_sampler, PlayerX, PlayerZ, 600, DetailConfig.For(_sampler));
                 if (trees.Count == 0) { Fail("no tree within 600 m"); return; }
@@ -47,16 +50,47 @@ public partial class WorldLab
             case 1:
                 Check(_myInv.HasTag("chopping"), "the start kit arrived (an axe in the pack)");
                 if (!_axeHeld) ToggleAxe();
-                _gtLogs = _myInv.Count("log");
+                _gtLogs = 0;
+                Go(10, 0); break;
+            case 10: // one hit per stroke (D111) until it falls
+                if (_sampler.Removals.Contains(ObjectRemovals.Trees, _gtTree.Cx, _gtTree.Cz))
+                {
+                    Check(_gtLogs == GameRules.TreeHits(_gtTree.Scale), $"felled after {_gtLogs} hits ({_status})");
+                    Check(_fallingTrees.TryGetValue((_gtTree.Cx, _gtTree.Cz), out var f) && f.Falling, "it is falling");
+                    _yaw = Mathf.Atan2(-(float)(_gtTree.X - PlayerX), -(float)(_gtTree.Z - PlayerZ)) + 1.2f; _pitch = -.15f; _zoom = 9;
+                    Go(11, 1.1); break;
+                }
+                // (every hit so far came back as a shake: alone at once, joined a round trip later)
+                if (_gtLogs > 0) Check(_fallingTrees.TryGetValue((_gtTree.Cx, _gtTree.Cz), out var shaking) && shaking.Hits == _gtLogs, $"hit {_gtLogs}: it shook");
                 Act(new ActionRequest(ActionKind.Chop, _gtTree.Cx, _gtTree.Cz, "", 0, 0, 0, 0));
-                Next(1.5); break;
-            case 2:
-                Check(_sampler.Removals.Contains(ObjectRemovals.Trees, _gtTree.Cx, _gtTree.Cz), "the tree is felled here");
-                Check(_myInv.Count("log") > _gtLogs, $"logs in the pack: {_myInv.Count("log")}, branches {_myInv.Count("branch")} (status: {_status})");
+                _gtLogs++;
+                if (_gtLogs == 3 && _gtShot != null) { _yaw = Mathf.Atan2(-(float)(_gtTree.X - PlayerX), -(float)(_gtTree.Z - PlayerZ)) + 2.2f; _pitch = .05f; _zoom = 9; }
+                if (_gtLogs == 5 && _gtShot != null) Screenshot(_gtShot.Replace(".png", "-standing.png"));
+                Go(10, .45); break;
+            case 11:
+                if (_gtShot != null) Screenshot(_gtShot.Replace(".png", "-fall.png"));
+                Go(12, 8); break;
+            case 12:
+            {
                 Check(_stumps.ContainsKey((_gtTree.Cx, _gtTree.Cz)), "a stump stands there");
                 Check(!Vegetation.TreesNear(_sampler, _gtTree.X, _gtTree.Z, .5, DetailConfig.For(_sampler)).Any(), "the tree is gone from the forest");
+                Check(!_fallingTrees.ContainsKey((_gtTree.Cx, _gtTree.Cz)), "the fallen trunk has sunk away");
+                var pile = _seenObjects.All.Where(o => o.Kind == "log_pile").OrderBy(o => (o.X - _gtTree.X) * (o.X - _gtTree.X) + (o.Z - _gtTree.Z) * (o.Z - _gtTree.Z)).FirstOrDefault();
+                Check(pile != null && _objectViews.TryGetValue(pile.Id, out var v) && v.Visible, $"its logs lie where it fell ({(pile == null ? "none" : $"{Math.Sqrt((pile.X - _gtTree.X) * (pile.X - _gtTree.X) + (pile.Z - _gtTree.Z) * (pile.Z - _gtTree.Z)):0.0} m from the stump")})");
+                if (_gtShot != null) Screenshot(_gtShot.Replace(".png", "-logs.png"));
+                if (pile != null) { Teleport(pile.X - 1, pile.Z - 1); }
+                Go(13, 2.5); break;
+            }
+            case 13:
+            {
+                var pile = _seenObjects.All.Where(o => o.Kind == "log_pile").OrderBy(o => (o.X - PlayerX) * (o.X - PlayerX) + (o.Z - PlayerZ) * (o.Z - PlayerZ)).FirstOrDefault();
+                if (pile != null) Interact(); // E
+                Go(14, 1.5); break;
+            }
+            case 14:
+                Check(_myInv.Count("log") > 0 && _myInv.Count("branch") > 0, $"picked up: {_myInv.Count("log")} logs, {_myInv.Count("branch")} branches ({_status})");
                 Act(new ActionRequest(ActionKind.Make, 0, 0, "campfire", PlayerX + 2.2, _sampler.Height(PlayerX + 2.2, PlayerZ + 1.5), PlayerZ + 1.5, 0));
-                Next(1.5); break;
+                Go(3, 1.5); break;
             case 3:
             {
                 var fire = _seenObjects.All.Where(o => o.Kind == "campfire").OrderBy(o => (o.X - PlayerX) * (o.X - PlayerX) + (o.Z - PlayerZ) * (o.Z - PlayerZ)).FirstOrDefault();
@@ -90,6 +124,7 @@ public partial class WorldLab
         }
 
         void Next(double wait) { _gtStage++; _gtTimer = wait; }
+        void Go(int stage, double wait) { _gtStage = stage; _gtTimer = wait; }
         void Print(string s) { GD.Print("GAMEPLAY " + s); _net?.Stats.Event("gameplay test: " + s); }
         void Check(bool ok, string what) { GD.Print((ok ? "GAMEPLAY ok: " : "GAMEPLAY_FAIL: ") + what); _net?.Stats.Event("gameplay test: " + (ok ? "ok " : "FAIL ") + what); }
         void Fail(string what) { GD.Print("GAMEPLAY_FAIL: " + what); _gtStage = -2; }

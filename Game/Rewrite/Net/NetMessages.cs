@@ -30,6 +30,7 @@ public enum Msg : byte
     Inventory = 21, // your inventory (after every change)
     Objects = 22,   // placed objects that changed (campfires); all of them for a player joining late
     Removals = 23,  // generated objects taken out or put back (felled trees); all of them for a player joining late
+    TreeHits = 24,  // trees hit (shake) or felled (fall, and which way)
 }
 
 /// <summary>One player's movement as others need it to draw them (world coordinates, not the floating origin).</summary>
@@ -39,10 +40,10 @@ public readonly record struct PlayerState(double X, double Y, double Z, float Fa
 public enum PlayerFlags : byte { None = 0, Flying = 1, Torch = 2, Swimming = 4, Axe = 8, Chopping = 16 }
 
 /// <summary>Step 1's actions (D110): what a player asks the host to do.</summary>
-public enum ActionKind : byte { Chop = 1, Make = 2, Fuel = 3, Eat = 4 }
+public enum ActionKind : byte { Chop = 1, Make = 2, Fuel = 3, Eat = 4, Gather = 5 }
 
-/// <summary>An action request: chop the tree of lattice cell (A, B); make recipe Id (placing at X, Y, Z facing Yaw);
-/// fuel object A; eat item Id.</summary>
+/// <summary>An action request: hit the tree of lattice cell (A, B); make recipe Id (placing at X, Y, Z facing Yaw);
+/// fuel object A; eat item Id; gather what lies in object A.</summary>
 public readonly record struct ActionRequest(ActionKind Kind, long A, long B, string Id, double X, double Y, double Z, float Yaw);
 
 /// <summary>
@@ -59,7 +60,7 @@ public readonly record struct DigRequest(BrushMode Mode, BrushShape Shape, doubl
 public static class NetMessages
 {
     /// <summary>Changes whenever the messages change: a client and host with different versions do not connect.</summary>
-    public const int Protocol = 4;
+    public const int Protocol = 5;
 
     public static byte[] Build(Msg kind, Action<BinaryWriter> body)
     {

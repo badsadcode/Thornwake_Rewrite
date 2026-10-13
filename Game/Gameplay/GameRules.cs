@@ -14,7 +14,14 @@ public interface IWorldQuery
     ObjectRemovals Removals { get; }
     /// <summary>Game time in hours since the world began (time stamps for regrowth).</summary>
     double Hours { get; }
+    /// <summary>The wind where the trees are (direction it blows toward, speed m/s): it decides where a tree falls.</summary>
+    (double X, double Z, double Speed) Wind { get; }
+    /// <summary>Ground height (m) at a point (where a felled tree's logs lie).</summary>
+    double Ground(double x, double z);
 }
+
+/// <summary>A tree was hit (shake it) or felled (it falls toward Dir); everyone draws it.</summary>
+public readonly record struct TreeEvent(long Cx, long Cz, int HitsLeft, bool Felled, double DirX, double DirZ);
 
 /// <summary>An action's outcome, told to the player who asked.</summary>
 public readonly record struct ActionResult(bool Ok, string Message, double Food = 0)
@@ -37,6 +44,16 @@ public sealed class GameRules
     private readonly IWorldQuery _world;
     private readonly Dictionary<int, Inventory> _inventories = new();
     private readonly HashSet<int> _inventoryChanged = new();
+    private readonly Dictionary<(long, long), int> _treeHits = new();
+    private readonly List<TreeEvent> _treeEvents = new();
+
+    /// <summary>The tree hits and falls since the last call (the host sends them to everyone).</summary>
+    public List<TreeEvent> TakeTreeEvents() { var l = _treeEvents.ToList(); _treeEvents.Clear(); return l; }
+
+    /// <summary>Hits a tree takes: 3 + 4 × its size (a small birch 6, a big oak 8).</summary>
+    public static int TreeHits(double scale) => 3 + (int)Math.Round(4 * scale);
+    /// <summary>How tall a tree of this size is, roughly (where its logs lie after it falls).</summary>
+    public static double TreeHeight(double scale) => 9 * scale;
 
     public GameRules(Catalog catalog, IWorldQuery world) { Catalog = catalog; _world = world; }
 
@@ -57,8 +74,12 @@ public sealed class GameRules
     /// <summary>Send this player's inventory again with the next changes (they were not there to receive it).</summary>
     public void InventoryChanged(int player) => _inventoryChanged.Add(player);
 
-    /// <summary>Fell the tree of lattice cell (cx, cz): an axe (tag <c>chopping</c>) in the pack, within reach; logs and
-    /// branches by the tree's size.</summary>
+    /// <summary>
+    /// One axe hit on the tree of lattice cell (cx, cz) (Tom, Valheim-like: impacts, not a timer; D111): an axe (tag
+    /// <c>chopping</c>) in the pack, within reach. After <see cref="TreeHits"/> hits it falls — away from the chopper,
+    /// pushed by the wind ("the wind decides where a tree lands", Old Berta) — and its wood lies where the trunk came down
+    /// as a log pile to pick up (E).
+    /// </summary>
     public ActionResult Chop(int player, long cx, long cz, double px, double pz)
     {
         var inv = Inventory(player);
@@ -66,11 +87,41 @@ public sealed class GameRules
         if (_world.Removals.Contains(ObjectRemovals.Trees, cx, cz)) return ActionResult.Fail("That tree is already down.");
         if (_world.Tree(cx, cz) is not { } tree) return ActionResult.Fail("There is no tree there.");
         if (Dist(px, pz, tree.X, tree.Z) > ChopReach + 1) return ActionResult.Fail("Too far from the tree.");
+        int left = (_treeHits.TryGetValue((cx, cz), out int done) ? TreeHits(tree.Scale) - done : TreeHits(tree.Scale)) - 1;
+        if (left > 0)
+        {
+            _treeHits[(cx, cz)] = done + 1;
+            _treeEvents.Add(new TreeEvent(cx, cz, left, false, 0, 0));
+            return new(true, "");
+        }
+        _treeHits.Remove((cx, cz));
         _world.Removals.Remove(ObjectRemovals.Trees, cx, cz, _world.Hours);
+        // Away from the chopper, and the wind's push (stronger wind, more say).
+        double ax = tree.X - px, az = tree.Z - pz, al = Math.Max(Math.Sqrt(ax * ax + az * az), 1e-6);
+        var wind = _world.Wind;
+        double k = Math.Clamp(wind.Speed / 12, 0, .8);
+        double dx = ax / al * (1 - k) + wind.X * k, dz = az / al * (1 - k) + wind.Z * k, dl = Math.Max(Math.Sqrt(dx * dx + dz * dz), 1e-6);
+        dx /= dl; dz /= dl;
+        _treeEvents.Add(new TreeEvent(cx, cz, 0, true, dx, dz));
+        // The wood where the middle of the trunk comes down.
+        double reach = TreeHeight(tree.Scale) * .45, lx = tree.X + dx * reach, lz = tree.Z + dz * reach;
+        var pile = Objects.Add("log_pile", lx, _world.Ground(lx, lz), lz, (float)Math.Atan2(dx, dz), 0);
         int logs = 1 + (int)Math.Round(tree.Scale * 2), branches = 3 + (int)Math.Round(tree.Scale * 3);
-        inv.Add("log", logs); inv.Add("branch", branches);
+        pile.Contents.Add(("log", logs)); pile.Contents.Add(("branch", branches));
+        return new(true, $"Timber! {logs} logs and {branches} branches lie where it fell (E picks them up).");
+    }
+
+    /// <summary>Pick up what lies in a placed object within reach (a log pile): into the pack, the object goes.</summary>
+    public ActionResult Gather(int player, long objectId, double px, double pz)
+    {
+        if (Objects.Get(objectId) is not { Contents.Count: > 0 } o) return ActionResult.Fail("Nothing to pick up there.");
+        if (Dist(px, pz, o.X, o.Z) > UseReach + 1.5) return ActionResult.Fail("Too far away.");
+        var inv = Inventory(player);
+        foreach (var (item, count) in o.Contents) inv.Add(item, count);
+        string what = string.Join(", ", o.Contents.Select(c => $"{c.Count} × {Catalog.Item(c.Item).Name.ToLowerInvariant()}"));
+        Objects.Remove(o.Id);
         _inventoryChanged.Add(player);
-        return new(true, $"Timber! {logs} logs and {branches} branches.");
+        return new(true, $"Picked up {what}.");
     }
 
     /// <summary>Make a recipe: its tools in the pack, its inputs, a working station within reach; items go into the

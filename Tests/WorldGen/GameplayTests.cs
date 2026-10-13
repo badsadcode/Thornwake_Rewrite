@@ -54,6 +54,8 @@ internal static class GameplayTests
         public ObjectRemovals Removals { get; } = new();
         public double Hours { get; set; } = 10;
         public (double X, double Z, double Scale)? Tree(long cx, long cz) => cx == 3 && cz == 4 ? (21.5, 29.0, 1.1) : null;
+        public (double X, double Z, double Speed) Wind { get; set; } = (1, 0, 0);
+        public double Ground(double x, double z) => 5;
     }
 
     private static void Slice()
@@ -67,12 +69,32 @@ internal static class GameplayTests
         T.Check(!rules.Chop(me, 3, 4, 40, 40).Ok, "too far from the tree");
         T.Check(!rules.Chop(me, 5, 5, 21, 29).Ok, "no tree there");
         T.Check(rules.Inventory(other).HasTag("chopping"), "every new character has an axe");
+        // Hits (D111): the tree stands until the last one; every hit is an event for everyone (the tree shakes).
+        int hits = GameRules.TreeHits(1.1);
+        for (int i = 1; i < hits; i++) T.Check(rules.Chop(me, 3, 4, 21, 28).Ok && !world.Removals.Contains(ObjectRemovals.Trees, 3, 4), $"hit {i} of {hits}: standing");
+        var events = rules.TakeTreeEvents();
+        T.Check(events.Count == hits - 1 && events.All(e => !e.Felled) && events[^1].HitsLeft == 1, $"{events.Count} hit events, the last with one hit left");
         var chop = rules.Chop(me, 3, 4, 21, 28);
         T.Check(chop.Ok && world.Removals.Contains(ObjectRemovals.Trees, 3, 4), "felled: " + chop.Message);
         T.Check(world.Removals.Get(ObjectRemovals.Trees, 3, 4) == 10, "with the time it fell");
+        var fall = rules.TakeTreeEvents().Single();
+        T.Check(fall.Felled && Math.Abs(fall.DirX - .5 / Math.Sqrt(1.25)) < 1e-6 && Math.Abs(fall.DirZ - 1 / Math.Sqrt(1.25)) < 1e-6,
+            $"it falls straight away from me (no wind): {fall.DirX:0.00}, {fall.DirZ:0.00}");
         T.Check(!rules.Chop(me, 3, 4, 21, 28).Ok, "only once");
-        T.Check(inv.Count("log") >= 2 && inv.Count("branch") >= 4, $"logs {inv.Count("log")}, branches {inv.Count("branch")}");
+        var pile = rules.Objects.All.Single(o => o.Kind == "log_pile");
+        T.Check(pile.Z > 29 && pile.Y == 5 && pile.Contents.Any(c => c.Item == "log"), $"its wood lies where it fell ({pile.X:0.0}, {pile.Z:0.0})");
+        T.Check(inv.Count("log") == 0, "nothing in the pack yet");
+        T.Check(!rules.Gather(me, pile.Id, 21, 10).Ok, "too far to pick it up");
+        var gather = rules.Gather(me, pile.Id, pile.X, pile.Z - 2);
+        T.Check(gather.Ok && inv.Count("log") >= 2 && inv.Count("branch") >= 4 && rules.Objects.Get(pile.Id) == null, $"picked up: {gather.Message}");
         T.Check(rules.TakeInventoryChanges().Contains(me), "my inventory is sent to me");
+        rules.Objects.TakeChanged();
+        // A strong wind has its say: a tree chopped from the south falls east in a 10 m/s west wind.
+        var windy = new World { Wind = (1, 0, 10) };
+        var rules2 = new GameRules(c, windy);
+        for (int i = 0; i < hits; i++) rules2.Chop(me, 3, 4, 21.5, 28);
+        var windFall = rules2.TakeTreeEvents().Last();
+        T.Check(windFall.Felled && windFall.DirX > .5, $"in the wind it falls downwind: {windFall.DirX:0.00}, {windFall.DirZ:0.00}");
 
         T.Check(!rules.Make(me, "cook_fish", 21, 28, 0, 0, 0, 0).Ok, "no fish, no fire: cannot cook");
         T.Check(!rules.Make(me, "campfire", 21, 28, 40, 0, 40, 0).Ok, "cannot build it out of reach");

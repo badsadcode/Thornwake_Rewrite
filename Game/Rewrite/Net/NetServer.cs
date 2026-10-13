@@ -124,10 +124,11 @@ public sealed class NetServer
                         ActionKind.Make => rules.Make(id, a.Id, at.X, at.Z, a.X, a.Y, a.Z, a.Yaw),
                         ActionKind.Fuel => rules.Fuel(id, a.A, at.X, at.Z),
                         ActionKind.Eat => rules.Eat(id, a.Id),
+                        ActionKind.Gather => rules.Gather(id, a.A, at.X, at.Z),
                         _ => ActionResult.Fail("Unknown action."),
                     };
                 }
-                if (peer != HostPeer || !result.Ok) Log?.Invoke($"{a.Kind} from {player.Name}: {result.Message}");
+                if ((peer != HostPeer || !result.Ok) && result.Message.Length > 0) Log?.Invoke($"{a.Kind} from {player.Name}: {result.Message}");
                 _send(peer, NetMessages.Build(Msg.Result, w => { w.Write((byte)a.Kind); w.Write(result.Ok); w.Write(result.Message); w.Write(result.Food); }), true);
                 SendChanges();
                 break;
@@ -231,6 +232,12 @@ public sealed class NetServer
             Broadcast(NetMessages.Build(Msg.Removals, w => w.WriteRemovals(removals, keys)), true);
         if (_world.Rules is { } rules)
         {
+            if (rules.TakeTreeEvents() is { Count: > 0 } hits)
+                Broadcast(NetMessages.Build(Msg.TreeHits, w =>
+                {
+                    w.Write(hits.Count);
+                    foreach (var e in hits) { w.Write(e.Cx); w.Write(e.Cz); w.Write((short)e.HitsLeft); w.Write(e.Felled); w.Write((float)e.DirX); w.Write((float)e.DirZ); }
+                }), true);
             if (rules.Objects.TakeChanged() is { Count: > 0 } ids)
                 Broadcast(NetMessages.Build(Msg.Objects, w => { w.Write(ids.Count); foreach (long id in ids) rules.Objects.Write(w, id); }), true);
             foreach (int owner in rules.TakeInventoryChanges())

@@ -17,6 +17,8 @@ public sealed class PlacedObject
     /// <summary>Minutes of fuel left (fires).</summary>
     public double Fuel { get; set; }
     public bool Lit => Fuel > 0;
+    /// <summary>Items lying in it to pick up (a log pile left by a felled tree).</summary>
+    public List<(string Item, int Count)> Contents { get; } = new();
 }
 
 /// <summary>
@@ -69,6 +71,8 @@ public sealed class PlacedObjects
         if (_all.TryGetValue(id, out var o))
         {
             w.Write(o.Kind); w.Write(o.X); w.Write(o.Y); w.Write(o.Z); w.Write(o.Yaw); w.Write(o.Fuel);
+            w.Write((byte)o.Contents.Count);
+            foreach (var (item, count) in o.Contents) { w.Write(item); w.Write(count); }
         }
         else w.Write("");
     }
@@ -81,6 +85,7 @@ public sealed class PlacedObjects
         if (kind.Length == 0) { _all.Remove(id); return (id, null); }
         var o = new PlacedObject { Id = id, Kind = kind, X = r.ReadDouble(), Y = r.ReadDouble(), Z = r.ReadDouble(), Yaw = r.ReadSingle() };
         o.Fuel = r.ReadDouble();
+        for (int n = r.ReadByte(); n > 0; n--) o.Contents.Add((r.ReadString(), r.ReadInt32()));
         _all[id] = o;
         _next = Math.Max(_next, id + 1);
         return (id, o);

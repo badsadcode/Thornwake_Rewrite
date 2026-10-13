@@ -1534,6 +1534,28 @@ that later").
   eat, warmth) and a late joiner receiving the felled tree. Placeholders: the campfire's flames are the original
   game's static cones (a flickering light), the axe and stump its models; no saving yet (the rewrite has no saves).
 
+## D111 — Chopping like Valheim: hits, a shaking tree, a fall, a log pile; torch and axe in their own hands (2026-10-13)
+Tom (build 57): chopping should feel impactful, as in Valheim — the tree shakes, falls with physics, and turns into
+logs; and the torch and the axe ended up in one hand, the torch in different hands in first and third person.
+* **Hits, not a timer**: each axe stroke that lands (the swing's impact moment, ~1.4 a second) is one `Chop` action;
+  the host counts them — a tree takes 3 + 4 × its size hits (≈ 6–8) — and sends every hit to everyone (`TreeHits`).
+  Wood chips fly from the trunk at each impact.
+* **Shake and fall**: on the first swing or hit the tree is drawn on its own (`TreeField.Proxy`: the detailed model's
+  parts as one-instance batches, the forest's own meshes and materials) and left out of the forest's batches
+  (`TerrainSampler.Hidden`, local, never sent). Each hit shakes its crown (a quick, dying sway). On the last hit the host
+  picks the direction — away from the chopper, the wind pushing it (its share grows with the wind, up to 80 % at
+  12 m/s: Old Berta's "the wind decides where a tree lands") — and every PC tips it over its base as a trunk pivoting
+  under gravity (θ'' = 3g / 2L · sin θ, a nudge at the start), stopped by the ground ahead (higher ground: sooner), with
+  a small bounce; it lies 2.5 s and sinks away.
+* **Logs**: its wood then lies where the middle of the trunk came down as a **log pile** (a placed object with
+  contents), picked up with **E** (Tom's gathering key) — the same for everyone and for late joiners. Valheim's next
+  step (one big log you chop into pieces) is left for Tom to decide.
+* **Hands**: the original model names its limbs from the viewer's side ("RightArm" is Alden's left). The torch is now
+  always in his left hand, the axe in his right, and the first-person torch sits on the left too.
+* Not done: the falling tree passes through other trees; the fallen trunk has no collision. Protocol 5. Checked by
+  `--gameplay-test` alone and as a joined guest (20 checks: hits come back as shakes, the fall, the stump, the pile,
+  picking it up, the campfire, eating).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

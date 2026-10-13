@@ -119,7 +119,7 @@ public static class Vegetation
             {
                 var (x, z, _) = Candidate(cx, cz, cell, seed);
                 if (x < x0 || z < z0 || x >= x0 + size || z >= z0 + size) continue;
-                if (removals.Contains(ObjectRemovals.Trees, cx, cz)) continue; // felled
+                if (removals.Contains(ObjectRemovals.Trees, cx, cz) || sampler.Hidden.Contains(ObjectRemovals.Trees, cx, cz)) continue; // felled, or falling
                 if (TreeAt(sampler, cx, cz, config) is not { } t) continue;
                 var basis = new Basis(Vector3.Up, t.Yaw).Scaled(Vector3.One * t.Scale);
                 trees.Add(new TreeInstance(t.Species, new Transform3D(basis, new Vector3((float)(x - x0), (float)t.Y, (float)(z - z0)))));

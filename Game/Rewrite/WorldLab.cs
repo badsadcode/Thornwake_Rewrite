@@ -1283,7 +1283,8 @@ public partial class WorldLab : Node3D
         _arm.AddExcludedObject(_player.GetRid());
         _camera = new Camera3D { Current = true, Fov = GameSettings.Fov.F, Near = .1f, Far = 90000 };
         _arm.AddChild(_camera);
-        _fpHold = new Node3D { Name = "FirstPersonHold", Position = new Vector3(.36f, -.66f, -.8f), Rotation = new Vector3(-.25f, 0, -.12f) };
+        // (in the left hand, as in third person — Tom)
+        _fpHold = new Node3D { Name = "FirstPersonHold", Position = new Vector3(-.36f, -.66f, -.8f), Rotation = new Vector3(-.25f, 0, .12f) };
         _camera.AddChild(_fpHold);
         _pivot.AddChild(_arm);
         AddChild(_pivot);

@@ -202,6 +202,25 @@ public sealed partial class TreeField : Node3D
             }
     }
 
+    /// <summary>
+    /// One tree on its own (D111: a tree being chopped shakes and falls): the detailed model's parts as one-instance
+    /// batches — the same meshes and materials as the forest, role 0 (no hand-over), casting shadows. The node's origin is
+    /// the tree's base; scale and turn as the lattice gives them.
+    /// </summary>
+    public Node3D Proxy(int species, float scale, float yaw)
+    {
+        var root = new Node3D { Name = "TreeProxy", Rotation = new Vector3(0, yaw, 0), Scale = Vector3.One * scale };
+        if (!_parts.TryGetValue((species, 1), out var parts)) parts = _catalog.PartsOf(species, 1).ToArray();
+        foreach (var (mesh, transform) in parts)
+        {
+            var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = mesh, InstanceCount = 1 };
+            multi.SetInstanceTransform(0, transform);
+            multi.SetInstanceCustomData(0, new Color(0, 0, 0, 0));
+            root.AddChild(new MultiMeshInstance3D { Multimesh = multi, Layers = RenderLayers.TreesNear, CastShadow = GeometryInstance3D.ShadowCastingSetting.On });
+        }
+        return root;
+    }
+
     /// <summary>Worker thread: the cell's trees and their instance buffers.</summary>
     private CellData Build(TerrainSampler sampler, DetailConfig config, TileKey key, bool near)
     {

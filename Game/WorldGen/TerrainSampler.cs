@@ -28,6 +28,9 @@ public sealed class TerrainSampler
     public TerrainEdits Edits { get; } = new();
     /// <summary>Generated objects taken out of the world (felled trees), by their lattice cell.</summary>
     public ObjectRemovals Removals { get; } = new();
+    /// <summary>Generated objects this PC draws itself for a while (a tree shaking and falling): left out of the batches.
+    /// Local only, never sent.</summary>
+    public ObjectRemovals Hidden { get; } = new();
     private readonly WorldProfile _p;
     private readonly TerrainStyle _style;
     private readonly MacroRaster _macro;
