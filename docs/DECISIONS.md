@@ -1556,6 +1556,32 @@ logs; and the torch and the axe ended up in one hand, the torch in different han
   `--gameplay-test` alone and as a joined guest (20 checks: hits come back as shakes, the fall, the stump, the pile,
   picking it up, the campfire, eating).
 
+## D112 — Felling in three acts: notch and fall side, impact, a physical trunk cut into logs (2026-10-13)
+Tom (after build 58): a whole tree falling with physics looks stiff; in Valheim the tree becomes a bare log that rolls,
+can be pushed, hurts, and is chopped into pieces — and felling should feel like an achievement and work, not deep or
+difficult. Agreed plan: GAMEPLAY_DESIGN §5a (three acts; tree size sets effort and yield). Built:
+* **Act 1**: the first hit sets the **notch** on the chopper's side (host: `_treeHits` keeps hits and the notch); a pale
+  cut face grows on that side with the hits, then a back cut (placeholder geometry on the proxy); at two hits left it
+  creaks ("It creaks…"), leans toward the notch and drops leaves; at 60 % the chopper is told to finish from behind.
+* **Act 2**: the tree falls **toward the notch** (the wind up to half: 14 m/s and more), scripted as before; it hurts the
+  player it comes down on (20 + 25 × size health, checked on each PC for its own player). On impact the crown **breaks
+  up** (a burst of leaves and twigs, dust along the trunk, a camera shake nearby) and the proxy is gone.
+* **Act 3**: the rules leave a **trunk** object (length 7.2 × size, radius 0.12 + 0.12 × size, the tree's species for
+  its bark) and a **branch pile** where the crown came down. The trunk is a Godot RigidBody3D on the PC of its
+  **owner** — who felled it, or who last walked into it (`Claim`; the host gives it over) — which reports where it is
+  (`Move`, ~10 a second while it moves; `Moves` to everyone, unreliable); other PCs follow smoothly (a kinematic
+  body). It rolls, can be pushed (walking into it), hurts when it rolls into you faster than 3 m/s, freezes when its
+  owner is more than 150 m away (no ground collision there), and is let go when its owner leaves. The axe cuts it:
+  two hits per cut, one cut fewer than its logs, each cut a pale ring on it; then it lies as a log pile (E).
+* **Yield by size**: logs = the trunk's volume (π r² L) / 0.3 m³ (a size-0.8 birch 3, size 1.15 6, size 1.6 12),
+  branches 3 + 3 × size; hits to fell 3 + 4 × size. Placeholders to tune.
+* Code: the felling part moved to `WorldLab.Felling.cs` (dev-separable, as promised to Tom); protocol 6.
+* Checked: headless (notch side, fall toward the notch, trunk owner, moves, claims, release, cuts, yield) and
+  `--gameplay-test` alone (29 checks, among them: standing behind it is safe, pushed across it rolls 1.3 m, the host
+  knows where it went) and as a joined guest (28).
+* Not yet: the falling tree passes through other trees; the notch is a placeholder face, not a cut in the model;
+  carrying weight (logs are heavy) waits for building (§5a). Tom will make tree assets by hand: a guide when he starts.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

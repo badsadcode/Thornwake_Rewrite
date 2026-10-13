@@ -33,22 +33,6 @@ public partial class WorldLab : IWorldQuery
     private readonly List<byte[]> _pendingObjects = new();
     private bool _axeHeld;
     private double _gameplayHours = double.NaN;
-    private Vegetation.LatticeTree? _chopTarget;
-    private bool _chopHooked;
-    /// <summary>Trees this PC draws itself while they shake and fall (D111).</summary>
-    private readonly Dictionary<(long, long), FallingTree> _fallingTrees = new();
-    private readonly Dictionary<long, double> _pileShowAt = new();
-
-    private sealed class FallingTree
-    {
-        public required Node3D Pivot;   // at the tree's base (moved with the floating origin)
-        public required Node3D Model;
-        public double X, Y, Z, Height;
-        public float Shake, Angle, Speed, MaxAngle, Lying = -1, Sink;
-        public Vector3 Axis;
-        public int Bounces, Hits;
-        public bool Falling;
-    }
     private Label _needsLabel = null!;
     private PanelContainer _pack = null!;
     private ItemList _packItems = null!, _packRecipes = null!;
@@ -87,8 +71,8 @@ public partial class WorldLab : IWorldQuery
     private void StopLocalGameplayLoop() { _localServer = null; _localClient = null; }
 
     // ---- IWorldQuery (the rules ask about the generated world)
-    (double X, double Z, double Scale)? IWorldQuery.Tree(long cx, long cz) =>
-        _sampler != null && Vegetation.TreeAt(_sampler, cx, cz, DetailConfig.For(_sampler)) is { } t ? (t.X, t.Z, t.Scale) : null;
+    (double X, double Z, double Scale, int Species)? IWorldQuery.Tree(long cx, long cz) =>
+        _sampler != null && Vegetation.TreeAt(_sampler, cx, cz, DetailConfig.For(_sampler)) is { } t ? (t.X, t.Z, t.Scale, t.Species) : null;
     ObjectRemovals IWorldQuery.Removals => _sampler!.Removals;
     double IWorldQuery.Hours => _clock.Day * 24 + _clock.Hour;
     (double X, double Z, double Speed) IWorldQuery.Wind => (_atmosphere.Wind.Direction.X, _atmosphere.Wind.Direction.Y, _atmosphere.Wind.Speed);
@@ -103,9 +87,7 @@ public partial class WorldLab : IWorldQuery
         _objectViews.Clear();
         foreach (var s in _stumps.Values) s.Node.QueueFree();
         _stumps.Clear();
-        foreach (var f in _fallingTrees.Values) f.Pivot.QueueFree();
-        _fallingTrees.Clear();
-        _pileShowAt.Clear();
+        FellingWorldReady();
         if (_rules != null && !IsNetClient) { _rules.Objects.Clear(); _seenObjects.Clear(); _seenObjects.TakeChanged(); }
         if (IsNetClient) _seenObjects.Clear();
         _gameplayHours = double.NaN;
@@ -154,130 +136,6 @@ public partial class WorldLab : IWorldQuery
         UpdateGameplayViews(delta);
     }
 
-    // ---- chopping (Tom: like Valheim — impacts, the tree shakes, then falls; D111): the axe held (6), the left mouse
-    // held on a tree in front of you; every stroke that lands is one hit, sent to the host, which counts them.
-    private void UpdateChopping(double delta, bool swinging)
-    {
-        if (!_chopHooked) { _me.ChopHit += OnChopHit; _chopHooked = true; }
-        if (!swinging) { _chopTarget = null; _me.Chopping = false; return; }
-        var config = DetailConfig.For(_sampler!);
-        var forward = -_camera.GlobalTransform.Basis.Z;
-        var flat = new Vector2(forward.X, forward.Z).Normalized();
-        // The tree in front: within reach, the nearest one inside a cone around where you look (one already falling
-        // here does not count).
-        Vegetation.LatticeTree? best = null; double bestScore = double.MaxValue;
-        foreach (var tree in Vegetation.TreesNear(_sampler!, PlayerX, PlayerZ, GameRules.ChopReach, config))
-        {
-            if (_fallingTrees.TryGetValue((tree.Cx, tree.Cz), out var f) && f.Falling) continue;
-            var to = new Vector2((float)(tree.X - PlayerX), (float)(tree.Z - PlayerZ));
-            float d = to.Length();
-            if (d > .3f && to.Normalized().Dot(flat) < .5f) continue; // more than 60° off
-            if (d < bestScore) { bestScore = d; best = tree; }
-        }
-        if (best is not { } target) { _me.Chopping = false; _chopTarget = null; _status = "No tree within reach in front of you."; return; }
-        _chopTarget = target;
-        _me.Chopping = true;
-        _me.Facing = Mathf.Atan2((float)(target.X - PlayerX), (float)(target.Z - PlayerZ));
-        StandAlone(target); // (drawn on its own from the first swing: it will shake)
-    }
-
-    private void OnChopHit()
-    {
-        if (_chopTarget is not { } t || !_axeHeld) return;
-        Chips(t);
-        Act(new ActionRequest(ActionKind.Chop, t.Cx, t.Cz, "", t.X, t.Y, t.Z, 0));
-    }
-
-    /// <summary>The tree of the cell drawn on its own (a proxy), left out of the forest's batches (rebuilt around it).</summary>
-    private FallingTree StandAlone(Vegetation.LatticeTree t)
-    {
-        if (_fallingTrees.TryGetValue((t.Cx, t.Cz), out var known)) return known;
-        var pivot = new Node3D { Name = $"Felling{t.Cx}_{t.Cz}" };
-        var model = _streamer.Field.Proxy(t.Species, t.Scale, t.Yaw);
-        pivot.AddChild(model);
-        AddChild(pivot);
-        var f = new FallingTree { Pivot = pivot, Model = model, X = t.X, Y = t.Y, Z = t.Z, Height = GameRules.TreeHeight(t.Scale) };
-        _fallingTrees[(t.Cx, t.Cz)] = f;
-        _sampler!.Hidden.Remove(ObjectRemovals.Trees, t.Cx, t.Cz, 0);
-        _streamer.Invalidate(t.X - 8, t.Z - 8, t.X + 8, t.Z + 8);
-        PlaceFalling(f);
-        return f;
-    }
-
-    void IClientGame.TreeHit(in TreeEvent e)
-    {
-        if (_sampler == null || _generation != null) return;
-        if (Vegetation.TreeAt(_sampler, e.Cx, e.Cz, DetailConfig.For(_sampler)) is not { } t) return;
-        var f = StandAlone(t);
-        f.Shake = 1;
-        f.Hits++;
-        if (!e.Felled || f.Falling) return;
-        // It falls toward Dir: tipping over its base about the horizontal axis across that direction.
-        var dir = new Vector3((float)e.DirX, 0, (float)e.DirZ).Normalized();
-        f.Falling = true;
-        f.Axis = Vector3.Up.Cross(dir).Normalized();
-        f.Angle = .05f; f.Speed = .25f; // (the last cut gives it a nudge: no long, slow start)
-        // It stops where the trunk meets the ground (higher ground ahead stops it sooner).
-        double rise = _sampler.Height(t.X + dir.X * f.Height * .7, t.Z + dir.Z * f.Height * .7) - t.Y;
-        f.MaxAngle = Mathf.Pi / 2 - (float)Math.Atan2(rise, f.Height * .7) - .03f;
-    }
-
-    /// <summary>Wood chips flying off the trunk where the axe lands.</summary>
-    private void Chips(Vegetation.LatticeTree t)
-    {
-        var to = new Vector3((float)(PlayerX - t.X), 0, (float)(PlayerZ - t.Z)).Normalized();
-        var mesh = new BoxMesh { Size = new Vector3(.05f, .015f, .03f), Material = new StandardMaterial3D { AlbedoColor = new Color("c9a46a"), Roughness = .9f } };
-        var chips = new CpuParticles3D
-        {
-            Emitting = true, OneShot = true, Amount = 14, Lifetime = .9, Explosiveness = .95f, LocalCoords = false,
-            Mesh = mesh, Direction = to + Vector3.Up * .6f, Spread = 35,
-            InitialVelocityMin = 1.5f, InitialVelocityMax = 3.5f, Gravity = new Vector3(0, -9.8f, 0),
-            AngularVelocityMin = -400, AngularVelocityMax = 400,
-            Position = new Vector3((float)(t.X - _originX) + to.X * .3f, (float)t.Y + 1.0f, (float)(t.Z - _originZ) + to.Z * .3f),
-        };
-        AddChild(chips);
-        GetTree().CreateTimer(1.5).Timeout += chips.QueueFree;
-    }
-
-    /// <summary>Per frame: shakes die down; falling trees tip over faster and faster (a trunk pivoting on its base:
-    /// θ'' = 3g / 2L · sin θ), crash with a small bounce, lie a moment, then sink away as their logs appear.</summary>
-    private void UpdateFallingTrees(double delta)
-    {
-        float dt = (float)delta;
-        foreach (var (key, f) in _fallingTrees.ToList())
-        {
-            f.Shake = Mathf.MoveToward(f.Shake, 0, dt * 2.2f);
-            if (f.Falling && f.Lying < 0)
-            {
-                f.Speed += 1.5f * 9.81f / (float)f.Height * Mathf.Sin(Math.Max(f.Angle, .02f)) * dt;
-                f.Angle += f.Speed * dt;
-                if (f.Angle >= f.MaxAngle)
-                {
-                    f.Angle = f.MaxAngle;
-                    if (f.Bounces++ < 2 && f.Speed > .4f) f.Speed = -f.Speed * .22f; // the crash: a small bounce
-                    else { f.Speed = 0; f.Lying = 0; }
-                }
-            }
-            else if (f.Lying >= 0)
-            {
-                f.Lying += dt;
-                if (f.Lying > 2.5f) f.Sink += dt * .9f; // then it sinks away and its logs are there
-                if (f.Sink > 2) { f.Pivot.QueueFree(); _fallingTrees.Remove(key); continue; }
-            }
-            PlaceFalling(f);
-        }
-    }
-
-    private void PlaceFalling(FallingTree f)
-    {
-        f.Pivot.Position = new Vector3((float)(f.X - _originX), (float)f.Y - f.Sink, (float)(f.Z - _originZ));
-        var basis = f.Falling ? new Basis(f.Axis, f.Angle) : Basis.Identity;
-        // A hit shakes the crown: a quick, dying sway about the trunk's base.
-        if (f.Shake > 0)
-            basis = basis * new Basis(Vector3.Right, .025f * f.Shake * Mathf.Sin((float)_flicker * 38)) * new Basis(Vector3.Forward, .02f * f.Shake * Mathf.Sin((float)_flicker * 31 + 1));
-        f.Pivot.Basis = basis;
-    }
-
     private void ToggleAxe()
     {
         if (!_axeHeld && !_myInv.HasTag("chopping")) { _status = "You have no axe."; return; }
@@ -291,7 +149,7 @@ public partial class WorldLab : IWorldQuery
     /// comes here later; Tom.)</summary>
     private void Interact()
     {
-        var near = _seenObjects.Near(PlayerX, PlayerZ, GameRules.UseReach + 1.5).OrderBy(o => (o.X - PlayerX) * (o.X - PlayerX) + (o.Z - PlayerZ) * (o.Z - PlayerZ)).FirstOrDefault();
+        var near = _seenObjects.Near(PlayerX, PlayerZ, GameRules.UseReach + 1.5).Where(o => o.Contents.Count > 0 || o.Kind == "campfire").OrderBy(o => (o.X - PlayerX) * (o.X - PlayerX) + (o.Z - PlayerZ) * (o.Z - PlayerZ)).FirstOrDefault();
         if (near == null) { _status = "Nothing here to use (E)."; return; }
         Act(new ActionRequest(near.Contents.Count > 0 ? ActionKind.Gather : ActionKind.Fuel, near.Id, 0, "", 0, 0, 0, 0));
     }
@@ -321,16 +179,15 @@ public partial class WorldLab : IWorldQuery
         for (int n = r.ReadInt32(); n > 0; n--)
         {
             var (id, o) = _seenObjects.Read(r);
-            if (o == null) { if (_objectViews.Remove(id, out var gone)) gone.QueueFree(); continue; }
+            if (o == null) { ObjectGone(id); if (_objectViews.Remove(id, out var gone)) gone.QueueFree(); continue; }
+            if (o.Kind == "trunk") { TrunkChanged(o); continue; } // (drawn and moved by the felling part)
             if (!_objectViews.ContainsKey(id))
             {
-                var view = o.Kind switch { "campfire" => Visuals.Campfire(), "log_pile" => LogPile(o), _ => new Node3D() };
-                // A felled tree's logs appear once it has come down here (a late joiner sees them at once).
-                if (o.Kind == "log_pile" && _fallingTrees.Values.Any(f => f.Falling && (f.X - o.X) * (f.X - o.X) + (f.Z - o.Z) * (f.Z - o.Z) < 15 * 15))
-                    _pileShowAt[id] = _flicker + 4.5;
+                var view = o.Kind switch { "campfire" => Visuals.Campfire(), "log_pile" => LogPile(o), "branch_pile" => BranchPile(o), _ => new Node3D() };
                 view.Rotation = new Vector3(0, o.Yaw, 0);
                 AddChild(view);
                 _objectViews[id] = view;
+                WaitForImpact(id, view, o); // (a felled tree's branches appear when its crown comes down)
             }
         }
         _seenObjects.TakeChanged();
@@ -377,10 +234,7 @@ public partial class WorldLab : IWorldQuery
                 light.LightEnergy = 1.6f * f * (float)Math.Clamp(o.Fuel / 10, .3, 1);
             }
         }
-        foreach (var (pileId, at) in _pileShowAt.ToList())
-            if (_objectViews.TryGetValue(pileId, out var pile)) { pile.Visible = _flicker >= at; if (pile.Visible) _pileShowAt.Remove(pileId); }
-            else _pileShowAt.Remove(pileId);
-        UpdateFallingTrees(delta);
+        UpdateFelling(delta);
         foreach (var s in _stumps.Values) s.Node.Position = new Vector3((float)(s.X - _originX), (float)s.Y, (float)(s.Z - _originZ));
     }
 

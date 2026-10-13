@@ -21,6 +21,8 @@ public partial class WorldLab
     private int _gtLogs;
     private string? _gtShot;
     private bool _gtMoved;
+    private Vector3 _gtPushFrom;
+    private double _gtHealth;
 
     private void GameplayTest(double delta)
     {
@@ -52,43 +54,90 @@ public partial class WorldLab
                 if (!_axeHeld) ToggleAxe();
                 _gtLogs = 0;
                 Go(10, 0); break;
-            case 10: // one hit per stroke (D111) until it falls
+            case 10: // one hit per stroke (D111, D112) until it falls
                 if (_sampler.Removals.Contains(ObjectRemovals.Trees, _gtTree.Cx, _gtTree.Cz))
                 {
                     Check(_gtLogs == GameRules.TreeHits(_gtTree.Scale), $"felled after {_gtLogs} hits ({_status})");
                     Check(_fallingTrees.TryGetValue((_gtTree.Cx, _gtTree.Cz), out var f) && f.Falling, "it is falling");
                     _yaw = Mathf.Atan2(-(float)(_gtTree.X - PlayerX), -(float)(_gtTree.Z - PlayerZ)) + 1.2f; _pitch = -.15f; _zoom = 9;
-                    Go(11, 1.1); break;
+                    Go(11, 1.0); break;
                 }
                 // (every hit so far came back as a shake: alone at once, joined a round trip later)
                 if (_gtLogs > 0) Check(_fallingTrees.TryGetValue((_gtTree.Cx, _gtTree.Cz), out var shaking) && shaking.Hits == _gtLogs, $"hit {_gtLogs}: it shook");
+                if (_gtLogs == 3) Check(_fallingTrees.TryGetValue((_gtTree.Cx, _gtTree.Cz), out var notched) && notched.Notch != null, "a notch on its side");
+                if (_gtLogs == 3 && _gtShot != null) { _yaw = Mathf.Atan2(-(float)(_gtTree.X - PlayerX), -(float)(_gtTree.Z - PlayerZ)) + 2.2f; _pitch = .05f; _zoom = 9; }
+                if (_gtLogs == 5 && _gtShot != null) Screenshot(_gtShot.Replace(".png", "-notch.png"));
+                // Notch done: finish from behind (it falls toward the notch, where we stood).
+                if (_gtLogs == GameRules.TreeHits(_gtTree.Scale) - 2)
+                {
+                    var away = new Vector2((float)(_gtTree.X - PlayerX), (float)(_gtTree.Z - PlayerZ)).Normalized();
+                    Teleport(_gtTree.X + away.X * 1.5, _gtTree.Z + away.Y * 1.5);
+                    _gtHealth = _needs.Health;
+                }
                 Act(new ActionRequest(ActionKind.Chop, _gtTree.Cx, _gtTree.Cz, "", 0, 0, 0, 0));
                 _gtLogs++;
-                if (_gtLogs == 3 && _gtShot != null) { _yaw = Mathf.Atan2(-(float)(_gtTree.X - PlayerX), -(float)(_gtTree.Z - PlayerZ)) + 2.2f; _pitch = .05f; _zoom = 9; }
-                if (_gtLogs == 5 && _gtShot != null) Screenshot(_gtShot.Replace(".png", "-standing.png"));
                 Go(10, .45); break;
             case 11:
                 if (_gtShot != null) Screenshot(_gtShot.Replace(".png", "-fall.png"));
-                Go(12, 8); break;
+                Go(12, 4); break;
             case 12:
             {
+                Check(!_fallingTrees.ContainsKey((_gtTree.Cx, _gtTree.Cz)), "it came down (the crown broke up)");
+                Check(_needs.Health >= _gtHealth, $"standing behind it, it did not hit me (health {_needs.Health:0})");
                 Check(_stumps.ContainsKey((_gtTree.Cx, _gtTree.Cz)), "a stump stands there");
                 Check(!Vegetation.TreesNear(_sampler, _gtTree.X, _gtTree.Z, .5, DetailConfig.For(_sampler)).Any(), "the tree is gone from the forest");
-                Check(!_fallingTrees.ContainsKey((_gtTree.Cx, _gtTree.Cz)), "the fallen trunk has sunk away");
-                var pile = _seenObjects.All.Where(o => o.Kind == "log_pile").OrderBy(o => (o.X - _gtTree.X) * (o.X - _gtTree.X) + (o.Z - _gtTree.Z) * (o.Z - _gtTree.Z)).FirstOrDefault();
-                Check(pile != null && _objectViews.TryGetValue(pile.Id, out var v) && v.Visible, $"its logs lie where it fell ({(pile == null ? "none" : $"{Math.Sqrt((pile.X - _gtTree.X) * (pile.X - _gtTree.X) + (pile.Z - _gtTree.Z) * (pile.Z - _gtTree.Z)):0.0} m from the stump")})");
-                if (_gtShot != null) Screenshot(_gtShot.Replace(".png", "-logs.png"));
-                if (pile != null) { Teleport(pile.X - 1, pile.Z - 1); }
-                Go(13, 2.5); break;
+                var trunk = _trunks.Values.FirstOrDefault();
+                Check(trunk is { Waiting: false } && trunk.Body.Visible, "a bare trunk lies there");
+                Check(trunk is { Owned: true } && !trunk.Body.Freeze, "this PC moves it (physics on)");
+                var branches = _seenObjects.All.FirstOrDefault(o => o.Kind == "branch_pile");
+                Check(branches != null && _objectViews.TryGetValue(branches.Id, out var bv) && bv.Visible, "the crown's branches lie there");
+                if (_gtShot != null) Screenshot(_gtShot.Replace(".png", "-trunk.png"));
+                // A push (as walking into it would): it moves, and the host hears where it went.
+                // (across the log: it rolls)
+                if (trunk != null) { _gtPushFrom = trunk.Body.GlobalPosition; trunk.Body.ApplyCentralImpulse(trunk.Body.Basis.Y.Cross(Vector3.Up).Normalized() * 300); }
+                Go(13, 2); break;
             }
             case 13:
             {
-                var pile = _seenObjects.All.Where(o => o.Kind == "log_pile").OrderBy(o => (o.X - PlayerX) * (o.X - PlayerX) + (o.Z - PlayerZ) * (o.Z - PlayerZ)).FirstOrDefault();
-                if (pile != null) Interact(); // E
-                Go(14, 1.5); break;
+                var trunk = _trunks.Values.FirstOrDefault();
+                float moved = trunk == null ? 0 : trunk.Body.GlobalPosition.DistanceTo(_gtPushFrom);
+                Check(moved > .1f, $"pushed, it moved {moved:0.00} m");
+                if (trunk != null && _rules != null && !IsNetClient && _rules.Objects.Get(trunk.Id) is { } truth)
+                    Check(new Vector3((float)(truth.X - _originX), (float)truth.Y, (float)(truth.Z - _originZ)).DistanceTo(trunk.Body.GlobalPosition) < .3f, "the host knows where it is now");
+                if (trunk != null) { var p = trunk.Body.GlobalPosition; Teleport(p.X + _originX + 1.5, p.Z + _originZ + .5); }
+                _gtLogs = 0;
+                Go(14, 2.5); break;
             }
-            case 14:
-                Check(_myInv.Count("log") > 0 && _myInv.Count("branch") > 0, $"picked up: {_myInv.Count("log")} logs, {_myInv.Count("branch")} branches ({_status})");
+            case 14: // cut it up
+            {
+                var trunk = _trunks.Values.FirstOrDefault();
+                if (trunk == null)
+                {
+                    Check(_gtLogs == GameRules.TrunkHits(_gtTree.Scale), $"cut into logs after {_gtLogs} hits ({_status})");
+                    var pile = _seenObjects.All.FirstOrDefault(o => o.Kind == "log_pile");
+                    Check(pile != null && _objectViews.ContainsKey(pile.Id), "the logs lie there");
+                    if (pile != null) Teleport(pile.X - 1, pile.Z - 1);
+                    Go(15, 2.5); break;
+                }
+                Act(new ActionRequest(ActionKind.ChopTrunk, trunk.Id, 0, "", 0, 0, 0, 0));
+                _gtLogs++;
+                Go(14, .45); break;
+            }
+            case 15:
+                Interact(); // E: the logs
+                Go(16, 1.5); break;
+            case 16:
+            {
+                Check(_myInv.Count("log") == GameRules.TrunkLogs(_gtTree.Scale), $"picked up {_myInv.Count("log")} logs (size {_gtTree.Scale:0.00}: {GameRules.TrunkLogs(_gtTree.Scale)}) ({_status})");
+                var branches = _seenObjects.All.FirstOrDefault(o => o.Kind == "branch_pile");
+                if (branches != null) Teleport(branches.X - 1, branches.Z - 1);
+                Go(17, 2.5); break;
+            }
+            case 17:
+                Interact(); // E: the branches
+                Go(18, 1.5); break;
+            case 18:
+                Check(_myInv.Count("branch") >= 4, $"and {_myInv.Count("branch")} branches ({_status})");
                 Act(new ActionRequest(ActionKind.Make, 0, 0, "campfire", PlayerX + 2.2, _sampler.Height(PlayerX + 2.2, PlayerZ + 1.5), PlayerZ + 1.5, 0));
                 Go(3, 1.5); break;
             case 3:

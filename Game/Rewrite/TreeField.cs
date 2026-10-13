@@ -221,6 +221,14 @@ public sealed partial class TreeField : Node3D
         return root;
     }
 
+    /// <summary>The species' bark material (its detailed model's trunk), for a felled trunk lying on the ground.</summary>
+    public Material? Bark(int species)
+    {
+        foreach (var (mesh, _) in _catalog.PartsOf(species, 1))
+            if (mesh.GetSurfaceCount() > 0 && mesh.SurfaceGetMaterial(0) is ShaderMaterial m && m.Shader?.ResourcePath.EndsWith("TreeBark.gdshader") == true) return m;
+        return null;
+    }
+
     /// <summary>Worker thread: the cell's trees and their instance buffers.</summary>
     private CellData Build(TerrainSampler sampler, DetailConfig config, TileKey key, bool near)
     {

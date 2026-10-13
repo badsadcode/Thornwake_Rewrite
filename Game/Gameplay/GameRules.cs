@@ -8,8 +8,8 @@ namespace Thornwake.Gameplay;
 /// <summary>What the rules need to know about the world (the game answers from the generated world).</summary>
 public interface IWorldQuery
 {
-    /// <summary>The tree of lattice cell (cx, cz) if one grows there (felled or not): its place and size.</summary>
-    (double X, double Z, double Scale)? Tree(long cx, long cz);
+    /// <summary>The tree of lattice cell (cx, cz) if one grows there (felled or not): its place, size and species.</summary>
+    (double X, double Z, double Scale, int Species)? Tree(long cx, long cz);
     /// <summary>Generated objects taken out (felled trees).</summary>
     ObjectRemovals Removals { get; }
     /// <summary>Game time in hours since the world began (time stamps for regrowth).</summary>
@@ -21,7 +21,9 @@ public interface IWorldQuery
 }
 
 /// <summary>A tree was hit (shake it) or felled (it falls toward Dir); everyone draws it.</summary>
-public readonly record struct TreeEvent(long Cx, long Cz, int HitsLeft, bool Felled, double DirX, double DirZ);
+/// <summary>A tree was hit (it shakes; the notch grows: HitsLeft of Total) or felled (it falls toward Dir). Dir is the
+/// notch's side while it stands (from the trunk toward where the first hits came from), the fall's once felled.</summary>
+public readonly record struct TreeEvent(long Cx, long Cz, int HitsLeft, int Total, bool Felled, double DirX, double DirZ);
 
 /// <summary>An action's outcome, told to the player who asked.</summary>
 public readonly record struct ActionResult(bool Ok, string Message, double Food = 0)
@@ -44,7 +46,8 @@ public sealed class GameRules
     private readonly IWorldQuery _world;
     private readonly Dictionary<int, Inventory> _inventories = new();
     private readonly HashSet<int> _inventoryChanged = new();
-    private readonly Dictionary<(long, long), int> _treeHits = new();
+    // A tree being felled: hits so far and the notch's side (D112).
+    private readonly Dictionary<(long, long), (int Hits, double Nx, double Nz)> _treeHits = new();
     private readonly List<TreeEvent> _treeEvents = new();
 
     /// <summary>The tree hits and falls since the last call (the host sends them to everyone).</summary>
@@ -52,8 +55,17 @@ public sealed class GameRules
 
     /// <summary>Hits a tree takes: 3 + 4 × its size (a small birch 6, a big oak 8).</summary>
     public static int TreeHits(double scale) => 3 + (int)Math.Round(4 * scale);
-    /// <summary>How tall a tree of this size is, roughly (where its logs lie after it falls).</summary>
+    /// <summary>How tall a tree of this size is, roughly (where its crown comes down).</summary>
     public static double TreeHeight(double scale) => 9 * scale;
+    /// <summary>The trunk left lying after a fall (D112): its length and radius (m) for a tree of this size.</summary>
+    public static double TrunkLength(double scale) => 7.2 * scale;
+    public static double TrunkRadius(double scale) => .12 + .12 * scale;
+    /// <summary>Logs in a trunk: its real volume (π r² L) at ~0.3 m³ a log — tree size sets the yield (Tom, §5a).</summary>
+    public static int TrunkLogs(double scale) => Math.Max(1, (int)Math.Round(Math.PI * TrunkRadius(scale) * TrunkRadius(scale) * TrunkLength(scale) / .3));
+    /// <summary>Hits that cut a trunk up into logs: two per cut (one cut fewer than logs), at least two.</summary>
+    public static int TrunkHits(double scale) => Math.Max(2, 2 * (TrunkLogs(scale) - 1));
+    /// <summary>Branches from the crown.</summary>
+    public static int CrownBranches(double scale) => 3 + (int)Math.Round(3 * scale);
 
     public GameRules(Catalog catalog, IWorldQuery world) { Catalog = catalog; _world = world; }
 
@@ -75,10 +87,11 @@ public sealed class GameRules
     public void InventoryChanged(int player) => _inventoryChanged.Add(player);
 
     /// <summary>
-    /// One axe hit on the tree of lattice cell (cx, cz) (Tom, Valheim-like: impacts, not a timer; D111): an axe (tag
-    /// <c>chopping</c>) in the pack, within reach. After <see cref="TreeHits"/> hits it falls — away from the chopper,
-    /// pushed by the wind ("the wind decides where a tree lands", Old Berta) — and its wood lies where the trunk came down
-    /// as a log pile to pick up (E).
+    /// One axe hit on the tree of lattice cell (cx, cz) (Tom: felling as real work in three acts, §5a; D112): an axe
+    /// (tag <c>chopping</c>) in the pack, within reach. The first hit sets the **notch** on the side the chopper stands;
+    /// after <see cref="TreeHits"/> hits the tree falls **toward the notch**, the wind pushing it (Old Berta: "the wind
+    /// decides where a tree lands"). It leaves a bare **trunk** lying along the fall — a physical log the felling player's
+    /// PC moves (it rolls, can be pushed) and the axe cuts into logs — and the crown's branches where it came down.
     /// </summary>
     public ActionResult Chop(int player, long cx, long cz, double px, double pz)
     {
@@ -87,28 +100,71 @@ public sealed class GameRules
         if (_world.Removals.Contains(ObjectRemovals.Trees, cx, cz)) return ActionResult.Fail("That tree is already down.");
         if (_world.Tree(cx, cz) is not { } tree) return ActionResult.Fail("There is no tree there.");
         if (Dist(px, pz, tree.X, tree.Z) > ChopReach + 1) return ActionResult.Fail("Too far from the tree.");
-        int left = (_treeHits.TryGetValue((cx, cz), out int done) ? TreeHits(tree.Scale) - done : TreeHits(tree.Scale)) - 1;
+        int total = TreeHits(tree.Scale);
+        if (!_treeHits.TryGetValue((cx, cz), out var work))
+        {
+            // The notch faces the chopper (from the trunk toward them).
+            double ax = px - tree.X, az = pz - tree.Z, al = Math.Sqrt(ax * ax + az * az);
+            work = al > 1e-6 ? (0, ax / al, az / al) : (0, 1, 0);
+        }
+        int left = total - work.Hits - 1;
         if (left > 0)
         {
-            _treeHits[(cx, cz)] = done + 1;
-            _treeEvents.Add(new TreeEvent(cx, cz, left, false, 0, 0));
-            return new(true, "");
+            _treeHits[(cx, cz)] = (work.Hits + 1, work.Nx, work.Nz);
+            _treeEvents.Add(new TreeEvent(cx, cz, left, total, false, work.Nx, work.Nz));
+            return new(true, left == 2 ? "It creaks…" : "");
         }
         _treeHits.Remove((cx, cz));
         _world.Removals.Remove(ObjectRemovals.Trees, cx, cz, _world.Hours);
-        // Away from the chopper, and the wind's push (stronger wind, more say).
-        double ax = tree.X - px, az = tree.Z - pz, al = Math.Max(Math.Sqrt(ax * ax + az * az), 1e-6);
+        // Toward the notch; the wind has its say (up to half in a gale).
         var wind = _world.Wind;
-        double k = Math.Clamp(wind.Speed / 12, 0, .8);
-        double dx = ax / al * (1 - k) + wind.X * k, dz = az / al * (1 - k) + wind.Z * k, dl = Math.Max(Math.Sqrt(dx * dx + dz * dz), 1e-6);
+        double k = Math.Clamp(wind.Speed / 14, 0, .5);
+        double dx = work.Nx * (1 - k) + wind.X * k, dz = work.Nz * (1 - k) + wind.Z * k, dl = Math.Max(Math.Sqrt(dx * dx + dz * dz), 1e-6);
         dx /= dl; dz /= dl;
-        _treeEvents.Add(new TreeEvent(cx, cz, 0, true, dx, dz));
-        // The wood where the middle of the trunk comes down.
-        double reach = TreeHeight(tree.Scale) * .45, lx = tree.X + dx * reach, lz = tree.Z + dz * reach;
-        var pile = Objects.Add("log_pile", lx, _world.Ground(lx, lz), lz, (float)Math.Atan2(dx, dz), 0);
-        int logs = 1 + (int)Math.Round(tree.Scale * 2), branches = 3 + (int)Math.Round(tree.Scale * 3);
-        pile.Contents.Add(("log", logs)); pile.Contents.Add(("branch", branches));
-        return new(true, $"Timber! {logs} logs and {branches} branches lie where it fell (E picks them up).");
+        _treeEvents.Add(new TreeEvent(cx, cz, 0, total, true, dx, dz));
+        double half = TrunkLength(tree.Scale) / 2, r = TrunkRadius(tree.Scale), tx = tree.X + dx * half, tz = tree.Z + dz * half;
+        var trunk = Objects.Add("trunk", tx, _world.Ground(tx, tz) + r, tz, (float)Math.Atan2(dx, dz), 0);
+        // (lying along the fall: the log's long axis, its local up, turned onto the direction — a quarter turn about up × dir)
+        double s45 = Math.Sqrt(.5);
+        trunk.Qx = (float)(dz * s45); trunk.Qy = 0; trunk.Qz = (float)(-dx * s45); trunk.Qw = (float)s45;
+        trunk.Size = (float)tree.Scale;
+        trunk.Variant = tree.Species;
+        trunk.Owner = player;
+        double crown = TreeHeight(tree.Scale) * .8, bx = tree.X + dx * crown, bz = tree.Z + dz * crown;
+        var branches = Objects.Add("branch_pile", bx, _world.Ground(bx, bz), bz, (float)Math.Atan2(dx, dz), 0);
+        branches.Contents.Add(("branch", CrownBranches(tree.Scale)));
+        return new(true, $"Timber! Cut the trunk up with the axe ({TrunkLogs(tree.Scale)} logs in it); the branches lie where the crown came down (E).");
+    }
+
+    /// <summary>One axe hit on a fallen trunk; after <see cref="TrunkHits"/> it is cut into logs lying where it was.</summary>
+    public ActionResult ChopTrunk(int player, long objectId, double px, double pz)
+    {
+        if (!Inventory(player).HasTag("chopping")) return ActionResult.Fail("You need something to chop with (an axe).");
+        if (Objects.Get(objectId) is not { Kind: "trunk" } t) return ActionResult.Fail("Nothing to cut up there.");
+        if (Dist(px, pz, t.X, t.Z) > TrunkLength(t.Size) / 2 + ChopReach) return ActionResult.Fail("Too far from the trunk.");
+        t.Hits++;
+        if (t.Hits < TrunkHits(t.Size)) { Objects.Touch(t.Id); return new(true, t.Hits % 2 == 0 ? $"A cut through ({t.Hits / 2} of {TrunkLogs(t.Size) - 1})." : ""); }
+        Objects.Remove(t.Id);
+        int logs = TrunkLogs(t.Size);
+        var pile = Objects.Add("log_pile", t.X, t.Y - TrunkRadius(t.Size), t.Z, t.Yaw, 0);
+        pile.Contents.Add(("log", logs));
+        return new(true, $"The trunk splits into {logs} logs (E picks them up).");
+    }
+
+    /// <summary>A player close to a moving object takes it over (their PC moves it from now on: they can push it).</summary>
+    public bool Claim(int player, long objectId, double px, double pz)
+    {
+        if (Objects.Get(objectId) is not { } o || o.Owner == player || o.Owner == 0 && o.Kind != "trunk") return false;
+        if (Dist(px, pz, o.X, o.Z) > TrunkLength(o.Size) / 2 + 3) return false;
+        o.Owner = player;
+        Objects.Touch(o.Id);
+        return true;
+    }
+
+    /// <summary>A player left: the objects their PC moved stay where they are until someone takes them over.</summary>
+    public void Release(int player)
+    {
+        foreach (var o in Objects.All.Where(o => o.Owner == player).ToList()) { o.Owner = 0; Objects.Touch(o.Id); }
     }
 
     /// <summary>Pick up what lies in a placed object within reach (a log pile): into the pack, the object goes.</summary>

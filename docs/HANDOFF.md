@@ -41,8 +41,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   also alone; `--gameplay-test`. In **build 57** (`8a1dc3b`, `dist/Preview-57`). **Next**: fishing (a cast action, raw fish from water) so cooking has its fish; E
   gathering (grass → fibre, berries, loose stones; Tom); a fire flame from the torch's particles; death (drop the pack
   where you fall, §4); saving the world (edits, removals, objects, inventories); Tom's storm atmosphere (D109).
-  Build 58 (`31d172d`, `dist/Preview-58`): Valheim-like chopping (D111). Paused (Tom wants to talk first): a physical
-  trunk that stays, rolls, can be pushed, hurts, and is cut into logs — unfinished rules in `git stash` ("D112 trunk physics"). Open from Tom (dump 221438): the torch lights the ground fog evenly far
+  Build 58 (`31d172d`, `dist/Preview-58`): Valheim-like chopping (D111). Since then: felling in three acts (D112, §5a) — notch
+  and fall side, impact, a physical trunk cut into logs; not yet in a build. Open from Tom (dump 221438): the torch lights the ground fog evenly far
   into the night — trees far away stand dark against an orange haze; light sources should shape the fog, but less
   uniformly (look at the torch's `LightVolumetricFogEnergy` / range and the fog's density near the ground; atmosphere
   work, after the mechanics).

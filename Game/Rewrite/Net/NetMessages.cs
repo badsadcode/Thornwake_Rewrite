@@ -16,6 +16,7 @@ public enum Msg : byte
     State = 2,      // my position, facing, motion (unreliable, ~20 a second)
     Dig = 3,        // please change the ground (the server applies it and sends the changed chunks to everyone)
     Action = 4,     // please do this (chop, make, fuel, eat: step 1's actions, checked by the host's GameRules)
+    Move = 5,       // where an object my PC moves is now (a rolling trunk; unreliable, ~10 a second while it moves)
     Welcome = 10,   // your id, the world, its settings, the clock, the players, the place to start
     Players = 11,   // everyone's state (unreliable, ~20 a second)
     Joined = 12,    // a player came in (id, name)
@@ -30,7 +31,8 @@ public enum Msg : byte
     Inventory = 21, // your inventory (after every change)
     Objects = 22,   // placed objects that changed (campfires); all of them for a player joining late
     Removals = 23,  // generated objects taken out or put back (felled trees); all of them for a player joining late
-    TreeHits = 24,  // trees hit (shake) or felled (fall, and which way)
+    TreeHits = 24,  // trees hit (shake, the notch grows) or felled (fall, and which way)
+    Moves = 25,     // where moving objects are now (unreliable; from their owners' PCs)
 }
 
 /// <summary>One player's movement as others need it to draw them (world coordinates, not the floating origin).</summary>
@@ -40,7 +42,7 @@ public readonly record struct PlayerState(double X, double Y, double Z, float Fa
 public enum PlayerFlags : byte { None = 0, Flying = 1, Torch = 2, Swimming = 4, Axe = 8, Chopping = 16 }
 
 /// <summary>Step 1's actions (D110): what a player asks the host to do.</summary>
-public enum ActionKind : byte { Chop = 1, Make = 2, Fuel = 3, Eat = 4, Gather = 5 }
+public enum ActionKind : byte { Chop = 1, Make = 2, Fuel = 3, Eat = 4, Gather = 5, ChopTrunk = 6, Claim = 7 }
 
 /// <summary>An action request: hit the tree of lattice cell (A, B); make recipe Id (placing at X, Y, Z facing Yaw);
 /// fuel object A; eat item Id; gather what lies in object A.</summary>
@@ -60,7 +62,7 @@ public readonly record struct DigRequest(BrushMode Mode, BrushShape Shape, doubl
 public static class NetMessages
 {
     /// <summary>Changes whenever the messages change: a client and host with different versions do not connect.</summary>
-    public const int Protocol = 5;
+    public const int Protocol = 6;
 
     public static byte[] Build(Msg kind, Action<BinaryWriter> body)
     {

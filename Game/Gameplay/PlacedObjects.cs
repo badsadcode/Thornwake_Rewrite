@@ -5,15 +5,28 @@ using System.Linq;
 
 namespace Thornwake.Gameplay;
 
-/// <summary>An object a player put into the world (a campfire): where, which way, and its state.</summary>
+/// <summary>An object in the world (a campfire, a log pile, a fallen trunk): where, which way, and its state.</summary>
 public sealed class PlacedObject
 {
     public long Id { get; init; }
     public required string Kind { get; init; }
-    public double X { get; init; }
-    public double Y { get; init; }
-    public double Z { get; init; }
+    public double X { get; set; }
+    public double Y { get; set; }
+    public double Z { get; set; }
     public float Yaw { get; init; }
+    /// <summary>Full orientation (a quaternion) for objects that move (a trunk rolls); identity otherwise.</summary>
+    public float Qx { get; set; }
+    public float Qy { get; set; }
+    public float Qz { get; set; }
+    public float Qw { get; set; } = 1;
+    /// <summary>Size (a trunk: its tree's scale).</summary>
+    public float Size { get; set; } = 1;
+    /// <summary>The player whose PC moves it (physics, D112); 0 = nobody (it stays where it is).</summary>
+    public int Owner { get; set; }
+    /// <summary>Axe hits taken (a trunk being cut up).</summary>
+    public int Hits { get; set; }
+    /// <summary>Which one of its kind (a trunk: its tree's species, for the bark).</summary>
+    public int Variant { get; set; }
     /// <summary>Minutes of fuel left (fires).</summary>
     public double Fuel { get; set; }
     public bool Lit => Fuel > 0;
@@ -62,6 +75,21 @@ public sealed class PlacedObjects
 
     public List<long> TakeChanged() { var l = _changed.ToList(); _changed.Clear(); return l; }
 
+    // ---- moving objects (a trunk rolling): their owner's PC reports where they are; the host passes it on unreliably,
+    // often, apart from the full (reliable) changes.
+    private readonly HashSet<long> _moved = new();
+
+    /// <summary>The owner moved it: the new place and orientation. False if it is not theirs (or gone).</summary>
+    public bool Move(int player, long id, double x, double y, double z, float qx, float qy, float qz, float qw)
+    {
+        if (!_all.TryGetValue(id, out var o) || o.Owner != player) return false;
+        o.X = x; o.Y = y; o.Z = z; o.Qx = qx; o.Qy = qy; o.Qz = qz; o.Qw = qw;
+        _moved.Add(id);
+        return true;
+    }
+
+    public List<long> TakeMoved() { var l = _moved.ToList(); _moved.Clear(); return l; }
+
     public void Clear() { foreach (var id in _all.Keys) _changed.Add(id); _all.Clear(); }
 
     // ---- network: an object's full state, or its id with no kind for a removed one.
@@ -71,6 +99,7 @@ public sealed class PlacedObjects
         if (_all.TryGetValue(id, out var o))
         {
             w.Write(o.Kind); w.Write(o.X); w.Write(o.Y); w.Write(o.Z); w.Write(o.Yaw); w.Write(o.Fuel);
+            w.Write(o.Qx); w.Write(o.Qy); w.Write(o.Qz); w.Write(o.Qw); w.Write(o.Size); w.Write(o.Owner); w.Write(o.Hits); w.Write(o.Variant);
             w.Write((byte)o.Contents.Count);
             foreach (var (item, count) in o.Contents) { w.Write(item); w.Write(count); }
         }
@@ -85,6 +114,8 @@ public sealed class PlacedObjects
         if (kind.Length == 0) { _all.Remove(id); return (id, null); }
         var o = new PlacedObject { Id = id, Kind = kind, X = r.ReadDouble(), Y = r.ReadDouble(), Z = r.ReadDouble(), Yaw = r.ReadSingle() };
         o.Fuel = r.ReadDouble();
+        o.Qx = r.ReadSingle(); o.Qy = r.ReadSingle(); o.Qz = r.ReadSingle(); o.Qw = r.ReadSingle(); o.Size = r.ReadSingle();
+        o.Owner = r.ReadInt32(); o.Hits = r.ReadInt32(); o.Variant = r.ReadInt32();
         for (int n = r.ReadByte(); n > 0; n--) o.Contents.Add((r.ReadString(), r.ReadInt32()));
         _all[id] = o;
         _next = Math.Max(_next, id + 1);

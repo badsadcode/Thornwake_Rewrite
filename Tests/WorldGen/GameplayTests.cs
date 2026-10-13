@@ -53,7 +53,7 @@ internal static class GameplayTests
     {
         public ObjectRemovals Removals { get; } = new();
         public double Hours { get; set; } = 10;
-        public (double X, double Z, double Scale)? Tree(long cx, long cz) => cx == 3 && cz == 4 ? (21.5, 29.0, 1.1) : null;
+        public (double X, double Z, double Scale, int Species)? Tree(long cx, long cz) => cx == 3 && cz == 4 ? (21.5, 29.0, 1.1, 5) : null;
         public (double X, double Z, double Speed) Wind { get; set; } = (1, 0, 0);
         public double Ground(double x, double z) => 5;
     }
@@ -69,32 +69,56 @@ internal static class GameplayTests
         T.Check(!rules.Chop(me, 3, 4, 40, 40).Ok, "too far from the tree");
         T.Check(!rules.Chop(me, 5, 5, 21, 29).Ok, "no tree there");
         T.Check(rules.Inventory(other).HasTag("chopping"), "every new character has an axe");
-        // Hits (D111): the tree stands until the last one; every hit is an event for everyone (the tree shakes).
+        // Felling in three acts (D112, §5a). Hits: the tree stands until the last one; every hit is an event for everyone
+        // (it shakes, the notch grows). The notch faces where the first hit came from: I stand south-west of it.
         int hits = GameRules.TreeHits(1.1);
         for (int i = 1; i < hits; i++) T.Check(rules.Chop(me, 3, 4, 21, 28).Ok && !world.Removals.Contains(ObjectRemovals.Trees, 3, 4), $"hit {i} of {hits}: standing");
         var events = rules.TakeTreeEvents();
-        T.Check(events.Count == hits - 1 && events.All(e => !e.Felled) && events[^1].HitsLeft == 1, $"{events.Count} hit events, the last with one hit left");
-        var chop = rules.Chop(me, 3, 4, 21, 28);
+        T.Check(events.Count == hits - 1 && events.All(e => !e.Felled && e.Total == hits) && events[^1].HitsLeft == 1, $"{events.Count} hit events, the last with one hit left");
+        T.Check(events[0].DirZ < -.8 && events[0].DirX < 0, $"the notch faces me: {events[0].DirX:0.00}, {events[0].DirZ:0.00}");
+        // The last hit from the other side: it still falls toward the notch (no wind).
+        var chop = rules.Chop(me, 3, 4, 22, 30);
         T.Check(chop.Ok && world.Removals.Contains(ObjectRemovals.Trees, 3, 4), "felled: " + chop.Message);
         T.Check(world.Removals.Get(ObjectRemovals.Trees, 3, 4) == 10, "with the time it fell");
         var fall = rules.TakeTreeEvents().Single();
-        T.Check(fall.Felled && Math.Abs(fall.DirX - .5 / Math.Sqrt(1.25)) < 1e-6 && Math.Abs(fall.DirZ - 1 / Math.Sqrt(1.25)) < 1e-6,
-            $"it falls straight away from me (no wind): {fall.DirX:0.00}, {fall.DirZ:0.00}");
+        T.Check(fall.Felled && Math.Abs(fall.DirX - events[0].DirX) < 1e-9 && Math.Abs(fall.DirZ - events[0].DirZ) < 1e-9, $"it falls toward the notch: {fall.DirX:0.00}, {fall.DirZ:0.00}");
         T.Check(!rules.Chop(me, 3, 4, 21, 28).Ok, "only once");
-        var pile = rules.Objects.All.Single(o => o.Kind == "log_pile");
-        T.Check(pile.Z > 29 && pile.Y == 5 && pile.Contents.Any(c => c.Item == "log"), $"its wood lies where it fell ({pile.X:0.0}, {pile.Z:0.0})");
+        // Act 3: a bare trunk lies along the fall (mine to move), the crown's branches where it came down.
+        var trunk = rules.Objects.All.Single(o => o.Kind == "trunk");
+        T.Check(trunk.Owner == me && trunk.Z < 29 && trunk.Size == 1.1f && trunk.Variant == 5, $"a trunk lies toward the fall ({trunk.X:0.0}, {trunk.Z:0.0}), its PC is mine");
+        var crownPile = rules.Objects.All.Single(o => o.Kind == "branch_pile");
+        T.Check(crownPile.Contents.Single().Count == GameRules.CrownBranches(1.1), "branches where the crown came down");
         T.Check(inv.Count("log") == 0, "nothing in the pack yet");
-        T.Check(!rules.Gather(me, pile.Id, 21, 10).Ok, "too far to pick it up");
+        // Size sets the yield: the trunk's volume.
+        T.Check(GameRules.TrunkLogs(.8) < GameRules.TrunkLogs(1.1) && GameRules.TrunkLogs(1.1) < GameRules.TrunkLogs(1.6), $"logs by size: {GameRules.TrunkLogs(.8)}, {GameRules.TrunkLogs(1.1)}, {GameRules.TrunkLogs(1.6)}");
+        T.Check(GameRules.TreeHits(.8) < GameRules.TreeHits(1.6), "and the effort");
+        // Moving it: only its owner's reports count; someone else close by takes it over (to push it).
+        double x0 = trunk.X;
+        T.Check(rules.Objects.Move(me, trunk.Id, x0 + 1, trunk.Y, trunk.Z, 0, 0, 0, 1) && trunk.X == x0 + 1 && rules.Objects.TakeMoved().Contains(trunk.Id), "it rolled a metre (my PC moves it; passed on)");
+        T.Check(!rules.Objects.Move(other, trunk.Id, 0, 0, 0, 0, 0, 0, 1), "another's report is ignored");
+        T.Check(!rules.Claim(other, trunk.Id, 200, 200), "not from afar");
+        T.Check(rules.Claim(other, trunk.Id, trunk.X + 1, trunk.Z) && trunk.Owner == other, "taken over by the player pushing it");
+        rules.Release(other);
+        T.Check(trunk.Owner == 0, "a player leaving lets it go");
+        // Cutting it up.
+        int cuts = GameRules.TrunkHits(1.1);
+        for (int i = 1; i < cuts; i++) T.Check(rules.ChopTrunk(me, trunk.Id, trunk.X, trunk.Z - 1).Ok && rules.Objects.Get(trunk.Id) != null, $"cut hit {i} of {cuts}");
+        T.Check(!rules.ChopTrunk(me, trunk.Id, 200, 200).Ok, "not from afar");
+        var split = rules.ChopTrunk(me, trunk.Id, trunk.X, trunk.Z - 1);
+        var pile = rules.Objects.All.Single(o => o.Kind == "log_pile");
+        T.Check(split.Ok && rules.Objects.Get(trunk.Id) == null && pile.Contents.Single() == ("log", GameRules.TrunkLogs(1.1)), $"split: {split.Message}");
+        T.Check(!rules.Gather(me, pile.Id, 21, 100).Ok, "too far to pick it up");
         var gather = rules.Gather(me, pile.Id, pile.X, pile.Z - 2);
-        T.Check(gather.Ok && inv.Count("log") >= 2 && inv.Count("branch") >= 4 && rules.Objects.Get(pile.Id) == null, $"picked up: {gather.Message}");
+        T.Check(gather.Ok && inv.Count("log") == GameRules.TrunkLogs(1.1) && rules.Objects.Get(pile.Id) == null, $"picked up: {gather.Message}");
+        T.Check(rules.Gather(me, crownPile.Id, crownPile.X, crownPile.Z - 1).Ok && inv.Count("branch") >= 4, "and the branches");
         T.Check(rules.TakeInventoryChanges().Contains(me), "my inventory is sent to me");
         rules.Objects.TakeChanged();
-        // A strong wind has its say: a tree chopped from the south falls east in a 10 m/s west wind.
+        // A strong wind has its say: notched from the south, in a 10 m/s west wind it falls north-east.
         var windy = new World { Wind = (1, 0, 10) };
         var rules2 = new GameRules(c, windy);
-        for (int i = 0; i < hits; i++) rules2.Chop(me, 3, 4, 21.5, 28);
+        for (int i = 0; i < hits; i++) rules2.Chop(me, 3, 4, 21.5, 26);
         var windFall = rules2.TakeTreeEvents().Last();
-        T.Check(windFall.Felled && windFall.DirX > .5, $"in the wind it falls downwind: {windFall.DirX:0.00}, {windFall.DirZ:0.00}");
+        T.Check(windFall.Felled && windFall.DirX > .3 && windFall.DirZ < -.5, $"in the wind it falls partly downwind: {windFall.DirX:0.00}, {windFall.DirZ:0.00}");
 
         T.Check(!rules.Make(me, "cook_fish", 21, 28, 0, 0, 0, 0).Ok, "no fish, no fire: cannot cook");
         T.Check(!rules.Make(me, "campfire", 21, 28, 40, 0, 40, 0).Ok, "cannot build it out of reach");

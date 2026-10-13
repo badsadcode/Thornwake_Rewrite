@@ -934,6 +934,7 @@ public partial class WorldLab : Node3D
         }
         _player.Velocity = velocity;
         _player.MoveAndSlide();
+        PushObjects(delta); // (walking into a fallen trunk pushes it)
         _physicsHitch.Mark("move");
         UpdateWakes(dt, level);
         // Never fall through the world if collision has not streamed in yet (e.g. after very fast flight): back onto

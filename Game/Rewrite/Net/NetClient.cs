@@ -28,6 +28,8 @@ public interface IClientGame
     void ApplyRemovals(IReadOnlyList<(int Layer, long X, long Z, double? RemovedAt)> removals);
     /// <summary>A tree was hit (shake it) or felled (it falls that way).</summary>
     void TreeHit(in Thornwake.Gameplay.TreeEvent e);
+    /// <summary>A moving object (a trunk) is here now (its owner's PC says so).</summary>
+    void ObjectMoved(long id, double x, double y, double z, float qx, float qy, float qz, float qw);
     /// <summary>This player's state now (null while there is none yet: the world is still loading).</summary>
     PlayerState? LocalState();
 }
@@ -64,6 +66,10 @@ public sealed class NetClient
         var d = dig;
         _send(NetMessages.Build(Msg.Dig, w => w.Write(d)), true);
     }
+
+    /// <summary>Where an object this PC moves is now (unreliable).</summary>
+    public void SendMove(long id, double x, double y, double z, float qx, float qy, float qz, float qw) =>
+        _send(NetMessages.Build(Msg.Move, w => { w.Write(id); w.Write(x); w.Write(y); w.Write(z); w.Write(qx); w.Write(qy); w.Write(qz); w.Write(qw); }), false);
 
     public void SendAction(in ActionRequest action)
     {
@@ -127,7 +133,11 @@ public sealed class NetClient
             case Msg.Removals: _game.ApplyRemovals(r.ReadRemovals()); break;
             case Msg.TreeHits:
                 for (int n = r.ReadInt32(); n > 0; n--)
-                    _game.TreeHit(new Thornwake.Gameplay.TreeEvent(r.ReadInt64(), r.ReadInt64(), r.ReadInt16(), r.ReadBoolean(), r.ReadSingle(), r.ReadSingle()));
+                    _game.TreeHit(new Thornwake.Gameplay.TreeEvent(r.ReadInt64(), r.ReadInt64(), r.ReadInt16(), r.ReadInt16(), r.ReadBoolean(), r.ReadSingle(), r.ReadSingle()));
+                break;
+            case Msg.Moves:
+                for (int n = r.ReadInt32(); n > 0; n--)
+                    _game.ObjectMoved(r.ReadInt64(), r.ReadDouble(), r.ReadDouble(), r.ReadDouble(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
                 break;
         }
     }

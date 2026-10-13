@@ -66,6 +66,7 @@ public sealed class NetServer
 
     public void Disconnected(long peer)
     {
+        _world.Rules?.Release((int)peer); // (what their PC moved stays where it is)
         if (!_players.Remove(peer, out var gone) || !gone.Welcomed) return;
         Broadcast(NetMessages.Build(Msg.Left, w => w.Write((int)peer)), true, except: peer);
     }
@@ -109,6 +110,13 @@ public sealed class NetServer
                 SendChanges(); // at once: the digger sees the hole without waiting for the next tick
                 break;
             }
+            case Msg.Move when player.Welcomed && _world.Rules is { } moving:
+            {
+                long id = r.ReadInt64(); double x = r.ReadDouble(), y = r.ReadDouble(), z = r.ReadDouble();
+                float qx = r.ReadSingle(), qy = r.ReadSingle(), qz = r.ReadSingle(), qw = r.ReadSingle();
+                if (double.IsFinite(x + y + z)) moving.Objects.Move((int)peer, id, x, y, z, qx, qy, qz, qw);
+                break;
+            }
             case Msg.Action when player.Welcomed && _world.Rules is { } rules && _world.Removals != null:
             {
                 var a = r.ReadAction();
@@ -125,6 +133,8 @@ public sealed class NetServer
                         ActionKind.Fuel => rules.Fuel(id, a.A, at.X, at.Z),
                         ActionKind.Eat => rules.Eat(id, a.Id),
                         ActionKind.Gather => rules.Gather(id, a.A, at.X, at.Z),
+                        ActionKind.ChopTrunk => rules.ChopTrunk(id, a.A, at.X, at.Z),
+                        ActionKind.Claim => new ActionResult(rules.Claim(id, a.A, at.X, at.Z), ""),
                         _ => ActionResult.Fail("Unknown action."),
                     };
                 }
@@ -236,8 +246,16 @@ public sealed class NetServer
                 Broadcast(NetMessages.Build(Msg.TreeHits, w =>
                 {
                     w.Write(hits.Count);
-                    foreach (var e in hits) { w.Write(e.Cx); w.Write(e.Cz); w.Write((short)e.HitsLeft); w.Write(e.Felled); w.Write((float)e.DirX); w.Write((float)e.DirZ); }
+                    foreach (var e in hits) { w.Write(e.Cx); w.Write(e.Cz); w.Write((short)e.HitsLeft); w.Write((short)e.Total); w.Write(e.Felled); w.Write((float)e.DirX); w.Write((float)e.DirZ); }
                 }), true);
+            // Moving objects: where their owners' PCs put them (everyone; an owner ignores its own).
+            if (rules.Objects.TakeMoved() is { Count: > 0 } moved)
+                Broadcast(NetMessages.Build(Msg.Moves, w =>
+                {
+                    var list = moved.Select(rules.Objects.Get).Where(o => o != null).ToList();
+                    w.Write(list.Count);
+                    foreach (var o in list) { w.Write(o!.Id); w.Write(o.X); w.Write(o.Y); w.Write(o.Z); w.Write(o.Qx); w.Write(o.Qy); w.Write(o.Qz); w.Write(o.Qw); }
+                }), false);
             if (rules.Objects.TakeChanged() is { Count: > 0 } ids)
                 Broadcast(NetMessages.Build(Msg.Objects, w => { w.Write(ids.Count); foreach (long id in ids) rules.Objects.Write(w, id); }), true);
             foreach (int owner in rules.TakeInventoryChanges())
