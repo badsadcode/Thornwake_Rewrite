@@ -36,6 +36,12 @@ public partial class Launcher : Control
         Add(_main, "Harthwood Valley (original game)", () => Open("res://Game/Main.tscn"));
         Add(_main, "Quit", () => GetTree().Quit(), 44);
         BuildMultiplayer();
+        // --launcher-join=<address as typed>: fill the Multiplayer page's address and press Join (tests the path a player takes).
+        if (args.FirstOrDefault(a => a.StartsWith("--launcher-join=")) is { } typed)
+        {
+            _address.Text = typed[16..];
+            Callable.From(Join).CallDeferred();
+        }
         // --launcher-shot=<png>: a picture of the Multiplayer page (checking the layout), then quit.
         if (args.FirstOrDefault(a => a.StartsWith("--launcher-shot=")) is { } shot)
         {
@@ -126,6 +132,9 @@ public partial class Launcher : Control
                 NetLaunch.Port = port;
             }
         }
+        NetLaunch.Save(); // (after splitting address:port — saved before, the game reloaded the unsplit address)
+        _address.Text = NetLaunch.Address;
+        _port.Value = NetLaunch.Port;
         NetLaunch.Pending = NetLaunch.Role.Join;
         Open("res://Game/Rewrite/WorldLab.tscn");
     }
