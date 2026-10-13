@@ -78,6 +78,26 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 56 — no more freezes after teleports, players on the map, host a world you set up
+**Host and friends must all use build 56** (build 55 and 56 do not connect to each other).
+* **Fixed: the host's game froze (12 s, 48 s, or for good) after teleports while it rained** (H). Rain erosion then
+  reworked all the ground between the old place and the new one — hundreds of kilometres. Now only the worn spots.
+* **Rain started with H on the host now rains for everyone.** On a joined game H says the host decides. The natural
+  weather was already the same for everyone (computed from the world and the shared time); lightning (L), poured
+  water and springs are still each player's own.
+* **World map (M):** your marker is an arrow (the notch at the back shows the way you look). The other players are on
+  it as arrows in their tunic colour with their names, moving while the map is open. **Players** list beside the map:
+  *Go to …* puts you right next to them.
+* **Set the world up before hosting:** start alone (*Explore the new world*), make the world you want (Esc → New
+  world: type, seed, sliders; settings; digging), then **Esc → Host this world…** — it hosts on the port and under the
+  name from the launcher's Multiplayer page. Friends join as usual and get that world with your digging. While
+  hosting, Esc → New world still takes everyone along to the next world.
+* **Fixed for joining players:** the game crashed when the address could not be used (e.g. with two ports); after a
+  lost connection it filled its log with errors.
+* **Logs:** the game log is now written line by line (a crash keeps everything up to it), and any frame over half a
+  second is noted in it and in the `net-…log` with what was slow. After a problem: F9, then send the newest
+  `dump-…txt` and `net-…log` from `%APPDATA%\Thornwake\debug` (and `%APPDATA%\Thornwake\logs`) from both of you.
+
 ## New in build 55 — multiplayer test, Alden's torch, first person
 * **Multiplayer (first test):** launcher → *Multiplayer…*: type your name; one player presses **Host a game**, the
   others type the host's address and press **Join**. Everyone sees the same world, time of day, weather and clouds,
