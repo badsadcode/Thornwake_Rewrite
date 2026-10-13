@@ -49,12 +49,14 @@ public sealed partial class NetSession : Node
     public Error Join(string address, int port, IClientGame game, string name, string version)
     {
         Setup(name, version);
+        // The client part first: the game asks it about the join even when the connection could not be made (a friend's
+        // game crashed there on an address it could not use).
+        Client = new NetClient(game, (data, reliable) => Send(NetServer.HostPeer, data, reliable), isHost: false);
         _peer = new ENetMultiplayerPeer();
         var error = _peer.CreateClient(address, port);
         Stats.Role = $"client {name} to {address}:{port}";
-        if (error != Error.Ok) { Status = $"Could not connect to {address}:{port}: {error}"; Stats.Event(Status); return error; }
+        if (error != Error.Ok) { _peer = null; Status = $"Could not connect to {address}:{port}: {error}"; Stats.Event(Status); return error; }
         _mp.MultiplayerPeer = _peer;
-        Client = new NetClient(game, (data, reliable) => Send(NetServer.HostPeer, data, reliable), isHost: false);
         _mp.ConnectedToServer += () => { Status = $"Connected to {address}:{port}"; Stats.Event(Status); Client.Hello(_name, _version); };
         _mp.ConnectionFailed += () => { Status = $"Could not reach {address}:{port} (wrong address, the host not running, or a port not forwarded)"; Stats.Event(Status); };
         _mp.ServerDisconnected += () => { Status = "The host closed the game or the connection dropped."; Stats.Event(Status); };
@@ -88,6 +90,8 @@ public sealed partial class NetSession : Node
 
     private void Send(long peer, byte[] data, bool reliable)
     {
+        // Not (or no longer) connected: nothing to send to (it used to fill the log with errors after a drop).
+        if (_peer == null || _peer.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Connected) return;
         Stats.Counted((Msg)data[0], true, data.Length);
         _mp.SendBytes(data, (int)peer, reliable ? MultiplayerPeer.TransferModeEnum.Reliable : MultiplayerPeer.TransferModeEnum.Unreliable, reliable ? 0 : 1);
     }

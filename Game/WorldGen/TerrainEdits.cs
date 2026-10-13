@@ -105,6 +105,36 @@ public sealed class TerrainEdits
         return volume;
     }
 
+    /// <summary>
+    /// Add a height change at single edit vertices (rain erosion): only the chunks holding them are visited, however
+    /// far apart they are (a teleport leaves erosion behind at the old place; a rectangle over both meant millions of
+    /// vertices and a frozen game, D106). Returns each touched chunk's vertex rectangle.
+    /// </summary>
+    public List<(long MinX, long MinZ, long MaxX, long MaxZ)> Add(IReadOnlyDictionary<(long X, long Z), double> deltas, double limit = 200)
+    {
+        var touched = new List<(long, long, long, long)>();
+        foreach (var group in deltas.GroupBy(d => (Chunk(d.Key.X), Chunk(d.Key.Z))))
+        {
+            var (cx, cz) = group.Key;
+            _chunks.TryGetValue((cx, cz), out var old);
+            float[]? next = null;
+            foreach (var ((vx, vz), delta) in group)
+            {
+                int k = (int)(vz - cz * ChunkVertices) * ChunkVertices + (int)(vx - cx * ChunkVertices);
+                double current = old?[k] ?? 0;
+                double value = Math.Clamp(current + delta, -limit, limit);
+                if (value == current) continue;
+                next ??= old != null ? (float[])old.Clone() : new float[ChunkVertices * ChunkVertices];
+                next[k] = (float)value;
+            }
+            if (next == null) continue;
+            _chunks[(cx, cz)] = next; _changed[(cx, cz)] = 0;
+            touched.Add((cx * ChunkVertices, cz * ChunkVertices, cx * ChunkVertices + ChunkVertices - 1, cz * ChunkVertices + ChunkVertices - 1));
+        }
+        Version++;
+        return touched;
+    }
+
     /// <summary>Raw offset at an edit vertex (1 m grid).</summary>
     public double At(long x, long z) => Vertex(x, z);
 

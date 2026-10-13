@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Thornwake.WorldGen;
 
@@ -6,21 +8,31 @@ namespace Thornwake.Rewrite;
 
 /// <summary>
 /// World map for exploring and testing (M): terrain or biome view (B), mouse wheel zooms at the cursor, left-drag pans,
-/// right-click teleports there (onto the ground). The marker shows the player and the way they face.
+/// right-click teleports there (onto the ground). An arrow shows the player and the way they look; in a multiplayer
+/// game the others too (in their tunic colour, with their name), and a list on the right jumps to them.
 /// </summary>
 public partial class WorldMap : Control
 {
     private const int Pixels = 768;
     private readonly TextureRect _image = new() { ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.Scale };
-    private readonly Label _marker = new() { Text = "▲", HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Control _markers = new() { MouseFilter = MouseFilterEnum.Ignore };
+    private readonly VBoxContainer _playerList = new();
+    private string _listedNames = "";
     private readonly Label _info = new();
     private WorldPlan? _plan;
     private double _cx, _cz, _span;
     private bool _biomes, _dragging;
     private double _playerX, _playerZ; private float _playerYaw;
 
+    /// <summary>Another player on the map: world position, yaw as the camera's (0 looks to −Z, north), tunic colour.</summary>
+    public readonly record struct Other(int Id, string Name, double X, double Z, float Yaw, Color Color);
+
     /// <summary>Called with world (x, z) on right-click.</summary>
     public Action<double, double>? Teleport;
+    /// <summary>The other players now (multiplayer), asked every frame while the map is open.</summary>
+    public Func<IReadOnlyList<Other>>? Others;
+    /// <summary>Called with a player's id from the list (go to them).</summary>
+    public Action<int>? GoTo;
 
     public override void _Ready()
     {
@@ -29,12 +41,11 @@ public partial class WorldMap : Control
         AddChild(new ColorRect { Color = new Color(0, 0, 0, .78f), AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore });
         _image.MouseFilter = MouseFilterEnum.Ignore;
         AddChild(_image);
-        _marker.AddThemeColorOverride("font_color", new Color(1, .25f, .2f));
-        _marker.AddThemeColorOverride("font_outline_color", Colors.Black);
-        _marker.AddThemeConstantOverride("outline_size", 6);
-        _marker.AddThemeFontSizeOverride("font_size", 22);
-        _marker.MouseFilter = MouseFilterEnum.Ignore;
-        AddChild(_marker);
+        _markers.SetAnchorsPreset(LayoutPreset.FullRect);
+        _markers.Draw += DrawMarkers;
+        AddChild(_markers);
+        _playerList.AddThemeConstantOverride("separation", 4);
+        AddChild(_playerList);
         _info.AddThemeColorOverride("font_shadow_color", Colors.Black);
         _info.Position = new Vector2(16, 0);
         _info.MouseFilter = MouseFilterEnum.Ignore;
@@ -72,12 +83,55 @@ public partial class WorldMap : Control
         _info.Position = new Vector2(16, MapRect().Position.Y - 48);
         var r = MapRect();
         _image.Position = r.Position; _image.Size = r.Size;
+        _playerList.Position = new Vector2(r.End.X + 12, r.Position.Y);
+        if (_playerList.Position.X + 170 > Size.X) _playerList.Position = new Vector2(r.End.X - 180, r.Position.Y + 8);
+        _markers.QueueRedraw();
+    }
+
+    // An arrow, not a triangle: the notch at the back makes the way it points plain at a glance (Tom).
+    private static readonly Vector2[] Arrow = { new(0, -14), new(10, 11), new(0, 5), new(-10, 11) };
+
+    private void DrawArrow(Vector2 at, float yaw, Color fill, float scale)
+    {
+        // yaw 0 looks to −Z (north, up on the map); turning left (+yaw) turns the arrow anticlockwise.
+        var points = Arrow.Select(v => at + v.Rotated(-yaw) * scale).ToArray();
+        _markers.DrawColoredPolygon(points, fill);
+        _markers.DrawPolyline(points.Append(points[0]).ToArray(), Colors.Black, 2.5f, true);
+    }
+
+    private void DrawMarkers()
+    {
+        var r = MapRect();
+        var font = ThemeDB.FallbackFont;
+        foreach (var o in Others?.Invoke() ?? Array.Empty<Other>())
+        {
+            var q = ToScreen(o.X, o.Z);
+            if (!r.HasPoint(q)) continue;
+            DrawArrow(q, o.Yaw, o.Color.Lightened(.25f), .85f);
+            _markers.DrawString(font, q + new Vector2(13, -8), o.Name, HorizontalAlignment.Left, -1, 15, Colors.Black);
+            _markers.DrawString(font, q + new Vector2(12, -9), o.Name, HorizontalAlignment.Left, -1, 15, Colors.White);
+        }
         var p = ToScreen(_playerX, _playerZ);
-        _marker.Visible = r.HasPoint(p);
-        _marker.Size = new Vector2(30, 30);
-        _marker.PivotOffset = new Vector2(15, 15);
-        _marker.Position = p - new Vector2(15, 15);
-        _marker.Rotation = -_playerYaw; // yaw 0 faces −Z (north, up on the map)
+        if (r.HasPoint(p)) DrawArrow(p, _playerYaw, new Color(1, .25f, .2f), 1);
+    }
+
+    private void UpdatePlayerList()
+    {
+        var others = Others?.Invoke() ?? Array.Empty<Other>();
+        string names = string.Join("|", others.Select(o => $"{o.Id}:{o.Name}"));
+        if (names == _listedNames) return;
+        _listedNames = names;
+        foreach (var child in _playerList.GetChildren()) child.QueueFree();
+        if (others.Count == 0) return;
+        _playerList.AddChild(new Label { Text = "Players" });
+        foreach (var o in others)
+        {
+            int id = o.Id;
+            var go = new Button { Text = "Go to " + o.Name, Alignment = HorizontalAlignment.Left, CustomMinimumSize = new Vector2(160, 0) };
+            go.AddThemeColorOverride("font_color", o.Color.Lightened(.45f));
+            go.Pressed += () => { Visible = false; GoTo?.Invoke(id); };
+            _playerList.AddChild(go);
+        }
     }
 
     private Vector2 ToScreen(double x, double z)
@@ -133,7 +187,10 @@ public partial class WorldMap : Control
 
     public override void _Process(double delta)
     {
-        if (!Visible || !_pendingRedraw) return;
+        if (!Visible) return;
+        UpdatePlayerList();
+        _markers.QueueRedraw(); // the others move while the map is open
+        if (!_pendingRedraw) return;
         _redrawTimer += delta;
         if (_dragging && _redrawTimer < .25) return;
         _redrawTimer = 0; _pendingRedraw = false;

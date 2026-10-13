@@ -37,7 +37,8 @@ public enum PlayerFlags : byte { None = 0, Flying = 1, Torch = 2, Swimming = 4 }
 /// Everything about time that each PC would otherwise count up on its own: the day and its phase (GameClock), the
 /// waves' clock (Atmosphere.OceanTime), the gusts' clock (Wind) and the clouds' accumulated drift (Atmosphere.CloudDrift).
 /// </summary>
-public readonly record struct ClockState(int Day, double Phase, double OceanTime, double WindTime, double[] CloudDrift);
+/// <summary>The host's clock, sea and wind times, cloud drift, and its rain switch (H; the weather itself needs no sync, D103).</summary>
+public readonly record struct ClockState(int Day, double Phase, double OceanTime, double WindTime, double[] CloudDrift, bool Rain);
 
 /// <summary>A dig as the client's tool resolved it (TerrainSculpt.Apply's arguments), for the server to apply.</summary>
 public readonly record struct DigRequest(BrushMode Mode, BrushShape Shape, double Radius, double Strength, double RockFactor, double Budget,
@@ -46,7 +47,7 @@ public readonly record struct DigRequest(BrushMode Mode, BrushShape Shape, doubl
 public static class NetMessages
 {
     /// <summary>Changes whenever the messages change: a client and host with different versions do not connect.</summary>
-    public const int Protocol = 2;
+    public const int Protocol = 3;
 
     public static byte[] Build(Msg kind, Action<BinaryWriter> body)
     {
@@ -79,6 +80,7 @@ public static class NetMessages
         w.Write(c.Day); w.Write(c.Phase); w.Write(c.OceanTime); w.Write(c.WindTime);
         w.Write((byte)c.CloudDrift.Length);
         foreach (double v in c.CloudDrift) w.Write(v);
+        w.Write(c.Rain);
     }
 
     public static ClockState ReadClock(this BinaryReader r)
@@ -86,7 +88,7 @@ public static class NetMessages
         int day = r.ReadInt32(); double phase = r.ReadDouble(), ocean = r.ReadDouble(), wind = r.ReadDouble();
         var drift = new double[r.ReadByte()];
         for (int i = 0; i < drift.Length; i++) drift[i] = r.ReadDouble();
-        return new ClockState(day, phase, ocean, wind, drift);
+        return new ClockState(day, phase, ocean, wind, drift, r.ReadBoolean());
     }
 
     public static void Write(this BinaryWriter w, in DigRequest d)

@@ -37,6 +37,7 @@ public partial class WorldLab : Node3D
     private readonly WorldGenOptions _gen = new();
     private Label _hud = null!, _overlay = null!, _help = null!;
     private PanelContainer _menu = null!;
+    private Button _hostButton = null!;
     private OptionButton _profileList = null!;
     private LineEdit _seedEdit = null!;
     private ItemList _landmarkList = null!;
@@ -221,6 +222,7 @@ public partial class WorldLab : Node3D
         try { (profile, style) = _gen.Build(recipe); }
         catch (Exception error) { _status = "These world parameters are not valid: " + error.Message; return; }
         _custom = !_gen.IsPreset;
+        _worldTypeJson = recipe.Custom ? recipe.ToJson() : null; // (the world built, not whatever the list shows later)
         _worldArgs = $"--preset={recipe.Id} --seed={seed}" + (_custom ? " " + string.Join(" ", _gen.All.Select(g => $"--set={g.Key}={g.Value.ToString("R", CultureInfo.InvariantCulture)}")) : "");
         _overlay.Text = $"Generating {profile.Name}{(_custom ? " (custom)" : "")}, seed {seed}…\ncontinents → erosion → rivers and lakes";
         _overlay.Visible = true;
@@ -350,7 +352,7 @@ public partial class WorldLab : Node3D
         if (_horizon == null) { _horizon = new HorizonLand(); AddChild(_horizon); }
         _horizon.Configure(_sampler);
         _water.Configure(_sampler, _streamer.WaterMaterial, _originX, _originZ);
-        _rain = false;
+        _rain = _shotRain && _shotPath == null; // a dump's Reproduce line carries --rain (H); shots start it later
         Teleport(start.X, start.Z);
         var plan = _sampler.Plan;
         foreach (string arg in OS.GetCmdlineUserArgs())
@@ -722,19 +724,26 @@ public partial class WorldLab : Node3D
     /// <summary>Time of the last _Process (this script's own work each frame; benchmark).</summary>
     private double _lastProcessMs;
 
+    private readonly Hitches _hitch = new(), _physicsHitch = new();
+
     public override void _Process(double delta)
     {
         _processStartUs = Time.GetTicksUsec();
+        _hitch.Begin("process");
         if (_generation is { IsCompleted: true }) FinishGeneration();
         if (_preview is { IsCompleted: true }) FinishPreview();
         StepJoining(delta);
+        TeleportTest(delta);
         if (_bench != null && (_sampler == null || _generation != null)) BenchStep(delta);
         if (_sampler == null) return;
         Rebase(PlayerX, PlayerZ);
+        _hitch.Mark("rebase");
         _streamer.Update(PlayerX, PlayerZ);
+        _hitch.Mark("terrain streaming");
         _horizon?.Step(PlayerX, PlayerZ, _originX, _originZ, _streamer.Levels, WorldStreamer.TopRadius, _camera.GlobalPosition.Y);
         // The far plane covers the horizon land (it was 90 km whatever its range: land beyond was cut off).
         _camera.Far = Math.Max(90000, (_horizon?.Range ?? 0) * 1.05f);
+        _hitch.Mark("horizon land");
         if (_holding && _streamer.HasGround(PlayerX, PlayerZ))
         {
             // Snap to the generated ground once its collision exists: onto the collision surface, which at cliffs (a
@@ -751,11 +760,14 @@ public partial class WorldLab : Node3D
         double latitude = _sampler.Plan.Climate.Latitude(PlayerZ);
         if (_pendingHour is { } setHour) { _clock.SetHour(setHour, latitude); _pendingHour = null; }
         var sky = _clock.Advance(delta, latitude, run: _shotPath == null);
+        _hitch.Mark("ground snap, camera, others");
         UpdateWeather(delta, sky);
+        _hitch.Mark("weather");
         UpdatePeak(delta);
         UpdateRelief();
         if (!_timeSlider.HasFocus()) _timeSlider.SetValueNoSignal(sky.Hour);
         _atmosphere.Update(delta, sky, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
+        _hitch.Mark("atmosphere");
         if (GameSettings.WeatherModel.Index == 1 && GameSettings.WeatherOn.On)
         {
             if (_lightning == null)
@@ -770,10 +782,12 @@ public partial class WorldLab : Node3D
         if (GameSettings.GroundFog.Index > 0)
             _mist.Update(_sampler, PlayerX, PlayerZ, _originX, _originZ, _atmosphere.MistAmount, (float)_sampler.Height(PlayerX, PlayerZ, 8), _atmosphere.MistColour);
         else _mist.Visible = false;
+        _hitch.Mark("lightning, mist");
         UpdateUnderwater(cam);
         _hudTimer -= delta;
         if (_hudTimer <= 0) { _hudTimer = .2; UpdateHud(); }
         _lastProcessMs = (Time.GetTicksUsec() - _processStartUs) / 1000.0;
+        _hitch.End($"at {PlayerX:0}, {PlayerZ:0}");
         if (_findSitesPending && _sampler != null && _generation == null && !_holding) { _findSitesPending = false; FindSites(); }
         if (_clearSpotPending && _sampler != null && _generation == null && !_holding) { _clearSpotPending = false; ClearSpot(); }
         if (_probeWaterPending && _sampler != null && _generation == null) { _probeWaterPending = false; ProbeWater(); }
@@ -847,6 +861,7 @@ public partial class WorldLab : Node3D
     {
         if (_sampler == null || _holding) return;
         if (_bench != null) { _player.Velocity = Vector3.Zero; return; } // the benchmark places the player itself
+        _physicsHitch.Begin("physics");
         float dt = (float)delta;
         var input = Vector2.Zero;
         bool typing = _menu.Visible;
@@ -867,6 +882,7 @@ public partial class WorldLab : Node3D
         var velocity = _player.Velocity;
 
         UpdateLocalWater(dt, typing);
+        _physicsHitch.Mark("local water, tools");
         double feet = _player.Position.Y;
         // Swim on the waves (the same waves the water shader draws).
         double level = WaterSurface(PlayerX, PlayerZ, out _);
@@ -904,6 +920,7 @@ public partial class WorldLab : Node3D
         }
         _player.Velocity = velocity;
         _player.MoveAndSlide();
+        _physicsHitch.Mark("move");
         UpdateWakes(dt, level);
         // Never fall through the world if collision has not streamed in yet (e.g. after very fast flight): back onto
         // the collision surface (or the terrain height without collision), and stop the fall.
@@ -922,6 +939,7 @@ public partial class WorldLab : Node3D
 
         // Character: face the direction of travel, swing limbs.
         _me.Animate(dt, _player.Velocity, _fly, holdFacing: FirstPerson);
+        _physicsHitch.End($"at {PlayerX:0}, {PlayerZ:0}");
     }
 
     /// <summary>Local water: simulate, and the debug tools (G pour at the aimed point, J toggle a spring there).</summary>
@@ -1011,17 +1029,16 @@ public partial class WorldLab : Node3D
     /// cells around each), and the touched tiles rebuilt.</summary>
     private void ApplyErosion(List<(double X, double Z, float Dz)> cells)
     {
-        var sums = new Dictionary<(long, long), (double Sum, int Count)>();
-        double minX = double.MaxValue, minZ = double.MaxValue, maxX = double.MinValue, maxZ = double.MinValue;
+        var sums = new Dictionary<(long X, long Z), double>();
         foreach (var (x, z, dz) in cells)
         {
             var key = ((long)Math.Round(x), (long)Math.Round(z));
-            sums[key] = sums.TryGetValue(key, out var v) ? (v.Sum + dz, v.Count + 1) : (dz, 1);
-            minX = Math.Min(minX, x); minZ = Math.Min(minZ, z); maxX = Math.Max(maxX, x); maxZ = Math.Max(maxZ, z);
+            sums[key] = sums.GetValueOrDefault(key) + dz;
         }
-        _sampler!.Edits.Modify(minX - 1, minZ - 1, maxX + 1, maxZ + 1,
-            (vx, vz, current) => sums.TryGetValue((vx, vz), out var v) ? current + v.Sum / 4 : current);
-        _streamer.Invalidate(minX - 2, minZ - 2, maxX + 2, maxZ + 2);
+        foreach (var key in sums.Keys.ToList()) sums[key] /= 4;
+        // Only the touched chunks: after a teleport the cells lie at both places (D106).
+        foreach (var (x0, z0, x1, z1) in _sampler!.Edits.Add(sums))
+            _streamer.Invalidate(x0 - 2, z0 - 2, x1 + 2, z1 + 2);
     }
 
 
@@ -1129,7 +1146,10 @@ public partial class WorldLab : Node3D
             case >= Key.Key1 and <= Key.Key5: if (!_menu.Visible && _tools.Select((int)(key.Keycode - Key.Key1))) _status = _tools.Status; break;
             case Key.T or Key.Y or Key.Bracketleft or Key.Bracketright or Key.Minus or Key.Equal: if (!_menu.Visible) _tools.DevKey(key.Keycode); break;
             case Key.R: if (!_menu.Visible) { _me.Torch.Lit = !_me.Torch.Lit; _status = _me.Torch.Lit ? "Torch lit (R puts it out)." : "Torch out."; } break;
-            case Key.H: if (!_menu.Visible) { _rain = !_rain; _status = _rain ? "Rain on (H stops it)." : "Rain stopped."; } break;
+            case Key.H:
+                if (_menu.Visible) break;
+                if (IsNetClient) { _status = "The host starts and stops the rain (H in the host's game)."; break; }
+                _rain = !_rain; _status = _rain ? "Rain on (H stops it)." : "Rain stopped."; break;
             case Key.K: if (!_menu.Visible) { _water.Clear(); _rain = false; _status = "Simulated water cleared."; } break;
             case Key.L: if (!_menu.Visible && _lightning != null)
                 {
@@ -1151,10 +1171,12 @@ public partial class WorldLab : Node3D
     private void ToggleMenu(bool open)
     {
         _menu.Visible = open;
+        _hostButton.Visible = _net == null && _sampler != null && _generation == null;
         Input.MouseMode = open ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
     }
 
     private string _worldArgs = "";
+    private string? _worldTypeJson;
 
     /// <summary>
     /// F9 (Tom: "a debug dump … so you can recreate the same place, same situation"): a text file with the world, the
@@ -1264,6 +1286,8 @@ public partial class WorldLab : Node3D
             _hud.Visible = _showHud; _help.Visible = true;
             _status = $"Teleported to {x:0} , {z:0}.";
         };
+        _map.Others = MapOthers;
+        _map.GoTo = GoToPlayer;
         _help = new Label
         {
             Text = "WASD move · Shift sprint · Space jump/swim up · C dive · mouse look (Tab frees cursor) · wheel zoom (all the way in: first person) · R torch\n" +
@@ -1298,6 +1322,10 @@ public partial class WorldLab : Node3D
         // Always visible under every tab (Tom: "add close/exit in ESC menu so I don't have to Alt+F4 in fullscreen").
         var menuBar = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
         menuColumn.AddChild(menuBar);
+        // Set the world up alone first (New world, settings, digging), then open it to others (Tom).
+        _hostButton = new Button { Text = "Host this world…", TooltipText = "Others can join this world now, on the port and under the name from the launcher's Multiplayer page." };
+        _hostButton.Pressed += () => { HostHere(); ToggleMenu(false); };
+        menuBar.AddChild(_hostButton);
         var resume = new Button { Text = "Resume (Esc)" };
         resume.Pressed += () => ToggleMenu(false);
         var back = new Button { Text = "Back to launcher" };

@@ -45,6 +45,7 @@ public partial class WorldLab : IWorldHost, IClientGame
             _net = new NetSession { Name = "Net" };
             AddChild(_net);
             _net.Host(port, this, this, name, version);
+            _hitch.Report = _physicsHitch.Report = _net.Stats.Event;
             return false; // the host builds its own world as usual
         }
         if (join != null)
@@ -65,6 +66,7 @@ public partial class WorldLab : IWorldHost, IClientGame
             _net = new NetSession { Name = "Net" };
             AddChild(_net);
             _net.Join(target, port, this, name, version);
+            _hitch.Report = _physicsHitch.Report = _net.Stats.Event;
             _tools.Remote = dig => _net.Client.SendDig(dig);
             _overlay.Text = $"Joining {target}:{port}…";
             _overlay.Visible = true;
@@ -88,17 +90,48 @@ public partial class WorldLab : IWorldHost, IClientGame
     // --net-probe=x,z (the ground height there, into the network log every 2 s: host and client must agree).
     private bool _netDigSent;
     private double _probeTimer;
+    private double _digRepeatTimer;
+    private int _digRepeatCount;
+
+    private double _testTime;
+    private bool _mapShotDone;
 
     private void NetTests(double delta)
     {
-        if (_net == null || _sampler == null) return;
+        if (_sampler == null || _generation != null) return;
         var args = OS.GetCmdlineUserArgs();
+        _testTime += delta;
+        // --host-here=seconds[,port]: a game started alone opens itself to others that long after its world is ready (the
+        // Esc menu's Host this world). --map-shot=png,seconds: the world map open, saved as a picture (the players on it).
+        if (_net == null && args.FirstOrDefault(a => a.StartsWith("--host-here=")) is { } hostHere
+            && hostHere[12..].Split(',') is var hv && _testTime > double.Parse(hv[0], CultureInfo.InvariantCulture))
+            HostHere(hv.Length > 1 ? int.Parse(hv[1], CultureInfo.InvariantCulture) : null);
+        if (!_mapShotDone && args.FirstOrDefault(a => a.StartsWith("--map-shot=")) is { } mapShot && mapShot[11..].Split(',') is [var png, var after]
+            && _testTime > double.Parse(after, CultureInfo.InvariantCulture))
+        {
+            _mapShotDone = true;
+            _map.Open(_sampler.Plan, PlayerX, PlayerZ, _yaw);
+            GetTree().CreateTimer(1).Timeout += () => GetViewport().GetTexture().GetImage().SavePng(png);
+        }
+        if (_net == null) return;
         if (!_netDigSent && IsNetClient && ((IClientGame)this).LocalState() != null && args.FirstOrDefault(a => a.StartsWith("--net-dig=")) is { } dig)
         {
             var v = dig[10..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray();
             _net.Client.SendDig(new DigRequest(BrushMode.Dig, BrushShape.Round, v[2], v[3], 1, double.PositiveInfinity, v[0], _sampler.Height(v[0], v[1]), v[1], 0, -1, 0));
             _net.Stats.Event($"test: asked the host to dig at {v[0]}, {v[1]}");
             _netDigSent = true;
+        }
+        // --net-dig-repeat=seconds,radius,strength: a client keeps digging and raising beside itself (terraform-like),
+        // the load a guest put on the host in the 2026-10-13 internet test.
+        if (IsNetClient && ((IClientGame)this).LocalState() != null && args.FirstOrDefault(a => a.StartsWith("--net-dig-repeat=")) is { } repeat
+            && (_digRepeatTimer -= delta) <= 0)
+        {
+            var v = repeat[17..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray();
+            _digRepeatTimer = v[0];
+            _digRepeatCount++;
+            double x = PlayerX + 6 + (_digRepeatCount % 5) * 2, z = PlayerZ + (_digRepeatCount % 3) * 2;
+            _net.Client.SendDig(new DigRequest(_digRepeatCount % 2 == 0 ? BrushMode.Dig : BrushMode.Raise, BrushShape.Round, v[1], v[2], 1,
+                double.PositiveInfinity, x, _sampler.Height(x, z), z, 0, -1, 0));
         }
         if (args.FirstOrDefault(a => a.StartsWith("--net-probe=")) is { } probe && (_probeTimer -= delta) <= 0)
         {
@@ -133,10 +166,10 @@ public partial class WorldLab : IWorldHost, IClientGame
     // ---- IWorldHost: the host's world as the server part sees it
 
     string IWorldHost.WorldArgs => _worldArgs;
-    string? IWorldHost.WorldTypeJson => _recipes[Math.Max(0, _profileList.Selected)] is { Custom: true } r ? r.ToJson() : null;
+    string? IWorldHost.WorldTypeJson => _worldTypeJson;
     IReadOnlyList<(string Key, double Value)> IWorldHost.WorldSettings() =>
         GameSettings.All.Where(GameSettings.AffectsWorld).Select(s => (s.Key, s.Value)).ToList();
-    ClockState IWorldHost.Clock() => new(_clock.Day, _clock.Phase, _atmosphere.OceanTime, _atmosphere.Wind.Time, _atmosphere.CloudDrift);
+    ClockState IWorldHost.Clock() => new(_clock.Day, _clock.Phase, _atmosphere.OceanTime, _atmosphere.Wind.Time, _atmosphere.CloudDrift, _rain);
     TerrainEdits? IWorldHost.Edits => _sampler?.Edits;
 
     (double Volume, double Hardness) IWorldHost.Dig(in DigRequest d)
@@ -198,6 +231,8 @@ public partial class WorldLab : IWorldHost, IClientGame
         _atmosphere.FollowOceanTime(c.OceanTime, 1, snap);
         _atmosphere.Wind.Time = c.WindTime;
         _atmosphere.FollowCloudDrift(c.CloudDrift);
+        if (_rain != c.Rain) _net?.Stats.Event($"the host's rain (H) is {(c.Rain ? "on" : "off")}");
+        _rain = c.Rain; // rain started with H on the host rains for everyone
     }
 
     void IClientGame.ApplyChunks(IReadOnlyList<(long X, long Z, float[]? Offsets)> chunks)
@@ -216,6 +251,27 @@ public partial class WorldLab : IWorldHost, IClientGame
             _water.Sim?.ReloadGround(x0 - 1, z0 - 1, x1 + 1, z1 + 1);
         }
         _sampler!.Edits.TakeChanged(); // (applied from the host: nothing to send back)
+    }
+
+    /// <summary>
+    /// Esc → Host this world: the world already here (made and changed alone first) is opened to others, on the port and
+    /// under the name from the launcher's Multiplayer page. Its digging so far goes to everyone who joins.
+    /// </summary>
+    private void HostHere(int? port = null)
+    {
+        if (_net != null || _sampler == null || _generation != null) return;
+        NetLaunch.Load();
+        if (port is { } p) NetLaunch.Port = p; // (tests: not the player's own port)
+        string name = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--name="))?[7..]
+            ?? (NetLaunch.Name.Length > 0 ? NetLaunch.Name : System.Environment.UserName);
+        string version = (string)ProjectSettings.GetSetting("application/config/version", "?");
+        var net = new NetSession { Name = "Net" };
+        AddChild(net);
+        if (net.Host(NetLaunch.Port, this, this, name, version) != Error.Ok) { _status = net.Status; net.QueueFree(); return; }
+        _net = net;
+        _hostWorlds = 1; // this world is the first: a later one (New world) is sent to everyone
+        _hitch.Report = _physicsHitch.Report = _net.Stats.Event;
+        _status = $"Hosting this world on UDP port {NetLaunch.Port} as {name}. Others join with your address.";
     }
 
     /// <summary>After the host's world finished generating here: its edits so far, and the place next to the host.</summary>
@@ -260,6 +316,22 @@ public partial class WorldLab : IWorldHost, IClientGame
         }
         remote.Push(state, Time.GetTicksMsec() / 1000.0);
         _net?.Stats.Arrived(id);
+    }
+
+    /// <summary>The other players for the world map (yaw as the camera's: the body's facing − π).</summary>
+    private IReadOnlyList<WorldMap.Other> MapOthers() => _remotes.Values
+        .Where(r => r.Latest != null)
+        .Select(r => { var s = r.Latest!.Value; return new WorldMap.Other(r.Id, r.PlayerName, s.X, s.Z, s.Facing - Mathf.Pi, r.Tunic); })
+        .OrderBy(o => o.Name).ToList();
+
+    /// <summary>Go to another player (from the map's list): beside them, on the ground.</summary>
+    private void GoToPlayer(int id)
+    {
+        if (!_remotes.TryGetValue(id, out var r) || r.Latest is not { } s) return;
+        Teleport(s.X + 3, s.Z + 2);
+        Input.MouseMode = Input.MouseModeEnum.Captured;
+        _hud.Visible = _showHud; _help.Visible = true;
+        _status = $"Went to {r.PlayerName}.";
     }
 
     void IClientGame.DigDone(double volume, double hardness) => _tools.RemoteDone(volume, hardness);

@@ -1437,6 +1437,33 @@ positions while loading too; (3) DS-Lite / CGNAT lines need a relay: later Steam
 Multiplayer page should explain it. Waiting for the guest's own log (clock offset, how often the host was drawn ahead)
 and how it felt.
 
+## D106 — The host's freezes after teleports were rain erosion; rain shared; join fixes (2026-10-13)
+Tom's host froze for 12 s and 48 s (and once for good) after map jumps in the internet test, with rain started by H.
+Both logs line up (the friend's clock is 407 s behind in session time): each freeze ends with one Chunks message of 24–28
+edit chunks (98–122 KB) from the host, and the friend's side shows the host silent while they kept sending. Cause: rain
+erosion (every 10 s, host only) hands over the worn cells of the local water window **and** of the window just left;
+`ApplyErosion` changed one rectangle over all of them, so after a jump it walked every 1 m vertex between the old and
+new place (366 × 92 km in the reproduction: 33 billion vertices, the game hung) and invalidated every tile in between.
+My earlier reproductions had no rain. Now `TerrainEdits.Add` changes only the vertices given, chunk by chunk, and only
+the touched chunks are rebuilt; the ground comes out identical (same values as `Modify`, test *erosion far apart*).
+Reproduced and checked with `--rain --teleport-test=6,35` (old: hung at the first jump; new: no hitch over 500 ms
+from erosion). `--rain` now starts the rain outside captures too, as the dump's Reproduce line meant.
+Correction to D105 (2): the 48 s gap in the guest's positions was this freeze of the host, not the guest loading.
+Also: rain switched on with H on the host is now part of the clock message and rains for everyone (protocol 3);
+on a joined game H only says the host decides. From the friend's logs: a failed join (the address with two ports)
+crashed in `StepJoining` because the client part was made after the connection; it is now made first. After a drop
+the game kept sending positions to a closed connection (thousands of errors per minute in the log); nothing is sent
+now unless connected.
+Tom's requests from the same session: the world map's marker is now an arrow with a notch at the back (the "▲"
+triangle did not show which way it pointed); the other players are on it as arrows in their tunic colour with their
+names, moving while the map is open, and a *Players* list beside the map goes to them (beside them, on the ground: the
+"teleport to another player" menu). To set a game up before hosting: Esc → *Host this world…* opens the world already
+here (made and dug alone first) on the port and name from the launcher's Multiplayer page; *Host a game* in the
+launcher still starts hosting at once. The custom world type sent to joiners is now the one the world was built from
+(it was whatever the menu's list showed). Diagnostics kept: frames over 500 ms are logged as HITCH with the slow steps
+(and into the network log), the log is flushed on every line (a crash keeps it), `--teleport-test=count,seconds`,
+`--net-dig-repeat=seconds,radius,strength`, `--host-here=seconds[,port]`, `--map-shot=png,seconds`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

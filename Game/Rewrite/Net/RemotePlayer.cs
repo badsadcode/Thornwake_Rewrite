@@ -16,10 +16,17 @@ public sealed partial class RemotePlayer : Node3D
     private readonly Label3D _label;
     private readonly List<(double Time, PlayerState State)> _states = new();
 
+    public int Id { get; }
+    public Color Tunic { get; }
+    /// <summary>The newest position from the host, or null before the first.</summary>
+    public PlayerState? Latest => _states.Count > 0 ? _states[^1].State : null;
+
     public RemotePlayer(int id, string name, Wind wind)
     {
         Name = $"Player{id}";
-        _character = new Character(Character.TunicFor(id), wind);
+        Id = id;
+        Tunic = Character.TunicFor(id);
+        _character = new Character(Tunic, wind);
         AddChild(_character);
         _label = new Label3D
         {
