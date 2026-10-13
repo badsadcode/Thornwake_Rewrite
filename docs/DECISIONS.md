@@ -1349,6 +1349,15 @@ spells built from parts, mana plus reagents, acting on the world's simulations; 
 Soulmask; climbing (important); Valheim-style sailing on the real wind and waves. Replaces the step order of
 `GAMEPLAY_PLAN.md`; first slice: chop → campfire → cook a fish → survive a cold, rainy night, with a first book.
 
+## D100 — Order of gameplay work; carts and draft animals separate (2026-10-13)
+Tom agreed the order in `docs/GAMEPLAY_DESIGN.md` §14: (0) a small multiplayer spike first — two players, shared seed,
+time and weather, one shared world change — so every mechanic is built multiplayer-ready instead of rewritten later;
+(1) proof-of-concept mechanics as placeholders (needs, inventory, actions, chopping, campfire, fishing, cooking, a
+placeholder animal, a raft or boat); (2) a real multiplayer test with 4–12 players; (3) settlement sites and roads with
+placeholders; (4) the living world (economy, caravans, bandits, events). Atmosphere 2.0 continues in parallel. Carts
+and draft animals are separate (an animal is a creature with an owner: it can be led, ridden, sold or stolen); hand
+carts first, animals later.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

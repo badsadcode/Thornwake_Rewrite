@@ -175,6 +175,11 @@ and the Design Bible (sections 33–39); it fits these principles and is adopted
   traveller — or nothing. No hard timers except for perishable or urgent goods. Delivery changes the village visibly
   (fuller stalls, better repairs, a stocked healer, houses repaired). **Stealing the cargo is possible** and has
   consequences: lower trust, worse pay, deposits, guards, bounties, rumours. The same by sea with cargo ships (§11).
+* **Carts and draft animals are separate** (Tom): the cart is a vehicle with hitch points; the horse or ox is a
+  creature with its own health, needs, behaviour and **owner**. Hitched, it pulls; unhitched, it can be led on a rope,
+  ridden (horses), sold — or **stolen** (reputation and bounties). The hard part is wagon physics on rough ground (slopes,
+  mud, rivers — the caravan stuck in the swamp). Stepwise: a hand cart the player pulls → animals that pull carts →
+  riding.
 * **Wandering merchants, pilgrims, refugees, hunters and travellers** on the roads: light road life near players, not
   tied to the economy.
 * **Bandits are groups in the world**, not spawn waves: they form, grow, make camps, rob travellers, raid farms and
@@ -203,18 +208,29 @@ and the Design Bible (sections 33–39); it fits these principles and is adopted
 * Gameplay code stays separate from rendering and from `Game/WorldGen` (which must stay a framework free of
   Thornwake's gameplay — `GAME_VISION.md`).
 
-## 14. First playable slice (proposal)
+## 14. Order of work (Tom, 2026-10-13)
+
+Atmosphere 2.0 continues alongside (rendering; it blocks none of these steps and they do not block it).
+
+| Step | What | Why |
+|---|---|---|
+| **0. Multiplayer spike** | Two players in the same world: seed, time and weather in sync, positions, one shared world change (a dug hole) | Fixes the shape of the code (who owns what, how a change reaches other players) before mechanics pile up; building single-player mechanics first and adding multiplayer later would mean rewriting them. Small: a few builds. |
+| **1. Proof-of-concept mechanics** — placeholders, not final | Needs (hunger, warmth), items and inventory, the action pipeline, chopping, campfire, fishing, cooking, a placeholder animal to hunt, a raft or small boat; the first books | Proves the building blocks and the feel; each multiplayer-ready because of step 0. The first slice below. |
+| **2. Real multiplayer test** | 4–12 players with these mechanics: connection, performance, synchronisation | Tom's checkpoint: does it meet expectations? |
+| **3. Settlements and roads** — placeholders | Village, town and castle sites, then roads between them (`GAMEPLAY_PLAN.md`) | Roads need the sites first. |
+| **4. Living world** | Village economy, caravans (hand carts, then animals), bandits, events (§12) | Needs villages and roads. |
+
+## 15. First playable slice (proposal)
 
 Not one mechanic, but the smallest loop that proves the blocks: **needs** (hunger, warmth), **items and inventory**,
 **the action pipeline** and **world changes** — chop a tree → logs → build a campfire → catch and cook a fish → get
 through a cold, rainy night; plus the first **book** (felling or fire-making) as the tutorial. If that feels right,
 most of what follows is content. Order after it to be decided with Tom (climbing, combat, sailing are the big ones).
 
-## 15. Open questions
+## 16. Open questions
 
 * **Injury depth**: a health bar only (Valheim) or wounds, bleeding, fractures, infection, bandages and splints (PZ)?
   Proposal: health plus an injuries layer, depth as a sandbox setting.
 * **Followers**: hired companions or mercenaries fighting beside the player (Conan's thralls, Soulmask's tribesmen)?
 * **Combat camera**: over the shoulder with a target lock? Combat in first person too?
-* Wagons and pack animals: does a caravan need draft animals (horses, oxen) from the start, or carts the player pulls?
 * How much of the settlement economy comes before real villages exist (the settlement sites of `GAMEPLAY_PLAN.md`).
