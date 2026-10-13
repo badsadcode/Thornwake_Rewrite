@@ -430,6 +430,7 @@ try
     CoreTests.Register(filter, record);
     HydrologyTests.Register(filter);
     SimulationTests.Register(filter);
+    GameplayTests.Register(filter);
     RecipeTests.Register(filter);
     ClimateTests.Register(filter);
 }

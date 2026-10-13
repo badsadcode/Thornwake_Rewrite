@@ -1,0 +1,88 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+namespace Thornwake.Gameplay;
+
+/// <summary>An object a player put into the world (a campfire): where, which way, and its state.</summary>
+public sealed class PlacedObject
+{
+    public long Id { get; init; }
+    public required string Kind { get; init; }
+    public double X { get; init; }
+    public double Y { get; init; }
+    public double Z { get; init; }
+    public float Yaw { get; init; }
+    /// <summary>Minutes of fuel left (fires).</summary>
+    public double Fuel { get; set; }
+    public bool Lit => Fuel > 0;
+}
+
+/// <summary>
+/// Objects placed into the world — a world change like dug ground and felled trees (§2): the host keeps them, steps
+/// them (fires burn down) and sends the changed ones; a player joining later gets them all.
+/// </summary>
+public sealed class PlacedObjects
+{
+    private readonly Dictionary<long, PlacedObject> _all = new();
+    private readonly HashSet<long> _changed = new();
+    private long _next = 1;
+
+    public IReadOnlyCollection<PlacedObject> All => _all.Values;
+    public PlacedObject? Get(long id) => _all.GetValueOrDefault(id);
+
+    public PlacedObject Add(string kind, double x, double y, double z, float yaw, double fuel)
+    {
+        var o = new PlacedObject { Id = _next++, Kind = kind, X = x, Y = y, Z = z, Yaw = yaw, Fuel = fuel };
+        _all[o.Id] = o;
+        _changed.Add(o.Id);
+        return o;
+    }
+
+    public void Remove(long id) { if (_all.Remove(id)) _changed.Add(id); }
+    public void Touch(long id) => _changed.Add(id);
+
+    /// <summary>The objects within <paramref name="reach"/> m (horizontally) of a point.</summary>
+    public IEnumerable<PlacedObject> Near(double x, double z, double reach) =>
+        _all.Values.Where(o => (o.X - x) * (o.X - x) + (o.Z - z) * (o.Z - z) <= reach * reach);
+
+    /// <summary>Fires burn their fuel (game minutes). A fire going out counts as a change (everyone sees it die).</summary>
+    public void Step(double minutes)
+    {
+        foreach (var o in _all.Values)
+        {
+            if (o.Fuel <= 0) continue;
+            o.Fuel = Math.Max(0, o.Fuel - minutes);
+            if (o.Fuel == 0) _changed.Add(o.Id);
+        }
+    }
+
+    public List<long> TakeChanged() { var l = _changed.ToList(); _changed.Clear(); return l; }
+
+    public void Clear() { foreach (var id in _all.Keys) _changed.Add(id); _all.Clear(); }
+
+    // ---- network: an object's full state, or its id with no kind for a removed one.
+    public void Write(BinaryWriter w, long id)
+    {
+        w.Write(id);
+        if (_all.TryGetValue(id, out var o))
+        {
+            w.Write(o.Kind); w.Write(o.X); w.Write(o.Y); w.Write(o.Z); w.Write(o.Yaw); w.Write(o.Fuel);
+        }
+        else w.Write("");
+    }
+
+    /// <summary>Apply one written by the host (not counted as a change): its id, and the object or null if removed.</summary>
+    public (long Id, PlacedObject? Object) Read(BinaryReader r)
+    {
+        long id = r.ReadInt64();
+        string kind = r.ReadString();
+        if (kind.Length == 0) { _all.Remove(id); return (id, null); }
+        var o = new PlacedObject { Id = id, Kind = kind, X = r.ReadDouble(), Y = r.ReadDouble(), Z = r.ReadDouble(), Yaw = r.ReadSingle() };
+        o.Fuel = r.ReadDouble();
+        _all[id] = o;
+        _next = Math.Max(_next, id + 1);
+        return (id, o);
+    }
+}

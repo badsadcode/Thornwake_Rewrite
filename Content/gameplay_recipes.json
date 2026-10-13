@@ -1,0 +1,13 @@
+{
+  "_comment": "Step 1 placeholder recipes: one pipeline for everything made or done (GAMEPLAY_DESIGN.md §2; D110). inputs: an item or a tag with a count; tools: tags something in the pack must carry (not used up); station: a tag of a placed object within reach that must be working (a lit fire); seconds: how long it takes; outputs: items made; places: an object put into the world instead.",
+  "recipes": [
+    { "id": "campfire", "name": "Campfire", "inputs": [ { "item": "log", "count": 2 }, { "item": "branch", "count": 4 } ],
+      "seconds": 4, "places": "campfire",
+      "description": "A ring of stones, two logs and kindling. Burns about an hour and a half; add wood to keep it going." },
+    { "id": "cook_fish", "name": "Cook a fish", "inputs": [ { "item": "raw_fish", "count": 1 } ], "station": "fire",
+      "seconds": 12, "outputs": [ { "item": "cooked_fish", "count": 1 } ] }
+  ],
+  "objects": [
+    { "id": "campfire", "name": "Campfire", "tags": ["fire"], "fuel": 90, "max_fuel": 240, "warmth": 14, "reach": 4 }
+  ]
+}

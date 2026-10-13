@@ -13,6 +13,7 @@
   <ItemGroup>
     <Compile Include="../../Game/WorldGen/**/*.cs" Link="WorldGen/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../../Game/Simulation/**/*.cs" Link="Simulation/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../Game/Gameplay/**/*.cs" Link="Gameplay/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../../Game/Core/*.cs" Link="Legacy/%(Filename)%(Extension)" />
     <Content Include="../../Content/*.json" Link="Content/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Fixtures/*.json" CopyToOutputDirectory="PreserveNewest" />

@@ -1,0 +1,24 @@
+{
+  "_comment": "Step 1 placeholder items (GAMEPLAY_DESIGN.md §2, §15; D110). Rules ask for tags, not items. weight in kg; stack = most per slot; food = how much hunger one removes (0-100 scale); fuel = minutes one keeps a fire burning; warmth = degrees C a lit station adds close by.",
+  "items": [
+    { "id": "stone_axe", "name": "Stone axe", "tags": ["tool", "chopping", "cutting"], "weight": 1.6, "stack": 1,
+      "description": "A sharp stone lashed to a handle. Fells small trees, slowly." },
+    { "id": "log", "name": "Log", "tags": ["wood", "fuel", "heavy"], "weight": 8, "stack": 10, "fuel": 45,
+      "description": "A length of trunk. Burns long; builds things later." },
+    { "id": "branch", "name": "Branches", "tags": ["wood", "fuel", "kindling"], "weight": 0.8, "stack": 30, "fuel": 8,
+      "description": "Dry twigs and small branches. Quick to catch, quick to burn." },
+    { "id": "dried_meat", "name": "Dried meat", "tags": ["food"], "weight": 0.3, "stack": 20, "food": 30,
+      "description": "Salted, dried strips. Keeps for weeks." },
+    { "id": "raw_fish", "name": "Raw fish", "tags": ["food", "raw", "spoils"], "weight": 0.6, "stack": 10, "food": 8,
+      "description": "Better cooked." },
+    { "id": "cooked_fish", "name": "Cooked fish", "tags": ["food", "cooked"], "weight": 0.5, "stack": 10, "food": 35,
+      "description": "Hot and filling." },
+    { "id": "book_felling", "name": "Notes on Felling", "tags": ["book"], "weight": 0.4, "stack": 1,
+      "description": "by Old Berta of the Marsh Woods. \"Never fell into the wind, lad. The wind decides where a tree lands, not you.\" — Look at a tree with an axe in your pack and hold E." }
+  ],
+  "start": [
+    { "item": "stone_axe", "count": 1 },
+    { "item": "dried_meat", "count": 3 },
+    { "item": "book_felling", "count": 1 }
+  ]
+}
