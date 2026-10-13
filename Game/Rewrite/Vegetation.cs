@@ -87,54 +87,93 @@ public static class Vegetation
         return DetMath.Smooth((treeline - elevation) / 220);
     }
 
+    /// <summary>A tree of the lattice in world space; (Cx, Cz) is its cell: the tree's identity (felling, D108).</summary>
+    public readonly record struct LatticeTree(long Cx, long Cz, double X, double Y, double Z, int Species, float Scale, float Yaw);
+
+    /// <summary>The lattice's cell size for this world (denser forests: smaller cells).</summary>
+    public static double LatticeCell(in DetailConfig config) => Cell / Math.Sqrt(Math.Max(1, config.ForestDensity));
+
+    private static ulong TreeSeed(TerrainSampler sampler) => Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0x7EE5UL);
+
+    /// <summary>Where the lattice cell's tree would stand (before any test whether it grows there).</summary>
+    private static (double X, double Z, ulong Hash) Candidate(long cx, long cz, double cell, ulong seed)
+    {
+        ulong h = Hashing.Lattice(cx, cz, seed);
+        return ((cx + .15 + .7 * Hashing.Unit(h)) * cell, (cz + .15 + .7 * Hashing.Unit(Hashing.Mix(h))) * cell, h);
+    }
+
     public static List<TreeInstance> Trees(TerrainSampler sampler, TileKey key, in DetailConfig config)
     {
         var trees = new List<TreeInstance>();
         // Denser than default: smaller world-aligned cells; sparser: fewer cells kept.
-        double cell = Cell / Math.Sqrt(Math.Max(1, config.ForestDensity)), keep = Math.Min(1, config.ForestDensity);
-        double x0 = key.MinX, z0 = key.MinZ, size = key.Size, sea = sampler.Plan.Profile.SeaLevel;
+        double cell = LatticeCell(config);
+        double x0 = key.MinX, z0 = key.MinZ, size = key.Size;
         long c0x = (long)Math.Floor(x0 / cell), c0z = (long)Math.Floor(z0 / cell);
         long c1x = (long)Math.Floor((x0 + size) / cell), c1z = (long)Math.Floor((z0 + size) / cell);
-        ulong seed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0x7EE5UL);
+        ulong seed = TreeSeed(sampler);
+        var removals = sampler.Removals;
         // Inclusive: the cell straddling the tile's far edge may put its tree inside this tile (an exclusive loop lost
         // those trees, leaving tree-free lanes along every tile border).
         for (long cz = c0z; cz <= c1z; cz++)
             for (long cx = c0x; cx <= c1x; cx++)
             {
-                ulong h = Hashing.Lattice(cx, cz, seed);
-                double x = (cx + .15 + .7 * Hashing.Unit(h)) * cell, z = (cz + .15 + .7 * Hashing.Unit(Hashing.Mix(h))) * cell;
+                var (x, z, _) = Candidate(cx, cz, cell, seed);
                 if (x < x0 || z < z0 || x >= x0 + size || z >= z0 + size) continue;
-                double chance = Hashing.Unit(Hashing.Mix(h ^ 0xABCDEFUL));
-                if (chance > .95) continue; // never a perfectly closed canopy
-                var t = sampler.Sample(x, z, 2);
-                double density = ForestDensity(sampler, x, z, t, config.ForestCover);
-                if (chance > density * .92 * keep) continue;
-                // Avoid steep ground: compare with a neighbour sample.
-                double slope = Math.Abs(sampler.Height(x + 2, z, 4) - t.Height) / 2;
-                if (slope > .7) continue;
-                double elevation = t.Height - sea;
-                ulong pick = Hashing.Mix(h + 99);
-                int species;
-                ResolvedBiome? biomeHere = null;
-                if (sampler.Plan.Hydrology.NearestRiver(x, z, 0, out var river) && river.Distance < river.Width * .5 + 18 && (pick & 3) != 0) species = 13;
-                else
-                {
-                    // A tree from the biome's tree sets (classic look: species by elevation as in build 9).
-                    var (ba, bb, share) = BiomeOf(sampler, x, z);
-                    biomeHere = Hashing.Unit(Hashing.Mix(pick + 7)) < share ? ba : bb;
-                    if (biomeHere.Classic)
-                    {
-                        var list = elevation < 550 ? Broadleaf : elevation < 1250 ? Mixed : Conifer;
-                        species = list[(int)(pick % (ulong)list.Length)];
-                    }
-                    else species = SpeciesIndex.GetValueOrDefault(biomeHere.PickTree(Hashing.Unit(Hashing.Mix(pick + 3))), 0);
-                }
-                var sizes = biomeHere?.Def.Vegetation.TreeSize ?? new[] { .8, 1.25 };
-                float scale = (float)(sizes[0] + (sizes[1] - sizes[0]) * Hashing.Unit(Hashing.Mix(pick)));
-                float yaw = (float)(Hashing.Unit(Hashing.Mix(pick + 1)) * Math.PI * 2);
-                var basis = new Basis(Vector3.Up, yaw).Scaled(Vector3.One * scale);
-                trees.Add(new TreeInstance(species, new Transform3D(basis, new Vector3((float)(x - x0), (float)t.Height - .1f, (float)(z - z0)))));
+                if (removals.Contains(ObjectRemovals.Trees, cx, cz)) continue; // felled
+                if (TreeAt(sampler, cx, cz, config) is not { } t) continue;
+                var basis = new Basis(Vector3.Up, t.Yaw).Scaled(Vector3.One * t.Scale);
+                trees.Add(new TreeInstance(t.Species, new Transform3D(basis, new Vector3((float)(x - x0), (float)t.Y, (float)(z - z0)))));
             }
         return trees;
+    }
+
+    /// <summary>The tree of lattice cell (cx, cz), or null where none grows (felled ones included: see Removals).</summary>
+    public static LatticeTree? TreeAt(TerrainSampler sampler, long cx, long cz, in DetailConfig config)
+    {
+        double cell = LatticeCell(config), keep = Math.Min(1, config.ForestDensity), sea = sampler.Plan.Profile.SeaLevel;
+        var (x, z, h) = Candidate(cx, cz, cell, TreeSeed(sampler));
+        double chance = Hashing.Unit(Hashing.Mix(h ^ 0xABCDEFUL));
+        if (chance > .95) return null; // never a perfectly closed canopy
+        var t = sampler.Sample(x, z, 2);
+        double density = ForestDensity(sampler, x, z, t, config.ForestCover);
+        if (chance > density * .92 * keep) return null;
+        // Avoid steep ground: compare with a neighbour sample.
+        double slope = Math.Abs(sampler.Height(x + 2, z, 4) - t.Height) / 2;
+        if (slope > .7) return null;
+        double elevation = t.Height - sea;
+        ulong pick = Hashing.Mix(h + 99);
+        int species;
+        ResolvedBiome? biomeHere = null;
+        if (sampler.Plan.Hydrology.NearestRiver(x, z, 0, out var river) && river.Distance < river.Width * .5 + 18 && (pick & 3) != 0) species = 13;
+        else
+        {
+            // A tree from the biome's tree sets (classic look: species by elevation as in build 9).
+            var (ba, bb, share) = BiomeOf(sampler, x, z);
+            biomeHere = Hashing.Unit(Hashing.Mix(pick + 7)) < share ? ba : bb;
+            if (biomeHere.Classic)
+            {
+                var list = elevation < 550 ? Broadleaf : elevation < 1250 ? Mixed : Conifer;
+                species = list[(int)(pick % (ulong)list.Length)];
+            }
+            else species = SpeciesIndex.GetValueOrDefault(biomeHere.PickTree(Hashing.Unit(Hashing.Mix(pick + 3))), 0);
+        }
+        var sizes = biomeHere?.Def.Vegetation.TreeSize ?? new[] { .8, 1.25 };
+        float scale = (float)(sizes[0] + (sizes[1] - sizes[0]) * Hashing.Unit(Hashing.Mix(pick)));
+        float yaw = (float)(Hashing.Unit(Hashing.Mix(pick + 1)) * Math.PI * 2);
+        return new LatticeTree(cx, cz, x, (float)t.Height - .1f, z, species, scale, yaw);
+    }
+
+    /// <summary>The trees standing within <paramref name="radius"/> m of (x, z) (felled ones left out).</summary>
+    public static List<LatticeTree> TreesNear(TerrainSampler sampler, double x, double z, double radius, in DetailConfig config)
+    {
+        var list = new List<LatticeTree>();
+        double cell = LatticeCell(config);
+        for (long cz = (long)Math.Floor((z - radius) / cell); cz <= (long)Math.Floor((z + radius) / cell); cz++)
+            for (long cx = (long)Math.Floor((x - radius) / cell); cx <= (long)Math.Floor((x + radius) / cell); cx++)
+            {
+                if (sampler.Removals.Contains(ObjectRemovals.Trees, cx, cz)) continue;
+                if (TreeAt(sampler, cx, cz, config) is { } t && (t.X - x) * (t.X - x) + (t.Z - z) * (t.Z - z) <= radius * radius) list.Add(t);
+            }
+        return list;
     }
 }

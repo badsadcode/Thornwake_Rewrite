@@ -25,6 +25,7 @@ internal static class SimulationTests
         T.Run("Edits: dig and raise the generated ground", Edits, filter);
         T.Run("Edits: chunks copied to another world give the same ground (multiplayer)", EditsCopied, filter);
         T.Run("Edits: erosion far apart (after a teleport) touches only its chunks, quickly", ErosionFarApart, filter);
+        T.Run("Removals: felled trees as a world change (taken, sent, applied, put back)", Removals, filter);
         T.Run("Edits: water follows a dug channel", DugChannel, filter);
         T.Run("Edits: a channel dug from a river fills from it", RiverFed, filter);
         T.Run("Edits: real river and lake feed dug ground", RealRiverFed, filter);
@@ -315,6 +316,24 @@ internal static class SimulationTests
         T.Near(edits.At(12, 20), 0, 0, "neighbours untouched");
         edits.Add(deltas);
         T.Near(edits.At(-6010, 7005), -.01, 1e-6, "added again");
+    }
+
+    // D108: a felled tree is its lattice cell in ObjectRemovals; the host sends the changed keys like edit chunks.
+    private static void Removals()
+    {
+        var host = new ObjectRemovals();
+        T.Check(host.Remove(ObjectRemovals.Trees, 12, -7, 30.5), "felled");
+        T.Check(!host.Remove(ObjectRemovals.Trees, 12, -7, 31), "felling it again does nothing");
+        T.Check(host.Contains(ObjectRemovals.Trees, 12, -7) && !host.Contains(ObjectRemovals.Trees, 12, -6), "only that one");
+        var changed = host.TakeChanged();
+        T.Check(changed.Count == 1 && host.TakeChanged().Count == 0, "reported once as changed");
+        var client = new ObjectRemovals();
+        foreach (var (layer, x, z) in changed) client.Set(layer, x, z, host.Get(layer, x, z));
+        T.Check(client.Contains(ObjectRemovals.Trees, 12, -7) && client.Get(ObjectRemovals.Trees, 12, -7) == 30.5, "the client has it, with the time");
+        T.Check(client.TakeChanged().Count == 0, "applied from the host: not sent back");
+        T.Check(host.Restore(ObjectRemovals.Trees, 12, -7) && host.Count == 0, "put back (regrowth)");
+        foreach (var (layer, x, z) in host.TakeChanged()) client.Set(layer, x, z, host.Get(layer, x, z));
+        T.Check(client.Count == 0, "and gone on the client too");
     }
 
     private static void DugChannel()

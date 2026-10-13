@@ -26,6 +26,8 @@ public sealed class TerrainSampler
     public WorldPlan Plan { get; }
     /// <summary>Player edits on top of the generated ground (empty for a fresh world: no cost, identical output).</summary>
     public TerrainEdits Edits { get; } = new();
+    /// <summary>Generated objects taken out of the world (felled trees), by their lattice cell.</summary>
+    public ObjectRemovals Removals { get; } = new();
     private readonly WorldProfile _p;
     private readonly TerrainStyle _style;
     private readonly MacroRaster _macro;
