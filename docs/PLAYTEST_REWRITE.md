@@ -78,6 +78,32 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 55 — multiplayer test, Alden's torch, first person
+* **Multiplayer (first test):** launcher → *Multiplayer…*: type your name; one player presses **Host a game**, the
+  others type the host's address and press **Join**. Everyone sees the same world, time of day, weather and clouds,
+  each other walking, flying and carrying torches, and holes dug by anyone (also players who join later). The host's
+  *New world* takes everyone along. Not shared yet: poured water, springs and puddles (each player's own for now).
+* **Hosting over the internet** (the host does this once):
+  1. *Check for CGNAT first.* Open the router's page (usually http://192.168.0.1 or http://192.168.1.1 — the
+     "Default Gateway" that `ipconfig` shows) and find its WAN / Internet IP address. Compare it with the address
+     https://www.whatismyip.com shows. **Same** → good, go on. **Different**, or it starts with 100.64–100.127, 10.,
+     172.16–172.31 or 192.168. → the provider shares one public address among customers (CGNAT) and port forwarding
+     cannot work: ask the provider for a public IP address (often a free or cheap option), or tell me and we use a
+     tunnel (Tailscale, ZeroTier or playit.gg) for the test.
+  2. *Give this PC a fixed local address* in the router (DHCP reservation / "static lease" for this PC's network
+     card), so the next step keeps pointing at it. `ipconfig` shows the PC's current IPv4 address (e.g. 192.168.0.17).
+  3. *Forward the port:* router → Port forwarding / Virtual server / NAT: protocol **UDP**, external port **7777**,
+     internal IP **this PC's address**, internal port **7777**. Save.
+  4. *Windows Firewall:* the first time you press Host a game, Windows asks whether Thornwake may use the network —
+     allow it (tick *Private* and *Public*).
+  5. Send your friends the address whatismyip shows. They type it in *Join* (port 7777 is the default).
+* **If something goes wrong:** press **F9** in the game (a debug dump) and send me the newest `dump-…txt` and
+  `net-…log` from `%APPDATA%\Thornwake\debug` — from **both** the host and the friend. The `net-…log` records the
+  connection once a second (ping, packet loss, traffic, time differences, every join, leave and dig).
+* **Alden's torch: R** — a small flickering flame that streams downwind, a little smoke and warm light with moving
+  shadows. **First person:** scroll all the way in (one more wheel step after the closest view); scroll out to return.
+* Fixed: every player keeps one tunic colour on every screen (the host wears Alden's green).
+
 ## New in build 54 — new clouds, no forest hole from above, land to the horizon
 * **Sky → Cloud look** (new, default *reference*): brighter, clearer clouds. The sky's clouds were veiled by the fog
   twice (Godot fogs the sky's half-resolution pass too) — now once, like the clouds in front of the land, so the two
