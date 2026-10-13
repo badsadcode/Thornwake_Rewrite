@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 59** (felling in three acts D112: notch and fall side, impact, physical trunk cut into logs by size; protocol 6) | `bc32f36` | Thornwake-Rewrite-Preview-59 (v0.9.59) | Does not connect to build 58; build 58 = `31d172d` |
 | **Build 58** (chopping with hits, shake, fall and log pile D111; torch in the left hand; protocol 5) | `31d172d` | Thornwake-Rewrite-Preview-58 (v0.9.58) | Does not connect to build 57; build 57 = `8a1dc3b` |
 | **Build 57** (step 1 first slice: axe (6) and chopping with the left mouse, campfire, pack (I), needs; storm sun-glow fix D107; darkness settings D109; protocol 4) | `8a1dc3b` | Thornwake-Rewrite-Preview-57 (v0.9.57) | Does not connect to build 56; darkness 0 / normal = build 56's light; build 56 = `404a9c5` |
 | **Build 56** (no host freeze after teleports in rain; rain (H) shared; players on the map with go-to; Esc → Host this world; join fixes; protocol 3) | `404a9c5` | Thornwake-Rewrite-Preview-56 (v0.9.56) | Does not connect to build 55; single player as build 55 apart from the map arrow and the erosion fix; build 55 = `d2b59b9` |
