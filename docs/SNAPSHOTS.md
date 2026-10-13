@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 56** (no host freeze after teleports in rain; rain (H) shared; players on the map with go-to; Esc → Host this world; join fixes; protocol 3) | `404a9c5` | Thornwake-Rewrite-Preview-56 (v0.9.56) | Does not connect to build 55; single player as build 55 apart from the map arrow and the erosion fix; build 55 = `d2b59b9` |
 | **Build 55** (multiplayer test: host and join from the launcher, network log; Alden's torch; first person; cloud drafts off by default) | `d2b59b9` | Thornwake-Rewrite-Preview-55 (v0.9.55) | Multiplayer is only used when chosen in the launcher; single player as build 54 plus the torch (R) and first person; build 54 = `0e69bfd` |
 | **Build 54** (Cloud look *reference* by default; no forest hole under a high camera; no horizon line inside clouds; horizon land to the true horizon) | `0e69bfd` | Thornwake-Rewrite-Preview-54 (v0.9.54) | Clouds: *Cloud look → build 53*; git: the return point below (`72b98d9`); build 53 = `987890d` |
 | **RETURN POINT — before *Cloud look: reference* became the default** (Tom, 2026-10-12: "keep the clouds … but make a snapshot so that we can go back") = build 53 + D93–D95 (tree and horizon fixes, Cloud look setting defaulting to build 53) | `72b98d9` | — (no package; build 53 is the nearest) | In game: *Sky → Cloud look → build 53*; in git: branch `pre-cloud-look-reference` or tag `return-pre-cloud-look-reference` |
