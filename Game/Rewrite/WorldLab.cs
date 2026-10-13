@@ -365,6 +365,14 @@ public partial class WorldLab : Node3D
                 var data = TileBuilder.Build(_sampler, key, DetailConfig.For(_sampler));
                 double meanForest = 0; for (int k = 0; k < data.Side * data.Side; k++) meanForest += data.Colors[k].R;
                 GD.Print($"TILE {key} water {(data.Water is { } w ? w.Indices.Length / 3 : -1)} triangles, trees {data.Trees.Count}, mean forest {meanForest / (data.Side * data.Side):0.00}, cards {data.FarTrees.Count}");
+                // (a fingerprint of the 3D trees of the 128 m cells around: every species, place, size and turn)
+                ulong treeHash = 1469598103934665603UL;
+                for (long tz = -2; tz <= 2; tz++)
+                    for (long tx = -2; tx <= 2; tx++)
+                        foreach (var tree in Vegetation.Trees(_sampler, new TileKey(TreeField.FineLevel, (long)Math.Floor(qx / 128) + tx, (long)Math.Floor(qz / 128) + tz), DetailConfig.For(_sampler)))
+                            foreach (float f in new[] { tree.Species, tree.Transform.Origin.X, tree.Transform.Origin.Y, tree.Transform.Origin.Z, tree.Transform.Basis.X.X, tree.Transform.Basis.X.Z, tree.Transform.Basis.Y.Y })
+                                treeHash = (treeHash ^ BitConverter.SingleToUInt32Bits(f)) * 1099511628211UL;
+                GD.Print($"TREES around {qx}, {qz}: fingerprint {treeHash:x16}");
                 foreach (int level in new[] { 1, 2, 3 })
                 {
                     var k2 = new TileKey(level, (long)Math.Floor(qx / (TileBuilder.BaseTile * (1 << level))), (long)Math.Floor(qz / (TileBuilder.BaseTile * (1 << level))));
