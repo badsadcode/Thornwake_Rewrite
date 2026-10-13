@@ -78,6 +78,24 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 57 — chop trees, build a campfire, hunger and cold; storm and darkness settings
+**In multiplayer everyone needs build 57** (build 56 and 57 do not connect).
+* **First gameplay (placeholders):** you start with a stone axe, three dried meats and *Notes on Felling*.
+  * **6** takes the axe out (1–5 put it away). Hold the **left mouse button** on a tree in front of you: Alden chops,
+    the tree falls after a few seconds and leaves a stump; logs and branches go into your pack.
+  * **I** opens the pack: your items (**Eat**) and what you can make (**Make it**). A **campfire** takes 2 logs and 4
+    branches; it is built in front of you, lit, with about 1½ hours of wood. Cooking a fish needs a fish — fishing
+    comes next.
+  * **E** puts wood on the nearest fire (later: gathering grass, berries, stones).
+  * **Needs** (bottom right): food, body warmth (from the real temperature, wind, rain and a fire nearby), wetness,
+    health. Cold and hunger hurt; there is no dying yet. *Settings → Simulation → Hunger and cold* turns them off.
+  * In multiplayer the host checks everything; felled trees and fires are the same for everyone, also for players who
+    join later. Nothing is saved yet.
+* **Storms:** no more sun dog or glow around a sun hidden by the storm deck.
+* **New darkness settings:** *Overcast and storm darkness* and *Forest darkness* (Lighting and effects; default 0.5,
+  0 = build 56), *Night darkness* (Simulation: bright, normal, dark, very dark, pitch black; the sky looks the same at
+  every level; in multiplayer the host's applies).
+
 ## New in build 56 — no more freezes after teleports, players on the map, host a world you set up
 **Host and friends must all use build 56** (build 55 and 56 do not connect to each other).
 * **Fixed: the host's game froze (12 s, 48 s, or for good) after teleports while it rained** (H). Rain erosion then
