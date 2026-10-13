@@ -220,6 +220,38 @@ Atmosphere 2.0 continues alongside (rendering; it blocks none of these steps and
 | **3. Settlements and roads** — placeholders | Village, town and castle sites, then roads between them (`GAMEPLAY_PLAN.md`) | Roads need the sites first. |
 | **4. Living world** | Village economy, caravans (hand carts, then animals), bandits, events (§12) | Needs villages and roads. |
 
+### 14.0 Step 0 in detail — the multiplayer spike (agreed with Tom, 2026-10-13)
+
+* **Hosting**: one player hosts, others join (as in Valheim). Inside, the code keeps the *server part* (the true state:
+  time, world changes, who is where; it checks what clients send) separate from the *client part* (drawing, input,
+  sound); the host runs both. Later a **dedicated server** is the same game started headless, with a **dashboard**
+  (Tom's wish: a small web page for sandbox settings, players, saves, bans, restarts).
+* **Connecting**: Godot's built-in high-level networking (ENet, UDP). Not only LAN: Tom forwards one UDP port (e.g.
+  7777) on his home router and friends anywhere join with his IP and port (Windows Firewall asks once). First check
+  that the router's WAN address equals the public IP a "what is my IP" site shows (otherwise the provider uses CGNAT
+  and port forwarding cannot work; then a tunnel such as playit.gg, Tailscale or ZeroTier for testing, and Steam
+  networking later — which also gives invites and joining without router setup).
+* **Where**: Tom's PC session (two game windows side by side, then a friend over the internet), on a short-lived branch
+  `multiplayer-spike`, started after its current Atmosphere 2.0 task and merged into `main` as soon as the first
+  version works (both touch `WorldLab.cs`).
+* **What is synchronised**
+  * on joining: the world (seed and world parameters), the host's sandbox and world-affecting settings (time, weather,
+    wind, sea state, cloud cover and speed…) — graphics settings stay each player's own — and the current time;
+  * time: the host's clock; clients correct gently toward it;
+  * players: positions and facing ~20 times a second, interpolated so others move smoothly;
+  * world changes (digging first): a client asks, the host applies and broadcasts; a player joining later receives
+    the list of changes made before;
+  * weather, wind and waves are computed from the seed and the clock, so they should match by themselves — verify it.
+    Anything *accumulated* frame by frame rather than computed from the clock must come from the host: at least the
+    clouds' drift (dumps already carry it: `--cloud-drift`), possibly eased storm and mood values.
+* **Not shared in the spike**: the local water simulation (puddles, poured water, springs) runs only around each player
+  and is not deterministic; each player keeps their own for now. Shared simulated water is a later problem.
+* **The player is separated from the world**: `WorldLab.cs` runs the world and one player together; the spike splits
+  out a player that can exist several times (local and remote), the largest part of the work.
+* **Done means**: (1) two windows on Tom's PC see each other move; (2) a hole dug in one appears in the other, and for a
+  player who joins afterwards; (3) the same time of day, weather and clouds in both; (4) the same with a friend over the
+  internet, with ping and bandwidth measured and noted.
+
 ## 15. First playable slice (proposal)
 
 Not one mechanic, but the smallest loop that proves the blocks: **needs** (hunger, warmth), **items and inventory**,
