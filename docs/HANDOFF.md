@@ -31,7 +31,10 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
-  through playit.gg, Poland ↔ Brazil, ~320 ms, ~2 KB/s per player (D105). Still open: same weather
+  through playit.gg, Poland ↔ Brazil, ~320 ms, ~2 KB/s per player (D105). The host's freezes after teleports were
+  rain erosion over a rectangle spanning both places (D106, fixed); also D106: rain (H) shared, map arrows with the
+  other players and a go-to list, Esc → Host this world, join-failure crash and send spam fixed — not yet in a build
+  (build 56 next; host and guests must switch builds together, protocol 3). Still open: same weather
   check (§14.0 done-criterion 3), sharing poured water / springs (Tom to decide).
 * **Parked (2026-10-13) for the multiplayer spike** (`docs/GAMEPLAY_DESIGN.md` §14.0, branch `multiplayer-spike`): the
   cloud drafts of D97 stay behind their settings, off by default — *Cloud caps: dense* works (waiting for Tom's pick),

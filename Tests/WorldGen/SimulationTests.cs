@@ -24,6 +24,7 @@ internal static class SimulationTests
         T.Run("Rivers: no river perched above the dry ground beside it (revision 13 confluences)", Perched, filter);
         T.Run("Edits: dig and raise the generated ground", Edits, filter);
         T.Run("Edits: chunks copied to another world give the same ground (multiplayer)", EditsCopied, filter);
+        T.Run("Edits: erosion far apart (after a teleport) touches only its chunks, quickly", ErosionFarApart, filter);
         T.Run("Edits: water follows a dug channel", DugChannel, filter);
         T.Run("Edits: a channel dug from a river fills from it", RiverFed, filter);
         T.Run("Edits: real river and lake feed dug ground", RealRiverFed, filter);
@@ -292,6 +293,28 @@ internal static class SimulationTests
         host.Edits.Clear();
         foreach (var (cx, cz) in host.Edits.TakeChanged()) client.Edits.SetChunk(cx, cz, host.Edits.GetChunk(cx, cz));
         T.Check(client.Edits.ChunkCount == 0, "clearing on the host clears the client");
+    }
+
+    // D106: rain erosion from the place left behind and the new place in one step. It used to change a rectangle over
+    // both (millions of vertices after a long teleport: the host froze for 12–48 s).
+    private static void ErosionFarApart()
+    {
+        var edits = new TerrainEdits();
+        var reference = new TerrainEdits();
+        var deltas = new Dictionary<(long X, long Z), double> { [(10, 20)] = -.003, [(11, 20)] = -.002, [(31, 20)] = .001, [(32, 20)] = .004, [(-6010, 7005)] = -.005 };
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var touched = edits.Add(deltas);
+        T.Check(watch.ElapsedMilliseconds < 50, $"took {watch.ElapsedMilliseconds} ms");
+        T.Check(touched.Count == 3, $"{touched.Count} chunks touched (3 expected)");
+        T.Check(edits.TakeChanged().Count == 3, "the touched chunks are reported as changed");
+        foreach (var ((x, z), d) in deltas)
+        {
+            reference.Modify(x, z, x, z, (vx, vz, current) => vx == x && vz == z ? current + d : current);
+            T.Near(edits.At(x, z), reference.At(x, z), 0, $"vertex {x}, {z} as by Modify");
+        }
+        T.Near(edits.At(12, 20), 0, 0, "neighbours untouched");
+        edits.Add(deltas);
+        T.Near(edits.At(-6010, 7005), -.01, 1e-6, "added again");
     }
 
     private static void DugChannel()
