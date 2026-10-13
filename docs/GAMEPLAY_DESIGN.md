@@ -252,6 +252,26 @@ Atmosphere 2.0 continues alongside (rendering; it blocks none of these steps and
   player who joins afterwards; (3) the same time of day, weather and clouds in both; (4) the same with a friend over the
   internet, with ping and bandwidth measured and noted.
 
+### 14.1 Players far apart in a huge world (Tom's question, 2026-10-13)
+
+* **Each player's own PC draws their own surroundings** (terrain, trees, grass, water, clouds). The host never draws a
+  distant player's area.
+* **The host needs only the skeleton around each player**: the ground's shape and nearby trees and rocks for collision,
+  and the animals, NPCs and events there. The world comes from the seed, so the host computes that shape without
+  graphics (`Game/WorldGen` already runs without Godot) — far cheaper than drawing it.
+* **Cost grows with the number of separate places, not the size of the world**: players together share one active
+  area; twelve players in twelve places are twelve active areas (physics, animals, events) on the host. This is what
+  step 2's test measures.
+* **If that is too heavy — the proven fix (Valheim's)**: whoever is in an area simulates its animals and physics and
+  sends the results; the host keeps the final say over what lasts (world changes, inventories, deaths). The work then
+  spreads over all players' PCs. Start with the host doing everything; switch only if the test shows the need. Keep the
+  spike's code open to it (simulation of an area should not assume it runs on the host).
+* **Places with nobody in them do not run**: when a player arrives, the place catches up at once ("seven days passed:
+  harvest in, one raid, the village struggling") — lazy evaluation, as in §12.
+* **Shared weather and time**: one weather system for everyone, seen from different places (a storm on one player's
+  mountain, sun in another's swamp). Time is shared: skipping the night needs a rule — Valheim's "everyone in bed" by
+  default, as a sandbox setting.
+
 ## 15. First playable slice (proposal)
 
 Not one mechanic, but the smallest loop that proves the blocks: **needs** (hunger, warmth), **items and inventory**,
