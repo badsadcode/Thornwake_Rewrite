@@ -51,7 +51,7 @@ public partial class WorldLab
         _displayConfirm = new HBoxContainer { Visible = false };
         _displayConfirmText = new Label { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         var keep = new Button { Text = "Keep" };
-        keep.Pressed += () => { _displayPrevious = null; _displayTimer.Stop(); _displayConfirm.Visible = false; DisplaySettings.Save(); };
+        keep.Pressed += DisplayKeep;
         var revert = new Button { Text = "Revert" };
         revert.Pressed += DisplayRevert;
         _displayConfirm.AddChild(_displayConfirmText); _displayConfirm.AddChild(keep); _displayConfirm.AddChild(revert);
@@ -71,7 +71,10 @@ public partial class WorldLab
         _displayScreen.ItemSelected += i => DisplayChange(() => DisplaySettings.Screen = (int)i);
         _displaySize.ItemSelected += i => DisplayChange(() => DisplaySettings.Size = _displaySizes[(int)i]);
         _displayUi.ItemSelected += i => { DisplaySettings.UiScale = DisplaySettings.UiScales[(int)i]; DisplaySettings.Apply(GetTree().Root); DisplaySettings.Save(); DisplayRefresh(); };
-        box.VisibilityChanged += () => { if (box.IsVisibleInTree()) DisplayRefresh(); };
+        // Leaving the page (closing the menu, another tab) keeps a pending change: the player could see to do it, so the new
+        // mode works — the countdown used to run on hidden and put the old mode back 15 s later (Tom: "it goes back to
+        // full screen after some time").
+        box.VisibilityChanged += () => { if (box.IsVisibleInTree()) DisplayRefresh(); else if (_displayPrevious != null) DisplayKeep(); };
         DisplayRefresh();
         return box;
     }
@@ -114,6 +117,14 @@ public partial class WorldLab
         _displayConfirm.Visible = true;
         _displayTimer.Start();
         CallDeferred(nameof(DisplayRefresh));
+    }
+
+    private void DisplayKeep()
+    {
+        _displayPrevious = null;
+        _displayTimer.Stop();
+        _displayConfirm.Visible = false;
+        DisplaySettings.Save();
     }
 
     private void DisplayRevert()
