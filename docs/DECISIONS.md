@@ -1423,6 +1423,20 @@ listens on IPv6 (tested over ::1) and the join screen takes IPv6 addresses (bare
 public IPv4 (no DS-Lite). For a later build: say on the Multiplayer page that DS-Lite / CGNAT lines must host over IPv6
 or a tunnel, and show the host's own IPv6 address there to copy.
 
+## D105 — First internet test: Poland ↔ Brazil through playit.gg (2026-10-13)
+§14.0 done-criterion 4 (a friend over the internet, ping and bandwidth measured). Tom hosted build 55 on his DS-Lite line
+(D104) through a playit.gg UDP tunnel (free plan; only the host runs the playit program; the game server still runs on
+Tom's PC, playit only relays); the friend (TeaBeca, Telefônica Brazil, IPv4 only) joined `cairo-teal.tun.ply.gg:49088`.
+The friend's earlier "no answer" was a timing miss (Brazil is 5 h behind; the attempt came 15 s after Tom's host closed).
+Two sessions, 20 min and 4 min (host logs net-…-184317 / -191708): round trip **~320 ms** (10–90 %: 310–330 ms, jitter
+~11 ms, spikes to 1.1 s), loss 0.2–0.5 % (bursts to 10 %), the host's upload **~1.9 KB/s** with one guest (bursts of
+100–120 KB/s when edit chunks go out), the guest's positions every 50 ms as designed, 100+ of the guest's digs applied
+(shovel and the terraform tool). Found: (1) the join screen lost the port of `address:port` (fixed, 8c7bd27); (2) a 48 s
+gap in the guest's positions while their terrain loaded after a 20 km jump (no state is sent while `_holding`) — send
+positions while loading too; (3) DS-Lite / CGNAT lines need a relay: later Steam networking or our own relay, and the
+Multiplayer page should explain it. Waiting for the guest's own log (clock offset, how often the host was drawn ahead)
+and how it felt.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
