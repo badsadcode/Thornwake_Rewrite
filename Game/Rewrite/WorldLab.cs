@@ -203,7 +203,10 @@ public partial class WorldLab : Node3D
             BenchStart(bench[8..], profile, outDir, quitWhenDone: true);
             return;
         }
-        Generate();
+        // --window-at=x,y: where the window opens (two game windows side by side for multiplayer tests)
+        if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--window-at=")) is { } at && at[12..].Split(',') is [var wx, var wy])
+            Callable.From(() => DisplayServer.WindowSetPosition(new Vector2I(int.Parse(wx, CultureInfo.InvariantCulture), int.Parse(wy, CultureInfo.InvariantCulture)))).CallDeferred();
+        if (!StartNetwork()) Generate(); // (joining: the world comes from the host)
     }
 
     // ------------------------------------------------------------------ world
@@ -211,6 +214,7 @@ public partial class WorldLab : Node3D
     private void Generate()
     {
         if (_generation != null) return;
+        if (IsNetClient && !_netWorldLoading) { _status = "In a multiplayer game the world is the host's."; return; }
         if (!int.TryParse(_seedEdit.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seed)) { _status = "Seed must be a whole number."; return; }
         var recipe = _recipes[Math.Max(0, _profileList.Selected)];
         WorldProfile profile; TerrainStyle style;
@@ -376,6 +380,7 @@ public partial class WorldLab : Node3D
         _overlay.Text = "Loading terrain…";
         if (_weatherProbe) { WeatherProbe(); GetTree().Quit(); }
         if (_thunderWavs != null) { ThunderWavs(_thunderWavs); GetTree().Quit(); }
+        NetWorldReady();
     }
 
     /// <summary>The weather at the player: fronts over game time, rain amount from the local climate, snow when cold.</summary>
@@ -688,11 +693,13 @@ public partial class WorldLab : Node3D
     private void OnSettingChanged(Setting s)
     {
         if (s.Rebuild) _streamer.Refresh();
+        if (_net?.Server != null && GameSettings.AffectsWorld(s)) _net.Server.SettingsChanged();
     }
 
     public override void _ExitTree()
     {
         GameSettings.Changed -= OnSettingChanged;
+        if (IsNetClient) GameSettings.ClearOverrides(); // (the player's own time, weather and sea settings back)
         GetTree().Root.SizeChanged -= DisplaySettings.WindowChanged;
         RenderingServer.GlobalShaderParameterSet("tree_ranges", Vector4.Zero); // the valley game's trees never fade
         // Static caches of Godot resources (tree, rock and prop meshes, materials) must be freed while the engine is
@@ -720,6 +727,7 @@ public partial class WorldLab : Node3D
         _processStartUs = Time.GetTicksUsec();
         if (_generation is { IsCompleted: true }) FinishGeneration();
         if (_preview is { IsCompleted: true }) FinishPreview();
+        StepJoining(delta);
         if (_bench != null && (_sampler == null || _generation != null)) BenchStep(delta);
         if (_sampler == null) return;
         Rebase(PlayerX, PlayerZ);
@@ -737,6 +745,7 @@ public partial class WorldLab : Node3D
         }
         if (_overlay.Visible && _generation == null && _streamer.Missing < 20) _overlay.Visible = false;
         UpdateCamera();
+        StepRemotes(delta);
         var cam = _camera.GlobalPosition;
         RenderingServer.GlobalShaderParameterSet("tree_camera", new Vector4(cam.X, cam.Y, cam.Z, 0)); // tree hand-overs (TreeFade)
         double latitude = _sampler.Plan.Climate.Latitude(PlayerZ);
@@ -931,7 +940,7 @@ public partial class WorldLab : Node3D
         if (!typing && Input.IsKeyPressed(Key.G) && Aim() is { } at) sim.AddDisc(at.X, at.Z, WaterRadius, WaterPour * dt);
         // Rain erosion: the ground the streams wore away (or built up) goes to the terrain edits, a few mm at a time.
         sim.ErosionRate = GameSettings.RainErosion.F;
-        if ((_erosionTimer -= dt) <= 0)
+        if (!IsNetClient && (_erosionTimer -= dt) <= 0) // (a joining player's ground comes from the host)
         {
             _erosionTimer = 10;
             if (sim.TakeErosion(.004f) is { Count: > 0 } worn) ApplyErosion(worn);
@@ -1070,7 +1079,7 @@ public partial class WorldLab : Node3D
             $"Position {PlayerX:0} , {PlayerZ:0}   ground {t.Height:0.0} m   {where}\n" +
             $"{mode}   FPS {Engine.GetFramesPerSecond():0}   tiles {_streamer.Resident} (+{_streamer.Missing} queued)   " +
             $"terrain triangles {_streamer.Triangles / 1000}k   tile build {_streamer.LastBuildMs:0.0} ms, commit {_streamer.LastCommitMs:0.0} ms";
-        _hud.Text += "\n" + _tools.Hud();
+        _hud.Text += "\n" + _tools.Hud() + NetHud();
         if (_water.Sim is { Added: > 0 } sim)
             _hud.Text += $"\nWater simulation: {sim.Volume():0.0} m³ on the land, {sim.Absorbed:0.0} m³ joined rivers/lakes{(_rain ? ", raining" : "")}" +
                 $"{(sim.Sources.Count > 0 ? $", {sim.Sources.Count} spring(s)" : "")}";

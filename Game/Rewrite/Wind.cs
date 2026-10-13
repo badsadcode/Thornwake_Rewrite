@@ -17,6 +17,8 @@ public sealed class Wind
     public float Speed { get; private set; } = 6;
     public float Gust { get; private set; }
     private double _time;
+    /// <summary>The gusts' own clock (real seconds): multiplayer clients take the host's, so the gusts match.</summary>
+    public double Time { get => _time; set => _time = value; }
 
     /// <summary>Advance with game time (hours) and real time; <paramref name="storm"/> 0..1 strengthens and steadies it.</summary>
     public void Update(double realSeconds, double gameHours, float storm, ulong seed)

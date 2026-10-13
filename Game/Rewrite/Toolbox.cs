@@ -39,6 +39,16 @@ public partial class Toolbox : Node3D
     public double DevRadius { get; private set; } = 4;
     public double DevStrength { get; private set; } = .6;
     public string Status { get; private set; } = "";
+    /// <summary>Multiplayer client: digs go to the host (which changes the ground for everyone) instead of being applied here.</summary>
+    public Action<Thornwake.Rewrite.Net.DigRequest>? Remote { get; set; }
+    private bool _remoteSoil;
+
+    /// <summary>The host applied this player's dig: the soil bag follows the volume moved.</summary>
+    public void RemoteDone(double volume, double hardness)
+    {
+        if (_remoteSoil) Soil = Math.Clamp(Soil - volume, 0, SoilCapacity);
+        if (hardness > .6 && Tool.RockFactor < .5 && Math.Abs(volume) < .01 && Selected != Tools.Length - 1) Status = $"Too hard for the {Tool.Name.ToLowerInvariant()}: use the pickaxe.";
+    }
 
     private Decal _preview = null!;
     private ImageTexture _round = null!, _square = null!;
@@ -122,6 +132,13 @@ public partial class Toolbox : Node3D
             }
         }
         var world = (hit.X + originX, (double)hit.Y, hit.Z + originZ);
+        if (Remote != null)
+        {
+            Remote(new Thornwake.Rewrite.Net.DigRequest(mode, shape, radius, strength, dev ? 1 : tool.RockFactor, budget,
+                world.Item1, world.Item2, world.Item3, aimDirection.X, aimDirection.Y, aimDirection.Z));
+            _remoteSoil = tool.UsesSoil && !dev;
+            return null;
+        }
         var result = TerrainSculpt.Apply(sampler, mode, shape, radius, strength, world, (aimDirection.X, aimDirection.Y, aimDirection.Z),
             dev ? 1 : tool.RockFactor, budget);
         if (tool.UsesSoil && !dev) Soil = Math.Clamp(Soil - result.Volume, 0, SoilCapacity);

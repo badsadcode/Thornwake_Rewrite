@@ -18,6 +18,21 @@ public sealed class GameClock
 {
     /// <summary>Position in the real day cycle (0 = sunrise … day share = sunset … 1 = next sunrise).</summary>
     private double _phase = .2;
+    /// <summary>Position in the day cycle (0 = sunrise … 1 = the next sunrise): what a multiplayer host sends.</summary>
+    public double Phase => _phase;
+
+    /// <summary>
+    /// Follow the host's clock (multiplayer): snap when far off (joining, a skipped night), else close the gap over a
+    /// few seconds so the sun never jumps.
+    /// </summary>
+    public void Follow(int day, double phase, double realSeconds, bool snap)
+    {
+        double error = (day - Day) + (phase - _phase);
+        if (snap || Math.Abs(error) > .02) { Day = Math.Max(1, day); _phase = phase; return; }
+        _phase += error * Math.Min(1, realSeconds * .5);
+        while (_phase >= 1) { _phase -= 1; Day++; }
+        while (_phase < 0) { _phase += 1; Day = Math.Max(1, Day - 1); }
+    }
     public int Day { get; private set; } = 1;
     public double Hour { get; private set; } = 10.5;
 
