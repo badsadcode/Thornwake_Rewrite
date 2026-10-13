@@ -105,12 +105,26 @@ public partial class Launcher : Control
         if (!Remember()) return;
         string address = NetLaunch.Address;
         if (address.Length == 0) { _hint.Text = "Type the host's address (they can find it as described under Host a game)."; _address.GrabFocus(); return; }
-        // "address:port" overrides the port box (IPv6 addresses in brackets: [::1]:7777).
-        int colon = address.LastIndexOf(':');
-        if (colon > 0 && address.IndexOf(':') == colon && int.TryParse(address[(colon + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out int port))
+        // "address:port" overrides the port box; an IPv6 address with a port goes in brackets ([2a02:…]:7777), without
+        // one it can stand alone (2a02:…).
+        if (address.StartsWith('['))
         {
-            NetLaunch.Address = address[..colon];
-            NetLaunch.Port = port;
+            int close = address.IndexOf(']');
+            if (close > 1)
+            {
+                NetLaunch.Address = address[1..close];
+                if (close + 1 < address.Length && address[close + 1] == ':' && int.TryParse(address[(close + 2)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out int p6))
+                    NetLaunch.Port = p6;
+            }
+        }
+        else
+        {
+            int colon = address.LastIndexOf(':');
+            if (colon > 0 && address.IndexOf(':') == colon && int.TryParse(address[(colon + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out int port))
+            {
+                NetLaunch.Address = address[..colon];
+                NetLaunch.Port = port;
+            }
         }
         NetLaunch.Pending = NetLaunch.Role.Join;
         Open("res://Game/Rewrite/WorldLab.tscn");

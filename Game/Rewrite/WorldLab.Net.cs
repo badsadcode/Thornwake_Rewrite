@@ -38,7 +38,7 @@ public partial class WorldLab : IWorldHost, IClientGame
         string? host = args.FirstOrDefault(a => a == "--host" || a.StartsWith("--host="))
             ?? (pending == NetLaunch.Role.Host ? $"--host={NetLaunch.Port}" : null);
         string? join = args.FirstOrDefault(a => a.StartsWith("--join="))
-            ?? (pending == NetLaunch.Role.Join ? $"--join={NetLaunch.Address}:{NetLaunch.Port}" : null);
+            ?? (pending == NetLaunch.Role.Join ? (NetLaunch.Address.Contains(':') ? $"--join=[{NetLaunch.Address}]:{NetLaunch.Port}" : $"--join={NetLaunch.Address}:{NetLaunch.Port}") : null);
         if (host != null)
         {
             int port = host.Contains('=') ? int.Parse(host[7..], CultureInfo.InvariantCulture) : NetSession.DefaultPort;
@@ -51,8 +51,17 @@ public partial class WorldLab : IWorldHost, IClientGame
         {
             string target = join[7..];
             int port = NetSession.DefaultPort;
-            int colon = target.LastIndexOf(':');
-            if (colon > 0) { port = int.Parse(target[(colon + 1)..], CultureInfo.InvariantCulture); target = target[..colon]; }
+            // address:port, [IPv6]:port, or a bare IPv6 address (several colons: no port)
+            if (target.StartsWith('[') && target.IndexOf(']') is > 1 and var close)
+            {
+                if (close + 1 < target.Length && target[close + 1] == ':') port = int.Parse(target[(close + 2)..], CultureInfo.InvariantCulture);
+                target = target[1..close];
+            }
+            else if (target.Count(c => c == ':') == 1)
+            {
+                int colon = target.IndexOf(':');
+                port = int.Parse(target[(colon + 1)..], CultureInfo.InvariantCulture); target = target[..colon];
+            }
             _net = new NetSession { Name = "Net" };
             AddChild(_net);
             _net.Join(target, port, this, name, version);
