@@ -400,7 +400,7 @@ public partial class Atmosphere : Node3D
         // God ray contrast also feeds the volumetric fog: brighter, more forward scattering, so shafts through trees and fog stand
         // out (build 32 at 0: Godot's energy 1 and anisotropy .65).
         // (round 29: 1 + 2c and .65 + .2c lit the haze around a low sun into a glare half the screen wide — Tom's "blob")
-        Sun.LightVolumetricFogEnergy = 1 + .8f * GameSettings.GodRayContrast.F;
+        Sun.LightVolumetricFogEnergy = FogSunEnergy(1);
         Environment.VolumetricFogAnisotropy = .65f + .1f * GameSettings.GodRayContrast.F;
         if (_shaftQuad != null) _shaftQuad.Visible = GameSettings.SunShafts.Value > 0;
         _beams?.SetShaderParameter("intensity", GameSettings.LightBeams.F);
@@ -1117,10 +1117,10 @@ public partial class Atmosphere : Node3D
             _shaftQuad.Visible = baseShafts > 0;
         }
         bool air = mode == 1 && _forest > .01f && !float.IsNaN(_mistGround);
+        if (!air) Sun.LightVolumetricFogEnergy = FogSunEnergy(1); // (every frame: the cloud cover changes)
         if (!air && _forestAirOn)
         {
             // Back to what the settings say (ApplyAll only runs when a setting changes).
-            Sun.LightVolumetricFogEnergy = 1 + .8f * GameSettings.GodRayContrast.F;
             Environment.VolumetricFogEnabled = GameSettings.VolumetricFog.On || (_mistVolume?.Visible ?? false);
         }
         _forestAirOn = air;
@@ -1144,8 +1144,16 @@ public partial class Atmosphere : Node3D
         _forestAirMaterial.SetShaderParameter("drift", _forestDrift);
         _forestAirMaterial.SetShaderParameter("albedo", new Color("ece6da").Lerp(Sun.LightColor, .25f));
         Environment.VolumetricFogEnabled = true;
-        Sun.LightVolumetricFogEnergy = (1 + .8f * GameSettings.GodRayContrast.F) * (1 + 1.8f * _forest);
+        Sun.LightVolumetricFogEnergy = FogSunEnergy(1 + 1.8f * _forest);
     }
+
+    /// <summary>
+    /// The sun's light into the volumetric fog. Godot lights the fog by the shadow map, which the clouds are not in, so
+    /// under an overcast or a storm the fog went on scattering full sunlight toward the sun: a bright glow around a
+    /// sun hidden by the deck (Tom, storm dump 204727; D107). It now dims with the cloud cover like the sunlight on the
+    /// ground does, more strongly (the glow is all direct light): a clear or broken sky is unchanged (gloom 0).
+    /// </summary>
+    private float FogSunEnergy(float boost) => (1 + .8f * GameSettings.GodRayContrast.F) * boost * (1 - .9f * _gloom);
 
     // ---- biome moods (option): the sky, haze and fog drift toward the biome around the player over a few seconds.
     private Vector4 _mood = new(1, 1, 1, 0), _moodTarget = new(1, 1, 1, 0);

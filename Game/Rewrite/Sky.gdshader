@@ -63,6 +63,9 @@ void sky() {
 			disc = sun_col * tint * smoothstep(r0, r0 + 0.0002, mu) * mix(3.2, 0.95, lowsun) * sun_glare;
 		}
 		disc *= smoothstep(-0.004, 0.004, up); // a sun under the horizon shows no disc
+		// How much of the sky behind the clouds below the cirrus still shows here: the halo and sun dogs form in the
+		// cirrus, so any cloud in front hides them (Tom, storm dump 204727: a sun dog through the storm deck).
+		float clear = 1.0;
 		bool layered = quality >= 1 && !AT_CUBEMAP_PASS;
 		float cirrus_here = 0.0;
 		if (up > 0.0) {
@@ -84,6 +87,7 @@ void sky() {
 					vec4 c = layer(dir, xz, 4500.0, d, sun_dir, sun_col, day, mu, d * 0.5, 1.04);
 					col = mix(col, c.rgb, d);
 					disc *= 1.0 - d;
+					clear *= 1.0 - d;
 				}
 			}
 		}
@@ -103,6 +107,7 @@ void sky() {
 			vec4 fw = front_wall(dir, ambient, sun_dir, sun_col * (1.0 - night), col);
 			col = col * (1.0 - fw.a) + fw.rgb;
 			disc *= 1.0 - fw.a;
+			clear *= 1.0 - fw.a;
 		}
 		if (up > 0.0 || (quality == 3 && !AT_CUBEMAP_PASS)) {
 			// Main deck: volumetric (quarter-res pass) or the flat textured layer.
@@ -110,6 +115,7 @@ void sky() {
 				// Far storms and the lens stand behind the volume (it grows its own towers).
 				col = col * (1.0 - far.a) + far.rgb;
 				disc *= 1.0 - far.a;
+				clear *= 1.0 - far.a;
 				far = vec4(0.0);
 				vec4 v = HALF_RES_COLOR;
 				if (cloud_look == 1) v.rgb /= max(QUARTER_RES_COLOR.rgb, vec3(1.0)); // fogged once, not twice (FOG_UNDO_K)
@@ -117,6 +123,7 @@ void sky() {
 				if (split_test >= 1 && quality == 3 && (split_test == 4 || SCREEN_UV.x < 0.5)) v = vec4(0.0); // (4: CloudsNear draws all clouds)
 				col = col * (1.0 - v.a) + v.rgb;
 				disc *= 1.0 - v.a;
+				clear *= 1.0 - v.a;
 			} else {
 				float t = cloud_height / max(up, 0.015);
 				vec2 xz = cloud_state.xy + dir.xz * t;
@@ -133,6 +140,7 @@ void sky() {
 					deck_d = d;
 					col = mix(col, c.rgb, d);
 					disc *= 1.0 - d;
+					clear *= 1.0 - d;
 				}
 			}
 			// Low ragged clouds (900 m): greyer, faster, in front of the main deck (layered mode; the volume has its own depth).
@@ -145,6 +153,7 @@ void sky() {
 					vec4 c = layer(dir, xz, 900.0, d, sun_dir, sun_col, day, mu, toward, 0.86);
 					col = mix(col, c.rgb, d);
 					disc *= 1.0 - d;
+					clear *= 1.0 - d;
 				}
 			}
 		}
@@ -152,10 +161,11 @@ void sky() {
 			float k = 1.0 - deck_d * smoothstep(0.08, 0.25, up);
 			col = col * (1.0 - far.a * k) + far.rgb * k;
 			disc *= 1.0 - far.a * k;
+			clear *= 1.0 - far.a * k;
 		}
 		if (!AT_CUBEMAP_PASS) {
 			// Halo and sun dogs where thin cirrus crosses 22° from the sun (the sun must be up and not hidden).
-			col += halo(dir, sun_dir, sun_col, cirrus_here * 2.2 * smoothstep(-0.02, 0.05, sun_dir.y) * (1.0 - storm));
+			col += halo(dir, sun_dir, sun_col, cirrus_here * 2.2 * smoothstep(-0.02, 0.05, sun_dir.y) * (1.0 - storm) * clear);
 			// Rainbows: rain has wetted the world, the sun is breaking through, low enough (< 42°).
 			float bow = smoothstep(0.15, 0.5, rain_wetness.x) * (1.0 - smoothstep(0.35, 0.8, storm)) * smoothstep(0.0, 0.05, sun_dir.y)
 				* smoothstep(0.67, 0.55, sun_dir.y) * smoothstep(0.0, 0.03, up);

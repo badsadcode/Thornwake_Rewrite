@@ -1464,6 +1464,21 @@ launcher still starts hosting at once. The custom world type sent to joiners is 
 (and into the network log), the log is flushed on every line (a crash keeps it), `--teleport-test=count,seconds`,
 `--net-dig-repeat=seconds,radius,strength`, `--host-here=seconds[,port]`, `--map-shot=png,seconds`.
 
+## D107 — Storm: no sun dog and less sun glow through the deck (2026-10-13)
+Tom's dump 204727 (storm, 12:23, sun 30° up, Atmosphere 2.0 light model, volumetric v2 clouds): "during the storm …
+I can still see the sun glow". Two things, found by switching parts off one at a time and measuring the sky's
+brightness on the sun's side against the other side (167 vs 109 in the reproduction):
+1. **A sun dog** (the coloured spot of the 22° halo) shone through the storm deck: the sky shader adds the halo after
+   compositing every cloud layer, dimmed only by the eased storm value (0.34 there). The halo forms in the cirrus, so
+   now it is also hidden by every cloud in front of the cirrus (`clear`, tracked with the sun disc's dimming).
+2. **The broad glow** came mostly from the volumetric fog: Godot lights it through the shadow map, which the clouds
+   are not in, so under a full deck it went on scattering full sunlight forward, toward the hidden sun. Its sun energy
+   now dims with the cloud cover (`gloom`, the value that already halves the sunlight under an overcast): × (1 − 0.9 ×
+   gloom), 0.37 under a full deck. Sun side 167 → 145, the other side 109 → 106. A clear or broken sky (gloom 0) is
+   unchanged. Not the cause (no change when switched off): the storm deck's sun-side glow, the sun glare, the storm
+   overlay's 5 % leak, the deep-cloud forward light in the cloud march. What is left is the deck's own structure (thinner
+   toward the storm's edge). Return point: build 56 (`404a9c5`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
