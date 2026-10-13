@@ -78,6 +78,15 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 58 — chopping with hits, a falling tree, log piles; torch in the left hand
+**In multiplayer everyone needs build 58** (build 57 and 58 do not connect).
+* **Chopping** (axe: 6, hold the left mouse on a tree in front of you): every stroke that lands is a hit, wood chips
+  fly and the tree shakes; after 6–8 hits it falls — away from you, and the wind pushes it — crashes with a small
+  bounce, lies a moment and sinks away. Its logs and branches then lie where it came down: **E** picks them up.
+  Everyone sees the same hits and the same fall.
+* **Hands:** the torch is always in Alden's left hand (also in first person), the axe in his right.
+* Not yet: the fallen trunk staying as a log you can push and cut up (Valheim) — to be discussed.
+
 ## New in build 57 — chop trees, build a campfire, hunger and cold; storm and darkness settings
 **In multiplayer everyone needs build 57** (build 56 and 57 do not connect).
 * **First gameplay (placeholders):** you start with a stone axe, three dried meats and *Notes on Felling*.
