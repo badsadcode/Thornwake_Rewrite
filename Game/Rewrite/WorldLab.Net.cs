@@ -30,7 +30,7 @@ public partial class WorldLab : IWorldHost, IClientGame
     private bool StartNetwork()
     {
         var args = OS.GetCmdlineUserArgs();
-        NetLaunch.Load();
+        if (NetLaunch.Pending == NetLaunch.Role.None) NetLaunch.Load(); // (from the launcher: its values are already here)
         string name = args.FirstOrDefault(a => a.StartsWith("--name="))?[7..] ?? NetLaunch.Name;
         string version = (string)ProjectSettings.GetSetting("application/config/version", "?");
         var pending = NetLaunch.Pending;
