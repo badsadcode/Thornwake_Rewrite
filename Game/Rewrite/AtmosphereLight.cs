@@ -46,20 +46,41 @@ public static class AtmosphereLight
         return new State(color, sun, sky, shade, Mathf.Lerp(share, .88f, gloom));
     }
 
+    /// <summary>The light reaching the land on a dark-night sandbox rule (sim.night_darkness): bright … pitch black.</summary>
+    public static float NightLight => GameSettings.NightDarkness.Index switch { 0 => 1.8f, 1 => 1, 2 => .5f, 3 => .25f, _ => .06f };
+
+    /// <summary>
+    /// Tom's darkness settings (D109) on the light of the frame: a full overcast or storm (fx.storm_darkness), dense woods
+    /// (fx.forest_darkness) and night on the land (sim.night_darkness). All at 0 / normal give build 56's light exactly.
+    /// Only the sun and the sky light on the scene change: the sky's own drawing does not (the clouds darken with the
+    /// sun's energy in a storm, as the storm setting says).
+    /// </summary>
+    public static State Darken(in State light, float elevation, float gloom, float canopy)
+    {
+        float d = GameSettings.StormDarkness.F * Mathf.Clamp(gloom, 0, 1);
+        float f = GameSettings.ForestDarkness.F * Mathf.Clamp(canopy, 0, 1);
+        float night = Mathf.SmoothStep(-1, -8, elevation);
+        float sky = (1 - .5f * d) * (1 - .35f * f) * Mathf.Lerp(1, NightLight, night);
+        return light with { SunEnergy = light.SunEnergy * (1 - .65f * d), AmbientEnergy = light.AmbientEnergy * sky };
+    }
+
     /// <summary>Exposure multiplier the eye adapts toward (1 in build 47's model): a forest interior is lifted up to
     /// +0.5 stop and a dim golden hour or overcast day up to +0.25 stop, so neither needs the Brightness slider, while
     /// night stays dark and noon on open ground stays as it is.</summary>
     /// <param name="canopy">0 open … 1 closed forest around the camera.</param>
-    public static float Exposure(in State light, float elevation, float canopy)
+    /// <param name="gloom">0 clear … 1 storm (Compute's).</param>
+    public static float Exposure(in State light, float elevation, float canopy, float gloom = 0)
     {
         if (!Modern) return 1;
         // How much light reaches open ground, relative to a clear noon (sun on flat ground plus the sky).
         float key = (light.SunEnergy * .75f + light.AmbientEnergy * 1.6f) / (1.3f * .75f + .44f * 1.6f);
         float day = Mathf.Clamp(Mathf.Pow(Mathf.Max(key, .05f), -.25f), 1, 1.19f);
         day = Mathf.Lerp(1, day, Mathf.SmoothStep(-4, 2, elevation));
+        // (darker overcast and storms: the eye lifts less under the deck; D109)
+        day = Mathf.Lerp(day, 1, GameSettings.StormDarkness.F * Mathf.Clamp(gloom, 0, 1));
         // Night: dark but readable (Tom's night reference: silhouettes against teal mist), up to +¼ stop.
         day *= Mathf.Lerp(1, 1.19f, Mathf.SmoothStep(-1, -8, elevation));
-        float forest = Mathf.Pow(Mathf.Lerp(1, .5f, Mathf.Clamp(canopy, 0, 1)), -.5f);
+        float forest = Mathf.Pow(Mathf.Lerp(1, .5f, Mathf.Clamp(canopy, 0, 1)), -.5f * (1 - GameSettings.ForestDarkness.F));
         // (plus the biome's bias in stops: a bright desert a little darker, a swamp a little lighter)
         return Mathf.Clamp(day * forest, 1, 1.5f) * Mathf.Pow(2, LightProfiles.At(elevation).Exposure);
     }

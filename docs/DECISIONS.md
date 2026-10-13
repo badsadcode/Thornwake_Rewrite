@@ -1479,6 +1479,32 @@ brightness on the sun's side against the other side (167 vs 109 in the reproduct
    overlay's 5 % leak, the deep-cloud forward light in the cloud march. What is left is the deck's own structure (thinner
    toward the storm's edge). Return point: build 56 (`404a9c5`).
 
+## D108 — Step 1 starts: felled trees as a world change (2026-10-13)
+§14 step 1 (placeholder mechanics) begins with §15's first slice. A generated tree's identity is its lattice cell
+(Vegetation's 7 m lattice from the seed; the cell size follows the world's forest density, a world setting, so it is the
+same on every PC). `ObjectRemovals` (Game/WorldGen, beside `TerrainEdits`: generic, no gameplay in WorldGen) holds the
+cells taken out, with the game time, and the keys changed for the host to send — a felled tree reaches late joiners
+like dug ground does, and the time stamp is there for regrowth (§6). `Vegetation.Trees` leaves removed cells out, so
+the tree field, impostors and the level-0 collision all lose the tree once the tiles around are invalidated.
+`TreeAt` / `TreesNear` find the tree to chop. Trees come out bit-identical to before (a fingerprint of the trees around
+two places, old vs new code; `--dump-tile` prints it). Next: the gameplay core (items, inventory, recipes, needs) as
+engine-free code in `Game/Gameplay` with data in `Content/` (the original game's items.json / recipes.json are there
+and are left alone: new files), then chopping, the campfire and the network messages.
+
+## D109 — Darkness settings: overcast and storms, forests, nights (2026-10-13)
+Tom: full overcast and storms should be darker; dense woods a little darker; and a sandbox setting for how dark nights
+are, "without ruining how the sky and clouds look". Three settings, each at build 56's light by default (Tom picks the
+defaults from the captures):
+* *Overcast and storm darkness* (`fx.storm_darkness`, 0–1): under the deck (gloom) the sun's energy × (1 − 0.65 d),
+  the sky light × (1 − 0.5 d), and the eye's lift under overcast (up to +¼ stop) shrinks to none. The clouds darken
+  with the sun's energy (the sky shader lights them with it).
+* *Forest darkness* (`fx.forest_darkness`, 0–1): the eye's lift under a closed canopy (up to +½ stop) shrinks to none
+  and the sky light under the crowns × (1 − 0.35 f). Dense forest at noon: exposure ×1.50 → ×1.11.
+* *Night darkness* (`sim.night_darkness`, Simulation page, so the host's applies to everyone): bright / normal / dark /
+  very dark / pitch black = the sky light on the land at night × 1.8 / 1 / 0.5 / 0.25 / 0.06 and the moonlight the
+  same. The exposure is not touched, so the sky, moon, stars and clouds look identical at every level (checked in the
+  forest night captures). A torch matters at night now.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

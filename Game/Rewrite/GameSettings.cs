@@ -235,6 +235,13 @@ public static class GameSettings
         "Aerial perspective: how quickly distant land fades into the sky colour.", "×"));
     public static readonly Setting Exposure = Add(new("fx.exposure", "Lighting and effects", "Brightness", .5, 1.6, .05, 1,
         "Camera exposure.", "×"));
+    // Tom (2026-10-13): full overcast and storms, dense woods and nights may be darker. 0 / normal = build 56's light.
+    public static readonly Setting StormDarkness = Add(new("fx.storm_darkness", "Lighting and effects", "Overcast and storm darkness", 0, 1, .05, 0,
+        "How dark a fully overcast or stormy day is: less light through the deck, and the eye adapts to it less. 0 = build 56. " +
+        "The clouds themselves darken with it.", "×"));
+    public static readonly Setting ForestDarkness = Add(new("fx.forest_darkness", "Lighting and effects", "Forest darkness", 0, 1, .05, 0,
+        "How dark dense woods are: the eye lifts the exposure less (0 = build 56: up to +½ stop under a closed canopy) and " +
+        "less sky light reaches the ground under the crowns.", "×"));
     public static readonly Setting GroundFog = Add(new("fx.ground_fog", "Lighting and effects", "Ground fog and mist", 0, 2, 1, 1,
         "Mist pooling in valleys, over rivers and lakes below you — thickest at dawn, after rain and in misty biomes (swamps, " +
         "old forests, taiga). With patches: drifting ground-hugging wisps around you (volumetric).",
@@ -312,6 +319,10 @@ public static class GameSettings
     // ---- simulation (live)
     public static readonly Setting WaterSimulation = Add(new("sim.water", "Simulation", "Local water simulation", 0, 1, 1, 1,
         "Simulated water around the player (G pour, J spring, H rain, K clear). Runs in a 128 m area that follows you.", rebuild: true));
+    public static readonly Setting NightDarkness = Add(new("sim.night_darkness", "Simulation", "Night darkness", 0, 4, 1, 1,
+        "How dark nights are on the land, as a sandbox rule (in multiplayer the host's applies to everyone): the light the " +
+        "sky and the moon give the ground. The sky, moon, stars and clouds look the same. Normal = build 56.",
+        options: new[] { "bright", "normal", "dark", "very dark", "pitch black" }));
     public static readonly Setting RainErosion = Add(new("sim.erosion", "Simulation", "Rain erosion", 0, 10, .25, 1,
         "Streams of rain water slowly wear the ground away and leave the soil where they slow down: at 1 a strong rain " +
         "stream cuts about 2 cm an hour, so gullies take many storms. 0 = off. Around the player (the water simulation's " +

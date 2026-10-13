@@ -496,7 +496,7 @@ public partial class Atmosphere : Node3D
         float gloom = Math.Max(_storm, overcast * .7f);
         _gloom = gloom;
         LightProfiles.Update(dt, StillShot || SnapExposure);
-        var light = AtmosphereLight.Compute(elevation, gloom, _storm, Natural);
+        var light = AtmosphereLight.Darken(AtmosphereLight.Compute(elevation, gloom, _storm, Natural), elevation, gloom, Canopy);
         Sun.LightEnergy = light.SunEnergy;
         _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, gloom);
         UpdateWaterSky(elevation);
@@ -513,7 +513,7 @@ public partial class Atmosphere : Node3D
         Environment.AmbientLightSkyContribution = light.SkyShare;
         Environment.AmbientLightColor = light.ShadeTint;
         // Eye adaptation (light model 1): toward the target over ~1.5 s; build 47's model keeps 1.
-        float exposure = AtmosphereLight.Exposure(light, elevation, Canopy);
+        float exposure = AtmosphereLight.Exposure(light, elevation, Canopy, gloom);
         _adapted = StillShot || SnapExposure ? exposure : Mathf.Lerp(_adapted, exposure, 1 - Mathf.Exp(-dt / 1.5f));
         SnapExposure = false;
         LightInfo = $"profile {LightProfiles.Dominant} sun {light.SunEnergy:0.00} sky {light.AmbientEnergy:0.00}×{light.SkyShare:0.00} canopy {Canopy:0.00} exposure ×{_adapted:0.00} (target {exposure:0.00}) base {_baseExposure:0.00}";
@@ -985,7 +985,8 @@ public partial class Atmosphere : Node3D
         float moonUp = Mathf.SmoothStep(-2, 8, (float)sky.MoonElevation);
         _moon.Basis = Basis.LookingAt(-moonDir, Mathf.Abs(moonDir.Y) > .99f ? Vector3.Forward : Vector3.Up);
         // (light model 1: brighter moonlight, so a night is dark but readable)
-        _moon.LightEnergy = .14f * lit * moonUp * _night * Mathf.Lerp(1, .25f, _storm) * (AtmosphereLight.Modern ? 1.5f : 1);
+        _moon.LightEnergy = .14f * lit * moonUp * _night * Mathf.Lerp(1, .25f, _storm) * (AtmosphereLight.Modern ? 1.5f : 1)
+            * AtmosphereLight.NightLight; // (night darkness, D109)
         _moon.Visible = _moon.LightEnergy > .002f;
         RenderingServer.GlobalShaderParameterSet("night_sky", new Vector4(moonDir.X, moonDir.Y, moonDir.Z, (float)sky.MoonPhase));
         RenderingServer.GlobalShaderParameterSet("star_rotation", sky.Stars);
