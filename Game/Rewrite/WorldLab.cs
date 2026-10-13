@@ -19,12 +19,11 @@ public partial class WorldLab : Node3D
 {
     private WorldStreamer _streamer = null!;
     private CharacterBody3D _player = null!;
-    private Node3D _avatar = null!;
-    private Torch _torch = null!;
+    /// <summary>The local player's figure and torch (Character.cs; remote players have their own).</summary>
+    private Character _me = null!;
     // First person (round 32, Tom: "zooming in to the maximum, could it go into first-person mode?"): one wheel step in
     // from the closest third-person zoom. The body still casts its shadow; the torch moves to the lower right of the view.
     private bool FirstPerson => _zoom < .5f;
-    private bool _fpApplied;
     private Node3D _fpHold = null!;
     private Node3D _pivot = null!;
     private SpringArm3D _arm = null!;
@@ -75,7 +74,7 @@ public partial class WorldLab : Node3D
     private Task<TerrainSampler>? _generation;
     private List<Landmark> _landmarks = new();
     private double _originX, _originZ;
-    private float _yaw = .6f, _pitch = -.32f, _zoom = 6.5f, _walkPhase;
+    private float _yaw = .6f, _pitch = -.32f, _zoom = 6.5f;
     private bool _fly, _noclip, _holding = true, _showHud = true, _swimming;
     private double _hudTimer, _generationStarted;
     private string _status = "";
@@ -913,17 +912,7 @@ public partial class WorldLab : Node3D
         }
 
         // Character: face the direction of travel, swing limbs.
-        var flat = new Vector3(_player.Velocity.X, 0, _player.Velocity.Z);
-        if (flat.LengthSquared() > .05f)
-        {
-            float target = Mathf.Atan2(flat.X, flat.Z);
-            if (!FirstPerson) _avatar.Rotation = new Vector3(0, Mathf.LerpAngle(_avatar.Rotation.Y, target, 1 - Mathf.Exp(-12 * dt)), 0);
-            _walkPhase += flat.Length() * dt * 1.6f;
-        }
-        else _walkPhase = Mathf.Lerp(_walkPhase, Mathf.Round(_walkPhase / Mathf.Pi) * Mathf.Pi, 1 - Mathf.Exp(-10 * dt));
-        float swing = Mathf.Sin(_walkPhase) * (_fly ? 0 : .55f);
-        // (with the torch the right arm is held up and forward, swinging only a little)
-        Limb("LeftLeg", swing); Limb("RightLeg", -swing); Limb("LeftArm", -swing * .8f); Limb("RightArm", _torch.Lit ? -.6f + swing * .12f : swing * .8f);
+        _me.Animate(dt, _player.Velocity, _fly, holdFacing: FirstPerson);
     }
 
     /// <summary>Local water: simulate, and the debug tools (G pour at the aimed point, J toggle a spring there).</summary>
@@ -1026,10 +1015,6 @@ public partial class WorldLab : Node3D
         _streamer.Invalidate(minX - 2, minZ - 2, maxX + 2, maxZ + 2);
     }
 
-    private void Limb(string name, float angle)
-    {
-        if (_avatar.GetNodeOrNull<Node3D>(name) is { } limb) limb.Rotation = new Vector3(angle, limb.Rotation.Y, limb.Rotation.Z);
-    }
 
     private void UpdateCamera()
     {
@@ -1040,27 +1025,16 @@ public partial class WorldLab : Node3D
             var forward = new Vector3(-Mathf.Sin(_yaw), 0, -Mathf.Cos(_yaw));
             _pivot.Position = _player.Position + Vector3.Up * 1.64f + forward * .12f;
             _arm.SpringLength = 0;
-            _avatar.Rotation = new Vector3(0, _yaw + Mathf.Pi, 0);
+            _me.Facing = _yaw + Mathf.Pi;
         }
         else
         {
             _pivot.Position = _player.Position + Vector3.Up * 1.55f;
             _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, _zoom, .2f);
         }
-        if (_fpApplied != FirstPerson)
-        {
-            _fpApplied = FirstPerson;
-            // First person: the body is only a shadow; the torch goes from the hand to the view.
-            foreach (var mesh in _avatar.FindChildren("*", "MeshInstance3D", true, false))
-                if (mesh is MeshInstance3D m && !_torch.IsAncestorOf(m))
-                    m.CastShadow = _fpApplied ? GeometryInstance3D.ShadowCastingSetting.ShadowsOnly : GeometryInstance3D.ShadowCastingSetting.On;
-            if (_fpApplied) { _torch.Reparent(_fpHold, false); _torch.Position = Vector3.Zero; _torch.Rotation = Vector3.Zero; }
-            else { _torch.Reparent(_avatar.GetNode<Node3D>("RightArm"), false); TorchInHand(); }
-        }
+        // First person: the body is only a shadow; the torch goes from the hand to the view.
+        _me.SetFirstPerson(FirstPerson ? _fpHold : null);
     }
-
-    /// <summary>In the right fist, the stick up and a little forward while the arm is raised (Limb: RightArm).</summary>
-    private void TorchInHand() { _torch.Position = new Vector3(0, -.51f, .02f); _torch.Rotation = new Vector3(.85f, 0, -.3f); } // (tilted out, away from the head)
 
     private void UpdateHud()
     {
@@ -1145,7 +1119,7 @@ public partial class WorldLab : Node3D
             case Key.Period: if (!_menu.Visible) WaterSize(1); break;
             case >= Key.Key1 and <= Key.Key5: if (!_menu.Visible && _tools.Select((int)(key.Keycode - Key.Key1))) _status = _tools.Status; break;
             case Key.T or Key.Y or Key.Bracketleft or Key.Bracketright or Key.Minus or Key.Equal: if (!_menu.Visible) _tools.DevKey(key.Keycode); break;
-            case Key.R: if (!_menu.Visible) { _torch.Lit = !_torch.Lit; _status = _torch.Lit ? "Torch lit (R puts it out)." : "Torch out."; } break;
+            case Key.R: if (!_menu.Visible) { _me.Torch.Lit = !_me.Torch.Lit; _status = _me.Torch.Lit ? "Torch lit (R puts it out)." : "Torch out."; } break;
             case Key.H: if (!_menu.Visible) { _rain = !_rain; _status = _rain ? "Rain on (H stops it)." : "Rain stopped."; } break;
             case Key.K: if (!_menu.Visible) { _water.Clear(); _rain = false; _status = "Simulated water cleared."; } break;
             case Key.L: if (!_menu.Visible && _lightning != null)
@@ -1224,7 +1198,7 @@ public partial class WorldLab : Node3D
         }
         sb.AppendLine("Reproduce:");
         sb.AppendLine($"  {_worldArgs} --at={F(PlayerX)},{F(PlayerZ)} --view={F(_yaw)},{F(_pitch)},{F(_zoom)} --day={_clock.Day} --hour={F(_clock.Hour)}" +
-            (_fly ? $" --fly-height={F(fly)}" : "") + (_rain ? " --rain" : "") + (_torch.Lit ? " --torch" : "") +
+            (_fly ? $" --fly-height={F(fly)}" : "") + (_rain ? " --rain" : "") + (_me.Torch.Lit ? " --torch" : "") +
             $" --cloud-drift={string.Join(",", _atmosphere.CloudDrift.Select(v => v.ToString("R", c)))} {settings}");
         File.WriteAllText(path, sb.ToString());
         Screenshot(Path.Combine(dir, $"dump-{stamp}.png"));
@@ -1249,13 +1223,9 @@ public partial class WorldLab : Node3D
         _player = new CharacterBody3D { Name = "AldenWayfarer", // the first explorer (docs/HALL_OF_FAME.md)
              CollisionLayer = 2, CollisionMask = 1, FloorSnapLength = .6f, FloorMaxAngle = Mathf.DegToRad(50) };
         _player.AddChild(new CollisionShape3D { Position = Vector3.Up * .9f, Shape = new CapsuleShape3D { Radius = .3f, Height = 1.8f } });
-        _avatar = Visuals.Person(new Color("526b61"));
-        _player.AddChild(_avatar);
-        _torch = new Torch();
-        _torch.Follow(_atmosphere.Wind);
-        _avatar.GetNode<Node3D>("RightArm").AddChild(_torch);
-        TorchInHand();
-        _torch.Lit = OS.GetCmdlineUserArgs().Contains("--torch");
+        _me = new Character(new Color("526b61"), _atmosphere.Wind);
+        _player.AddChild(_me);
+        _me.Torch.Lit = OS.GetCmdlineUserArgs().Contains("--torch");
         AddChild(_player);
         _pivot = new Node3D { Name = "CameraPivot" };
         _arm = new SpringArm3D { SpringLength = _zoom, CollisionMask = 1, Margin = .3f };
