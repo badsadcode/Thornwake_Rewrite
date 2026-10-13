@@ -12,7 +12,6 @@ namespace Thornwake.Rewrite.Net;
 public sealed partial class RemotePlayer : Node3D
 {
     private const double Delay = .1, Extrapolate = .25;
-    private static readonly Color[] Tunics = { new("7a4a3a"), new("3f5a7a"), new("6b6a3a"), new("5a3f6b"), new("3a6b5a"), new("7a6a4a") };
     private readonly Character _character;
     private readonly Label3D _label;
     private readonly List<(double Time, PlayerState State)> _states = new();
@@ -20,7 +19,7 @@ public sealed partial class RemotePlayer : Node3D
     public RemotePlayer(int id, string name, Wind wind)
     {
         Name = $"Player{id}";
-        _character = new Character(Tunics[(id & 0x7fffffff) % Tunics.Length], wind);
+        _character = new Character(Character.TunicFor(id), wind);
         AddChild(_character);
         _label = new Label3D
         {

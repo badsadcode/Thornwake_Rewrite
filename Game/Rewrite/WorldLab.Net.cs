@@ -78,6 +78,7 @@ public partial class WorldLab : IWorldHost, IClientGame
     private string NetHud()
     {
         if (_net == null) return "";
+        if (_net.Client.Welcomed) _me.SetTunic(Character.TunicFor(_net.Client.Id)); // (the colour the others see me in)
         string others = string.Join(", ", _net.Client.Names.Values);
         string who = others.Length > 0 ? $" · with {others}" : " · nobody else here yet";
         return _net.IsHost ? $"\n{_net.Status} · {_net.Server!.PlayerCount - 1} joined{who}"

@@ -10,8 +10,15 @@ namespace Thornwake.Rewrite;
 /// </summary>
 public sealed partial class Character : Node3D
 {
+    /// <summary>Tunic colours by player: the host (or a single player) wears Alden's green; others the rest, by id.</summary>
+    private static readonly Color[] Tunics = { new("526b61"), new("7a4a3a"), new("3f5a7a"), new("6b6a3a"), new("5a3f6b"), new("3a6b5a"), new("7a6a4a") };
+
+    /// <summary>The same colour for a player on every PC (multiplayer: chosen from the id the host gave them).</summary>
+    public static Color TunicFor(long id) => id <= 1 ? Tunics[0] : Tunics[1 + (int)((id & 0x7fffffff) % (Tunics.Length - 1))];
+
     /// <summary>The figure (Visuals.Person): faces +Z.</summary>
-    public Node3D Body { get; }
+    public Node3D Body { get; private set; }
+    private Color _tunic;
     public Torch Torch { get; }
     private float _walkPhase;
     private bool _bodyHidden;
@@ -19,6 +26,7 @@ public sealed partial class Character : Node3D
     public Character(Color tunic, Wind wind)
     {
         Name = "Character";
+        _tunic = tunic;
         Body = Visuals.Person(tunic);
         AddChild(Body);
         Torch = new Torch();
@@ -26,6 +34,25 @@ public sealed partial class Character : Node3D
         Body.GetNode<Node3D>("RightArm").AddChild(Torch);
         TorchInHand();
         Torch.Lit = false;
+    }
+
+    /// <summary>Dress in another colour (a joining player learns their id, and with it their colour, from the host).</summary>
+    public void SetTunic(Color tunic)
+    {
+        if (tunic == _tunic) return;
+        _tunic = tunic;
+        float facing = Facing;
+        bool hidden = _bodyHidden;
+        var hold = hidden ? Torch.GetParent<Node3D>() : null;
+        if (hidden) SetFirstPerson(null);
+        Torch.Reparent(this, false);
+        Body.QueueFree();
+        Body = Visuals.Person(tunic);
+        AddChild(Body);
+        Torch.Reparent(Body.GetNode<Node3D>("RightArm"), false);
+        TorchInHand();
+        Facing = facing;
+        if (hold != null) SetFirstPerson(hold);
     }
 
     /// <summary>Facing (radians about +Y, 0 = +Z) — the direction the body looks.</summary>
