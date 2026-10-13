@@ -158,7 +158,42 @@ wind changing with fronts and storms), the boat rides the **same waves the water
 requirement), **storms at sea are dangerous**, **river currents** carry small boats. Shipbuilding is carpentry (a
 **shipwright**); boats wear and break on rocks and in storms. **Cargo** carries the merchant's trade overseas.
 
-## 12. Engineering consequences (for when code starts)
+## 12. The living world: settlements, economy, caravans, bandits, events
+
+Tom: "caravans, wandering merchants, bandits, random road and world events — villages can be raided by bandits or
+animals whether the player is there or not; players can help but don't have to. The world should feel alive."
+The detailed design already exists in `docs/design-inbox/THORNWAKE_LIVING_WORLD_SIMULATION_SCOPE.md` (sections 4–25)
+and the Design Bible (sections 33–39); it fits these principles and is adopted as the basis. In short:
+
+* **Village economy as a few numbers** (food, materials, metal, tools, medicine, wealth; specialties and needs as
+  tendencies), refilled slowly by abstract production, evaluated lazily (once a day, or when someone comes near). They
+  drive merchant stock, prices, requests and contracts — no per-worker simulation, no GDP.
+* **Caravan contracts**: a surplus in one village and a shortage in another, with a route between them, create a
+  delivery contract. Accepted, the goods become real cargo (crates, sacks, barrels) on the employer's or the player's
+  own wagon (more profit), driven by the player or an NPC driver. The journey: food and water, route choice, repairs;
+  events such as ambushes, wolves, a fallen tree, a broken wheel, a blocked bridge, a flooded crossing, a wounded
+  traveller — or nothing. No hard timers except for perishable or urgent goods. Delivery changes the village visibly
+  (fuller stalls, better repairs, a stocked healer, houses repaired). **Stealing the cargo is possible** and has
+  consequences: lower trust, worse pay, deposits, guards, bounties, rumours. The same by sea with cargo ships (§11).
+* **Wandering merchants, pilgrims, refugees, hunters and travellers** on the roads: light road life near players, not
+  tied to the economy.
+* **Bandits are groups in the world**, not spawn waves: they form, grow, make camps, rob travellers, raid farms and
+  villages, demand tribute, and collapse. Players may ignore, fight, negotiate with or join them (bandit is a valid
+  life, with reputation and bounties).
+* **Events happen whether the player is there or not**: raids by bandits or animals, fire, crop failure, flood,
+  drought, disease, a blocked road, festivals, migration. Near players they play out live and players can help — or
+  not. Far away they are resolved coarsely in the background, and players arriving find the result: burnt houses, a
+  struggling village, refugees, a new camp nearby. Events grow from the world's state (a hungry village, a bandit camp
+  nearby, the real weather) more than from dice.
+* **Villages can decline and die** (healthy → struggling → critical → abandoned) and slowly **repopulate**; a dead
+  village may later hold bandits, refugees, wildlife or nobody. Players are never obliged to save or maintain one.
+* **Players learn by noticing**: tavern rumours, notice boards, empty shelves and high prices, damaged wagons, smoke
+  on the horizon, travellers' talk.
+* **"Generate lots, remember little"**: small events exist only near players; important outcomes (a village destroyed
+  or saved, a leader killed) enter the world's memory. NPCs are simulated in full only near players (simulation levels).
+* Sandbox settings: event frequency, bandit activity, how fragile villages are, repopulation speed.
+
+## 13. Engineering consequences (for when code starts)
 
 * Content as data (`Content/*.json`: items, tags, recipes, stations, skills, traits, effects, ingredients, runes,
   books' texts); code only for the blocks. Moddable later (the Bible's modding tiers).
@@ -168,18 +203,18 @@ requirement), **storms at sea are dangerous**, **river currents** carry small bo
 * Gameplay code stays separate from rendering and from `Game/WorldGen` (which must stay a framework free of
   Thornwake's gameplay — `GAME_VISION.md`).
 
-## 13. First playable slice (proposal)
+## 14. First playable slice (proposal)
 
 Not one mechanic, but the smallest loop that proves the blocks: **needs** (hunger, warmth), **items and inventory**,
 **the action pipeline** and **world changes** — chop a tree → logs → build a campfire → catch and cook a fish → get
 through a cold, rainy night; plus the first **book** (felling or fire-making) as the tutorial. If that feels right,
 most of what follows is content. Order after it to be decided with Tom (climbing, combat, sailing are the big ones).
 
-## 14. Open questions
+## 15. Open questions
 
 * **Injury depth**: a health bar only (Valheim) or wounds, bleeding, fractures, infection, bandages and splints (PZ)?
   Proposal: health plus an injuries layer, depth as a sandbox setting.
 * **Followers**: hired companions or mercenaries fighting beside the player (Conan's thralls, Soulmask's tribesmen)?
 * **Combat camera**: over the shoulder with a target lock? Combat in first person too?
-* Settlements' role for each life (where merchants sell, where contracts and bounties come from) — with the settlement
-  sites of `GAMEPLAY_PLAN.md`.
+* Wagons and pack animals: does a caravan need draft animals (horses, oxen) from the start, or carts the player pulls?
+* How much of the settlement economy comes before real villages exist (the settlement sites of `GAMEPLAY_PLAN.md`).
