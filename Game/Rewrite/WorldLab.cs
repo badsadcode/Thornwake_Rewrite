@@ -207,7 +207,9 @@ public partial class WorldLab : Node3D
         // --window-at=x,y: where the window opens (two game windows side by side for multiplayer tests)
         if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--window-at=")) is { } at && at[12..].Split(',') is [var wx, var wy])
             Callable.From(() => DisplayServer.WindowSetPosition(new Vector2I(int.Parse(wx, CultureInfo.InvariantCulture), int.Parse(wy, CultureInfo.InvariantCulture)))).CallDeferred();
-        if (!StartNetwork()) Generate(); // (joining: the world comes from the host)
+        bool joining = StartNetwork();
+        StartGameplay();
+        if (!joining) Generate(); // (joining: the world comes from the host)
     }
 
     // ------------------------------------------------------------------ world
@@ -391,6 +393,7 @@ public partial class WorldLab : Node3D
         if (_weatherProbe) { WeatherProbe(); GetTree().Quit(); }
         if (_thunderWavs != null) { ThunderWavs(_thunderWavs); GetTree().Quit(); }
         NetWorldReady();
+        GameplayWorldReady();
     }
 
     /// <summary>The weather at the player: fronts over game time, rain amount from the local climate, snow when cold.</summary>
@@ -763,6 +766,9 @@ public partial class WorldLab : Node3D
         if (_overlay.Visible && _generation == null && _streamer.Missing < 20) _overlay.Visible = false;
         UpdateCamera();
         StepRemotes(delta);
+        UpdateGameplay(delta);
+        UpdateMaking(delta);
+        GameplayTest(delta);
         var cam = _camera.GlobalPosition;
         RenderingServer.GlobalShaderParameterSet("tree_camera", new Vector4(cam.X, cam.Y, cam.Z, 0)); // tree hand-overs (TreeFade)
         double latitude = _sampler.Plan.Climate.Latitude(PlayerZ);
@@ -872,7 +878,7 @@ public partial class WorldLab : Node3D
         _physicsHitch.Begin("physics");
         float dt = (float)delta;
         var input = Vector2.Zero;
-        bool typing = _menu.Visible;
+        bool typing = _menu.Visible || _pack.Visible;
         if (!typing)
         {
             if (Input.IsKeyPressed(Key.W)) input.Y -= 1;
@@ -1104,7 +1110,7 @@ public partial class WorldLab : Node3D
             $"Position {PlayerX:0} , {PlayerZ:0}   ground {t.Height:0.0} m   {where}\n" +
             $"{mode}   FPS {Engine.GetFramesPerSecond():0}   tiles {_streamer.Resident} (+{_streamer.Missing} queued)   " +
             $"terrain triangles {_streamer.Triangles / 1000}k   tile build {_streamer.LastBuildMs:0.0} ms, commit {_streamer.LastCommitMs:0.0} ms";
-        _hud.Text += "\n" + _tools.Hud() + NetHud();
+        _hud.Text += "\n" + (_axeHeld ? GameplayHud() : _tools.Hud()) + NetHud();
         if (_water.Sim is { Added: > 0 } sim)
             _hud.Text += $"\nWater simulation: {sim.Volume():0.0} m³ on the land, {sim.Absorbed:0.0} m³ joined rivers/lakes{(_rain ? ", raining" : "")}" +
                 $"{(sim.Sources.Count > 0 ? $", {sim.Sources.Count} spring(s)" : "")}";
@@ -1132,6 +1138,7 @@ public partial class WorldLab : Node3D
             if (button.ButtonIndex == MouseButton.Left && !_menu.Visible) Input.MouseMode = Input.MouseModeEnum.Captured;
         }
         if (e is not InputEventKey { Pressed: true, Echo: false } key) return;
+        if (GameplayKey(key.Keycode)) return;
         switch (key.Keycode)
         {
             case Key.Escape when _map.Visible: _map.Visible = false; Input.MouseMode = Input.MouseModeEnum.Captured; _hud.Visible = _showHud; _help.Visible = true; break;
@@ -1151,7 +1158,11 @@ public partial class WorldLab : Node3D
             case Key.J: if (!_menu.Visible) ToggleSpring(); break;
             case Key.Comma: if (!_menu.Visible) WaterSize(-1); break;
             case Key.Period: if (!_menu.Visible) WaterSize(1); break;
-            case >= Key.Key1 and <= Key.Key5: if (!_menu.Visible && _tools.Select((int)(key.Keycode - Key.Key1))) _status = _tools.Status; break;
+            case >= Key.Key1 and <= Key.Key5:
+                if (_menu.Visible) break;
+                if (_axeHeld) ToggleAxe(); // (another tool in the hand)
+                if (_tools.Select((int)(key.Keycode - Key.Key1))) _status = _tools.Status;
+                break;
             case Key.T or Key.Y or Key.Bracketleft or Key.Bracketright or Key.Minus or Key.Equal: if (!_menu.Visible) _tools.DevKey(key.Keycode); break;
             case Key.R: if (!_menu.Visible) { _me.Torch.Lit = !_me.Torch.Lit; _status = _me.Torch.Lit ? "Torch lit (R puts it out)." : "Torch out."; } break;
             case Key.H:
@@ -1287,6 +1298,7 @@ public partial class WorldLab : Node3D
         _hud.AddThemeConstantOverride("shadow_offset_x", 1); _hud.AddThemeConstantOverride("shadow_offset_y", 1);
         layer.AddChild(_hud);
         layer.AddChild(_map);
+        InitGameplay(layer);
         _map.Teleport = (x, z) =>
         {
             Teleport(x, z);

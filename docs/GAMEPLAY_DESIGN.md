@@ -134,6 +134,11 @@ Players write recipes into recipe books, which can be sold. New ingredients are 
 
 ## 9. Combat (Valheim, Conan Exiles, Soulmask)
 
+* **Controls (Tom, 2026-10-13)**: what you hold decides what the left mouse does — a weapon or an axe swung at an enemy
+  attacks it; the same axe swung at a tree in front of you chops it (with its animation). **E gathers and interacts**:
+  grass for plant fibre, berries, loose stones on the ground, putting wood on a fire. (Step 1 has the axe and the fire;
+  attacking and gathering come with enemies and gatherables.)
+
 * Third-person, physical, **stamina-driven**: light and heavy attacks, short combos, block, a **timed parry** that
   staggers, a **dodge roll**. Each weapon type has its own moveset (sword, axe, mace, spear, bow, shield, two-handers).
   Bows with real arrow flight and drop.

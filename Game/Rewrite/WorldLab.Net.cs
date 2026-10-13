@@ -269,6 +269,7 @@ public partial class WorldLab : IWorldHost, IClientGame
         AddChild(net);
         if (net.Host(NetLaunch.Port, this, this, name, version) != Error.Ok) { _status = net.Status; net.QueueFree(); return; }
         _net = net;
+        StopLocalGameplayLoop(); // (the network's server and client parts take over; the rules stay)
         _hostWorlds = 1; // this world is the first: a later one (New world) is sent to everyone
         _hitch.Report = _physicsHitch.Report = _net.Stats.Event;
         _status = $"Hosting this world on UDP port {NetLaunch.Port} as {name}. Others join with your address.";
@@ -342,7 +343,8 @@ public partial class WorldLab : IWorldHost, IClientGame
     {
         if (_sampler == null || _holding) return null;
         var v = _player.Velocity;
-        var flags = (_fly ? PlayerFlags.Flying : 0) | (_me.Torch.Lit ? PlayerFlags.Torch : 0) | (_swimming ? PlayerFlags.Swimming : 0);
+        var flags = (_fly ? PlayerFlags.Flying : 0) | (_me.Torch.Lit ? PlayerFlags.Torch : 0) | (_swimming ? PlayerFlags.Swimming : 0)
+            | (_axeHeld ? PlayerFlags.Axe : 0) | (_me.Chopping ? PlayerFlags.Chopping : 0);
         return new PlayerState(PlayerX, _player.Position.Y, PlayerZ, _me.Facing, v.X, v.Y, v.Z, flags);
     }
 }

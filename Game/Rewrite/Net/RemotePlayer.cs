@@ -75,6 +75,8 @@ public sealed partial class RemotePlayer : Node3D
         Position = new Vector3((float)(s.X - originX), (float)s.Y, (float)(s.Z - originZ));
         _character.Facing = s.Facing;
         _character.Torch.Lit = (s.Flags & PlayerFlags.Torch) != 0;
+        _character.AxeHeld = (s.Flags & PlayerFlags.Axe) != 0;
+        _character.Chopping = (s.Flags & PlayerFlags.Chopping) != 0;
         _character.Animate(dt, new Vector3(s.Vx, s.Vy, s.Vz), (s.Flags & PlayerFlags.Flying) != 0, holdFacing: true);
         return guessed;
     }

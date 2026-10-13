@@ -15,6 +15,7 @@ public enum Msg : byte
     Hello = 1,      // name, game version
     State = 2,      // my position, facing, motion (unreliable, ~20 a second)
     Dig = 3,        // please change the ground (the server applies it and sends the changed chunks to everyone)
+    Action = 4,     // please do this (chop, make, fuel, eat: step 1's actions, checked by the host's GameRules)
     Welcome = 10,   // your id, the world, its settings, the clock, the players, the place to start
     Players = 11,   // everyone's state (unreliable, ~20 a second)
     Joined = 12,    // a player came in (id, name)
@@ -25,13 +26,24 @@ public enum Msg : byte
     DigDone = 17,   // the result of your dig (volume moved, hardness)
     Refused = 18,   // you cannot join (reason)
     World = 19,     // the host started another world: build it (arguments, type, where the host is)
+    Result = 20,    // the outcome of your action (done or why not, and food eaten)
+    Inventory = 21, // your inventory (after every change)
+    Objects = 22,   // placed objects that changed (campfires); all of them for a player joining late
+    Removals = 23,  // generated objects taken out or put back (felled trees); all of them for a player joining late
 }
 
 /// <summary>One player's movement as others need it to draw them (world coordinates, not the floating origin).</summary>
 public readonly record struct PlayerState(double X, double Y, double Z, float Facing, float Vx, float Vy, float Vz, PlayerFlags Flags);
 
 [Flags]
-public enum PlayerFlags : byte { None = 0, Flying = 1, Torch = 2, Swimming = 4 }
+public enum PlayerFlags : byte { None = 0, Flying = 1, Torch = 2, Swimming = 4, Axe = 8, Chopping = 16 }
+
+/// <summary>Step 1's actions (D110): what a player asks the host to do.</summary>
+public enum ActionKind : byte { Chop = 1, Make = 2, Fuel = 3, Eat = 4 }
+
+/// <summary>An action request: chop the tree of lattice cell (A, B); make recipe Id (placing at X, Y, Z facing Yaw);
+/// fuel object A; eat item Id.</summary>
+public readonly record struct ActionRequest(ActionKind Kind, long A, long B, string Id, double X, double Y, double Z, float Yaw);
 
 /// <summary>
 /// Everything about time that each PC would otherwise count up on its own: the day and its phase (GameClock), the
@@ -47,7 +59,7 @@ public readonly record struct DigRequest(BrushMode Mode, BrushShape Shape, doubl
 public static class NetMessages
 {
     /// <summary>Changes whenever the messages change: a client and host with different versions do not connect.</summary>
-    public const int Protocol = 3;
+    public const int Protocol = 4;
 
     public static byte[] Build(Msg kind, Action<BinaryWriter> body)
     {
@@ -89,6 +101,38 @@ public static class NetMessages
         var drift = new double[r.ReadByte()];
         for (int i = 0; i < drift.Length; i++) drift[i] = r.ReadDouble();
         return new ClockState(day, phase, ocean, wind, drift, r.ReadBoolean());
+    }
+
+    public static void Write(this BinaryWriter w, in ActionRequest a)
+    {
+        w.Write((byte)a.Kind); w.Write(a.A); w.Write(a.B); w.Write(a.Id ?? ""); w.Write(a.X); w.Write(a.Y); w.Write(a.Z); w.Write(a.Yaw);
+    }
+
+    public static ActionRequest ReadAction(this BinaryReader r) =>
+        new((ActionKind)r.ReadByte(), r.ReadInt64(), r.ReadInt64(), r.ReadString(), r.ReadDouble(), r.ReadDouble(), r.ReadDouble(), r.ReadSingle());
+
+    /// <summary>Removal keys with their state (removed at that game hour, or put back).</summary>
+    public static void WriteRemovals(this BinaryWriter w, ObjectRemovals removals, IReadOnlyList<(int Layer, long X, long Z)> keys)
+    {
+        w.Write(keys.Count);
+        foreach (var (layer, x, z) in keys)
+        {
+            w.Write((byte)layer); w.Write(x); w.Write(z);
+            var at = removals.Get(layer, x, z);
+            w.Write(at.HasValue); w.Write(at ?? 0);
+        }
+    }
+
+    public static List<(int Layer, long X, long Z, double? RemovedAt)> ReadRemovals(this BinaryReader r)
+    {
+        var list = new List<(int, long, long, double?)>();
+        for (int n = r.ReadInt32(); n > 0; n--)
+        {
+            int layer = r.ReadByte(); long x = r.ReadInt64(), z = r.ReadInt64();
+            bool removed = r.ReadBoolean(); double at = r.ReadDouble();
+            list.Add((layer, x, z, removed ? at : null));
+        }
+        return list;
     }
 
     public static void Write(this BinaryWriter w, in DigRequest d)

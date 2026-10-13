@@ -319,6 +319,8 @@ public static class GameSettings
     // ---- simulation (live)
     public static readonly Setting WaterSimulation = Add(new("sim.water", "Simulation", "Local water simulation", 0, 1, 1, 1,
         "Simulated water around the player (G pour, J spring, H rain, K clear). Runs in a 128 m area that follows you.", rebuild: true));
+    public static readonly Setting NeedsOn = Add(new("sim.needs", "Simulation", "Hunger and cold", 0, 1, 1, 1,
+        "Step 1 placeholder needs (D110): food, body warmth, wetness and health. Off: none of them change (testing the world)."));
     public static readonly Setting NightDarkness = Add(new("sim.night_darkness", "Simulation", "Night darkness", 0, 4, 1, 1,
         "How dark nights are on the land, as a sandbox rule (in multiplayer the host's applies to everyone): the light the " +
         "sky and the moon give the ground. The sky, moon, stars and clouds look the same. Normal = build 56.",

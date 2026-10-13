@@ -1508,6 +1508,32 @@ Defaults (Tom agreed with the proposal from the captures): storm 0.5, forest 0.5
 build 56's light back. Storms are to get more atmosphere later (Tom: "Storms have to be atmospheric, but we can work on
 that later").
 
+## D110 — Step 1's first slice playable: chop, campfire, needs, through the server part (2026-10-13)
+* **Core** (`Game/Gameplay`, engine-free, headless tests `GameplayTests`): items with tags, an inventory, recipes as one
+  pipeline (inputs, tools, a working station within reach, time, outputs or a placed object), placed objects (a
+  campfire burns its fuel in game minutes), needs (food, body warmth, wetness, health; 0–100, per game hour) and
+  `GameRules`, the host's rules for chop / make / fuel / eat. Content: `Content/gameplay_items.json`,
+  `Content/gameplay_recipes.json` (new files; the original game's items.json / recipes.json are left alone). Start kit:
+  a stone axe, three dried meats, *Notes on Felling* (Old Berta's line from §5).
+* **Authority**: a player's PC asks (`Msg.Action`), the host's server part checks against where it knows the player
+  to be (reach, tools, materials, a lit fire) and answers (`Result`); inventories go to their owners (`Inventory`),
+  placed objects and felled trees to everyone (`Objects`, `Removals`) and all of them to late joiners in the welcome.
+  The host's own player and **single player use the same path**: alone, a NetServer and NetClient talk without a
+  network (Host this world swaps in the network's). Protocol 4.
+* **Controls** (Tom): 6 holds the axe (1–5 put it away); the left mouse held on a tree in front of you (within 4.5 m,
+  inside 60° of the view) chops it in 3 + 2.5 × size seconds with an arm swing others see (state flags Axe, Chopping);
+  E puts the best wood in the pack on the nearest fire; I opens the pack (items, eat, make). Making takes the recipe's
+  time and stops if you walk away; a campfire goes 1.8 m in front of you, lit, with 90 min of wood.
+* **Felling**: the tree leaves the forest (tiles, tree field and collision rebuilt around it) and the original game's
+  stump stands there; 1 + 2 × size logs and 3 + 3 × size branches.
+* **Needs**: air temperature = the place's yearly mean (climate) + season (±3 °C in the tropics … ±10.5 °C at 50°) +
+  hour (±4.5 °C, warmest at 15:00) − 3 °C in rain; feels-like = air + fire − wind chill − wetness. Food lasts ~2 game
+  days. Freezing and starving hurt health; no death yet (health stops at 0 with a warning). Setting *Hunger and cold*
+  (`sim.needs`, on; off for testing the world).
+* Checked by `--gameplay-test` (alone and as a joined guest: chop, stump, tree gone, campfire built and drawn, fuel,
+  eat, warmth) and a late joiner receiving the felled tree. Placeholders: the campfire's flames are the original
+  game's static cones (a flickering light), the axe and stump its models; no saving yet (the rewrite has no saves).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

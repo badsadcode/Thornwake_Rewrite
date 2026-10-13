@@ -41,6 +41,8 @@ public sealed partial class Character : Node3D
     {
         if (tunic == _tunic) return;
         _tunic = tunic;
+        bool axe = AxeHeld;
+        AxeHeld = false; // (the axe hangs on the old body)
         float facing = Facing;
         bool hidden = _bodyHidden;
         var hold = hidden ? Torch.GetParent<Node3D>() : null;
@@ -53,6 +55,7 @@ public sealed partial class Character : Node3D
         TorchInHand();
         Facing = facing;
         if (hold != null) SetFirstPerson(hold);
+        AxeHeld = axe;
     }
 
     /// <summary>Facing (radians about +Y, 0 = +Z) — the direction the body looks.</summary>
@@ -78,7 +81,38 @@ public sealed partial class Character : Node3D
         }
         else _walkPhase = Mathf.Lerp(_walkPhase, Mathf.Round(_walkPhase / Mathf.Pi) * Mathf.Pi, 1 - Mathf.Exp(-10 * dt));
         float swing = Mathf.Sin(_walkPhase) * (flying ? 0 : .55f);
-        Limb("LeftLeg", swing); Limb("RightLeg", -swing); Limb("LeftArm", -swing * .8f); Limb("RightArm", Torch.Lit ? -.6f + swing * .12f : swing * .8f);
+        bool torchLeft = _axe != null && Torch.Lit;
+        Limb("LeftLeg", swing); Limb("RightLeg", -swing);
+        Limb("LeftArm", torchLeft ? -.6f + swing * .12f : -swing * .8f);
+        Limb("RightArm", _axe == null && Torch.Lit ? -.6f + swing * .12f : swing * .8f);
+        // Chopping (placeholder, D110): the axe arm raised back over the shoulder, then brought down, ~1.4 strokes a second.
+        if (Chopping)
+        {
+            _chopPhase += dt * 1.4f;
+            float k = _chopPhase % 1;
+            float angle = k < .6f ? Mathf.Lerp(-.3f, -2.6f, Mathf.SmoothStep(0, 1, k / .6f)) : Mathf.Lerp(-2.6f, -.3f, Mathf.SmoothStep(0, 1, (k - .6f) / .15f));
+            Limb("RightArm", angle);
+        }
+        else _chopPhase = 0;
+    }
+
+    /// <summary>Swinging the axe (the arm animation; the player's own PC times the chop).</summary>
+    public bool Chopping { get; set; }
+    private float _chopPhase;
+    private Node3D? _axe;
+
+    /// <summary>An axe in the right hand (the original game's model); a lit torch moves to the left hand.</summary>
+    public bool AxeHeld
+    {
+        get => _axe != null;
+        set
+        {
+            if (value == (_axe != null)) return;
+            var right = Body.GetNode<Node3D>("RightArm");
+            if (value) { _axe = Thornwake.World.Visuals.Tool(0); right.AddChild(_axe); }
+            else { _axe.QueueFree(); _axe = null; Chopping = false; }
+            if (!_bodyHidden) { Torch.Reparent(Body.GetNode<Node3D>(value ? "LeftArm" : "RightArm"), false); TorchInHand(); }
+        }
     }
 
     private void Limb(string name, float angle)
@@ -103,5 +137,9 @@ public sealed partial class Character : Node3D
     }
 
     /// <summary>In the right fist, the stick up and a little forward while the arm is raised; tilted out, away from the head.</summary>
-    private void TorchInHand() { Torch.Position = new Vector3(0, -.51f, .02f); Torch.Rotation = new Vector3(.85f, 0, -.3f); }
+    private void TorchInHand()
+    {
+        bool left = Torch.GetParent()?.Name == "LeftArm";
+        Torch.Position = new Vector3(0, -.51f, .02f); Torch.Rotation = new Vector3(.85f, 0, left ? .3f : -.3f);
+    }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Thornwake.Gameplay;
 using Thornwake.WorldGen;
 
 namespace Thornwake.Rewrite.Net;
@@ -22,6 +23,10 @@ public interface IWorldHost
     TerrainEdits? Edits { get; }
     /// <summary>Apply a player's dig to the true world; the changed chunks then go to everyone.</summary>
     (double Volume, double Hardness) Dig(in DigRequest request);
+    /// <summary>Generated objects taken out of the world (felled trees; null while the world is being generated).</summary>
+    ObjectRemovals? Removals { get; }
+    /// <summary>Step 1's rules: inventories, placed objects, actions (D110).</summary>
+    GameRules? Rules { get; }
 }
 
 /// <summary>
@@ -104,6 +109,29 @@ public sealed class NetServer
                 SendChanges(); // at once: the digger sees the hole without waiting for the next tick
                 break;
             }
+            case Msg.Action when player.Welcomed && _world.Rules is { } rules && _world.Removals != null:
+            {
+                var a = r.ReadAction();
+                // The rules check the player's reach from where the server knows them to be.
+                ActionResult result;
+                if (!player.HasState) result = ActionResult.Fail("Not in the world yet.");
+                else
+                {
+                    var at = player.State; int id = (int)peer;
+                    result = a.Kind switch
+                    {
+                        ActionKind.Chop => rules.Chop(id, a.A, a.B, at.X, at.Z),
+                        ActionKind.Make => rules.Make(id, a.Id, at.X, at.Z, a.X, a.Y, a.Z, a.Yaw),
+                        ActionKind.Fuel => rules.Fuel(id, a.A, at.X, at.Z),
+                        ActionKind.Eat => rules.Eat(id, a.Id),
+                        _ => ActionResult.Fail("Unknown action."),
+                    };
+                }
+                if (peer != HostPeer || !result.Ok) Log?.Invoke($"{a.Kind} from {player.Name}: {result.Message}");
+                _send(peer, NetMessages.Build(Msg.Result, w => { w.Write((byte)a.Kind); w.Write(result.Ok); w.Write(result.Message); w.Write(result.Food); }), true);
+                SendChanges();
+                break;
+            }
         }
     }
 
@@ -173,6 +201,16 @@ public sealed class NetServer
             w.Write(others.Count);
             foreach (var (id, p) in others) { w.Write((int)id); w.Write(p.Name); }
         }), true);
+        // Felled trees and placed objects so far; their inventory follows with the next changes (a new one: the start kit).
+        if (_world.Removals is { } removals && removals.Count > 0)
+            _send(peer, NetMessages.Build(Msg.Removals, w => w.WriteRemovals(removals, removals.Keys())), true);
+        if (_world.Rules is { } rules)
+        {
+            var objects = rules.Objects.All.Select(o => o.Id).ToList();
+            if (objects.Count > 0) _send(peer, NetMessages.Build(Msg.Objects, w => { w.Write(objects.Count); foreach (long id in objects) rules.Objects.Write(w, id); }), true);
+            rules.Inventory((int)peer);
+            _send(peer, NetMessages.Build(Msg.Inventory, w => rules.Inventory((int)peer).Write(w)), true);
+        }
         // Every change made before this player came (late joining), a few hundred chunks per message.
         if (_world.Edits is { } edits)
         {
@@ -187,6 +225,18 @@ public sealed class NetServer
 
     private void SendChanges()
     {
+        // Felled trees and placed objects to everyone (the host's own player too: it draws from what it receives),
+        // inventories to their owners.
+        if (_world.Removals is { } removals && removals.TakeChanged() is { Count: > 0 } keys)
+            Broadcast(NetMessages.Build(Msg.Removals, w => w.WriteRemovals(removals, keys)), true);
+        if (_world.Rules is { } rules)
+        {
+            if (rules.Objects.TakeChanged() is { Count: > 0 } ids)
+                Broadcast(NetMessages.Build(Msg.Objects, w => { w.Write(ids.Count); foreach (long id in ids) rules.Objects.Write(w, id); }), true);
+            foreach (int owner in rules.TakeInventoryChanges())
+                if (_players.TryGetValue(owner, out var p) && p.Welcomed)
+                    _send(owner, NetMessages.Build(Msg.Inventory, w => rules.Inventory(owner).Write(w)), true);
+        }
         if (_world.Edits is not { } edits) return;
         var changed = edits.TakeChanged();
         if (changed.Count == 0) return;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Thornwake.Rewrite.Net;
 
@@ -17,6 +18,14 @@ public interface IClientGame
     void PlayerMoved(int id, in PlayerState state);
     void DigDone(double volume, double hardness);
     void Refused(string reason);
+    /// <summary>The host's answer to this player's action (done or why not; food eaten).</summary>
+    void ActionDone(ActionKind kind, bool ok, string message, double food);
+    /// <summary>This player's inventory as the host has it.</summary>
+    void ApplyInventory(BinaryReader r);
+    /// <summary>Placed objects that changed (count, then each one as PlacedObjects.Write wrote it).</summary>
+    void ApplyObjects(BinaryReader r);
+    /// <summary>Generated objects taken out or put back (felled trees).</summary>
+    void ApplyRemovals(IReadOnlyList<(int Layer, long X, long Z, double? RemovedAt)> removals);
     /// <summary>This player's state now (null while there is none yet: the world is still loading).</summary>
     PlayerState? LocalState();
 }
@@ -52,6 +61,12 @@ public sealed class NetClient
     {
         var d = dig;
         _send(NetMessages.Build(Msg.Dig, w => w.Write(d)), true);
+    }
+
+    public void SendAction(in ActionRequest action)
+    {
+        var a = action;
+        _send(NetMessages.Build(Msg.Action, w => w.Write(a)), true);
     }
 
     public void Tick(double dt)
@@ -103,6 +118,11 @@ public sealed class NetClient
             case Msg.Clock when !_isHost: _game.ApplyClock(r.ReadClock(), snap: false); break;
             case Msg.Settings when !_isHost: _game.ApplySettings(r.ReadSettings()); break;
             case Msg.DigDone: _game.DigDone(r.ReadDouble(), r.ReadDouble()); break;
+            // (also on the host: its own player draws objects and its inventory from what the server part sends)
+            case Msg.Result: { var k = (ActionKind)r.ReadByte(); bool ok = r.ReadBoolean(); string m = r.ReadString(); _game.ActionDone(k, ok, m, r.ReadDouble()); break; }
+            case Msg.Inventory: _game.ApplyInventory(r); break;
+            case Msg.Objects: _game.ApplyObjects(r); break;
+            case Msg.Removals: _game.ApplyRemovals(r.ReadRemovals()); break;
         }
     }
 }
