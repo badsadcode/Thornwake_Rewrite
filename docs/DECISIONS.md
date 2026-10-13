@@ -1358,6 +1358,30 @@ placeholders; (4) the living world (economy, caravans, bandits, events). Atmosph
 and draft animals are separate (an animal is a creature with an owner: it can be led, ridden, sold or stolen); hand
 carts first, animals later.
 
+## D101 — Multiplayer spike, first shape: host and join (2026-10-13)
+`docs/GAMEPLAY_DESIGN.md` §14.0, branch `multiplayer-spike`. **Transport**: Godot's ENet with raw byte messages
+(`SceneMultiplayer.SendBytes`, no RPCs on node paths), so the messages (`Net/NetMessages.cs`) are plain binary with no
+Godot types; channel 0 reliable (welcome, edits, settings, digs), channel 1 unreliable (positions, clock). **Server and
+client parts apart**: `NetServer` holds the true state (players, their states, the edits it sends) and checks what
+clients send (version, a sane brush, digging near where the player stands); it reaches the world only through
+`IWorldHost` (world arguments, world settings, clock, edits, apply a dig) — the host's WorldLab implements it now, a
+headless dedicated server later. `NetClient` applies what the host sends through `IClientGame`. The host runs both; its
+own player reaches the server part without the network (peer 1). **The player split**: `Character` (body, walk,
+torch, first-person hiding) out of WorldLab; the local player's movement, camera and tools stay in WorldLab (one local
+player per PC), remote players are `RemotePlayer`s (a Character and a name, drawn 100 ms behind and interpolated,
+extrapolated ≤ 0.25 s). **What is synchronised**: on joining the world (WorldLab's own world arguments — preset, seed,
+every generation parameter — plus a custom world type's JSON), the world-affecting settings (`time.*`, `sim.*` except
+volume, cloud cover, wind strength, sea state; graphics stay one's own; applied as overrides that are never saved over
+the player's own and are restored on leaving), the clock (day and phase; joining snaps, then once a second the gap
+closes over ~2 s), the waves' clock, the gusts' clock and the clouds' drift (all accumulated per PC, so they come from
+the host), positions ~20 a second, terrain edits as whole 32 m chunks (changed ones ~20 a second, all of them to a late
+joiner). A client's dig is a request (the tool's resolved brush) the host applies and answers with the volume (the soil
+bag); the hole reaches everyone as chunks. A client runs no rain erosion (only the host changes the ground). **Start**:
+`--host[=port]` (UDP 7777), `--join=address[:port]`, `--name=`, `--window-at=x,y`; `TEST_MP_HOST.cmd` and
+`TEST_MP_JOIN.cmd` open two windows side by side. Verified on this PC: the client got the welcome (1.7 KB), built the
+same world, appeared beside the host and showed them. Not shared yet: local water (as agreed), the simulated weather's
+own state (to verify).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

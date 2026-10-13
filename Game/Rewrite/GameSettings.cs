@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Godot;
 
 namespace Thornwake.Rewrite;
@@ -79,6 +80,28 @@ public static class GameSettings
     public static readonly List<Setting> All = new();
     private const string FilePath = "user://rewrite_settings.cfg";
     private static bool _loaded;
+    // Multiplayer: the host's world settings applied on a client, and the player's own values to save meanwhile and to
+    // restore when the session ends (GAMEPLAY_DESIGN.md §14.0: the host's time, weather, wind, sea; graphics stay one's own).
+    private static readonly Dictionary<Setting, double> Own = new();
+
+    /// <summary>Take a value from the host without saving it over the player's own.</summary>
+    public static void Override(Setting s, double value)
+    {
+        if (!Own.ContainsKey(s)) Own[s] = s.Value;
+        s.Value = value;
+    }
+
+    /// <summary>The session ended: the player's own values back.</summary>
+    public static void ClearOverrides()
+    {
+        var own = Own.ToList();
+        Own.Clear();
+        foreach (var (s, v) in own) s.Value = v;
+    }
+
+    /// <summary>Settings that change the world everyone shares (the host's count), not how it is drawn.</summary>
+    public static bool AffectsWorld(Setting s) => s.Key.StartsWith("time.") || (s.Key.StartsWith("sim.") && s.Key != "sim.weather_volume")
+        || s.Key is "sky.clouds" or "sky.cloud_speed" or "sky.sea_state";
 
     private static Setting Add(Setting s) { All.Add(s); return s; }
     private static readonly string[] OffLowMediumHigh = { "off", "low", "medium", "high" };
@@ -363,7 +386,7 @@ public static class GameSettings
     {
         if (!_loaded) return;
         var file = new ConfigFile();
-        foreach (var s in All) file.SetValue("settings", s.Key, s.Value);
+        foreach (var s in All) file.SetValue("settings", s.Key, Own.TryGetValue(s, out double own) ? own : s.Value);
         file.Save(FilePath);
     }
 

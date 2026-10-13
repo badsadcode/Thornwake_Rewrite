@@ -81,6 +81,14 @@ public partial class Atmosphere : Node3D
         set { (_windX, _windZ, _highX, _highZ, _lowX, _lowZ, _cloudTime) = (value[0], value[1], value[2], value[3], value[4], value[5], value[6]); _driftHeld = true; }
     }
     private bool _driftHeld;
+
+    /// <summary>The host's cloud drift (multiplayer): taken as it is but, unlike --cloud-drift, not held: the clouds go
+    /// on drifting here until the next update (once a second, gusts in step through Wind.Time).</summary>
+    public void FollowCloudDrift(double[] drift)
+    {
+        if (drift.Length < 7) return;
+        (_windX, _windZ, _highX, _highZ, _lowX, _lowZ, _cloudTime) = (drift[0], drift[1], drift[2], drift[3], drift[4], drift[5], drift[6]);
+    }
     /// <summary>The next rain front (Weather.FrontHours / FrontStrength): hours until it arrives (NaN none), strength.</summary>
     public double FrontHours { get; set; } = double.NaN;
     public float FrontStrength { get; set; }
@@ -95,6 +103,10 @@ public partial class Atmosphere : Node3D
     public SpectrumWaves Spectrum { get; } = new();
     /// <summary>Wave clock (s), shared with the shader through the global uniform <c>ocean_time</c>.</summary>
     public double OceanTime { get; private set; }
+
+    /// <summary>Follow the host's wave clock (multiplayer): snap when far off, else ease so the waves never jump.</summary>
+    public void FollowOceanTime(double hostTime, double delta, bool snap) =>
+        OceanTime = snap || Math.Abs(hostTime - OceanTime) > 2 ? hostTime : OceanTime + (hostTime - OceanTime) * Math.Min(1, delta * .5);
     private double _wavesState = -1, _wavesAngle = Math.Atan2(.6, .8);
     /// <summary>The simulated wind (direction, speed, gusts).</summary>
     public Wind Wind { get; } = new();
