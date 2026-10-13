@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 57** (step 1 first slice: axe (6) and chopping with the left mouse, campfire, pack (I), needs; storm sun-glow fix D107; darkness settings D109; protocol 4) | `8a1dc3b` | Thornwake-Rewrite-Preview-57 (v0.9.57) | Does not connect to build 56; darkness 0 / normal = build 56's light; build 56 = `404a9c5` |
 | **Build 56** (no host freeze after teleports in rain; rain (H) shared; players on the map with go-to; Esc → Host this world; join fixes; protocol 3) | `404a9c5` | Thornwake-Rewrite-Preview-56 (v0.9.56) | Does not connect to build 55; single player as build 55 apart from the map arrow and the erosion fix; build 55 = `d2b59b9` |
 | **Build 55** (multiplayer test: host and join from the launcher, network log; Alden's torch; first person; cloud drafts off by default) | `d2b59b9` | Thornwake-Rewrite-Preview-55 (v0.9.55) | Multiplayer is only used when chosen in the launcher; single player as build 54 plus the torch (R) and first person; build 54 = `0e69bfd` |
 | **Build 54** (Cloud look *reference* by default; no forest hole under a high camera; no horizon line inside clouds; horizon land to the true horizon) | `0e69bfd` | Thornwake-Rewrite-Preview-54 (v0.9.54) | Clouds: *Cloud look → build 53*; git: the return point below (`72b98d9`); build 53 = `987890d` |

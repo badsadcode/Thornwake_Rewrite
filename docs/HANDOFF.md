@@ -38,7 +38,7 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   check (§14.0 done-criterion 3), sharing poured water / springs (Tom to decide).
 * **Step 1 in progress (2026-10-13, D108–D110)**: playable first slice — 6 axe / LMB chop a tree, I pack and crafting
   (campfire, cook fish), E wood on a fire, needs line (food, warmth, wet, health), all through the host's GameRules,
-  also alone; `--gameplay-test`. **Next**: fishing (a cast action, raw fish from water) so cooking has its fish; E
+  also alone; `--gameplay-test`. In **build 57** (`8a1dc3b`, `dist/Preview-57`). **Next**: fishing (a cast action, raw fish from water) so cooking has its fish; E
   gathering (grass → fibre, berries, loose stones; Tom); a fire flame from the torch's particles; death (drop the pack
   where you fall, §4); saving the world (edits, removals, objects, inventories); Tom's storm atmosphere (D109).
 * **Parked (2026-10-13) for the multiplayer spike** (`docs/GAMEPLAY_DESIGN.md` §14.0, branch `multiplayer-spike`): the
