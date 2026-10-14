@@ -112,6 +112,21 @@ public partial class WorldLab : IWorldQuery
         }
     }
 
+    private bool _dying;
+
+    /// <summary>After dying (D115): a new character at the world's start, fed, warm and whole; the old one's pack lies
+    /// where they fell.</summary>
+    private void Respawn(string message)
+    {
+        _dying = false;
+        _needs.Food = 80; _needs.Warmth = 72; _needs.Wet = 0; _needs.Health = 100;
+        if (_axeHeld) ToggleAxe();
+        if (_me.RodHeld) ToggleRod();
+        if (_landmarks.Count > 0) Teleport(_landmarks[0].X, _landmarks[0].Z);
+        _status = message + " A new life begins at the start.";
+        _camShake = 1;
+    }
+
     private void Act(ActionRequest a)
     {
         if (GameClient is { } c) c.SendAction(a);
@@ -140,10 +155,13 @@ public partial class WorldLab : IWorldQuery
             double precip = _rain ? .7 : _atmosphere.Precipitation;
             double air = Thornwake.Gameplay.Needs.AirTemperature(mean, _sampler.Plan.Climate.Latitude(PlayerZ), GameSettings.Season.Index, _clock.Hour, precip);
             bool sprint = Input.IsKeyPressed(Key.Shift) && new Vector2(_player.Velocity.X, _player.Velocity.Z).Length() > 6;
-            var body = new BodyInput(air, _atmosphere.Wind.Speed, precip * (1 - .7 * Math.Clamp(_atmosphere.Canopy, 0, 1)) * (_atmosphere.Snowing ? .4 : 1),
+            bool sheltered = GameRules.Sheltered(_catalog, _seenObjects, PlayerX, PlayerZ);
+            var body = new BodyInput(air, _atmosphere.Wind.Speed * (sheltered ? .3 : 1),
+                sheltered ? 0 : precip * (1 - .7 * Math.Clamp(_atmosphere.Canopy, 0, 1)) * (_atmosphere.Snowing ? .4 : 1),
                 _swimming, GameRules.FireWarmth(_catalog, _seenObjects, PlayerX, PlayerZ), _me.Chopping ? 1 : sprint ? .6 : 0);
             _needs.Step(dh, body);
-            _needsLabel.Text = $"{_needs.Describe()} · feels {_needs.FeelsLike(body):0} °C" + (_needs.Health <= 0 ? "\nYou are dying: eat, get warm (a fire)." : "");
+            if (_needs.Health <= 0 && !_dying) { _dying = true; Act(new ActionRequest(ActionKind.Die, 0, 0, "", 0, 0, 0, 0)); }
+            _needsLabel.Text = $"{_needs.Describe()} · feels {_needs.FeelsLike(body):0} °C" + (sheltered ? " · sheltered" : "") + (_needs.Health <= 0 ? "\nYou are dying: eat, get warm (a fire)." : "");
         }
         else _needsLabel.Text = "";
         UpdateGameplayViews(delta);
@@ -215,6 +233,7 @@ public partial class WorldLab : IWorldQuery
     {
         _status = message;
         if (ok && kind == ActionKind.Eat) _needs.Eat(food);
+        if (kind == ActionKind.Die) Respawn(message);
         if (_pack.Visible) RefreshPack();
     }
 
@@ -239,7 +258,7 @@ public partial class WorldLab : IWorldQuery
             if (o.Kind == "trunk") { TrunkChanged(o); continue; } // (drawn and moved by the felling part)
             if (!_objectViews.ContainsKey(id))
             {
-                var view = o.Kind switch { "campfire" => Visuals.Campfire(), "log_pile" => LogPile(o), "branch_pile" => BranchPile(o), _ => new Node3D() };
+                var view = o.Kind switch { "campfire" => Visuals.Campfire(), "log_pile" => LogPile(o), "branch_pile" => BranchPile(o), "pack" => Pack(), "lean_to" => LeanTo(), _ => new Node3D() };
                 view.Rotation = new Vector3(0, o.Yaw, 0);
                 AddChild(view);
                 _objectViews[id] = view;
@@ -426,6 +445,41 @@ public partial class WorldLab : IWorldQuery
             case Key.E when !_menu.Visible && !_pack.Visible: Interact(); return true;
         }
         return false;
+    }
+
+    /// <summary>A lean-to (placeholder): two forked poles, a ridge pole, a roof of poles sloping to the ground behind,
+    /// branches on it. Open toward the builder (its front faces where they stood).</summary>
+    private static Node3D LeanTo()
+    {
+        var root = new Node3D { Name = "LeanTo" };
+        var wood = new StandardMaterial3D { AlbedoColor = new Color("6b4a2e"), Roughness = .95f };
+        var leaf = new StandardMaterial3D { AlbedoColor = new Color("4a5f2c"), Roughness = 1 };
+        MeshInstance3D Pole(float r, float length) => new() { Mesh = new CylinderMesh { TopRadius = r, BottomRadius = r * 1.1f, Height = length, RadialSegments = 6 }, MaterialOverride = wood };
+        // (front = +Z toward the builder after the object's turn; the roof falls to −Z)
+        foreach (float x in new[] { -1.4f, 1.4f }) { var p = Pole(.06f, 1.7f); p.Position = new Vector3(x, .85f, .9f); root.AddChild(p); }
+        var ridge = Pole(.06f, 3.2f); ridge.Rotation = new Vector3(0, 0, Mathf.Pi / 2); ridge.Position = new Vector3(0, 1.65f, .9f); root.AddChild(ridge);
+        float slope = Mathf.Atan2(1.65f, 1.9f), len = Mathf.Sqrt(1.65f * 1.65f + 1.9f * 1.9f);
+        for (int i = 0; i < 7; i++)
+        {
+            var rafter = Pole(.045f, len + .2f);
+            rafter.Rotation = new Vector3(-(Mathf.Pi / 2 - slope), 0, 0);
+            rafter.Position = new Vector3(-1.35f + i * .45f, .82f, -.05f);
+            root.AddChild(rafter);
+        }
+        var thatch = new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(3.1f, .08f, len) }, MaterialOverride = leaf,
+            Rotation = new Vector3(slope, 0, 0), Position = new Vector3(0, .9f, -.05f) };
+        root.AddChild(thatch);
+        return root;
+    }
+
+    /// <summary>A dead character's pack (placeholder: a leather bag with a strap).</summary>
+    private static Node3D Pack()
+    {
+        var root = new Node3D { Name = "Pack" };
+        var leather = new StandardMaterial3D { AlbedoColor = new Color("5b3a22"), Roughness = .8f };
+        root.AddChild(new MeshInstance3D { Mesh = new CapsuleMesh { Radius = .22f, Height = .6f }, MaterialOverride = leather, Position = new Vector3(0, .2f, 0), Rotation = new Vector3(Mathf.Pi / 2, 0, .3f) });
+        root.AddChild(new MeshInstance3D { Mesh = new TorusMesh { InnerRadius = .2f, OuterRadius = .24f }, MaterialOverride = leather, Position = new Vector3(0, .25f, 0), Rotation = new Vector3(0, 0, 1.2f) });
+        return root;
     }
 
     /// <summary>A felled tree's wood (placeholder): logs lying along where the trunk fell, a few branches on top.</summary>

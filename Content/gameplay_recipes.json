@@ -4,6 +4,9 @@
     { "id": "campfire", "name": "Campfire", "inputs": [ { "item": "log", "count": 2 }, { "item": "branch", "count": 4 } ],
       "seconds": 4, "places": "campfire",
       "description": "A ring of stones, two logs and kindling. Burns about an hour and a half; add wood to keep it going." },
+    { "id": "lean_to", "name": "Lean-to", "inputs": [ { "item": "log", "count": 3 }, { "item": "branch", "count": 8 }, { "item": "plant_fibre", "count": 4 } ],
+      "seconds": 10, "places": "lean_to",
+      "description": "Poles lashed into a sloping roof of branches. Under it the rain stays off and most of the wind; build the fire in front." },
     { "id": "fishing_rod", "name": "Rough fishing rod", "inputs": [ { "item": "branch", "count": 1 }, { "item": "plant_fibre", "count": 4 } ],
       "seconds": 6, "outputs": [ { "item": "fishing_rod", "count": 1 } ],
       "description": "A branch and a line twisted from plant fibre (E on grass)." },
@@ -14,6 +17,7 @@
       "seconds": 12, "outputs": [ { "item": "cooked_fish", "count": 1 } ] }
   ],
   "objects": [
-    { "id": "campfire", "name": "Campfire", "tags": ["fire"], "fuel": 90, "max_fuel": 240, "warmth": 14, "reach": 4 }
+    { "id": "campfire", "name": "Campfire", "tags": ["fire"], "fuel": 90, "max_fuel": 240, "warmth": 14, "reach": 4 },
+    { "id": "lean_to", "name": "Lean-to", "tags": ["shelter"], "reach": 2.2 }
   ]
 }

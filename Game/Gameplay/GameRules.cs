@@ -214,6 +214,30 @@ public sealed class GameRules
 
     private readonly Dictionary<int, double> _lastCatch = new();
 
+    /// <summary>
+    /// A character died (GAMEPLAY_DESIGN §4; D115): everything they carried drops where they fell — a pack to come back
+    /// for (E picks it up; anyone can) — and the player goes on as a new character with the start kit.
+    /// </summary>
+    public ActionResult Die(int player, double px, double pz)
+    {
+        var inv = Inventory(player);
+        string dropped = "";
+        if (inv.Stacks.Count > 0)
+        {
+            var pack = Objects.Add("pack", px, _world.Ground(px, pz), pz, 0, 0);
+            foreach (var (item, count) in inv.Stacks)
+            {
+                int i = pack.Contents.FindIndex(c => c.Item == item);
+                if (i >= 0) pack.Contents[i] = (item, pack.Contents[i].Count + count); else pack.Contents.Add((item, count));
+            }
+            dropped = " Everything you carried lies where you fell.";
+        }
+        inv.Clear();
+        foreach (var s in Catalog.Start) inv.Add(s.Item!, s.Count);
+        _inventoryChanged.Add(player);
+        return new(true, "You died." + dropped);
+    }
+
     /// <summary>Berries grow back on a picked bush after this many game hours (two days).</summary>
     public const double BerryRegrowHours = 48;
     private double _regrowCheck;
@@ -323,6 +347,10 @@ public sealed class GameRules
             if (layer == ObjectRemovals.Berries && _world.Removals.Get(layer, x, z) is { } at && now - at >= BerryRegrowHours)
                 _world.Removals.Restore(layer, x, z);
     }
+
+    /// <summary>Under a shelter (a lean-to's reach): the rain stays off, most of the wind (D115).</summary>
+    public static bool Sheltered(Catalog catalog, PlacedObjects objects, double x, double z) =>
+        objects.Near(x, z, 6).Any(o => catalog.Objects.TryGetValue(o.Kind, out var d) && d.Tags.Contains("shelter") && Dist(x, z, o.X, o.Z) <= d.Reach);
 
     /// <summary>Warmth (°C) the lit fires give at a point: full at the fire, nothing at the edge of its reach × 2.</summary>
     public static double FireWarmth(Catalog catalog, PlacedObjects objects, double x, double z) =>

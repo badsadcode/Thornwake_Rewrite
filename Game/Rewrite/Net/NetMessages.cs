@@ -42,7 +42,7 @@ public readonly record struct PlayerState(double X, double Y, double Z, float Fa
 public enum PlayerFlags : byte { None = 0, Flying = 1, Torch = 2, Swimming = 4, Axe = 8, Chopping = 16, Rod = 32, Fishing = 64 }
 
 /// <summary>Step 1's actions (D110): what a player asks the host to do.</summary>
-public enum ActionKind : byte { Chop = 1, Make = 2, Fuel = 3, Eat = 4, Gather = 5, ChopTrunk = 6, Claim = 7, Forage = 8, Catch = 9 }
+public enum ActionKind : byte { Chop = 1, Make = 2, Fuel = 3, Eat = 4, Gather = 5, ChopTrunk = 6, Claim = 7, Forage = 8, Catch = 9, Die = 10 }
 
 /// <summary>An action request: hit the tree of lattice cell (A, B); make recipe Id (placing at X, Y, Z facing Yaw);
 /// fuel object A; eat item Id; gather what lies in object A.</summary>
@@ -62,7 +62,7 @@ public readonly record struct DigRequest(BrushMode Mode, BrushShape Shape, doubl
 public static class NetMessages
 {
     /// <summary>Changes whenever the messages change: a client and host with different versions do not connect.</summary>
-    public const int Protocol = 8;
+    public const int Protocol = 9;
 
     public static byte[] Build(Msg kind, Action<BinaryWriter> body)
     {

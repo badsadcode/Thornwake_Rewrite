@@ -1623,6 +1623,17 @@ version of exactly that minigame, so it grows rather than being replaced:
 * Checked: headless (216 checks: fish by water and hour, bite timing, perfect / slow / idle / wrong play, a stronger
   rod, the host's checks) and `--fish-test` (finds the nearest water, casts, strikes, fights, lands a grayling).
 
+## D115 — Death drops the pack; a lean-to for a cold, rainy night (2026-10-14)
+The first slice's end (GAMEPLAY_DESIGN §15: get through a cold, rainy night) and §4's death.
+* **Death**: when health reaches 0 (cold, hunger, a falling tree, a rolling trunk) the player's PC asks `Die`; the host
+  drops everything carried as a **pack** where they fell (E picks it up — the owner on a corpse run, or anyone else) and
+  the player goes on as a new character with the start kit, at the world's start, fed and whole. Journals carrying
+  skills over (§5) come with skills.
+* **Lean-to** (3 logs, 8 branches, 4 plant fibre, 10 s): placed 1.8 m in front, open toward the builder; within 2.2 m of
+  it the rain stays off and the wind drops to 30 %. Eight game hours of 2 °C rain and wind: out in it health falls;
+  under a lean-to by a campfire it stays (tested). The needs line says "sheltered".
+* Protocol 9.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

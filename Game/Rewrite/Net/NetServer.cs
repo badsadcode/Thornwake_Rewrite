@@ -137,6 +137,7 @@ public sealed class NetServer
                         ActionKind.Claim => new ActionResult(rules.Claim(id, a.A, at.X, at.Z), ""),
                         ActionKind.Forage => rules.Forage(id, a.Id, a.A, a.B, a.X, a.Z, at.X, at.Z),
                         ActionKind.Catch => rules.Catch(id, a.Id, a.X, at.X, at.Z),
+                        ActionKind.Die => rules.Die(id, at.X, at.Z),
                         _ => ActionResult.Fail("Unknown action."),
                     };
                 }

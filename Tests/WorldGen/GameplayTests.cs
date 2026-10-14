@@ -12,6 +12,7 @@ internal static class GameplayTests
         T.Run("Gameplay: needs — hunger, cold, wet, a fire's warmth, health", NeedsWork, filter);
         T.Run("Gameplay: gathering — stones, berries (they grow back), grass for fibre; a fishing rod", Gathering, filter);
         T.Run("Gameplay: fishing — which fish where and when, the tug-of-war, landing one (D114)", FishingWorks, filter);
+        T.Run("Gameplay: death — the pack drops where you fell, a new character starts with the kit (D115)", Death, filter);
     }
 
     private static Catalog Load() => new(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Content/gameplay_items.json")),
@@ -228,6 +229,29 @@ internal static class GameplayTests
         world.Hours += .1;
         var away = rules.Catch(7, "", 0, 2000, 0);
         T.Check(away.Ok && inv.CountTag("bait") == 1 && inv.Count("raw_fish") == 1, "lost one: the bait is gone — " + away.Message);
+    }
+
+    private static void Death()
+    {
+        var c = Load();
+        var rules = new GameRules(c, new World());
+        var inv = rules.Inventory(7);
+        inv.Add("log", 3); inv.Add("berries", 5);
+        int axes = inv.Count("stone_axe");
+        var died = rules.Die(7, 40, 41);
+        var pack = rules.Objects.All.Single(o => o.Kind == "pack");
+        T.Check(died.Ok && pack.X == 40 && pack.Z == 41 && pack.Contents.Contains(("log", 3)) && pack.Contents.Contains(("berries", 5)), $"the pack lies where I fell: {died.Message}");
+        T.Check(inv.Count("log") == 0 && inv.Count("stone_axe") == axes, "a new character with the start kit");
+        T.Check(rules.Gather(9, pack.Id, 40, 42).Ok && rules.Inventory(9).Count("log") == 3, "anyone can pick it up (a corpse run — or a thief)");
+        // A lean-to for a cold, rainy night.
+        inv.Add("log", 3); inv.Add("branch", 8); inv.Add("plant_fibre", 4);
+        var built = rules.Make(7, "lean_to", 0, 0, 2, 5, 0, 0);
+        T.Check(built.Ok && GameRules.Sheltered(c, rules.Objects, 2.5, .5) && !GameRules.Sheltered(c, rules.Objects, 8, 0), "a lean-to: sheltered under it, not beside it");
+        var rainyNight = new BodyInput(Air: 2, Wind: 7, Rain: .9, Swimming: false, Fire: 0, Effort: 0);
+        var under = rainyNight with { Rain = 0, Wind = 7 * .3, Fire = 9 };
+        Needs open = new() { Warmth = 70 }, snug = new() { Warmth = 70 };
+        for (int i = 0; i < 16; i++) { open.Step(.5, rainyNight); snug.Step(.5, under); }
+        T.Check(open.Health < 100 && snug.Health >= 99 && snug.Warmth > 45, $"eight hours of cold rain: out in it health {open.Health:0}, warmth {open.Warmth:0}; under the lean-to by a fire health {snug.Health:0}, warmth {snug.Warmth:0}");
     }
 
     private static void NeedsWork()
