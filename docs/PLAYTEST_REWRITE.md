@@ -78,6 +78,23 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 60 — gathering, fishing, shelter, death and saving: the first slice is complete
+**In multiplayer everyone needs build 60** (build 59 and 60 do not connect).
+* **E gathers** (nearest first): wood lying in a pile, a campfire (wood on it), a berry bush (4 handfuls; they grow back
+  in two game days), a loose stone, else long grass where you stand (plant fibre). It takes a moment; moving stops it.
+* **Fishing:** make a rough rod (a branch and 4 plant fibre) and berry bait (one berry → three baits) in the pack (I).
+  **7** takes the rod. Hold the left mouse button to throw farther, release to cast at water; when the bobber goes under,
+  click; then hold **A** or **D** against the fish's pull and let go when it rests — land it before the line gives.
+  Rivers: trout, grayling; lakes: perch, pike (dawn and dusk); ponds: carp, tench; the sea: mackerel, cod. The bobber
+  rides the waves and drifts with a river's current. Cook the fish at a campfire.
+* **Lean-to** (3 logs, 8 branches, 4 plant fibre): under it the rain stays off and most of the wind — with a fire in
+  front you get through a cold, rainy night.
+* **Death:** at no health you drop everything you carried where you fell (go back for it — or someone else will) and
+  start again at the start with the basic kit.
+* **Saving:** Esc → *Save* / *Load…*, **F5** a quick save, an autosave every 10 minutes. Felled trees, picked stones and
+  berries, dug ground, fires, trunks, your pack, where you were and the time of day come back. Hosting, your friends'
+  packs are kept under their names.
+
 ## New in build 59 — felling a tree in three acts
 **In multiplayer everyone needs build 59** (build 58 and 59 do not connect).
 * **Notch and fall side:** your first axe hits cut a notch on the side you stand; the tree will fall **toward the
