@@ -123,6 +123,21 @@ placeholders to tune.
 **Assets (Tom, later)**: Tom will make handmade tree assets; a guide to what each tree needs for this (the standing
 model and its LODs, the bare trunk log, the stump, cut faces) and what can be generated comes when he starts.
 
+## 5b. Fishing (Tom, 2026-10-14: Enshrouded style for the final game)
+
+Fishing must be engaging. Enshrouded's model as the base:
+* **Bait is required** and decides what can bite (simple bait crafted by hand, better ones at a station, wild bait found).
+* **Cast** (hold to throw farther), **wait** for a bite, **strike** when the bobber goes under.
+* **Reel in — a tug-of-war**: the fish runs left or right; pull the other way (A/D) and switch the moment it stops. The
+  fish's stamina must run out before the line's does; the rod's **strength** tires the fish faster, its **endurance**
+  keeps the line longer (better rods are crafted or found).
+
+Thornwake on top, from what the world already simulates: **which fish** by the water (river, lake, sea, swamp pool,
+pond dug by players), the biome and water temperature, the **hour** (dawn and dusk bites) and the **weather**; a river's
+current makes a fish pull harder downstream; a fishing book teaches it (§5). Step 1 builds a small version of exactly
+this minigame (cast, strike, A/D, one bait, two or three fish), so it grows into the final one rather than being
+replaced. The rod needs plant fibre: E-gathering (grass, berries, loose stones; Tom) comes first.
+
 ## 6. Survival, the world's memory, crafting quality
 
 * **Needs** as in §2; survival feeds everything else: hungry, cold, wet or exhausted means less stamina and slower
