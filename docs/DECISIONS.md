@@ -1653,6 +1653,22 @@ The rewrite saved nothing; the first slice needs it (a night survived should sti
 * Checked: headless (10 checks: round trip, a fresh world with the changes, packs by name, a returning friend) and
   `--save-test` (fell a tree, pick a stone, save, walk away, load: tree, stump, trunk, stone, pack, place, time).
 
+## D117 — Fishing as Tom plays it; the lean-to's roof the right way (2026-10-14)
+Tom (build 60, dump 203051): the lean-to looked wrong; fishing should let him walk, the bobber should ride the water,
+the fish should run left and right with the rod turned against it and bending, and high tension should show.
+* **Lean-to**: its rafters and roof were mirrored (rising to the back); now the ridge pole on its posts is the high
+  front edge and the roof slopes down to the ground behind (two signs).
+* **Walking while fishing**: the bobber stays where it landed; the line (22 m) follows the rod; walk farther and it
+  drags the bobber toward you along the water; dragged out of the water, it is reeled in. Only a click reels in (then
+  cast again). With a fish on, **A/D turn the rod** (and Alden) against it instead of stepping sideways; W/S still walk.
+* **The fight shows**: `FishFight` gains **Side** (where the fish has run, fast when unanswered, slowly when held) and
+  **Tension** (0.1 resting … 0.45 answered … 1 unanswered, eased). The bobber is dragged up to 3 m left or right (kept in
+  the water); the rod is a chain of five joints that **bends** toward the water with the tension and sideways toward
+  the pull; the **line turns red** as the tension rises (and goes taut).
+* **The bobber bobs** on its own (a few centimetres, a slow sway) on top of the drawn water surface (the sea's and
+  lakes' waves): rivers and calm lakes have no waves to ride, which is why it stood still for Tom.
+* Checked: headless (tension unanswered > 0.9, answered < 0.7) and `--fish-test` (pictures of the lean-to and a fight).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

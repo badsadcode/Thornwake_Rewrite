@@ -884,13 +884,14 @@ public partial class WorldLab : Node3D
         _physicsHitch.Begin("physics");
         float dt = (float)delta;
         var input = Vector2.Zero;
-        bool typing = _menu.Visible || _pack.Visible || FishingHoldsMovement;
+        bool typing = _menu.Visible || _pack.Visible;
         if (!typing)
         {
             if (Input.IsKeyPressed(Key.W)) input.Y -= 1;
             if (Input.IsKeyPressed(Key.S)) input.Y += 1;
-            if (Input.IsKeyPressed(Key.A)) input.X -= 1;
-            if (Input.IsKeyPressed(Key.D)) input.X += 1;
+            // (with a fish on, A and D turn the rod against it, not step sideways)
+            if (Input.IsKeyPressed(Key.A) && !FishingSteers) input.X -= 1;
+            if (Input.IsKeyPressed(Key.D) && !FishingSteers) input.X += 1;
         }
         if (_smokeDirectory != null && _shotPath == null && _smokeStage == 2) input = new Vector2(0, -1);
         if (CollisionTestActive) { CollisionTestStep(delta); input = _testInput; }

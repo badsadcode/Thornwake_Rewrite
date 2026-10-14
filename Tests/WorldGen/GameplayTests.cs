@@ -198,6 +198,12 @@ internal static class GameplayTests
         double t = 0;
         while (!good.Over && t < 120) { good.Step(.05, -good.Pull); t += .05; }
         T.Check(good.Landed && good.Line > .99, $"perfect play lands a pike in {t:0} s, the line untouched");
+        var strain = new FishFight(pike, 1, 1, new Random(3));
+        double highest = 0, held = 0;
+        for (int i = 0; i < 400 && !strain.Over; i++) { strain.Step(.05, 0); if (strain.Pull != 0) highest = Math.Max(highest, strain.Tension); }
+        var answered = new FishFight(pike, 1, 1, new Random(3));
+        for (int i = 0; i < 400 && !answered.Over; i++) { answered.Step(.05, -answered.Pull); if (answered.Pull != 0) held = Math.Max(held, answered.Tension); }
+        T.Check(highest > .9 && held < .7, $"tension: unanswered {highest:0.00}, answered at most {held:0.00}");
         // A quarter of a second late at every turn: still landed, the line worn.
         var late = new FishFight(pike, 1, 1, new Random(3));
         int seen = 0; double since = 0; t = 0;

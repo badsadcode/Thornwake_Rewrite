@@ -60,11 +60,21 @@ public partial class WorldLab
             }
             case 1:
                 Check(_myInv.HasTag("fishing") && _myInv.HasTag("bait"), "a rod and bait in the pack");
+                if (_ftShot != null)
+                {
+                    // (a lean-to beside the spot, to look at: D115's model)
+                    var kit = _rules!.Inventory((int)NetServer.HostPeer);
+                    kit.Add("log", 3); kit.Add("branch", 8); kit.Add("plant_fibre", 4);
+                    var side = new Vector2(Mathf.Cos(_yaw), -Mathf.Sin(_yaw)) * 3.5f; // (to the right of the view)
+                    double lx = PlayerX + side.X, lz = PlayerZ + side.Y;
+                    Act(new ActionRequest(ActionKind.Make, 0, 0, "lean_to", lx, _sampler.Height(lx, lz), lz, _yaw));
+                }
                 ToggleRod();
                 Check(_me.RodHeld, "the rod in hand");
                 _testLmb = true; // hold to aim farther…
                 Go(2, .6); break;
             case 2:
+                if (_ftShot != null) Screenshot(_ftShot.Replace(".png", "-leanto.png"));
                 _testLmb = false; // …and release: cast
                 _ftFishBefore = _myInv.Count("raw_fish"); _ftBaitBefore = _myInv.CountTag("bait");
                 Go(3, 1.2); break;
@@ -81,7 +91,7 @@ public partial class WorldLab
             case 5:
                 _testLmb = false;
                 Check(_fishStage == FishStage.Fight, "the fight is on");
-                if (_ftShot != null) GetTree().CreateTimer(1.2).Timeout += () => Screenshot(_ftShot);
+                if (_ftShot != null) GetTree().CreateTimer(1.6).Timeout += () => Screenshot(_ftShot);
                 _ftSeen = 0; _ftSince = 0;
                 Go(6, 0); break;
             case 7:

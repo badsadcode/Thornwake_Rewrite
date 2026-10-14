@@ -35,8 +35,11 @@ public partial class WorldLab
     private bool? _testLmb;   // --fish-test: the left mouse button held or not
     private int? _testPull;   // --fish-test: A (−1) or D (+1) or nothing
 
-    /// <summary>While reeling in, A and D answer the fish (walking stops).</summary>
-    private bool FishingHoldsMovement => _fishStage is FishStage.Fight or FishStage.Charging;
+    /// <summary>With a fish on, A and D turn the rod against it instead of stepping sideways (W/S still walk; Tom).</summary>
+    private bool FishingSteers => _fishStage == FishStage.Fight;
+    /// <summary>The line's length: walk farther and it drags the bobber after you (out of the water: reeled in).</summary>
+    private const double LineLength = 22;
+    private float _rodSide;
 
     private void ToggleRod()
     {
@@ -55,7 +58,8 @@ public partial class WorldLab
         bool pressed = lmb && !_lmbWasDown, released = !lmb && _lmbWasDown;
         _lmbWasDown = lmb;
         if (!_me.RodHeld) { if (_fishStage != FishStage.Idle) StopFishing(null); return; }
-        if (_fishStage is FishStage.Waiting or FishStage.Bite && new Vector2(_player.Velocity.X, _player.Velocity.Z).Length() > 1.5f) { StopFishing("You reel in (you moved)."); return; }
+        // Walking about is fine (Tom): the bobber stays; only too far does the line drag it after you.
+        if (_fishStage is FishStage.Waiting or FishStage.Bite or FishStage.Fight && !KeepLine()) { StopFishing("The bobber is dragged out of the water: reeled in."); return; }
         switch (_fishStage)
         {
             case FishStage.Idle:
@@ -78,7 +82,7 @@ public partial class WorldLab
                 _fishStage = FishStage.Waiting;
                 _fishTimer = Fishing.BiteDelay(_clock.Hour, _rain ? .5 : _atmosphere.Precipitation, _fishRng);
                 _hooked = Fishing.Pick(_catalog.Fish, _fishWater, _clock.Hour, _fishRng);
-                _status = $"Waiting for a bite… ({_fishWater}; click to reel in)";
+                _status = $"Waiting for a bite… ({_fishWater}; you can walk about; click to reel in)";
                 break;
             case FishStage.Waiting:
             {
@@ -87,7 +91,7 @@ public partial class WorldLab
                 double nx = _bobberWorldX + current.X, nz = _bobberWorldZ + current.Y;
                 if (current.LengthSquared() > 0 && _sampler!.Sample(nx, nz).Water != WaterKind.None
                     && (nx - _castX) * (nx - _castX) + (nz - _castZ) * (nz - _castZ) < 4 * 4) { _bobberWorldX = nx; _bobberWorldZ = nz; }
-                PlaceBobber(BobberRest(.02f * Mathf.Sin((float)_flickerFell * 2)));
+                PlaceBobber(BobberRest(0));
             }
                 if (pressed) { StopFishing("You reel in."); break; }
                 if ((_fishTimer -= delta) > 0) break;
@@ -112,9 +116,17 @@ public partial class WorldLab
             {
                 int input = _testPull ?? (Input.IsKeyPressed(Key.A) ? -1 : 0) + (Input.IsKeyPressed(Key.D) ? 1 : 0);
                 _fight!.Step(delta, input);
-                // The bobber is dragged the way it pulls.
-                var side = _camera.GlobalTransform.Basis.X with { Y = 0 };
-                PlaceBobber(BobberRest(-.1f) + side.Normalized() * _fight.Pull * .5f * Mathf.Sin((float)_flickerFell * 3 + 1.2f));
+                // The fish runs left and right of the line, dragging the bobber (kept in the water); Alden turns the rod
+                // against it (A/D) and the rod bends toward the pull, more the higher the tension.
+                var toBobber = new Vector3((float)(_bobberWorldX - PlayerX), 0, (float)(_bobberWorldZ - PlayerZ));
+                var across = Vector3.Up.Cross(toBobber.Normalized()); // (to the player's left as they face the bobber)
+                double wantX = _castX + across.X * _fight.Side * -3, wantZ = _castZ + across.Z * _fight.Side * -3;
+                double mx = _bobberWorldX + (wantX - _bobberWorldX) * Math.Min(1, delta * 3), mz = _bobberWorldZ + (wantZ - _bobberWorldZ) * Math.Min(1, delta * 3);
+                if (_sampler!.Sample(mx, mz).Water != WaterKind.None) { _bobberWorldX = mx; _bobberWorldZ = mz; }
+                PlaceBobber(BobberRest(-.08f + .04f * Mathf.Sin((float)_flickerFell * 9)));
+                _rodSide = Mathf.Lerp(_rodSide, input * .55f, 1 - Mathf.Exp(-8 * (float)delta));
+                _me.Facing = Mathf.Atan2(toBobber.X, toBobber.Z) - _rodSide;
+                _me.BendRod((float)(.25 + .75 * _fight.Tension), (float)-_fight.Side * .8f - _rodSide);
                 UpdateFishPanel();
                 if (_fight.Landed)
                 {
@@ -158,13 +170,29 @@ public partial class WorldLab
         _bobber.Visible = true;
     }
 
-    /// <summary>The bobber on the surface as it is drawn — riding the waves of a lake or the sea (Tom), on a river's
-    /// level — plus <paramref name="dy"/> (a bite pulls it under).</summary>
+    /// <summary>The bobber on the surface as it is drawn — riding the waves of a lake or the sea (Tom) — and always
+    /// bobbing a little on its own (a few centimetres, a slow sway: rivers and calm lakes have no waves to ride), plus
+    /// <paramref name="dy"/> (a bite pulls it under).</summary>
     private Vector3 BobberRest(float dy)
     {
         double level = WaterSurface(_bobberWorldX, _bobberWorldZ, out _);
         if (double.IsNaN(level)) level = _waterLevel;
-        return new((float)(_bobberWorldX - _originX), (float)level + .03f + dy, (float)(_bobberWorldZ - _originZ));
+        float t = (float)_flickerFell;
+        float bob = .045f * Mathf.Sin(t * 1.7f) + .025f * Mathf.Sin(t * 2.9f + 1.3f);
+        var sway = new Vector3(.05f * Mathf.Sin(t * .7f), 0, .04f * Mathf.Sin(t * .9f + 2));
+        return new Vector3((float)(_bobberWorldX - _originX), (float)level + .03f + bob + dy, (float)(_bobberWorldZ - _originZ)) + sway;
+    }
+
+    /// <summary>The line can reach <see cref="LineLength"/> m: beyond, the bobber is dragged toward the player (along the
+    /// water). False when that would pull it out of the water.</summary>
+    private bool KeepLine()
+    {
+        double dx = _bobberWorldX - PlayerX, dz = _bobberWorldZ - PlayerZ, d = Math.Sqrt(dx * dx + dz * dz);
+        if (d <= LineLength) return true;
+        double nx = PlayerX + dx / d * LineLength, nz = PlayerZ + dz / d * LineLength;
+        if (_sampler!.Sample(nx, nz).Water == WaterKind.None) return false;
+        _bobberWorldX = nx; _bobberWorldZ = nz; _castX = nx; _castZ = nz;
+        return true;
     }
 
     private void PlaceBobber(Vector3 at) { if (_bobber != null) _bobber.Position = at; }
@@ -184,7 +212,10 @@ public partial class WorldLab
         _line.Visible = show;
         if (!show) return;
         var a = _me.RodTip!.Value; var b = _bobber!.Position;
-        float sag = _fishStage == FishStage.Fight ? .05f : .6f;
+        // Taut and redder with the tension (Tom); slack and pale while it waits.
+        float tension = _fight != null ? (float)_fight.Tension : 0;
+        float sag = _fishStage == FishStage.Fight ? .05f * (1 - tension) : .6f;
+        if (_line!.MaterialOverride is StandardMaterial3D m) m.AlbedoColor = new Color(.85f, .85f, .8f).Lerp(new Color(.95f, .12f, .08f), Mathf.Clamp((tension - .3f) / .6f, 0, 1));
         _lineMesh.SurfaceBegin(Mesh.PrimitiveType.LineStrip);
         for (int i = 0; i <= 12; i++)
         {
@@ -198,6 +229,7 @@ public partial class WorldLab
     {
         _fishStage = FishStage.Idle; _fight = null; _hooked = null;
         _me.Fishing = false;
+        _me.BendRod(0, 0); _rodSide = 0;
         if (_bobber != null) _bobber.Visible = false;
         if (_line != null) _line.Visible = false;
         ShowFishPanel(false);

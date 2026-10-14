@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using Thornwake.World;
 
@@ -111,7 +112,9 @@ public sealed partial class Character : Node3D
     /// <summary>An axe in Alden's right hand (the original game's model); the torch stays in his left.</summary>
     private const string TorchHand = "RightArm", AxeHand = "LeftArm"; // (Alden's left and right hands)
     private const float RodLength = 1.8f;
-    private MeshInstance3D? _rod;
+    private const int RodSegments = 5;
+    private Node3D? _rod;
+    private readonly List<Node3D> _rodJoints = new();
 
     /// <summary>A fishing rod in Alden's right hand (placeholder: a long, thin, springy stick), angled forward and up.</summary>
     public bool RodHeld
@@ -123,16 +126,24 @@ public sealed partial class Character : Node3D
             if (value)
             {
                 if (AxeHeld) AxeHeld = false;
-                var axis = new Vector3(0, Mathf.Cos(1.15f), Mathf.Sin(1.15f));
-                _rod = new MeshInstance3D
+                // A chain of joints (thick at the hand, thin at the tip) so it can bend toward the fish.
+                _rod = new Node3D { Name = "Rod", Rotation = new Vector3(1.15f, 0, 0), Position = new Vector3(0, -.5f, .02f) };
+                var wood = new StandardMaterial3D { AlbedoColor = new Color("7a5a36"), Roughness = .8f };
+                Node3D parent = _rod;
+                _rodJoints.Clear();
+                float seg = RodLength / RodSegments;
+                for (int i = 0; i < RodSegments; i++)
                 {
-                    Name = "Rod", Mesh = new CylinderMesh { TopRadius = .008f, BottomRadius = .018f, Height = RodLength, RadialSegments = 5 },
-                    MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color("7a5a36"), Roughness = .8f },
-                    Rotation = new Vector3(1.15f, 0, 0), Position = new Vector3(0, -.5f, .02f) + axis * RodLength / 2,
-                };
+                    var joint = new Node3D { Position = i == 0 ? Vector3.Zero : new Vector3(0, seg, 0) };
+                    float r0 = .018f - .01f * i / RodSegments, r1 = .018f - .01f * (i + 1) / RodSegments;
+                    joint.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = r1, BottomRadius = r0, Height = seg, RadialSegments = 5 }, MaterialOverride = wood, Position = new Vector3(0, seg / 2, 0) });
+                    parent.AddChild(joint);
+                    _rodJoints.Add(joint);
+                    parent = joint;
+                }
                 Body.GetNode<Node3D>(AxeHand).AddChild(_rod);
             }
-            else { _rod!.QueueFree(); _rod = null; Fishing = false; }
+            else { _rod!.QueueFree(); _rod = null; _rodJoints.Clear(); Fishing = false; }
         }
     }
 
@@ -140,7 +151,18 @@ public sealed partial class Character : Node3D
     public bool Fishing { get; set; }
 
     /// <summary>The rod's tip in the world (where the line starts), or null without a rod.</summary>
-    public Vector3? RodTip => _rod is { } r && r.IsInsideTree() ? r.GlobalTransform * new Vector3(0, RodLength / 2, 0) : null;
+    public Vector3? RodTip => _rodJoints.Count > 0 && _rodJoints[^1].IsInsideTree() ? _rodJoints[^1].GlobalTransform * new Vector3(0, RodLength / RodSegments, 0) : null;
+
+    /// <summary>Bend the rod (fishing): <paramref name="down"/> 0 … 1 toward the water with the line's tension,
+    /// <paramref name="side"/> −1 … 1 toward where the fish runs. The tip bends most.</summary>
+    public void BendRod(float down, float side)
+    {
+        for (int i = 0; i < _rodJoints.Count; i++)
+        {
+            float k = (i + 1f) / _rodJoints.Count; // (more toward the tip)
+            _rodJoints[i].Rotation = new Vector3(.22f * down * k, 0, -.16f * side * k);
+        }
+    }
 
     public bool AxeHeld
     {

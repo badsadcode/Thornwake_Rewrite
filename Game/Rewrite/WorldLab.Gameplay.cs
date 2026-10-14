@@ -464,12 +464,12 @@ public partial class WorldLab : IWorldQuery
         for (int i = 0; i < 7; i++)
         {
             var rafter = Pole(.045f, len + .2f);
-            rafter.Rotation = new Vector3(-(Mathf.Pi / 2 - slope), 0, 0);
+            rafter.Rotation = new Vector3(Mathf.Pi / 2 - slope, 0, 0); // (up toward the ridge at the front, down to the ground behind)
             rafter.Position = new Vector3(-1.35f + i * .45f, .82f, -.05f);
             root.AddChild(rafter);
         }
         var thatch = new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(3.1f, .08f, len) }, MaterialOverride = leaf,
-            Rotation = new Vector3(slope, 0, 0), Position = new Vector3(0, .9f, -.05f) };
+            Rotation = new Vector3(-slope, 0, 0), Position = new Vector3(0, .9f, -.05f) };
         root.AddChild(thatch);
         return root;
     }

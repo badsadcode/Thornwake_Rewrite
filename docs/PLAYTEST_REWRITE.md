@@ -78,6 +78,13 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 61 — fishing as you asked; the lean-to fixed
+* **Fishing:** walk about while the bobber is out — it stays, the line follows (go too far and it drags the bobber after
+  you; out of the water, it is reeled in). Click to reel in and cast again. With a fish on, A/D turn the rod against it
+  (W/S still walk); the bobber runs left and right, the rod bends toward the pull, the line turns red when the tension
+  is high. The bobber bobs and sways on the water (and rides the waves of lakes and the sea).
+* **Lean-to:** the roof now slopes from the poles at the front down to the ground behind (it was mirrored).
+
 ## New in build 60 — gathering, fishing, shelter, death and saving: the first slice is complete
 **In multiplayer everyone needs build 60** (build 59 and 60 do not connect).
 * **E gathers** (nearest first): wood lying in a pile, a campfire (wood on it), a berry bush (4 handfuls; they grow back

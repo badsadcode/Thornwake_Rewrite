@@ -58,6 +58,11 @@ public sealed class FishFight
     public double Line { get; private set; } = 1;
     /// <summary>−1 pulling left, +1 pulling right, 0 resting.</summary>
     public int Pull { get; private set; }
+    /// <summary>0 … 1: how hard the line is strained now (the line drawn redder; Tom). High while the fish pulls and is
+    /// not answered, moderate while it is, low while it rests.</summary>
+    public double Tension { get; private set; } = .2;
+    /// <summary>−1 … 1: where the fish has run to, left or right of the line (the bobber is dragged there).</summary>
+    public double Side { get; private set; }
     public bool Landed => FishStamina <= 0;
     public bool Lost => Line <= 0 && !Landed;
     public bool Over => Landed || Lost;
@@ -85,6 +90,10 @@ public sealed class FishFight
         }
         _sinceSwitch += dt;
         bool reacting = _sinceSwitch < ReactionWindow; // (a fair moment to see the switch and answer it)
+        // Where it runs: fast unanswered, slowly held; drifting back while it rests.
+        Side = Math.Clamp(Side + (Pull != 0 ? Pull * dt * (input == -Pull ? .12 : .45) : -Side * dt * .4), -1, 1);
+        double target = Pull == 0 ? (input != 0 ? .35 : .12) : input == -Pull ? .45 : reacting ? .6 : 1;
+        Tension += (target - Tension) * Math.Min(1, dt * 6);
         if (Pull != 0)
         {
             if (input == -Pull) FishStamina -= dt * _strength / Fish.Stamina;
