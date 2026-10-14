@@ -135,6 +135,9 @@ public sealed class TerrainEdits
         return touched;
     }
 
+    /// <summary>Every chunk counts as changed (a loaded save: the host sends all of it).</summary>
+    public void MarkAllChanged() { foreach (var k in _chunks.Keys) _changed[k] = 0; }
+
     /// <summary>Raw offset at an edit vertex (1 m grid).</summary>
     public double At(long x, long z) => Vertex(x, z);
 

@@ -64,6 +64,9 @@ public sealed class ObjectRemovals
         return keys;
     }
 
+    /// <summary>Every key counts as changed (a loaded save: the host sends all of it).</summary>
+    public void MarkAllChanged() { foreach (var k in _removed.Keys) _changed[k] = 0; }
+
     public void Clear()
     {
         foreach (var k in _removed.Keys) _changed[k] = 0;

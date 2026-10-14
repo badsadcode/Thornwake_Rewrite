@@ -58,6 +58,7 @@ public partial class WorldLab : IWorldQuery
     {
         if (IsNetClient) return;
         _rules ??= new GameRules(_catalog, this);
+        _rules.Name((int)NetServer.HostPeer, GameRules.HostName); // (the host's own player in saves)
         _rules.Inventory((int)NetServer.HostPeer); // (this player's start kit, sent with the first changes)
         if (_net == null)
         {
@@ -110,6 +111,7 @@ public partial class WorldLab : IWorldQuery
             var p = _pendingObjects.ToList(); _pendingObjects.Clear();
             foreach (var data in p) ((IClientGame)this).ApplyObjects(new BinaryReader(new MemoryStream(data)));
         }
+        ApplyPendingSave(); // (a loaded save: its changes on the fresh world, after the clean-up above)
     }
 
     private bool _dying;

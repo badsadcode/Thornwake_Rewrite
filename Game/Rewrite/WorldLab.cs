@@ -773,6 +773,8 @@ public partial class WorldLab : Node3D
         GameplayTest(delta);
         GatherTest(delta);
         FishTest(delta);
+        SaveTest(delta);
+        UpdateAutosave(delta);
         var cam = _camera.GlobalPosition;
         RenderingServer.GlobalShaderParameterSet("tree_camera", new Vector4(cam.X, cam.Y, cam.Z, 0)); // tree hand-overs (TreeFade)
         double latitude = _sampler.Plan.Climate.Latitude(PlayerZ);
@@ -1184,6 +1186,7 @@ public partial class WorldLab : Node3D
                 else if (!_menu.Visible) _status = "Lightning needs Settings → Simulation → Weather model: simulated.";
                 break;
             case Key.F9: DebugDump(); break;
+            case Key.F5: SaveWorld("quicksave"); break;
             case Key.F12: Screenshot(Path.Combine(OS.GetUserDataDir(), $"screenshot-{DateTime.Now:yyyyMMdd-HHmmss}.png")); break;
         }
     }
@@ -1359,6 +1362,7 @@ public partial class WorldLab : Node3D
         back.Pressed += () => { Input.MouseMode = Input.MouseModeEnum.Visible; GetTree().ChangeSceneToFile("res://Game/Launcher.tscn"); };
         var quit = new Button { Text = "Quit game" };
         quit.Pressed += () => GetTree().Quit();
+        AddSaveButtons(menuBar);
         menuBar.AddChild(resume); menuBar.AddChild(back); menuBar.AddChild(quit);
 
         // ---- World: teleport, movement, time of day, leave

@@ -13,6 +13,7 @@ internal static class GameplayTests
         T.Run("Gameplay: gathering — stones, berries (they grow back), grass for fibre; a fishing rod", Gathering, filter);
         T.Run("Gameplay: fishing — which fish where and when, the tug-of-war, landing one (D114)", FishingWorks, filter);
         T.Run("Gameplay: death — the pack drops where you fell, a new character starts with the kit (D115)", Death, filter);
+        T.Run("Gameplay: saving — a world's changes and players by name, written and read back (D116)", Saving, filter);
     }
 
     private static Catalog Load() => new(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Content/gameplay_items.json")),
@@ -252,6 +253,47 @@ internal static class GameplayTests
         Needs open = new() { Warmth = 70 }, snug = new() { Warmth = 70 };
         for (int i = 0; i < 16; i++) { open.Step(.5, rainyNight); snug.Step(.5, under); }
         T.Check(open.Health < 100 && snug.Health >= 99 && snug.Warmth > 45, $"eight hours of cold rain: out in it health {open.Health:0}, warmth {open.Warmth:0}; under the lean-to by a fire health {snug.Health:0}, warmth {snug.Warmth:0}");
+    }
+
+    private static void Saving()
+    {
+        var c = Load();
+        var world = new World();
+        var rules = new GameRules(c, world);
+        rules.Name(1, GameRules.HostName); rules.Name(9, "Bea");
+        rules.Inventory(1).Add("log", 4); rules.Inventory(9).Add("stone", 2);
+        for (int i = 0; i < GameRules.TreeHits(1.1); i++) rules.Chop(1, 3, 4, 21, 28);   // a felled tree, a trunk and branches
+        rules.Forage(1, "stone", 10, 10, 0, 0, 36, 36);
+        var edits = new TerrainEdits();
+        edits.Apply(5, 5, 3, -1.5);
+        var save = new WorldSave { WorldArgs = "--preset=mountainous --seed=42", Settings = { ("time.day_length", 90) }, Day = 3, Phase = .41, CloudDrift = new[] { 1.5, -2.0 }, Label = "test" };
+        save.Capture(edits, world.Removals, rules.Objects);
+        foreach (var (name, bytes) in rules.SaveInventories()) save.Players[name] = new PlayerSave { Inventory = bytes };
+        save.Players[GameRules.HostName].HasBody = true; save.Players[GameRules.HostName].X = 12.5; save.Players[GameRules.HostName].Health = 64;
+        var ms = new MemoryStream();
+        save.Write(ms);
+        ms.Position = 0;
+        var back = WorldSave.Read(ms);
+        T.Check(back.WorldArgs == save.WorldArgs && back.Day == 3 && back.Phase == .41 && back.CloudDrift.SequenceEqual(save.CloudDrift) && back.Settings.Single() == ("time.day_length", 90), "the world, its rules, the clock, the clouds");
+        // A fresh world (regenerated from the seed) with the changes put back.
+        var world2 = new World();
+        var rules2 = new GameRules(c, world2);
+        var edits2 = new TerrainEdits();
+        back.Restore(edits2, world2.Removals, rules2.Objects);
+        T.Near(edits2.Delta(5, 5), edits.Delta(5, 5), 0, "the dug ground");
+        T.Check(world2.Removals.Contains(ObjectRemovals.Trees, 3, 4) && world2.Removals.Contains(ObjectRemovals.Stones, 10, 10), "the felled tree and the picked stone");
+        T.Check(rules2.Objects.All.Count == rules.Objects.All.Count && rules2.Objects.All.Any(o => o.Kind == "trunk" && o.Variant == 5), "the trunk and the branches");
+        T.Check(rules2.Objects.TakeChanged().Count == 0, "restored, not changed (nothing to send)");
+        rules2.RestoreInventories(back.Players.ToDictionary(p => p.Key, p => p.Value.Inventory));
+        rules2.Name(1, GameRules.HostName);
+        T.Check(rules2.Inventory(1).Count("log") == 4, "the host's pack");
+        T.Check(rules2.Inventory(5).Count("stone") == 0, "a stranger: a new pack");
+        rules2.Name(5, "Bea");
+        T.Check(rules2.Inventory(5).Count("stone") == 2, "Bea comes back (another id): her pack is hers");
+        T.Check(back.Players[GameRules.HostName].HasBody && back.Players[GameRules.HostName].X == 12.5 && back.Players[GameRules.HostName].Health == 64, "where the host was, and how");
+        bool threw = false;
+        try { WorldSave.Read(new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 })); } catch (InvalidDataException) { threw = true; }
+        T.Check(threw, "not a save: refused");
     }
 
     private static void NeedsWork()

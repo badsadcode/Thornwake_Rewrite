@@ -222,6 +222,7 @@ public sealed class NetServer
         {
             var objects = rules.Objects.All.Select(o => o.Id).ToList();
             if (objects.Count > 0) _send(peer, NetMessages.Build(Msg.Objects, w => { w.Write(objects.Count); foreach (long id in objects) rules.Objects.Write(w, id); }), true);
+            if (_players.TryGetValue(peer, out var joined)) rules.Name((int)peer, joined.Name); // (a saved pack under that name is theirs)
             rules.Inventory((int)peer);
             _send(peer, NetMessages.Build(Msg.Inventory, w => rules.Inventory((int)peer).Write(w)), true);
         }

@@ -84,6 +84,45 @@ public sealed class GameRules
         return inv;
     }
 
+    // ---- saving (D116): players are known by name across sessions (ids change every time they connect).
+    /// <summary>The host's own player in a save.</summary>
+    public const string HostName = "host";
+    private readonly Dictionary<int, string> _names = new();
+    private readonly Dictionary<string, byte[]> _savedInventories = new();
+
+    /// <summary>A player's name (on joining): a loaded save's inventory under that name becomes theirs.</summary>
+    public void Name(int player, string name)
+    {
+        _names[player] = name;
+        if (!_savedInventories.Remove(name, out var bytes)) return;
+        var inv = new Inventory(Catalog);
+        using (var r = new System.IO.BinaryReader(new System.IO.MemoryStream(bytes))) inv.Read(r);
+        _inventories[player] = inv;
+        _inventoryChanged.Add(player);
+    }
+
+    /// <summary>Every player's inventory by name (those here, and those of a loaded save who have not come back yet).</summary>
+    public Dictionary<string, byte[]> SaveInventories()
+    {
+        var all = new Dictionary<string, byte[]>(_savedInventories);
+        foreach (var (id, inv) in _inventories)
+        {
+            if (!_names.TryGetValue(id, out var name)) continue;
+            using var ms = new System.IO.MemoryStream();
+            using (var w = new System.IO.BinaryWriter(ms)) inv.Write(w);
+            all[name] = ms.ToArray();
+        }
+        return all;
+    }
+
+    /// <summary>A loaded save's inventories: each one goes to its player when they are named (the host at once).</summary>
+    public void RestoreInventories(Dictionary<string, byte[]> saved)
+    {
+        _savedInventories.Clear();
+        foreach (var (name, bytes) in saved) _savedInventories[name] = bytes;
+        foreach (var (id, name) in _names.ToList()) Name(id, name);
+    }
+
     /// <summary>The players whose inventories changed since the last call (the host sends them theirs).</summary>
     public List<int> TakeInventoryChanges() { var l = _inventoryChanged.ToList(); _inventoryChanged.Clear(); return l; }
 

@@ -1634,6 +1634,25 @@ The first slice's end (GAMEPLAY_DESIGN §15: get through a cold, rainy night) an
   under a lean-to by a campfire it stays (tested). The needs line says "sheltered".
 * Protocol 9.
 
+## D116 — Saving the world (2026-10-14)
+The rewrite saved nothing; the first slice needs it (a night survived should still be there tomorrow).
+* **What**: `WorldSave` (Game/Gameplay, engine-free, tested): the world as its generation arguments (it is generated
+  again from the seed — a save stays tiny: 906 bytes after a felled tree and a stone) plus every change — terrain edit
+  chunks, generated objects taken out (trees, stones, berries, with their times), placed objects (fires, trunks, piles,
+  lean-tos, packs) — the world-affecting settings (the world's rules), the clock, the clouds' drift, and players **by
+  name** (ids change with every connection): every pack, and for the host's own player where they were and their needs
+  (a joined player's needs live on their PC and come back fresh). A joined friend who comes back under the same name
+  gets their pack back.
+* **When**: Esc → *Save* (a time-stamped file), **F5** a quick save, an autosave every 10 minutes (alone or hosting; a
+  joined player does not save). Esc → *Load…* lists the saves (newest first). Files: `%APPDATA%\Thornwake\saves`.
+* **Loading**: the save's world rules are set, the world is built again (as a joining player builds the host's), then
+  the changes are laid on, sent to everyone as changes (the host's own view included), the packs restored, the clock and
+  the clouds set, the host's player put back. While hosting, everyone joined rebuilds the world with it.
+* Not yet: a launcher *Continue* (proper menus later), several characters per world, the local water simulation's
+  water (puddles are not kept).
+* Checked: headless (10 checks: round trip, a fresh world with the changes, packs by name, a returning friend) and
+  `--save-test` (fell a tree, pick a stone, save, walk away, load: tree, stump, trunk, stone, pack, place, time).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
