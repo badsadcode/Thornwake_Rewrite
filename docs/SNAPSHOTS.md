@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 60** (the first slice complete: gathering D113, fishing D114, lean-to and death D115, saving D116; protocol 9) | `a5f4be8` | Thornwake-Rewrite-Preview-60 (v0.9.60) | Does not connect to build 59; build 59 = `bc32f36` |
 | **Build 59** (felling in three acts D112: notch and fall side, impact, physical trunk cut into logs by size; protocol 6) | `bc32f36` | Thornwake-Rewrite-Preview-59 (v0.9.59) | Does not connect to build 58; build 58 = `31d172d` |
 | **Build 58** (chopping with hits, shake, fall and log pile D111; torch in the left hand; protocol 5) | `31d172d` | Thornwake-Rewrite-Preview-58 (v0.9.58) | Does not connect to build 57; build 57 = `8a1dc3b` |
 | **Build 57** (step 1 first slice: axe (6) and chopping with the left mouse, campfire, pack (I), needs; storm sun-glow fix D107; darkness settings D109; protocol 4) | `8a1dc3b` | Thornwake-Rewrite-Preview-57 (v0.9.57) | Does not connect to build 56; darkness 0 / normal = build 56's light; build 56 = `404a9c5` |
