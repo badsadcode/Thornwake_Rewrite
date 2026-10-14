@@ -11,7 +11,8 @@ public readonly record struct FarTree(Vector3 Position, float Height, Color Crow
 
 /// <summary>Ground details: rock kinds index into <see cref="GroundCover.RockKinds"/>.</summary>
 /// <summary>A rock or prop instance; <paramref name="Tint"/> (rocks): the biome rock colour relative to the default stone (alpha 0 = none).</summary>
-public readonly record struct RockInstance(int Kind, Transform3D Transform, Color Tint = default);
+/// <param name="Cell">For gatherable objects (loose stones, berry bushes): their lattice cell, packed (D113).</param>
+public readonly record struct RockInstance(int Kind, Transform3D Transform, Color Tint = default, long Cell = 0);
 
 /// <summary>
 /// Cheap, deterministic scatter that reuses a tile's own sample grid (heights, normals, forest cover, water) instead
@@ -139,8 +140,27 @@ public static partial class GroundCover
         }
     }
 
+    // ---- gatherable objects (D113): loose stones and berry bushes are lattice cells, like trees — their identity.
+    private const double StoneCell = 3.5, BushCell = 9;
+    private const ulong StoneSalt = 0x570EUL, BushSalt = 0xB054UL;
+    public static ulong CoverSeed(TerrainSampler sampler) => Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
+    public static long PackCell(long cx, long cz) => (cx << 32) | (cz & 0xFFFFFFFFL);
+    public static (long Cx, long Cz) UnpackCell(long cell) => (cell >> 32, (int)(cell & 0xFFFFFFFFL));
+
+    /// <summary>Where the gatherable of a layer's lattice cell stands (world x, z), whether or not one grows there.</summary>
+    public static (double X, double Z) GatherPosition(int layer, long cx, long cz, ulong coverSeed)
+    {
+        double cell = layer == ObjectRemovals.Stones ? StoneCell : BushCell;
+        ulong h = Hashing.Lattice(cx, cz, coverSeed ^ (layer == ObjectRemovals.Stones ? StoneSalt : BushSalt));
+        return ((cx + Hashing.Unit(h)) * cell, (cz + Hashing.Unit(Hashing.Mix(h))) * cell);
+    }
+
     /// <summary>Calls <paramref name="emit"/> for each world-aligned cell of size <paramref name="cell"/> inside the tile.</summary>
-    private static void Cells(TileKey key, double cell, ulong salt, Action<double, double, ulong> emit)
+    private static void Cells(TileKey key, double cell, ulong salt, Action<double, double, ulong> emit) =>
+        CellsKeyed(key, cell, salt, (x, z, h, _, _) => emit(x, z, h));
+
+    /// <summary><see cref="Cells"/> with each cell's lattice coordinates (gatherables).</summary>
+    private static void CellsKeyed(TileKey key, double cell, ulong salt, Action<double, double, ulong, long, long> emit)
     {
         long c0x = (long)Math.Floor(key.MinX / cell), c0z = (long)Math.Floor(key.MinZ / cell);
         long c1x = (long)Math.Ceiling((key.MinX + key.Size) / cell), c1z = (long)Math.Ceiling((key.MinZ + key.Size) / cell);
@@ -150,7 +170,7 @@ public static partial class GroundCover
                 ulong h = Hashing.Lattice(cx, cz, salt);
                 double x = (cx + Hashing.Unit(h)) * cell - key.MinX, z = (cz + Hashing.Unit(Hashing.Mix(h))) * cell - key.MinZ;
                 if (x < 0 || z < 0 || x >= key.Size || z >= key.Size) continue;
-                emit(x, z, Hashing.Mix(h ^ 0x5DEECE66DUL));
+                emit(x, z, Hashing.Mix(h ^ 0x5DEECE66DUL), cx, cz);
             }
     }
 
@@ -202,13 +222,13 @@ public static partial class GroundCover
     }
 
     /// <summary>Stones (level 0), rocks (levels 0–1), boulders and outcrop clusters (levels 0–2).</summary>
-    public static List<RockInstance> Rocks(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1)
+    public static List<RockInstance> Rocks(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1, ObjectRemovals? removals = null)
     {
         float a = (float)amount;
         float a0() => Math.Min(1, a);
         var result = new List<RockInstance>();
         var g = grid;
-        void Place(int kind, double x, double z, ulong h, float baseSize, float sizeRange, float sink)
+        void Place(int kind, double x, double z, ulong h, float baseSize, float sizeRange, float sink, long cell = 0)
         {
             if (!g.At(x, z, out float height, out float up, out _, out bool wet)) return;
             if (wet && kind == Stone) return;
@@ -216,15 +236,16 @@ public static partial class GroundCover
             // Random tilt, partly buried so rocks sit in the ground rather than on it.
             var basis = new Basis(Vector3.Up, Unit(h, 7) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 8) - .5f) * .6f);
             basis = basis.Scaled(new Vector3(size * (.8f + .5f * Unit(h, 9)), size * (.55f + .5f * Unit(h, 10)), size * (.8f + .5f * Unit(h, 11))));
-            result.Add(new RockInstance(kind, new Transform3D(basis, new Vector3((float)x, height - size * sink, (float)z)), g.RockTint(x, z)));
+            result.Add(new RockInstance(kind, new Transform3D(basis, new Vector3((float)x, height - size * sink, (float)z)), g.RockTint(x, z), cell));
         }
         if (key.Level == 0)
-            Cells(key, 3.5, seed ^ 0x570EUL, (x, z, h) =>
+            CellsKeyed(key, StoneCell, seed ^ StoneSalt, (x, z, h, cx, cz) =>
             {
                 if (!g.At(x, z, out float height, out float up, out _, out _) || height - sea < .3) return;
                 float steep = 1 - up;
                 if (Unit(h, 1) > (.1f + 1.2f * steep) * a * g.Props(x, z, 0)) return; // more stones on slopes and banks
-                Place(Stone, x, z, h, .12f, .45f, .35f);
+                if (removals != null && removals.Contains(ObjectRemovals.Stones, cx, cz)) return; // picked up
+                Place(Stone, x, z, h, .12f, .45f, .35f, PackCell(cx, cz));
             });
         if (key.Level <= 1)
             Cells(key, 14, seed ^ 0x70C4UL, (x, z, h) =>
@@ -422,12 +443,12 @@ public static partial class GroundCover
     /// Bushes along forest edges and in meadows, stumps and fallen logs inside forests (levels 0–1).
     /// Placeholders from the valley game's models until Tom's scatter assets arrive.
     /// </summary>
-    public static List<RockInstance> Props(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1)
+    public static List<RockInstance> Props(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1, ObjectRemovals? removals = null)
     {
         float a = (float)amount;
         var result = new List<RockInstance>();
         var g = grid;
-        Cells(key, 9, seed ^ 0xB054UL, (x, z, h) =>
+        CellsKeyed(key, BushCell, seed ^ BushSalt, (x, z, h, cx, cz) =>
         {
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .8f || height - sea < 2) return;
             // Most bushes at forest edges (cover around 0.3–0.7), a few out in the meadows.
@@ -436,7 +457,9 @@ public static partial class GroundCover
             if (Unit(h, 1) > (.06f + .4f * Math.Max(0, edge)) * a * g.Props(x, z, 1) * Math.Min(1, g.Plants(x, z) * 1.5f)) return;
             float scale = .7f + .7f * Unit(h, 2);
             int kind = Unit(h, 3) < .25f ? BerryBush : Bush;
-            result.Add(new RockInstance(kind, new Transform3D(new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(Vector3.One * scale), new Vector3((float)x, height - .05f, (float)z))));
+            if (kind == BerryBush && removals != null && removals.Contains(ObjectRemovals.Berries, cx, cz)) kind = Bush; // picked
+            result.Add(new RockInstance(kind, new Transform3D(new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(Vector3.One * scale), new Vector3((float)x, height - .05f, (float)z)),
+                default, kind == BerryBush ? PackCell(cx, cz) : 0));
         });
         Cells(key, 24, seed ^ 0x1065UL, (x, z, h) =>
         {

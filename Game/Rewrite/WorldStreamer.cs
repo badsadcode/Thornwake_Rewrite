@@ -84,6 +84,33 @@ public partial class WorldStreamer : Node3D
     private long _revision;
     private double _originX, _originZ;
     private readonly Dictionary<TileKey, Node3D> _tiles = new();
+    // What can be gathered on the level-0 tiles drawn now (D113): loose stones and berry bushes with fruit, by lattice
+    // cell, at their world place (E finds the nearest).
+    private readonly Dictionary<TileKey, List<(int Layer, long Cx, long Cz, double X, double Y, double Z)>> _gatherables = new();
+
+    private void RememberGatherables(TileData data)
+    {
+        var list = new List<(int, long, long, double, double, double)>();
+        foreach (var r in data.Rocks)
+            if (r.Kind == GroundCover.Stone && r.Cell != 0) Add(ObjectRemovals.Stones, r);
+        foreach (var p in data.Props)
+            if (p.Kind == GroundCover.BerryBush && p.Cell != 0) Add(ObjectRemovals.Berries, p);
+        _gatherables[data.Key] = list;
+
+        void Add(int layer, RockInstance r)
+        {
+            var (cx, cz) = GroundCover.UnpackCell(r.Cell);
+            var o = r.Transform.Origin;
+            list.Add((layer, cx, cz, data.Key.MinX + o.X, o.Y, data.Key.MinZ + o.Z));
+        }
+    }
+
+    /// <summary>The gatherables within <paramref name="radius"/> m of (x, z) on the tiles drawn now, nearest first.</summary>
+    public List<(int Layer, long Cx, long Cz, double X, double Y, double Z)> GatherablesNear(double x, double z, double radius) =>
+        _gatherables.Where(t => _tiles.ContainsKey(t.Key) && t.Key.MinX - radius <= x && x <= t.Key.MinX + t.Key.Size + radius && t.Key.MinZ - radius <= z && z <= t.Key.MinZ + t.Key.Size + radius)
+            .SelectMany(t => t.Value)
+            .Where(g => (g.X - x) * (g.X - x) + (g.Z - z) * (g.Z - z) <= radius * radius && (_sampler?.Removals.Contains(g.Layer, g.Cx, g.Cz) != true))
+            .OrderBy(g => (g.X - x) * (g.X - x) + (g.Z - z) * (g.Z - z)).ToList();
     private readonly Dictionary<TileKey, long> _tileTriangles = new();
     private readonly Dictionary<TileKey, long> _tileRevision = new();
     private DetailConfig _config;
@@ -165,7 +192,7 @@ public partial class WorldStreamer : Node3D
         foreach (var node in _tiles.Values) { RemoveChild(node); node.QueueFree(); }
         foreach (var p in _pendingCollision.Values) p.Body?.Free(); // never added to the scene
         _pendingCollision.Clear();
-        _tiles.Clear(); _tileTriangles.Clear(); _tileRevision.Clear(); _failed.Clear(); _desired.Clear();
+        _tiles.Clear(); _tileTriangles.Clear(); _tileRevision.Clear(); _failed.Clear(); _desired.Clear(); _gatherables.Clear();
         _config = DetailConfig.For(sampler); Levels = 7 + GameSettings.TerrainDistance.Index;
         _sampler = sampler; _originX = originX; _originZ = originZ; Triangles = 0; Built = 0; MaxCommitMs = 0;
         _field.Configure(sampler, _config, originX, originZ);
@@ -238,6 +265,7 @@ public partial class WorldStreamer : Node3D
             AddChild(node);
             CommitEnterMs += Stopwatch.GetElapsedTime(enter).TotalMilliseconds;
             _tiles[key] = node; _tileRevision[key] = revision;
+            if (key.Level == 0) RememberGatherables(task.Result);
             long tris = task.Result.Indices.Length / 3;
             _tileTriangles[key] = tris; Triangles += tris; Built++;
             LastCommitMs = commit.Elapsed.TotalMilliseconds; MaxCommitMs = Math.Max(MaxCommitMs, LastCommitMs);
@@ -311,7 +339,7 @@ public partial class WorldStreamer : Node3D
             foreach (var key in _tiles.Keys.Where(k => !_desired.Contains(k)).ToList())
             {
                 var node = _tiles[key]; RemoveChild(node); node.QueueFree(); DropCollision(key);
-                _tiles.Remove(key); Triangles -= _tileTriangles[key]; _tileTriangles.Remove(key); _tileRevision.Remove(key);
+                _tiles.Remove(key); Triangles -= _tileTriangles[key]; _tileTriangles.Remove(key); _tileRevision.Remove(key); _gatherables.Remove(key);
             }
     }
 

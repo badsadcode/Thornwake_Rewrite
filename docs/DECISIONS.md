@@ -1582,6 +1582,25 @@ difficult. Agreed plan: GAMEPLAY_DESIGN §5a (three acts; tree size sets effort 
 * Not yet: the falling tree passes through other trees; the notch is a placeholder face, not a cut in the model;
   carrying weight (logs are heavy) waits for building (§5a). Tom will make tree assets by hand: a guide when he starts.
 
+## D113 — E gathers: loose stones, berries, long grass; a fishing rod (2026-10-14)
+Tom: E is for gathering — grass for plant fibre, berries, loose stones. Fishing (Enshrouded style, GAMEPLAY_DESIGN
+§5b) needs a rod, the rod needs fibre: gathering first.
+* **Identity**: loose stones (the 3.5 m lattice of `GroundCover.Rocks`, level 0) and berry bushes (the 9 m lattice of
+  `GroundCover.Props`) are lattice cells like trees; `RockInstance.Cell` carries the cell (packed), `ObjectRemovals`
+  gains layers **Stones** (picked up, for good) and **Berries** (picked: the bush is drawn without fruit, as a plain
+  bush; the fruit is back after 48 game hours — the host's rules restore it). Generation is unchanged while nothing
+  is taken (the same cells, the same chances; only a check of the removals added).
+* **Finding them**: the streamer keeps, per drawn level-0 tile, its stones and fruiting bushes at their world places
+  (`GatherablesNear`); E picks the nearest within reach. Order of E: wood lying in a pile, a campfire (fed), a berry
+  bush, a loose stone, else **long grass** where you stand (land, the biome's grass > 0.3, not steep, not in water).
+  Gathering takes a moment (stone 0.8 s, berries 1.5 s, grass 1.2 s); moving stops it.
+* **Rules** (`GameRules.Forage`, action Forage, protocol 7): the host checks the reach (the cell's place from the seed)
+  and that it was not taken already; whether one really grows there is the player's PC's word (it draws them).
+  Stone ×1, berries ×4 (food 5 each, raw), plant fibre ×2.
+* **Fishing rod** recipe: a branch and 4 plant fibre (6 s). Fishing itself next.
+* Checked: headless (14 checks: reach, once only, regrowth after two days, berries as food, fibre, the rod) and
+  `--gather-test` alone (7 checks) and as a joined guest (6; the host applied every gather).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

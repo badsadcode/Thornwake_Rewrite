@@ -135,6 +135,7 @@ public sealed class NetServer
                         ActionKind.Gather => rules.Gather(id, a.A, at.X, at.Z),
                         ActionKind.ChopTrunk => rules.ChopTrunk(id, a.A, at.X, at.Z),
                         ActionKind.Claim => new ActionResult(rules.Claim(id, a.A, at.X, at.Z), ""),
+                        ActionKind.Forage => rules.Forage(id, a.Id, a.A, a.B, a.X, a.Z, at.X, at.Z),
                         _ => ActionResult.Fail("Unknown action."),
                     };
                 }

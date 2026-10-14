@@ -77,6 +77,7 @@ public partial class WorldLab : IWorldQuery
     double IWorldQuery.Hours => _clock.Day * 24 + _clock.Hour;
     (double X, double Z, double Speed) IWorldQuery.Wind => (_atmosphere.Wind.Direction.X, _atmosphere.Wind.Direction.Y, _atmosphere.Wind.Speed);
     double IWorldQuery.Ground(double x, double z) => _sampler!.Height(x, z);
+    (double X, double Z) IWorldQuery.GatherSpot(int layer, long cx, long cz) => GroundCover.GatherPosition(layer, cx, cz, GroundCover.CoverSeed(_sampler!));
     ObjectRemovals? IWorldHost.Removals => _generation == null ? _sampler?.Removals : null;
     GameRules? IWorldHost.Rules => _rules;
 
@@ -145,13 +146,56 @@ public partial class WorldLab : IWorldQuery
         _status = _axeHeld ? "Axe in hand: hold the left mouse button on a tree in front of you to chop it (6 puts it away)." : "Axe put away.";
     }
 
-    /// <summary>E: the nearest placed object within reach — a fire takes wood. (Gathering grass, berries and stones
-    /// comes here later; Tom.)</summary>
+    /// <summary>
+    /// E (Tom: E gathers and interacts; D113): the nearest of — wood lying in a pile (picked up), a campfire (fed), a
+    /// berry bush with fruit (picked), a loose stone (picked up) — or else long grass where you stand (plant fibre).
+    /// Gathering from nature takes a moment (moving stops it).
+    /// </summary>
     private void Interact()
     {
+        if (_gathering != null) return;
         var near = _seenObjects.Near(PlayerX, PlayerZ, GameRules.UseReach + 1.5).Where(o => o.Contents.Count > 0 || o.Kind == "campfire").OrderBy(o => (o.X - PlayerX) * (o.X - PlayerX) + (o.Z - PlayerZ) * (o.Z - PlayerZ)).FirstOrDefault();
-        if (near == null) { _status = "Nothing here to use (E)."; return; }
-        Act(new ActionRequest(near.Contents.Count > 0 ? ActionKind.Gather : ActionKind.Fuel, near.Id, 0, "", 0, 0, 0, 0));
+        if (near != null) { Act(new ActionRequest(near.Contents.Count > 0 ? ActionKind.Gather : ActionKind.Fuel, near.Id, 0, "", 0, 0, 0, 0)); return; }
+        var spot = _streamer.GatherablesNear(PlayerX, PlayerZ, GameRules.UseReach - .5).FirstOrDefault();
+        if (spot.Layer != 0 || spot.X != 0 || spot.Z != 0)
+        {
+            bool stone = spot.Layer == ObjectRemovals.Stones;
+            StartGathering(stone ? "stone" : "berries", spot.Cx, spot.Cz, spot.X, spot.Z, stone ? .8 : 1.5, stone ? "Picking up a stone" : "Picking berries");
+            return;
+        }
+        if (GrassHere()) { StartGathering("grass", 0, 0, PlayerX, PlayerZ, 1.2, "Pulling long grass"); return; }
+        _status = "Nothing here to gather or use (E).";
+    }
+
+    /// <summary>Long grass grows here: land, not bare (the biome's grass), not too steep, not under water.</summary>
+    private bool GrassHere()
+    {
+        var t = _sampler!.Sample(PlayerX, PlayerZ);
+        if (t.Water != WaterKind.None || t.Height - _sampler.Plan.Profile.SeaLevel < .5) return false;
+        var (a, b, share) = Vegetation.BiomeOf(_sampler, PlayerX, PlayerZ);
+        double grass = a.Def.Vegetation.Grass * share + b.Def.Vegetation.Grass * (1 - share);
+        double slope = Math.Abs(_sampler.Height(PlayerX + 1, PlayerZ) - t.Height) + Math.Abs(_sampler.Height(PlayerX, PlayerZ + 1) - t.Height);
+        return grass > .3 && slope < .9;
+    }
+
+    private (string What, long Cx, long Cz, double X, double Z, double Seconds, double Left, string Label)? _gathering;
+
+    private void StartGathering(string what, long cx, long cz, double x, double z, double seconds, string label)
+    {
+        _gathering = (what, cx, cz, x, z, seconds, seconds, label);
+        if (x != PlayerX || z != PlayerZ) _me.Facing = Mathf.Atan2((float)(x - PlayerX), (float)(z - PlayerZ));
+    }
+
+    /// <summary>Per frame: a gathering in progress (moving away stops it), then the host is asked.</summary>
+    private void UpdateGathering(double delta)
+    {
+        if (_gathering is not { } g) return;
+        if (new Vector2(_player.Velocity.X, _player.Velocity.Z).Length() > 1.5f) { _gathering = null; _status = "Stopped (you moved)."; return; }
+        double left = g.Left - delta;
+        _status = $"{g.Label}… {Math.Clamp(1 - left / g.Seconds, 0, 1) * 100:0} %";
+        if (left > 0) { _gathering = g with { Left = left }; return; }
+        _gathering = null;
+        Act(new ActionRequest(ActionKind.Forage, g.Cx, g.Cz, g.What, g.X, 0, g.Z, 0));
     }
 
     // ---- what the host sends back
@@ -200,6 +244,13 @@ public partial class WorldLab : IWorldQuery
         foreach (var (layer, cx, cz, at) in removals)
         {
             _sampler.Removals.Set(layer, cx, cz, at); // (on the host the same set: already there)
+            if (layer is ObjectRemovals.Stones or ObjectRemovals.Berries)
+            {
+                // A stone gone, a bush picked (or its berries back): the tiles around it are drawn again.
+                var (gx, gz) = GroundCover.GatherPosition(layer, cx, cz, GroundCover.CoverSeed(_sampler));
+                _streamer.Invalidate(gx - 4, gz - 4, gx + 4, gz + 4);
+                continue;
+            }
             if (layer != ObjectRemovals.Trees || Vegetation.TreeAt(_sampler, cx, cz, config) is not { } tree) continue;
             // The tree goes (tiles, tree field, impostors, collision rebuilt around it); a stump stays.
             _streamer.Invalidate(tree.X - 8, tree.Z - 8, tree.X + 8, tree.Z + 8);
@@ -386,5 +437,5 @@ public partial class WorldLab : IWorldQuery
         return root;
     }
 
-    private string GameplayHud() => _axeHeld ? "Holding: stone axe — hold LMB on a tree in front of you to chop · E: pick up wood, feed a fire · I: pack" : "";
+    private string GameplayHud() => _axeHeld ? "Holding: stone axe — hold LMB on a tree or a trunk in front of you to chop · E: gather, pick up, feed a fire · I: pack" : "";
 }

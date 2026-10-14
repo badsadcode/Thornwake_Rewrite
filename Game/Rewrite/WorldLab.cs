@@ -768,7 +768,9 @@ public partial class WorldLab : Node3D
         StepRemotes(delta);
         UpdateGameplay(delta);
         UpdateMaking(delta);
+        UpdateGathering(delta);
         GameplayTest(delta);
+        GatherTest(delta);
         var cam = _camera.GlobalPosition;
         RenderingServer.GlobalShaderParameterSet("tree_camera", new Vector4(cam.X, cam.Y, cam.Z, 0)); // tree hand-overs (TreeFade)
         double latitude = _sampler.Plan.Climate.Latitude(PlayerZ);

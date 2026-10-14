@@ -42,7 +42,10 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   gathering (grass → fibre, berries, loose stones; Tom); a fire flame from the torch's particles; death (drop the pack
   where you fall, §4); saving the world (edits, removals, objects, inventories); Tom's storm atmosphere (D109).
   Build 58 (`31d172d`, `dist/Preview-58`): Valheim-like chopping (D111). Since then: felling in three acts (D112, §5a) — notch
-  and fall side, impact, a physical trunk cut into logs; **build 59** (`bc32f36`, `dist/Preview-59`). Open from Tom (dump 221438): the torch lights the ground fog evenly far
+  and fall side, impact, a physical trunk cut into logs; **build 59** (`bc32f36`, `dist/Preview-59`).
+  Since build 59: E-gathering (D113: stones, berries that regrow, grass → plant fibre; fishing rod recipe). Next:
+  fishing as a small Enshrouded-style minigame (GAMEPLAY_DESIGN §5b: bait, cast, strike, A/D tug-of-war), then a
+  cold rainy night to survive (§15), death (§4), saving. Open from Tom (dump 221438): the torch lights the ground fog evenly far
   into the night — trees far away stand dark against an orange haze; light sources should shape the fog, but less
   uniformly (look at the torch's `LightVolumetricFogEnergy` / range and the fog's density near the ground; atmosphere
   work, after the mechanics).

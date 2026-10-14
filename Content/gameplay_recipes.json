@@ -4,6 +4,9 @@
     { "id": "campfire", "name": "Campfire", "inputs": [ { "item": "log", "count": 2 }, { "item": "branch", "count": 4 } ],
       "seconds": 4, "places": "campfire",
       "description": "A ring of stones, two logs and kindling. Burns about an hour and a half; add wood to keep it going." },
+    { "id": "fishing_rod", "name": "Rough fishing rod", "inputs": [ { "item": "branch", "count": 1 }, { "item": "plant_fibre", "count": 4 } ],
+      "seconds": 6, "outputs": [ { "item": "fishing_rod", "count": 1 } ],
+      "description": "A branch and a line twisted from plant fibre (E on grass)." },
     { "id": "cook_fish", "name": "Cook a fish", "inputs": [ { "item": "raw_fish", "count": 1 } ], "station": "fire",
       "seconds": 12, "outputs": [ { "item": "cooked_fish", "count": 1 } ] }
   ],

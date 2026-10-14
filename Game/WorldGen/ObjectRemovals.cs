@@ -13,8 +13,8 @@ namespace Thornwake.WorldGen;
 /// </summary>
 public sealed class ObjectRemovals
 {
-    /// <summary>Layers: one lattice of generated objects each.</summary>
-    public const int Trees = 0;
+    /// <summary>Layers: one lattice of generated objects each (trees felled, loose stones picked up, berry bushes picked).</summary>
+    public const int Trees = 0, Stones = 1, Berries = 2;
 
     private readonly ConcurrentDictionary<(int Layer, long X, long Z), double> _removed = new();
     private readonly ConcurrentDictionary<(int Layer, long X, long Z), byte> _changed = new();

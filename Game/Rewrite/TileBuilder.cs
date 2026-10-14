@@ -330,10 +330,10 @@ public static class TileBuilder
         if (key.Level == 0 && config.Grass > 0 && !populations) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);
         if (key.Level == 0 && config.Grass > 0 && !populations) data.Reeds = GroundCover.Reeds(key, grid, sea, coverSeed, config.Grass);
         if (key.Level == 0 && config.Props > 0) data.Drapes = GroundCover.CliffDressing(key, grid, sea, coverSeed);
-        if (key.Level <= 2 && config.Rocks > 0) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed, config.Rocks);
+        if (key.Level <= 2 && config.Rocks > 0) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed, config.Rocks, sampler.Removals);
         if (data.Water is { } riverWater && data.WaterShore is { } shore && data.Rocks is { Count: > 0 } rocks)
             ObstacleWakes(riverWater.Vertices, riverWater.Colors, riverWater.Flow, shore, rocks);
-        if (key.Level <= 1 && config.Props > 0) data.Props = GroundCover.Props(key, grid, sea, coverSeed, config.Props);
+        if (key.Level <= 1 && config.Props > 0) data.Props = GroundCover.Props(key, grid, sea, coverSeed, config.Props, sampler.Removals);
         if (key.Level <= 1 && config.Grass > 0) data.WetPlants = GroundCover.WetPlants(key, grid, sea, coverSeed, biomes, Math.Min(1.5, config.Grass), floating: !populations || key.Level > 0);
         if (key.Level >= (config.CardLevels >= 0 ? config.CardLevels : config.TreeLevels) && key.Level <= config.FarTreeLevels)
             data.FarTrees = GroundCover.FarTrees(key, grid, sea, coverSeed, config.ForestDensity);

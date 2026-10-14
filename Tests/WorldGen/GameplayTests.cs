@@ -10,6 +10,7 @@ internal static class GameplayTests
         T.Run("Gameplay: inventory stacks, takes by item and by tag, travels over the network", InventoryWorks, filter);
         T.Run("Gameplay: chop a tree, build a campfire, fuel it, cook, eat (host rules)", Slice, filter);
         T.Run("Gameplay: needs — hunger, cold, wet, a fire's warmth, health", NeedsWork, filter);
+        T.Run("Gameplay: gathering — stones, berries (they grow back), grass for fibre; a fishing rod", Gathering, filter);
     }
 
     private static Catalog Load() => new(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Content/gameplay_items.json")),
@@ -56,6 +57,7 @@ internal static class GameplayTests
         public (double X, double Z, double Scale, int Species)? Tree(long cx, long cz) => cx == 3 && cz == 4 ? (21.5, 29.0, 1.1, 5) : null;
         public (double X, double Z, double Speed) Wind { get; set; } = (1, 0, 0);
         public double Ground(double x, double z) => 5;
+        public (double X, double Z) GatherSpot(int layer, long cx, long cz) => (cx * 3.5 + 1, cz * 3.5 + 1);
     }
 
     private static void Slice()
@@ -146,6 +148,32 @@ internal static class GameplayTests
         var eat = rules.Eat(me, "cooked_fish");
         T.Check(eat.Ok && eat.Food == c.Item("cooked_fish").Food && inv.Count("cooked_fish") == 0, "eaten: " + eat.Message);
         T.Check(!rules.Eat(me, "log").Ok, "logs are not food");
+    }
+
+    private static void Gathering()
+    {
+        var c = Load();
+        var world = new World();
+        var rules = new GameRules(c, world);
+        const int me = 7, other = 9;
+        var inv = rules.Inventory(me);
+        T.Check(!rules.Forage(me, "stone", 10, 10, 0, 0, 0, 0).Ok, "a stone 50 m away: too far");
+        T.Check(rules.Forage(me, "stone", 10, 10, 0, 0, 36, 36).Ok && inv.Count("stone") == 1, "picked up a stone");
+        T.Check(world.Removals.Contains(ObjectRemovals.Stones, 10, 10), "it is gone from the world (for everyone)");
+        T.Check(!rules.Forage(other, "stone", 10, 10, 0, 0, 36, 36).Ok, "nobody picks it up twice");
+        T.Check(rules.Forage(me, "berries", 2, 3, 0, 0, 8, 11).Ok && inv.Count("berries") == 4, "picked berries");
+        T.Check(!rules.Forage(me, "berries", 2, 3, 0, 0, 8, 11).Ok, "the bush is picked");
+        world.Hours += 47; rules.Step(30);
+        T.Check(world.Removals.Contains(ObjectRemovals.Berries, 2, 3), "47 hours later: still bare");
+        world.Hours += 2; rules.Step(30);
+        T.Check(!world.Removals.Contains(ObjectRemovals.Berries, 2, 3) && world.Removals.Contains(ObjectRemovals.Stones, 10, 10), "two days later the berries are back (the stone is not)");
+        T.Check(rules.Eat(me, "berries").Ok && inv.Count("berries") == 3, "berries are food");
+        T.Check(!rules.Forage(me, "grass", 0, 0, 50, 50, 0, 0).Ok, "grass out of reach");
+        for (int i = 0; i < 2; i++) T.Check(rules.Forage(me, "grass", 0, 0, 1, 1, 0, 0).Ok, "grass pulled");
+        T.Check(inv.Count("plant_fibre") == 4, "4 plant fibre");
+        inv.Add("branch", 1);
+        var rod = rules.Make(me, "fishing_rod", 0, 0, 0, 0, 0, 0);
+        T.Check(rod.Ok && inv.HasTag("fishing") && inv.Count("plant_fibre") == 0, "a fishing rod: " + rod.Message);
     }
 
     private static void NeedsWork()

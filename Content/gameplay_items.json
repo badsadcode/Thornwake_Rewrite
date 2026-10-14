@@ -7,6 +7,14 @@
       "description": "A length of trunk. Burns long; builds things later." },
     { "id": "branch", "name": "Branches", "tags": ["wood", "fuel", "kindling"], "weight": 0.8, "stack": 30, "fuel": 8,
       "description": "Dry twigs and small branches. Quick to catch, quick to burn." },
+    { "id": "stone", "name": "Stone", "tags": ["stone"], "weight": 1.2, "stack": 20,
+      "description": "A loose stone, fist-sized. Fire rings, tools, throwing." },
+    { "id": "plant_fibre", "name": "Plant fibre", "tags": ["fibre"], "weight": 0.05, "stack": 50,
+      "description": "Long grass, pulled and twisted. Cord for lashing and fishing lines." },
+    { "id": "berries", "name": "Wild berries", "tags": ["food", "raw", "spoils"], "weight": 0.1, "stack": 30, "food": 5,
+      "description": "A handful of berries from a bush. A little sweet, a little filling." },
+    { "id": "fishing_rod", "name": "Rough fishing rod", "tags": ["tool", "fishing"], "weight": 0.6, "stack": 1,
+      "description": "A springy branch with a line of twisted fibre and a bone hook. Fishing comes next." },
     { "id": "dried_meat", "name": "Dried meat", "tags": ["food"], "weight": 0.3, "stack": 20, "food": 30,
       "description": "Salted, dried strips. Keeps for weeks." },
     { "id": "raw_fish", "name": "Raw fish", "tags": ["food", "raw", "spoils"], "weight": 0.6, "stack": 10, "food": 8,
@@ -14,7 +22,7 @@
     { "id": "cooked_fish", "name": "Cooked fish", "tags": ["food", "cooked"], "weight": 0.5, "stack": 10, "food": 35,
       "description": "Hot and filling." },
     { "id": "book_felling", "name": "Notes on Felling", "tags": ["book"], "weight": 0.4, "stack": 1,
-      "description": "by Old Berta of the Marsh Woods. \"Never fell into the wind, lad. The wind decides where a tree lands, not you.\" — Look at a tree with an axe in your pack and hold E." }
+      "description": "by Old Berta of the Marsh Woods. \"Never fell into the wind, lad. The wind decides where a tree lands, not you.\" — Take the axe (6), stand on the side you want it to fall, hold the left mouse button on the tree; finish from behind." }
   ],
   "start": [
     { "item": "stone_axe", "count": 1 },

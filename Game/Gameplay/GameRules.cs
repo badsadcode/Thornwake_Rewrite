@@ -18,6 +18,8 @@ public interface IWorldQuery
     (double X, double Z, double Speed) Wind { get; }
     /// <summary>Ground height (m) at a point (where a felled tree's logs lie).</summary>
     double Ground(double x, double z);
+    /// <summary>Where the gatherable of a layer's lattice cell stands (a loose stone, a berry bush), whether or not one grows there.</summary>
+    (double X, double Z) GatherSpot(int layer, long cx, long cz);
 }
 
 /// <summary>A tree was hit (shake it) or felled (it falls toward Dir); everyone draws it.</summary>
@@ -151,6 +153,41 @@ public sealed class GameRules
         return new(true, $"The trunk splits into {logs} logs (E picks them up).");
     }
 
+    /// <summary>
+    /// E on nature (Tom: E gathers; D113): a loose stone picked up (gone for good), berries picked from a bush (they grow
+    /// back in <see cref="BerryRegrowHours"/>), or long grass pulled for plant fibre (anywhere it grows; nothing changes).
+    /// Whether one really lies there is the player's PC's word (it draws them); the host checks the reach and that it
+    /// was not taken already.
+    /// </summary>
+    public ActionResult Forage(int player, string what, long cx, long cz, double x, double z, double px, double pz)
+    {
+        var inv = Inventory(player);
+        switch (what)
+        {
+            case "stone" or "berries":
+            {
+                int layer = what == "stone" ? ObjectRemovals.Stones : ObjectRemovals.Berries;
+                var at = _world.GatherSpot(layer, cx, cz);
+                if (Dist(px, pz, at.X, at.Z) > UseReach) return ActionResult.Fail("Too far away.");
+                if (!_world.Removals.Remove(layer, cx, cz, _world.Hours)) return ActionResult.Fail(what == "stone" ? "Someone took it already." : "Already picked.");
+                if (what == "stone") inv.Add("stone");
+                else inv.Add("berries", 4);
+                _inventoryChanged.Add(player);
+                return new(true, what == "stone" ? "A good stone." : "4 handfuls of berries.");
+            }
+            case "grass":
+                if (Dist(px, pz, x, z) > UseReach) return ActionResult.Fail("Too far away.");
+                inv.Add("plant_fibre", 2);
+                _inventoryChanged.Add(player);
+                return new(true, "Plant fibre x2.");
+        }
+        return ActionResult.Fail("Nothing to gather there.");
+    }
+
+    /// <summary>Berries grow back on a picked bush after this many game hours (two days).</summary>
+    public const double BerryRegrowHours = 48;
+    private double _regrowCheck;
+
     /// <summary>A player close to a moving object takes it over (their PC moves it from now on: they can push it).</summary>
     public bool Claim(int player, long objectId, double px, double pz)
     {
@@ -245,8 +282,17 @@ public sealed class GameRules
         return new(true, $"You eat the {d.Name.ToLowerInvariant()}{(d.Has("raw") ? " (raw: not very filling)" : "")}.", d.Food);
     }
 
-    /// <summary>Advance the world's objects by <paramref name="minutes"/> of game time.</summary>
-    public void Step(double minutes) => Objects.Step(minutes);
+    /// <summary>Advance the world's objects by <paramref name="minutes"/> of game time; picked bushes regrow.</summary>
+    public void Step(double minutes)
+    {
+        Objects.Step(minutes);
+        if ((_regrowCheck -= minutes) > 0) return;
+        _regrowCheck = 10; // (every ten game minutes)
+        double now = _world.Hours;
+        foreach (var (layer, x, z) in _world.Removals.Keys())
+            if (layer == ObjectRemovals.Berries && _world.Removals.Get(layer, x, z) is { } at && now - at >= BerryRegrowHours)
+                _world.Removals.Restore(layer, x, z);
+    }
 
     /// <summary>Warmth (°C) the lit fires give at a point: full at the fire, nothing at the edge of its reach × 2.</summary>
     public static double FireWarmth(Catalog catalog, PlacedObjects objects, double x, double z) =>
