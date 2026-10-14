@@ -344,7 +344,8 @@ public partial class WorldLab : IWorldHost, IClientGame
         if (_sampler == null || _holding) return null;
         var v = _player.Velocity;
         var flags = (_fly ? PlayerFlags.Flying : 0) | (_me.Torch.Lit ? PlayerFlags.Torch : 0) | (_swimming ? PlayerFlags.Swimming : 0)
-            | (_axeHeld ? PlayerFlags.Axe : 0) | (_me.Chopping ? PlayerFlags.Chopping : 0);
+            | (_axeHeld ? PlayerFlags.Axe : 0) | (_me.Chopping ? PlayerFlags.Chopping : 0)
+            | (_me.RodHeld ? PlayerFlags.Rod : 0) | (_me.Fishing ? PlayerFlags.Fishing : 0);
         return new PlayerState(PlayerX, _player.Position.Y, PlayerZ, _me.Facing, v.X, v.Y, v.Z, flags);
     }
 }

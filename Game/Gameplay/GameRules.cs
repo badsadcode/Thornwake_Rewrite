@@ -18,6 +18,8 @@ public interface IWorldQuery
     (double X, double Z, double Speed) Wind { get; }
     /// <summary>Ground height (m) at a point (where a felled tree's logs lie).</summary>
     double Ground(double x, double z);
+    /// <summary>The kind of water ("ocean", "lake", "river", "pond") within <paramref name="radius"/> m of a point, or "".</summary>
+    string WaterNear(double x, double z, double radius);
     /// <summary>Where the gatherable of a layer's lattice cell stands (a loose stone, a berry bush), whether or not one grows there.</summary>
     (double X, double Z) GatherSpot(int layer, long cx, long cz);
 }
@@ -183,6 +185,34 @@ public sealed class GameRules
         }
         return ActionResult.Fail("Nothing to gather there.");
     }
+
+    /// <summary>
+    /// A fish landed (or lost: <paramref name="fish"/> empty) after the reel-in on the player's PC (D114). The host checks
+    /// a rod and bait in the pack, water nearby where that fish lives, and not too often; the bait is used up either way.
+    /// </summary>
+    public ActionResult Catch(int player, string fish, double kg, double px, double pz)
+    {
+        var inv = Inventory(player);
+        if (!inv.HasTag("fishing")) return ActionResult.Fail("You need a fishing rod.");
+        if (!inv.HasTag("bait")) return ActionResult.Fail("No bait left: fish will not bite on a bare hook.");
+        double now = _world.Hours;
+        if (_lastCatch.TryGetValue(player, out double last) && now - last < .02) return ActionResult.Fail("Too quick.");
+        string water = _world.WaterNear(px, pz, 22);
+        if (water.Length == 0) return ActionResult.Fail("No water here.");
+        FishDef? def = null;
+        if (fish.Length > 0 && (Catalog.Fish.FirstOrDefault(f => f.Id == fish) is not { } d || !d.Waters.Contains(water)))
+            return ActionResult.Fail("That fish does not live here.");
+        if (fish.Length > 0) def = Catalog.Fish.First(f => f.Id == fish);
+        inv.Take(new Ingredient(null, "bait", 1));
+        _inventoryChanged.Add(player);
+        _lastCatch[player] = now;
+        if (def == null) return new(true, "It got away — and the bait with it.");
+        kg = Math.Clamp(kg, def.MinKg, def.MaxKg);
+        inv.Add("raw_fish");
+        return new(true, FormattableString.Invariant($"A {def.Name.ToLowerInvariant()}, {kg:0.0} kg!"));
+    }
+
+    private readonly Dictionary<int, double> _lastCatch = new();
 
     /// <summary>Berries grow back on a picked bush after this many game hours (two days).</summary>
     public const double BerryRegrowHours = 48;

@@ -7,6 +7,9 @@
     { "id": "fishing_rod", "name": "Rough fishing rod", "inputs": [ { "item": "branch", "count": 1 }, { "item": "plant_fibre", "count": 4 } ],
       "seconds": 6, "outputs": [ { "item": "fishing_rod", "count": 1 } ],
       "description": "A branch and a line twisted from plant fibre (E on grass)." },
+    { "id": "bait", "name": "Berry bait", "inputs": [ { "item": "berries", "count": 1 } ],
+      "seconds": 2, "outputs": [ { "item": "bait", "count": 3 } ],
+      "description": "Berries mashed into three baits (fish need bait to bite)." },
     { "id": "cook_fish", "name": "Cook a fish", "inputs": [ { "item": "raw_fish", "count": 1 } ], "station": "fire",
       "seconds": 12, "outputs": [ { "item": "cooked_fish", "count": 1 } ] }
   ],

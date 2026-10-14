@@ -11,6 +11,7 @@ internal static class GameplayTests
         T.Run("Gameplay: chop a tree, build a campfire, fuel it, cook, eat (host rules)", Slice, filter);
         T.Run("Gameplay: needs — hunger, cold, wet, a fire's warmth, health", NeedsWork, filter);
         T.Run("Gameplay: gathering — stones, berries (they grow back), grass for fibre; a fishing rod", Gathering, filter);
+        T.Run("Gameplay: fishing — which fish where and when, the tug-of-war, landing one (D114)", FishingWorks, filter);
     }
 
     private static Catalog Load() => new(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Content/gameplay_items.json")),
@@ -58,6 +59,7 @@ internal static class GameplayTests
         public (double X, double Z, double Speed) Wind { get; set; } = (1, 0, 0);
         public double Ground(double x, double z) => 5;
         public (double X, double Z) GatherSpot(int layer, long cx, long cz) => (cx * 3.5 + 1, cz * 3.5 + 1);
+        public string WaterNear(double x, double z, double radius) => x > 1000 ? "river" : "";
     }
 
     private static void Slice()
@@ -174,6 +176,58 @@ internal static class GameplayTests
         inv.Add("branch", 1);
         var rod = rules.Make(me, "fishing_rod", 0, 0, 0, 0, 0, 0);
         T.Check(rod.Ok && inv.HasTag("fishing") && inv.Count("plant_fibre") == 0, "a fishing rod: " + rod.Message);
+    }
+
+    private static void FishingWorks()
+    {
+        var c = Load();
+        T.Check(c.Fish.Count >= 6 && c.Item("fishing_rod").Prop("strength") > 0, "fish and the rod's strength load");
+        var rng = new Random(5);
+        // Which fish: only those living in that water; dusk hunters more often at dusk.
+        for (int i = 0; i < 200; i++) T.Check(Fishing.Pick(c.Fish, "river", 12, rng) is { } f && f.Waters.Contains("river"), "a river fish in a river");
+        T.Check(Fishing.Pick(c.Fish, "desert", 12, rng) == null, "no fish without water");
+        int pikeNoon = 0, pikeDusk = 0;
+        for (int i = 0; i < 2000; i++) { if (Fishing.Pick(c.Fish, "lake", 12, rng)!.Id == "pike") pikeNoon++; if (Fishing.Pick(c.Fish, "lake", 19, rng)!.Id == "pike") pikeDusk++; }
+        T.Check(pikeDusk > pikeNoon * 2, $"pike bite at dusk: {pikeDusk} vs {pikeNoon} at noon (of 2000)");
+        T.Check(Fishing.BiteDelay(6, 0, new Random(1)) < Fishing.BiteDelay(13, 0, new Random(1)), "quicker bites at dawn");
+        // The tug-of-war: always against the pull and let go when it rests — landed; doing nothing — lost.
+        var pike = c.Fish.First(f => f.Id == "pike");
+        var good = new FishFight(pike, 1, 1, new Random(3));
+        double t = 0;
+        while (!good.Over && t < 120) { good.Step(.05, -good.Pull); t += .05; }
+        T.Check(good.Landed && good.Line > .99, $"perfect play lands a pike in {t:0} s, the line untouched");
+        // A quarter of a second late at every turn: still landed, the line worn.
+        var late = new FishFight(pike, 1, 1, new Random(3));
+        int seen = 0; double since = 0; t = 0;
+        while (!late.Over && t < 120) { if (late.Pull != seen) { since += .05; if (since >= .25) { seen = late.Pull; since = 0; } } late.Step(.05, -seen); t += .05; }
+        T.Check(late.Landed && late.Line < 1, $"a slow hand lands it too, the line at {late.Line:0.00}");
+        var lazy = new FishFight(pike, 1, 1, new Random(3));
+        t = 0;
+        while (!lazy.Over && t < 120) { lazy.Step(.05, 0); t += .05; }
+        T.Check(lazy.Lost, $"doing nothing loses it ({t:0} s)");
+        var wrong = new FishFight(pike, 1, 1, new Random(3));
+        while (!wrong.Over) wrong.Step(.05, wrong.Pull);
+        T.Check(wrong.Lost, "pulling with it loses it");
+        var strong = new FishFight(pike, 2, 1, new Random(3));
+        double t2 = 0;
+        while (!strong.Over && t2 < 120) { strong.Step(.05, -strong.Pull); t2 += .05; }
+        T.Check(strong.Landed, "a stronger rod lands it too");
+        // Landing it: the host's checks.
+        var world = new World();
+        var rules = new GameRules(c, world);
+        var inv = rules.Inventory(7);
+        T.Check(!rules.Catch(7, "trout", 1, 2000, 0).Ok, "no rod");
+        inv.Add("fishing_rod");
+        T.Check(!rules.Catch(7, "trout", 1, 2000, 0).Ok, "no bait");
+        inv.Add("bait", 3);
+        T.Check(!rules.Catch(7, "trout", 1, 0, 0).Ok, "no water here");
+        T.Check(!rules.Catch(7, "cod", 1, 2000, 0).Ok && inv.CountTag("bait") == 3, "a sea fish in a river: refused, the bait kept");
+        var trout = rules.Catch(7, "trout", 1.1, 2000, 0);
+        T.Check(trout.Ok && inv.Count("raw_fish") == 1 && inv.CountTag("bait") == 2, "landed: " + trout.Message);
+        T.Check(!rules.Catch(7, "trout", 1, 2000, 0).Ok, "not again at once");
+        world.Hours += .1;
+        var away = rules.Catch(7, "", 0, 2000, 0);
+        T.Check(away.Ok && inv.CountTag("bait") == 1 && inv.Count("raw_fish") == 1, "lost one: the bait is gone — " + away.Message);
     }
 
     private static void NeedsWork()

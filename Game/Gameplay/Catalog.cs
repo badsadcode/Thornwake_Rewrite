@@ -6,9 +6,12 @@ using System.Text.Json;
 namespace Thornwake.Gameplay;
 
 /// <summary>An item kind (Content/gameplay_items.json): rules ask for its tags, not its id (GAMEPLAY_DESIGN.md §2).</summary>
-public sealed record ItemDef(string Id, string Name, IReadOnlySet<string> Tags, double Weight, int Stack, double Food, double Fuel, string Description)
+public sealed record ItemDef(string Id, string Name, IReadOnlySet<string> Tags, double Weight, int Stack, double Food, double Fuel, string Description,
+    IReadOnlyDictionary<string, double>? Props = null)
 {
     public bool Has(string tag) => Tags.Contains(tag);
+    /// <summary>A property (a rod's strength and endurance…), or the fallback.</summary>
+    public double Prop(string name, double fallback = 0) => Props != null && Props.TryGetValue(name, out double v) ? v : fallback;
 }
 
 /// <summary>An item or any item with a tag, and how many.</summary>
@@ -36,6 +39,8 @@ public sealed class Catalog
     public IReadOnlyDictionary<string, ObjectDef> Objects { get; }
     /// <summary>What a new character carries.</summary>
     public IReadOnlyList<Ingredient> Start { get; }
+    /// <summary>The fish (D114).</summary>
+    public IReadOnlyList<FishDef> Fish { get; }
 
     public Catalog(string itemsJson, string recipesJson)
     {
@@ -44,11 +49,21 @@ public sealed class Catalog
         foreach (var e in items.RootElement.GetProperty("items").EnumerateArray())
         {
             var d = new ItemDef(Str(e, "id")!, Str(e, "name") ?? Str(e, "id")!, Tags(e), Num(e, "weight"), (int)Num(e, "stack", 1),
-                Num(e, "food"), Num(e, "fuel"), Str(e, "description") ?? "");
+                Num(e, "food"), Num(e, "fuel"), Str(e, "description") ?? "",
+                e.TryGetProperty("props", out var props) ? props.EnumerateObject().ToDictionary(p => p.Name, p => p.Value.GetDouble()) : null);
             list.Add(d.Id, d);
         }
         Items = list;
         Start = items.RootElement.TryGetProperty("start", out var start) ? start.EnumerateArray().Select(Parse).ToList() : new List<Ingredient>();
+        Fish = items.RootElement.TryGetProperty("fish", out var fish)
+            ? fish.EnumerateArray().Select(f =>
+            {
+                var kg = f.TryGetProperty("weight", out var w) ? w.EnumerateArray().Select(x => x.GetDouble()).ToArray() : new[] { .5, 1.0 };
+                return new FishDef(Str(f, "id")!, Str(f, "name") ?? Str(f, "id")!,
+                    f.GetProperty("waters").EnumerateArray().Select(x => x.GetString()!).ToHashSet(), Num(f, "stamina", 6), Num(f, "pull", 1), kg[0], kg[^1],
+                    f.TryGetProperty("dusk", out var dusk) && dusk.ValueKind == JsonValueKind.True);
+            }).ToList()
+            : new List<FishDef>();
 
         using var recipes = JsonDocument.Parse(recipesJson);
         var objects = new Dictionary<string, ObjectDef>();

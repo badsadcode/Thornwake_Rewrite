@@ -77,6 +77,8 @@ public sealed partial class RemotePlayer : Node3D
         _character.Torch.Lit = (s.Flags & PlayerFlags.Torch) != 0;
         _character.AxeHeld = (s.Flags & PlayerFlags.Axe) != 0;
         _character.Chopping = (s.Flags & PlayerFlags.Chopping) != 0;
+        _character.RodHeld = (s.Flags & PlayerFlags.Rod) != 0;
+        _character.Fishing = (s.Flags & PlayerFlags.Fishing) != 0;
         _character.Animate(dt, new Vector3(s.Vx, s.Vy, s.Vz), (s.Flags & PlayerFlags.Flying) != 0, holdFacing: true);
         return guessed;
     }

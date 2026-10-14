@@ -77,6 +77,18 @@ public partial class WorldLab : IWorldQuery
     double IWorldQuery.Hours => _clock.Day * 24 + _clock.Hour;
     (double X, double Z, double Speed) IWorldQuery.Wind => (_atmosphere.Wind.Direction.X, _atmosphere.Wind.Direction.Y, _atmosphere.Wind.Speed);
     double IWorldQuery.Ground(double x, double z) => _sampler!.Height(x, z);
+    string IWorldQuery.WaterNear(double x, double z, double radius)
+    {
+        // The nearest water on rings around the point (every ~3 m).
+        for (double r = 0; r <= radius; r += 3)
+            for (int k = 0; k < (r == 0 ? 1 : 12); k++)
+            {
+                double a = k * Math.Tau / 12;
+                var kind = _sampler!.Sample(x + Math.Cos(a) * r, z + Math.Sin(a) * r).Water;
+                if (kind != WaterKind.None) return Fishing.WaterName(kind);
+            }
+        return "";
+    }
     (double X, double Z) IWorldQuery.GatherSpot(int layer, long cx, long cz) => GroundCover.GatherPosition(layer, cx, cz, GroundCover.CoverSeed(_sampler!));
     ObjectRemovals? IWorldHost.Removals => _generation == null ? _sampler?.Removals : null;
     GameRules? IWorldHost.Rules => _rules;
@@ -119,7 +131,7 @@ public partial class WorldLab : IWorldQuery
         _seenObjects.Step(dh * 60); _seenObjects.TakeChanged(); // (the copy burns down too, for the fires drawn here)
 
         bool captured = Input.MouseMode == Input.MouseModeEnum.Captured && !_menu.Visible && !_pack.Visible && !_map.Visible;
-        UpdateChopping(delta, captured && _axeHeld && Input.IsMouseButtonPressed(MouseButton.Left));
+        UpdateChopping(delta, captured && _axeHeld && !_me.RodHeld && Input.IsMouseButtonPressed(MouseButton.Left));
         if (NeedsOn)
         {
             var t = _sampler.Sample(PlayerX, PlayerZ);
@@ -409,7 +421,8 @@ public partial class WorldLab : IWorldQuery
         {
             case Key.I when !_menu.Visible && !_map.Visible: TogglePack(!_pack.Visible); return true;
             case Key.Escape when _pack.Visible: TogglePack(false); return true;
-            case Key.Key6 when !_menu.Visible && !_pack.Visible: ToggleAxe(); return true;
+            case Key.Key6 when !_menu.Visible && !_pack.Visible: if (_me.RodHeld) ToggleRod(); ToggleAxe(); return true;
+            case Key.Key7 when !_menu.Visible && !_pack.Visible: ToggleRod(); return true;
             case Key.E when !_menu.Visible && !_pack.Visible: Interact(); return true;
         }
         return false;
@@ -437,5 +450,5 @@ public partial class WorldLab : IWorldQuery
         return root;
     }
 
-    private string GameplayHud() => _axeHeld ? "Holding: stone axe — hold LMB on a tree or a trunk in front of you to chop · E: gather, pick up, feed a fire · I: pack" : "";
+    private string GameplayHud() => _me.RodHeld ? "Holding: fishing rod — hold and release LMB to cast · click when it bites · then A / D against the fish · 7 puts it away" : _axeHeld ? "Holding: stone axe — hold LMB on a tree or a trunk in front of you to chop · E: gather, pick up, feed a fire · I: pack" : "";
 }

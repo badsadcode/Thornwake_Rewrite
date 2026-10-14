@@ -769,8 +769,10 @@ public partial class WorldLab : Node3D
         UpdateGameplay(delta);
         UpdateMaking(delta);
         UpdateGathering(delta);
+        UpdateFishing(delta);
         GameplayTest(delta);
         GatherTest(delta);
+        FishTest(delta);
         var cam = _camera.GlobalPosition;
         RenderingServer.GlobalShaderParameterSet("tree_camera", new Vector4(cam.X, cam.Y, cam.Z, 0)); // tree hand-overs (TreeFade)
         double latitude = _sampler.Plan.Climate.Latitude(PlayerZ);
@@ -880,7 +882,7 @@ public partial class WorldLab : Node3D
         _physicsHitch.Begin("physics");
         float dt = (float)delta;
         var input = Vector2.Zero;
-        bool typing = _menu.Visible || _pack.Visible;
+        bool typing = _menu.Visible || _pack.Visible || FishingHoldsMovement;
         if (!typing)
         {
             if (Input.IsKeyPressed(Key.W)) input.Y -= 1;
@@ -1113,7 +1115,7 @@ public partial class WorldLab : Node3D
             $"Position {PlayerX:0} , {PlayerZ:0}   ground {t.Height:0.0} m   {where}\n" +
             $"{mode}   FPS {Engine.GetFramesPerSecond():0}   tiles {_streamer.Resident} (+{_streamer.Missing} queued)   " +
             $"terrain triangles {_streamer.Triangles / 1000}k   tile build {_streamer.LastBuildMs:0.0} ms, commit {_streamer.LastCommitMs:0.0} ms";
-        _hud.Text += "\n" + (_axeHeld ? GameplayHud() : _tools.Hud()) + NetHud();
+        _hud.Text += "\n" + (_axeHeld || _me.RodHeld ? GameplayHud() : _tools.Hud()) + NetHud();
         if (_water.Sim is { Added: > 0 } sim)
             _hud.Text += $"\nWater simulation: {sim.Volume():0.0} m³ on the land, {sim.Absorbed:0.0} m³ joined rivers/lakes{(_rain ? ", raining" : "")}" +
                 $"{(sim.Sources.Count > 0 ? $", {sim.Sources.Count} spring(s)" : "")}";
@@ -1164,6 +1166,7 @@ public partial class WorldLab : Node3D
             case >= Key.Key1 and <= Key.Key5:
                 if (_menu.Visible) break;
                 if (_axeHeld) ToggleAxe(); // (another tool in the hand)
+                if (_me.RodHeld) ToggleRod();
                 if (_tools.Select((int)(key.Keycode - Key.Key1))) _status = _tools.Status;
                 break;
             case Key.T or Key.Y or Key.Bracketleft or Key.Bracketright or Key.Minus or Key.Equal: if (!_menu.Visible) _tools.DevKey(key.Keycode); break;

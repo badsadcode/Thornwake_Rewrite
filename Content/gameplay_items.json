@@ -14,7 +14,10 @@
     { "id": "berries", "name": "Wild berries", "tags": ["food", "raw", "spoils"], "weight": 0.1, "stack": 30, "food": 5,
       "description": "A handful of berries from a bush. A little sweet, a little filling." },
     { "id": "fishing_rod", "name": "Rough fishing rod", "tags": ["tool", "fishing"], "weight": 0.6, "stack": 1,
-      "description": "A springy branch with a line of twisted fibre and a bone hook. Fishing comes next." },
+      "props": { "strength": 1.0, "endurance": 1.0 },
+      "description": "A springy branch with a line of twisted fibre and a bone hook. Hold it with 7; hold and release the left mouse button to cast." },
+    { "id": "bait", "name": "Berry bait", "tags": ["bait"], "weight": 0.02, "stack": 50,
+      "description": "Mashed berries pressed onto the hook. Fish will not bite on a bare hook." },
     { "id": "dried_meat", "name": "Dried meat", "tags": ["food"], "weight": 0.3, "stack": 20, "food": 30,
       "description": "Salted, dried strips. Keeps for weeks." },
     { "id": "raw_fish", "name": "Raw fish", "tags": ["food", "raw", "spoils"], "weight": 0.6, "stack": 10, "food": 8,
@@ -23,6 +26,17 @@
       "description": "Hot and filling." },
     { "id": "book_felling", "name": "Notes on Felling", "tags": ["book"], "weight": 0.4, "stack": 1,
       "description": "by Old Berta of the Marsh Woods. \"Never fell into the wind, lad. The wind decides where a tree lands, not you.\" — Take the axe (6), stand on the side you want it to fall, hold the left mouse button on the tree; finish from behind." }
+  ],
+  "_comment_fish": "Step 1 fish (GAMEPLAY_DESIGN §5b, D114): waters they live in (ocean, lake, river, pond); stamina = seconds of pulling against them to tire them; pull = how hard they tug (the line wears faster); weight range in kg; dusk = more likely at dawn and dusk. All land as raw fish for now.",
+  "fish": [
+    { "id": "trout", "name": "Trout", "waters": ["river"], "stamina": 7, "pull": 1.0, "weight": [0.3, 1.4] },
+    { "id": "grayling", "name": "Grayling", "waters": ["river"], "stamina": 5, "pull": 0.8, "weight": [0.2, 0.9] },
+    { "id": "perch", "name": "Perch", "waters": ["lake", "pond"], "stamina": 4, "pull": 0.7, "weight": [0.1, 0.8] },
+    { "id": "pike", "name": "Pike", "waters": ["lake"], "stamina": 12, "pull": 1.4, "weight": [1.0, 6.0], "dusk": true },
+    { "id": "carp", "name": "Carp", "waters": ["pond", "lake"], "stamina": 9, "pull": 1.1, "weight": [0.8, 4.0] },
+    { "id": "tench", "name": "Tench", "waters": ["pond"], "stamina": 6, "pull": 0.8, "weight": [0.4, 1.5], "dusk": true },
+    { "id": "mackerel", "name": "Mackerel", "waters": ["ocean"], "stamina": 6, "pull": 1.0, "weight": [0.3, 1.0] },
+    { "id": "cod", "name": "Cod", "waters": ["ocean"], "stamina": 11, "pull": 1.2, "weight": [1.0, 8.0] }
   ],
   "start": [
     { "item": "stone_axe", "count": 1 },

@@ -42,8 +42,8 @@ public sealed partial class Character : Node3D
     {
         if (tunic == _tunic) return;
         _tunic = tunic;
-        bool axe = AxeHeld;
-        AxeHeld = false; // (the axe hangs on the old body)
+        bool axe = AxeHeld, rod = RodHeld;
+        AxeHeld = false; RodHeld = false; // (they hang on the old body)
         float facing = Facing;
         bool hidden = _bodyHidden;
         var hold = hidden ? Torch.GetParent<Node3D>() : null;
@@ -57,6 +57,7 @@ public sealed partial class Character : Node3D
         Facing = facing;
         if (hold != null) SetFirstPerson(hold);
         AxeHeld = axe;
+        RodHeld = rod;
     }
 
     /// <summary>Facing (radians about +Y, 0 = +Z) — the direction the body looks.</summary>
@@ -85,7 +86,7 @@ public sealed partial class Character : Node3D
         // (The model names its limbs from the viewer's side: "RightArm" is Alden's left. The torch is in his left hand,
         // the axe in his right — the same in first person.)
         Limb("LeftLeg", swing); Limb("RightLeg", -swing);
-        Limb(AxeHand, -swing * .8f);
+        Limb(AxeHand, _rod != null && Fishing ? -.7f : -swing * .8f);
         Limb(TorchHand, Torch.Lit ? -.6f + swing * .12f : swing * .8f);
         // Chopping (placeholder, D110): the axe arm raised back over the shoulder, then brought down, ~1.4 strokes a second.
         if (Chopping)
@@ -109,6 +110,37 @@ public sealed partial class Character : Node3D
 
     /// <summary>An axe in Alden's right hand (the original game's model); the torch stays in his left.</summary>
     private const string TorchHand = "RightArm", AxeHand = "LeftArm"; // (Alden's left and right hands)
+    private const float RodLength = 1.8f;
+    private MeshInstance3D? _rod;
+
+    /// <summary>A fishing rod in Alden's right hand (placeholder: a long, thin, springy stick), angled forward and up.</summary>
+    public bool RodHeld
+    {
+        get => _rod != null;
+        set
+        {
+            if (value == (_rod != null)) return;
+            if (value)
+            {
+                if (AxeHeld) AxeHeld = false;
+                var axis = new Vector3(0, Mathf.Cos(1.15f), Mathf.Sin(1.15f));
+                _rod = new MeshInstance3D
+                {
+                    Name = "Rod", Mesh = new CylinderMesh { TopRadius = .008f, BottomRadius = .018f, Height = RodLength, RadialSegments = 5 },
+                    MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color("7a5a36"), Roughness = .8f },
+                    Rotation = new Vector3(1.15f, 0, 0), Position = new Vector3(0, -.5f, .02f) + axis * RodLength / 2,
+                };
+                Body.GetNode<Node3D>(AxeHand).AddChild(_rod);
+            }
+            else { _rod!.QueueFree(); _rod = null; Fishing = false; }
+        }
+    }
+
+    /// <summary>The rod held out (fishing: the arm raised).</summary>
+    public bool Fishing { get; set; }
+
+    /// <summary>The rod's tip in the world (where the line starts), or null without a rod.</summary>
+    public Vector3? RodTip => _rod is { } r && r.IsInsideTree() ? r.GlobalTransform * new Vector3(0, RodLength / 2, 0) : null;
 
     public bool AxeHeld
     {
@@ -117,7 +149,7 @@ public sealed partial class Character : Node3D
         {
             if (value == (_axe != null)) return;
             var right = Body.GetNode<Node3D>(AxeHand);
-            if (value) { _axe = Thornwake.World.Visuals.Tool(0); right.AddChild(_axe); }
+            if (value) { if (RodHeld) RodHeld = false; _axe = Thornwake.World.Visuals.Tool(0); right.AddChild(_axe); }
             else { _axe.QueueFree(); _axe = null; Chopping = false; }
         }
     }

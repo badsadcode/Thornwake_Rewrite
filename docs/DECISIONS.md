@@ -1601,6 +1601,28 @@ Tom: E is for gathering — grass for plant fibre, berries, loose stones. Fishin
 * Checked: headless (14 checks: reach, once only, regrowth after two days, berries as food, fibre, the rod) and
   `--gather-test` alone (7 checks) and as a joined guest (6; the host applied every gather).
 
+## D114 — Fishing, a small Enshrouded-style version (2026-10-14)
+GAMEPLAY_DESIGN §5b (Tom: fishing must be engaging, Enshrouded style for the final game). Step 1 builds a small
+version of exactly that minigame, so it grows rather than being replaced:
+* **Rod** (7; made from a branch and 4 plant fibre) with *strength* and *endurance* (item props); **bait** is required
+  (berry bait: one berry → three baits; later worms from digging, better baits at a station).
+* **Cast**: hold the left mouse button to throw farther (4–14 m where you look), release; the bobber must land in
+  water. **Bite** after 4–14 s (×0.6 at dawn and dusk, ×1.3 at night, ×0.8 in light rain); the bobber goes under:
+  click within 0.9 s, else it swims off. Moving reels in.
+* **Fight** (`FishFight`, engine-free, tested): the fish pulls left or right (1–2.5 s), rests (0.4–0.9 s), pulls
+  again; holding the other way (A / D) tires it (rod strength / its stamina in seconds); the wrong way or nothing wears
+  the line (its pull × 0.2 a second / rod endurance); holding on while it rests wears it a little; a 0.2 s reaction
+  window after each switch (perfect play loses no line; the test's hands, a quarter second late, still land a pike).
+  Walking stops while reeling (A/D are the fish's).
+* **Which fish**: by the water at the bobber (ocean, lake, river, pond) — trout and grayling in rivers, perch and pike
+  in lakes, carp and tench in ponds, mackerel and cod at sea; pike and tench more at dawn and dusk. All land as raw
+  fish for now (cooking at a fire exists).
+* **Authority**: the fight runs on the player's PC; landing (or losing) one is the `Catch` action — the host checks a
+  rod and bait, water near the player where that fish lives, not more than one catch per 0.02 game hours; the bait is
+  used up either way (protocol 8). Others see the rod and the fishing pose (not the line yet).
+* Checked: headless (216 checks: fish by water and hour, bite timing, perfect / slow / idle / wrong play, a stronger
+  rod, the host's checks) and `--fish-test` (finds the nearest water, casts, strikes, fights, lands a grayling).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
