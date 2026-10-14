@@ -132,6 +132,13 @@ Fishing must be engaging. Enshrouded's model as the base:
   fish's stamina must run out before the line's does; the rod's **strength** tires the fish faster, its **endurance**
   keeps the line longer (better rods are crafted or found).
 
+**The final version (Tom, 2026-10-14, after trying step 1's)**: keep step 1's tug-of-war for now; the final one plays
+more like Enshrouded's: the bite shows in the water — **splashes and the bobber wobbling** before it goes under;
+then you **tire the fish by turning the rod against its runs** (it goes left, you turn right), **reel the line in**
+(the fish comes closer: a real distance to win back) and **watch the tension** — reeling while it runs hard, or
+holding against it too long, raises it until **the line snaps**; easing off lets it run (line paid out again). Tiring
+it, the line's length and its tension are the three things on screen.
+
 Thornwake on top, from what the world already simulates: **which fish** by the water (river, lake, sea, swamp pool,
 pond dug by players), the biome and water temperature, the **hour** (dawn and dusk bites) and the **weather**; a river's
 current makes a fish pull harder downstream; a fishing book teaches it (§5). Step 1 builds a small version of exactly
