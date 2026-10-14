@@ -21,7 +21,7 @@ public partial class WorldLab
     private FishStage _fishStage;
     private double _fishTimer, _castCharge, _fishFlight;
     private Vector3 _bobberFrom, _bobberAt;   // scene coordinates
-    private double _bobberWorldX, _bobberWorldZ, _waterLevel;
+    private double _bobberWorldX, _bobberWorldZ, _waterLevel, _castX, _castZ;
     private string _fishWater = "";
     private FishDef? _hooked;
     private FishFight? _fight;
@@ -81,7 +81,14 @@ public partial class WorldLab
                 _status = $"Waiting for a bite… ({_fishWater}; click to reel in)";
                 break;
             case FishStage.Waiting:
-                PlaceBobber(BobberRest(.03f * Mathf.Sin((float)_flickerFell * 2)));
+            {
+                // A river's current carries the bobber slowly downstream (a few metres at most; never onto dry land).
+                var current = Wakes.CurrentAt(_sampler!, _bobberWorldX, _bobberWorldZ) * .35f * (float)delta;
+                double nx = _bobberWorldX + current.X, nz = _bobberWorldZ + current.Y;
+                if (current.LengthSquared() > 0 && _sampler!.Sample(nx, nz).Water != WaterKind.None
+                    && (nx - _castX) * (nx - _castX) + (nz - _castZ) * (nz - _castZ) < 4 * 4) { _bobberWorldX = nx; _bobberWorldZ = nz; }
+                PlaceBobber(BobberRest(.02f * Mathf.Sin((float)_flickerFell * 2)));
+            }
                 if (pressed) { StopFishing("You reel in."); break; }
                 if ((_fishTimer -= delta) > 0) break;
                 if (_hooked == null) { StopFishing("Nothing bites here."); break; }
@@ -133,6 +140,7 @@ public partial class WorldLab
         forward = forward.Normalized();
         float distance = 4 + 10 * (float)_castCharge;
         _bobberWorldX = PlayerX + forward.X * distance; _bobberWorldZ = PlayerZ + forward.Z * distance;
+        _castX = _bobberWorldX; _castZ = _bobberWorldZ;
         var t = _sampler!.Sample(_bobberWorldX, _bobberWorldZ);
         _fishWater = Fishing.WaterName(t.Water);
         _waterLevel = _fishWater.Length > 0 && !double.IsNaN(t.WaterLevel) ? t.WaterLevel : t.Height;
@@ -150,8 +158,14 @@ public partial class WorldLab
         _bobber.Visible = true;
     }
 
-    private Vector3 BobberRest(float dy) =>
-        new((float)(_bobberWorldX - _originX), (float)_waterLevel + .03f + dy, (float)(_bobberWorldZ - _originZ));
+    /// <summary>The bobber on the surface as it is drawn — riding the waves of a lake or the sea (Tom), on a river's
+    /// level — plus <paramref name="dy"/> (a bite pulls it under).</summary>
+    private Vector3 BobberRest(float dy)
+    {
+        double level = WaterSurface(_bobberWorldX, _bobberWorldZ, out _);
+        if (double.IsNaN(level)) level = _waterLevel;
+        return new((float)(_bobberWorldX - _originX), (float)level + .03f + dy, (float)(_bobberWorldZ - _originZ));
+    }
 
     private void PlaceBobber(Vector3 at) { if (_bobber != null) _bobber.Position = at; }
 
