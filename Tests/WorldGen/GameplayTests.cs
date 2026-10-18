@@ -645,6 +645,31 @@ internal static class GameplayTests
         T.Check(dg.Place(me, tri.Id, 3, 5.3, 0, 0, 0, 0, -4).Ok, "placed");
         T.Check(dg.Place(me, tri.Id, 3, 5.3, 0, Math.PI, 0, 0, -4).Ok, "its other half: the cell completed");
         T.Check(!dg.Place(me, tri.Id, 3, 5.3, 0, 0, 0, 0, -4).Ok && !dg.Place(me, "log_foundation", 3, 5.3, 0, 0, 0, 0, -4).Ok, "but not the same triangle twice, nor a square over them");
+        // Edges (Tom: diagonal walls, doorways, doors and steps should snap to a diagonal line by themselves; D136): the
+        // chosen wall shape in the size the nearest edge needs, and stairs with their top on an edge, running up onto it.
+        var ed = new GameRules(c, new World()) { Testing = true };
+        ed.Place(me, "log_foundation", 0, 5.3, 0, 0, 0, 0, -4);
+        ed.Place(me, "log_foundation_half", 0, 5.3, -2.25, 0, 0, 0, -4);
+        ed.Place(me, "log_foundation_triangle", 3, 5.3, 0, 0, 0, 0, -4);
+        var en = ed.PiecesNear(0, 0, 12).ToList();
+        var stdWall = c.Pieces["log_wall"];
+        (PieceDef Piece, Pose Pose)? E(string piece, double x, double z, double facing = 0) =>
+            Building.SnapPiece(c.Pieces[piece], c.Family(c.Pieces[piece]), new V3(x, 5.3, z), facing, en, new V3(0, 1, 0));
+        T.Check(E("log_wall", .6, .55) is { } d1 && d1.Piece.Id == "log_wall_diagonal" && Math.Abs(d1.Pose.X) < 1e-6 && Math.Abs(d1.Pose.Z) < 1e-6,
+            $"a wall aimed near the diagonal is the diagonal wall, corner to corner: {E("log_wall", .6, .55)}");
+        T.Check(E("log_wall", 1.4, .3) is { } s1 && s1.Piece.Id == "log_wall" && Math.Abs(s1.Pose.X - 1.5) < 1e-6 && Math.Abs(s1.Pose.Z) < 1e-6,
+            $"near a side: the straight wall along it: {E("log_wall", 1.4, .3)}");
+        T.Check(E("log_wall", -1.45, -2.65, Math.PI / 2) is { } n1 && n1.Piece.Id == "log_wall_narrow", $"on the half foundation's short side: the narrow wall ({E("log_wall", -1.45, -2.65, Math.PI / 2)?.Piece.Id})");
+        T.Check(E("log_wall_doorway", -.55, -.6) is { } dd && dd.Piece.Id == "log_wall_doorway_diagonal", $"a doorway near the diagonal: the diagonal doorway ({E("log_wall_doorway", -.55, -.6)?.Piece.Id})");
+        T.Check(E("log_wall_window", 3.1, -.05) is { } dw2 && dw2.Piece.Id == "log_wall_window_diagonal", $"a window on the triangle's long side: diagonal ({E("log_wall_window", 3.1, -.05)?.Piece.Id})");
+        // Stairs on the triangle's long side (outside it): running up onto it, diagonal, their top on that side.
+        var sd = E("log_stairs_steep", 3.4, .3, -3 * Math.PI / 4 + .2); // (a player north-east of it, facing it)
+        bool onDiag = sd is { } sp2 && Math.Abs(Math.IEEERemainder(sp2.Pose.Yaw + 3 * Math.PI / 4, Math.Tau)) < 1e-6
+            && Building.ToWorld(sp2.Pose, new V3(0, 3, 1.5)) is var top2 && Math.Abs(top2.X - 3 + top2.Z) < 1e-6 && Math.Abs(top2.Y - 5.3) < 1e-6;
+        T.Check(onDiag, $"steep stairs onto the triangle's long side, diagonally: {sd}");
+        var ss = E("log_stairs", 1.8, .2, -Math.PI / 2); // (a player east of it, facing it)
+        T.Check(ss is { } sp3 && Math.Abs(Math.IEEERemainder(sp3.Pose.Yaw + Math.PI / 2, Math.Tau)) < 1e-6 && Math.Abs(sp3.Pose.X - 3.5) < 1e-6 && Math.Abs(sp3.Pose.Y - 2.3) < 1e-6,
+            $"stairs up onto the foundation's east side: {ss}");
         // Testing tools (D128): off, no kits; on, kits and pieces built at once without materials.
         var t3 = new GameRules(c, new World());
         T.Check(!t3.Give(me, "materials").Ok, "no free kits unless the testing tools are on");

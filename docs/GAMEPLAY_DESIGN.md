@@ -172,7 +172,8 @@ foundation, floor, wall, door, stairs, roof), **V** cycles its shapes (wall → 
 chosen shape (its materials go into the new one). **Versatile placement**: pieces snap by their points to the pieces
 around (edges to edges, eaves to wall tops), turned the way you turn them (R: quarter turns) while snapping finds the place; R and the
 wheel turn freely, Page Up/Down raise, Ctrl places freely without snapping. Roofs come in five shapes (slope, ridge,
-hip and valley corners, peak) at two pitches, so gabled, hip, L-shaped and lean-to roofs can all be built. Later:
+hip and valley corners, peak) at two pitches, so gabled, hip, L-shaped and lean-to roofs can all be built. Walls and stairs attach to **edges** (D136): the
+edge picks the size (straight, narrow, diagonal) of the shape you chose. Later:
 structural strength (a piece needs support, heavy roofs need posts), more materials (stone, planks, wattle and daub),
 diagonal and triangular pieces, windows' shutters, furniture and stations, repairs and decay, who may build where.
 

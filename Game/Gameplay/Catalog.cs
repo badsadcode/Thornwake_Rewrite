@@ -133,7 +133,15 @@ public sealed class Catalog
                     Str(e, "model") ?? "", e.TryGetProperty("cost", out var c) ? c.EnumerateArray().Select(Parse).ToList() : new List<Ingredient>(),
                     new V3(box[0], box[1], box[2]), new V3(box[3], box[4], box[5]), snap, e.TryGetProperty("ground", out var gr) && gr.ValueKind == JsonValueKind.True,
                     Num(e, "lift"), Num(e, "legs", .5), Tags(e), Str(e, "group") ?? category.ToLowerInvariant(),
-                    e.TryGetProperty("attach", out _) ? Strings(e, "attach") : null);
+                    e.TryGetProperty("attach", out _) ? Strings(e, "attach") : null)
+                {
+                    Edges = e.TryGetProperty("edges", out var ed)
+                        ? ed.EnumerateArray().Select(x => { var v = x.EnumerateArray().Select(y => y.GetDouble()).ToArray(); return (new V3(v[0], v[1], v[2]), new V3(v[3], v[4], v[5])); }).ToList()
+                        : new List<(V3, V3)>(),
+                    Family = Str(e, "family") ?? Str(e, "id")!,
+                    Length = Num(e, "length"),
+                    EdgeKind = Str(e, "edge") ?? "",
+                };
                 foreach (var x in piece.Cost) Check(x);
                 if (piece.Cost.Any(x => x.Item == null)) throw new FormatException($"piece {piece.Id}: costs must name items");
                 pieces.Add(piece.Id, piece);
@@ -143,6 +151,10 @@ public sealed class Catalog
         Pieces = pieces;
         Categories = categories;
     }
+
+    /// <summary>The pieces of a family, the standard size (3 m) first (D136).</summary>
+    public List<PieceDef> Family(PieceDef piece) =>
+        Pieces.Values.Where(p => p.Family == piece.Family).OrderBy(p => Math.Abs(p.Length - 3)).ToList();
 
     /// <summary>The piece of a placed object's kind, or null (a log pile, a trunk…).</summary>
     public PieceDef? Piece(string kind) => Pieces.GetValueOrDefault(kind);

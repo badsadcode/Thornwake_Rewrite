@@ -590,14 +590,22 @@ public partial class WorldLab
             case 31:
                 Check(!_seenObjects.All.Any(o => o.Kind == "campfire" && Math.Abs(o.Y - _btBase.Y) < .01), $"the campfire taken down by aiming at it ({_status})");
                 SetBuilding(false);
-                // A diagonal wall across the lone foundation and a triangle foundation beside it (D135).
-                Snapped("log_wall_diagonal", .2, 0, .2, Math.PI / 4);
+                // A doorway aimed at the lone foundation's diagonal (it becomes the diagonal doorway, D136) and a triangle
+                // foundation beside it.
+                Snapped("log_wall_doorway", .2, 0, .2, Math.PI / 4);
                 Snapped("log_foundation_triangle", 3.4, 0, -.6);
+                Go(311, .8); break;
+            case 311:
+                // A door in the diagonal doorway; steep stairs up onto the triangle's long side, from outside it.
+                Snapped("log_door", .2, .9, .2, Math.PI / 4);
+                Snapped("log_stairs_steep", 3.4, 0, .3, -3 * Math.PI / 4 + .2);
                 Go(32, .8); break;
             case 32:
             {
                 foreach (var o in _seenObjects.All.Where(o => o.Blueprint).ToList()) Act(new ActionRequest(ActionKind.Supply, o.Id, 0, "", 0, 0, 0, 0));
-                Check(_seenObjects.All.Any(o => o.Kind == "log_wall_diagonal") && _seenObjects.All.Any(o => o.Kind == "log_foundation_triangle"), $"a diagonal wall and a triangle foundation ({_status})");
+                Check(_seenObjects.All.Any(o => o.Kind == "log_wall_doorway_diagonal") && _seenObjects.All.Any(o => o.Kind == "log_foundation_triangle")
+                    && _seenObjects.All.Any(o => o.Kind == "log_stairs_steep") && _seenObjects.All.Count(o => o.Kind == "log_door") >= 2,
+                    $"a diagonal doorway with a door, a triangle foundation, stairs onto its long side ({_status})");
                 var view = Building.ToWorld(_btBase, new V3(-3, 0, 7));
                 Teleport(view.X, view.Z);
                 Go(33, 2.5); break;
@@ -619,8 +627,8 @@ public partial class WorldLab
             var def = _catalog.Pieces[piece];
             var aim = Building.ToWorld(_btBase, new V3(lx, ly, lz));
             var near = GameRules.PiecesNear(_catalog, _seenObjects, aim.X, aim.Z, 12).ToList();
-            if (Building.Snap(def, aim, _btBase.Yaw + turn, near) is not { } s) { Check(false, $"{piece} found nothing to snap to"); return; }
-            Act(new ActionRequest(ActionKind.Place, 0, 0, piece, s.Pose.X, s.Pose.Y, s.Pose.Z, (float)s.Pose.Yaw));
+            if (Building.SnapPiece(def, _catalog.Family(def), aim, _btBase.Yaw + turn, near, new V3(0, 1, 0)) is not { } s) { Check(false, $"{piece} found nothing to snap to"); return; }
+            Act(new ActionRequest(ActionKind.Place, 0, 0, s.Piece.Id, s.Pose.X, s.Pose.Y, s.Pose.Z, (float)s.Pose.Yaw));
         }
         void Go(int stage, double wait) { _btStage = stage; _btTimer = wait; }
         void Print(string s) { GD.Print("BUILD " + s); }

@@ -276,6 +276,22 @@ def piece_wall_narrow(height):
     m.build()
 
 
+def piece_wall_diagonal_opening(kind):
+    """A diagonal wall (4.24 m) with a window or a doorway in its middle, the same openings as the straight ones."""
+    m = Mesh("Wall")
+    if kind == "window":
+        wall_rows(m, opening=(-0.55, 0.55, 1.2, 2.1), profile=lambda y: (-2.12, 2.12))
+        box(m, (0, 1.2, 0), (1.25, 0.08, 0.34)); box(m, (0, 2.1, 0), (1.25, 0.08, 0.34))
+        for x in (-0.58, 0.58):
+            box(m, (x, 1.65, 0), (0.07, 0.9, 0.32))
+    else:
+        wall_rows(m, opening=(-0.62, 0.62, 0, 2.1), profile=lambda y: (-2.12, 2.12))
+        box(m, (0, 2.13, 0), (1.45, 0.12, 0.34))
+        for x in (-0.65, 0.65):
+            box(m, (x, 1.05, 0), (0.08, 2.1, 0.32))
+    m.build()
+
+
 def piece_wall_diagonal(height):
     """A wall across a 3 x 3 m square's diagonal (4.24 m), its ends flush (it meets edge walls at 45 degrees)."""
     m = Mesh("Wall")
@@ -538,6 +554,8 @@ def main():
              ("log_wall_narrow_half", OUT_BUILD, lambda: piece_wall_narrow(1.5)),
              ("log_wall_diagonal", OUT_BUILD, lambda: piece_wall_diagonal(3.0)),
              ("log_wall_diagonal_half", OUT_BUILD, lambda: piece_wall_diagonal(1.5)),
+             ("log_wall_window_diagonal", OUT_BUILD, lambda: piece_wall_diagonal_opening("window")),
+             ("log_wall_doorway_diagonal", OUT_BUILD, lambda: piece_wall_diagonal_opening("doorway")),
              ("log_foundation_triangle", OUT_BUILD, lambda: piece_triangle(True)),
              ("log_floor_triangle", OUT_BUILD, lambda: piece_triangle(False))]
     for mat in ("log", "thatch"):

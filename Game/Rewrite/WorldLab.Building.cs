@@ -54,9 +54,11 @@ public partial class WorldLab
     private List<PieceDef> InCategory => _catalog.Pieces.Values.Where(p => p.Category == Category).ToList();
     private List<string> Materials => InCategory.Select(p => p.Material).Distinct().ToList();
     private string Material => _buildMaterial.TryGetValue(Category, out var m) && Materials.Contains(m) ? m : Materials[0];
-    private List<string> Shapes => InCategory.Where(p => p.Material == Material).Select(p => p.Shape).Distinct().ToList();
+    private List<string> Shapes => InCategory.Where(p => p.Material == Material && _catalog.Family(p)[0] == p).Select(p => p.Shape).Distinct().ToList();
     private string Shape => _buildShape.TryGetValue(Category, out var s) && Shapes.Contains(s) ? s : Shapes[0];
     private PieceDef Piece => InCategory.First(p => p.Material == Material && p.Shape == Shape);
+    /// <summary>The piece the ghost is now (the chosen one, or another size of it an edge asked for).</summary>
+    private PieceDef _ghostDef = null!;
 
     private void CycleShape(int step)
     {
@@ -157,7 +159,7 @@ public partial class WorldLab
             return;
         }
         var def = Piece;
-        if (_ghostPiece != def.Id) MakeGhost(def);
+        var placing = def;
         _ghostPose = null; _ghostReplace = 0; _ghostWhy = ""; _ghostFree = false;
         if (aim is { } a)
         {
@@ -172,9 +174,12 @@ public partial class WorldLab
                 double flip = Math.Abs(Math.IEEERemainder(target.Pose.Yaw + Math.PI - desired, Math.Tau)) < Math.Abs(Math.IEEERemainder(target.Pose.Yaw - desired, Math.Tau)) ? Math.PI : 0;
                 _ghostPose = target.Pose with { Yaw = target.Pose.Yaw + flip };
                 _ghostReplace = target.Id;
+                // (in the size of the piece it replaces: a diagonal wall becomes a diagonal doorway)
+                placing = _catalog.Family(def).FirstOrDefault(m => Math.Abs(m.Length - target.Def.Length) < .05) ?? def;
                 if (target.Def.Id == def.Id && flip == 0) _ghostWhy = "it is that already (R turns it)";
             }
-            else if (snap && Building.Snap(def, point, desired, nearby, new V3(a.Normal.X, a.Normal.Y, a.Normal.Z)) is { } s) _ghostPose = s.Pose;
+            else if (snap && Building.SnapPiece(def, _catalog.Family(def), point, desired, nearby, new V3(a.Normal.X, a.Normal.Y, a.Normal.Z)) is { } s)
+            { _ghostPose = s.Pose; placing = s.Piece; }
             else
             {
                 // Freely: a foundation stands level above the highest ground under it, raised or lowered by the player.
@@ -193,6 +198,8 @@ public partial class WorldLab
         }
         else _ghostWhy = "aim at the ground or a piece nearby";
         _ghostOk = _ghostPose != null && _ghostWhy.Length == 0;
+        _ghostDef = placing;
+        if (_ghostPiece != placing.Id) MakeGhost(placing);
         if (!_ghostWhy.StartsWith("in the way")) UnflashBlocker();
         if (_ghost != null)
         {
@@ -206,12 +213,12 @@ public partial class WorldLab
         }
         if (place)
         {
-            if (_ghostOk && _ghostPose is { } p) Act(new ActionRequest(ActionKind.Place, _ghostReplace, 0, def.Id, p.X, p.Y, p.Z, (float)p.Yaw));
+            if (_ghostOk && _ghostPose is { } p) Act(new ActionRequest(ActionKind.Place, _ghostReplace, 0, placing.Id, p.X, p.Y, p.Z, (float)p.Yaw));
             else _status = $"Cannot build there: {_ghostWhy}.";
         }
         if (take) Dismantle();
-        UpdateBuildMenu(def);
-        UpdateSnapMarkers(def);
+        UpdateBuildMenu(placing);
+        UpdateSnapMarkers(placing);
     }
 
     /// <summary>The hit point is within the middle of a piece (its thin side counts whole): a swap, not a snap beside it.</summary>

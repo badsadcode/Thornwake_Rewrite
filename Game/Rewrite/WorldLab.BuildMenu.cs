@@ -118,10 +118,11 @@ public partial class WorldLab
         {
             var line = new HBoxContainer();
             line.AddThemeConstantOverride("separation", 6);
-            foreach (var p in _catalog.Pieces.Values.Where(p => p.Category == def.Category && p.Material == material))
+            foreach (var p in _catalog.Pieces.Values.Where(p => p.Category == def.Category && p.Material == material && _catalog.Family(p)[0] == p))
             {
-                var piece = p;
-                line.AddChild(Card(piece, piece.Id == def.Id, () =>
+                // (one card per shape; the change keeps the size: a diagonal wall becomes a diagonal doorway)
+                var piece = _catalog.Family(p).FirstOrDefault(m => System.Math.Abs(m.Length - def.Length) < .05) ?? p;
+                line.AddChild(Card(piece, piece.Family == def.Family, () =>
                 {
                     if (piece.Id != def.Id) Act(new ActionRequest(ActionKind.Place, id, 0, piece.Id, 0, 0, 0, o.Yaw));
                     ClosePieceMenu(true);

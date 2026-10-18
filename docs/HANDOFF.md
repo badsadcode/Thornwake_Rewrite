@@ -35,7 +35,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   roads as placeholders. **Build 70** (`24c41c9`, `dist/Preview-70`, 2026-10-18): diagonal walls, triangle foundations and floors, animals going round trees and
   buildings (D135) — the proof of concept's last items; next is the real multiplayer test. For the world-generation step:
   Tom's `docs/TERRAIN_LANDFORMS_PLAN.md` (from a cloud brainstorm, written without knowing the latest work: a guide to
-  check against the code, not a spec).
+  check against the code, not a spec). **Build 71** (2026-10-18): walls and stairs attach to edges, the edge picking the size (straight,
+  narrow, diagonal); diagonal window and doorway; stairs onto triangles' long sides (D136).
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done

@@ -1975,6 +1975,32 @@ and snap them diagonally with different rotation steps").
   trunk's centre; a deer fleeing at a row of walls never inside them) and `--build-test` (a diagonal wall and a triangle
   foundation built, pictured).
 
+## D136 — Walls and stairs on edges (2026-10-18)
+Tom: "can diagonal walls and other elements — diagonal doorways and doors — snap to a diagonal line by themselves? Or a
+better way?"; "we will need diagonal steps to snap to diagonal triangle floors." Point-to-point snapping left the size
+and the angle to the player (a diagonal wall was a shape of its own, turned by hand) and caused most of the odd
+placements (walls wedged between floors, turned across a deck). Walls and stairs now attach to **edges**, as in
+Soulmask and Conan Exiles:
+* **Every floor and foundation has edges** (`edges` in `gameplay_pieces.json`): its sides, the lines through its middle
+  (inner walls), a square's two diagonals, a triangle's long side; **a wall's top is an edge** (walls stack).
+* **Walls come in families** (`family` + `length`): wall (3 m, narrow 1.5 m, diagonal 4.24 m), half wall (the same three),
+  window and doorway (3 m and diagonal: new diagonal window and doorway models), gables and peaks (3 m). You choose the
+  **shape** (V; the menu shows one card per shape); the **edge picks the size**: aimed near a foundation's diagonal, a
+  doorway is the diagonal doorway; on a half foundation's short side a wall is the narrow one. The wall is centred on the
+  edge, facing the side nearest the way you look (R flips it). Doors still line up with their doorway, so a door in a
+  diagonal doorway is diagonal. Swapping a placed wall (aiming at its middle, or its right-click menu) keeps its size.
+* **Stairs attach by their top** to an edge, slid along it to the nearest quarter of it, **running up onto the piece**
+  that has the edge (only when you clearly face the other way, up from beneath it): onto a triangle's long side they come
+  out diagonal by themselves.
+* **Which edge**: the nearest to the aim within 1.6 m, an inner line costing 0.25 m and an edge askew to the view up to
+  0.4 m — where a side and the middle line meet, the side you look at wins. No edge in reach (or Ctrl): the point snapping
+  as before (floors, roofs, doors and the camp pieces always use points).
+* Checked: headless (a wall near the diagonal is the diagonal wall corner to corner, near a side the straight one, on a
+  half foundation's short side the narrow one; doorway and window near diagonals are the diagonal ones; steep stairs up
+  onto a triangle's long side, diagonal, their top on it; stairs up onto a foundation's side) and `--build-test` (a
+  doorway aimed at a diagonal is the diagonal doorway, a door in it, steep stairs onto a triangle's long side; the earlier
+  houses built through the edges).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

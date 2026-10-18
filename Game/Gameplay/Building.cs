@@ -30,6 +30,13 @@ public sealed record PieceDef(string Id, string Name, string Category, string Sh
     IReadOnlySet<string> Tags, string Group, IReadOnlySet<string>? Attach = null)
 {
     public bool Has(string tag) => Tags.Contains(tag);
+    /// <summary>Lines (local) walls and stairs attach to: a floor's sides, diagonals and middle lines, a wall's top (D136).</summary>
+    public IReadOnlyList<(V3 A, V3 B)> Edges { get; init; } = Array.Empty<(V3, V3)>();
+    /// <summary>The pieces of one shape in their sizes (a wall: 1.5, 3 and 4.24 m); an edge picks the size that fits.</summary>
+    public string Family { get; init; } = "";
+    public double Length { get; init; }
+    /// <summary>How it attaches to an edge: "wall" (centred on it, along it), "stairs" (its top on it, running away), or "".</summary>
+    public string EdgeKind { get; init; } = "";
     /// <summary>Joins pieces of that group by their points (null: any group).</summary>
     public bool JoinsTo(PieceDef other) => Attach == null || Attach.Contains(other.Group);
 }
@@ -195,6 +202,87 @@ public static class Building
             }
         return null;
     }
+
+    /// <summary>The way a piece of a family was placed: which member, where, and the edge it took.</summary>
+    public readonly record struct EdgeSnap(PieceDef Piece, Pose Pose, double Distance);
+
+    /// <summary>Edges are taken within this distance of the aim.</summary>
+    public const double EdgeRadius = 1.6;
+
+    /// <summary>
+    /// Walls and stairs on edges (D136; Tom: "diagonal walls, doorways, doors and steps should snap to a diagonal line by
+    /// themselves"): the edge of a floor, foundation or wall top nearest the aim; a wall of the chosen family in the size
+    /// that fits it (straight, narrow, diagonal) centred on it, facing the side nearest the wanted heading; stairs with
+    /// their top on it (slid along it to the nearest quarter, inside it), running away from the piece that has the edge
+    /// (toward the wanted heading's side when it is shared). Not overlapping its group. Null: no edge fits near the aim.
+    /// </summary>
+    public static EdgeSnap? SnapToEdge(IReadOnlyList<PieceDef> family, V3 aim, double desiredYaw, IReadOnlyList<Placed> nearby)
+    {
+        if (family.Count == 0 || family[0].EdgeKind.Length == 0) return null;
+        var found = new List<EdgeSnap>();
+        foreach (var p in nearby)
+            foreach (var (la, lb) in p.Def.Edges)
+            {
+                var a = ToWorld(p.Pose, la); var b = ToWorld(p.Pose, lb);
+                var ab = b - a;
+                double len = ab.Length;
+                if (len < .3) continue;
+                var dir = new V3(ab.X / len, ab.Y / len, ab.Z / len);
+                double s = Math.Clamp((aim - a).X * dir.X + (aim - a).Y * dir.Y + (aim - a).Z * dir.Z, 0, len);
+                var at = new V3(a.X + dir.X * s, a.Y + dir.Y * s, a.Z + dir.Z * s);
+                double dist = at.DistanceTo(aim);
+                if (dist > EdgeRadius) continue;
+                double yawAlong = Math.Atan2(-dir.Z, dir.X); // (a piece's local +X along the edge)
+                // Where lines meet (a side's middle and the line through the centre), the outer edge and the one you face win:
+                // an inner line (through the piece's centre) costs 0.25 m, an edge askew to the view up to 0.4 m.
+                var mid0 = new V3((a.X + b.X) / 2, 0, (a.Z + b.Z) / 2);
+                var c0 = ToWorld(p.Pose, p.Def.BoxCenter);
+                bool inner = Math.Sqrt((mid0.X - c0.X) * (mid0.X - c0.X) + (mid0.Z - c0.Z) * (mid0.Z - c0.Z)) < .2;
+                double rank = dist + (inner ? .25 : 0) + .4 * (1 - Math.Abs(Math.Cos(desiredYaw - yawAlong)));
+                if (family[0].EdgeKind == "wall")
+                {
+                    if (family.FirstOrDefault(m => Math.Abs(m.Length - len) < .05) is not { } member) continue;
+                    var mid = new V3((a.X + b.X) / 2, (a.Y + b.Y) / 2, (a.Z + b.Z) / 2);
+                    double yaw = Nearer(yawAlong, yawAlong + Math.PI, desiredYaw);
+                    found.Add(new EdgeSnap(member, new Pose(mid.X, mid.Y, mid.Z, yaw), rank));
+                }
+                else
+                {
+                    var st = family[0];
+                    double half = st.BoxHalf.X, run = st.BoxHalf.Z * 2, rise = st.BoxHalf.Y * 2;
+                    if (len < half * 2 - .01) continue;
+                    // Slid along the edge to the nearest quarter of it, kept inside it.
+                    double q = len / 4, sq = Math.Clamp(Math.Round(s / q) * q, half, len - half);
+                    var top = new V3(a.X + dir.X * sq, a.Y, a.Z + dir.Z * sq);
+                    // Away from the piece that has the edge (its centre's side), or toward the wanted heading's side.
+                    var n = new V3(-dir.Z, 0, dir.X);
+                    var centre = ToWorld(p.Pose, p.Def.BoxCenter);
+                    double inward = (centre.X - top.X) * n.X + (centre.Z - top.Z) * n.Z;
+                    if (inward < 0) n = new V3(-n.X, 0, -n.Z); // (n: toward the piece: the way up)
+                    double up = Math.Atan2(n.X, n.Z);
+                    // Up onto the piece; only when clearly turned the other way (within 60°: R twice), up from beneath it.
+                    double yaw = Math.Abs(Math.IEEERemainder(desiredYaw - (up + Math.PI), Math.Tau)) < Math.PI / 3 ? up + Math.PI : up;
+                    var dirUp = new V3(Math.Sin(yaw), 0, Math.Cos(yaw));
+                    var origin = new V3(top.X - dirUp.X * run / 2, top.Y - rise, top.Z - dirUp.Z * run / 2);
+                    found.Add(new EdgeSnap(st, new Pose(origin.X, origin.Y, origin.Z, yaw), rank));
+                }
+            }
+        foreach (var f in found.OrderBy(f => f.Distance))
+            if (!Blocked(f.Piece, f.Pose, nearby)) return f;
+        return null;
+    }
+
+    /// <summary>Where a chosen piece goes (D136): on an edge (walls and stairs; the family member that fits), else by its
+    /// points. The piece returned may be another size of the chosen one.</summary>
+    public static (PieceDef Piece, Pose Pose)? SnapPiece(PieceDef chosen, IReadOnlyList<PieceDef> family, V3 aim, double desiredYaw, IReadOnlyList<Placed> nearby, V3? normal = null)
+    {
+        if (SnapToEdge(family, aim, desiredYaw, nearby) is { } e) return (e.Piece, e.Pose);
+        if (Snap(chosen, aim, desiredYaw, nearby, normal) is { } s) return (chosen, s.Pose);
+        return null;
+    }
+
+    private static double Nearer(double a, double b, double want) =>
+        Math.Abs(Math.IEEERemainder(a - want, Math.Tau)) <= Math.Abs(Math.IEEERemainder(b - want, Math.Tau)) ? a : b;
 
     /// <summary>The pose of a piece put down where nothing snaps: at the aim (lifted by the piece's lift and the player's
     /// raise), facing the wanted heading.</summary>

@@ -78,6 +78,15 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 71 — walls and stairs find their edge
+* **Walls snap to edges** of floors and foundations (their sides, the lines through their middle, a square's diagonals,
+  a triangle's long side) and to the tops of walls. Choose the shape with V — wall, window, doorway, half wall, gables —
+  and **the edge picks the size**: aim near a diagonal and you get the diagonal doorway or window; on a half foundation's
+  short side, the narrow wall. Where two lines meet, the one you look at wins. R flips which way a wall faces.
+* **A door in a diagonal doorway** goes diagonal by itself.
+* **Stairs attach by their top** to an edge and run up onto the piece — onto a triangle's long side they come out
+  diagonal by themselves.
+
 ## New in build 70 — diagonal walls, triangles, animals that go round things
 * **Diagonal walls** (Wall, V: *Diagonal wall*, *Diagonal half wall*): corner to corner across a foundation or floor.
   With a diagonal piece **R turns 45°**.
