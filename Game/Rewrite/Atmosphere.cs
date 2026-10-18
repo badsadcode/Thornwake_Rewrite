@@ -1131,11 +1131,16 @@ public partial class Atmosphere : Node3D
     private static bool FogAllowed => GameSettings.FogQuality.Index > 0;
 
     /// <summary>The volumetric fog's cell grid from <c>perf.fog_quality</c> (build 75: project.godot's 96 × 96 × 96).</summary>
+    private (int, int, bool) _fogGrid = (96, 96, true); // (project.godot)
+
     public void ApplyFogQuality()
     {
         var (size, depth) = GameSettings.FogQuality.Index switch { 1 => (64, 64), 3 => (160, 128), 4 => (256, 160), _ => (96, 96) };
-        RenderingServer.EnvironmentSetVolumetricFogVolumeSize((int)Dev("size", size), (int)Dev("depth", depth));
-        RenderingServer.EnvironmentSetVolumetricFogFilterActive(Dev("filter", 1) > 0);
+        var grid = ((int)Dev("size", size), (int)Dev("depth", depth), Dev("filter", 1) > 0);
+        if (grid == _fogGrid) return; // (ApplyAll runs on every setting change: only a real change reaches the renderer)
+        _fogGrid = grid;
+        RenderingServer.EnvironmentSetVolumetricFogVolumeSize(grid.Item1, grid.Item2);
+        RenderingServer.EnvironmentSetVolumetricFogFilterActive(grid.Item3);
     }
 
     // A2 (M2 draft, D143): the forest air of A, tuned toward Unity HDRP's rays.
@@ -1144,7 +1149,9 @@ public partial class Atmosphere : Node3D
     // less of it scatters less light toward the camera overall, so the sun's energy into the air rises as it falls
     // (0.75 → ×8 as build 76, 0.3 → ×20).
     private static float A2Aniso => GameSettings.RayScatter.F;
-    private static float A2Boost => 8 + (.75f - A2Aniso) * 26.7f;
+    // A high sun lets far more light through the crowns: at full boost the noon air went milky white (rays3 captures,
+    // D146), so the boost eases from a 30° to a 65° sun, down to 35 %.
+    private float A2Boost => (8 + (.75f - A2Aniso) * 26.7f) * Mathf.Lerp(1, .35f, Mathf.SmoothStep(30, 65, _sunElevation));
 
     private void UpdateForestRays(double delta)
     {

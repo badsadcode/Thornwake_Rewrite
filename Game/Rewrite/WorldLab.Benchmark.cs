@@ -118,6 +118,7 @@ public partial class WorldLab
         string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
         outDir ??= Path.Combine(OS.GetUserDataDir(), "bench", $"{stamp}-{suite}-{profile}");
         Directory.CreateDirectory(outDir);
+        GameSettings.SaveSuspended = true; // (the player's file keeps their own values even if the run is killed)
         _bench = new BenchRun
         {
             Config = config, Suite = suite, Profile = profile, OutDir = outDir, Jobs = jobs, QuitWhenDone = quitWhenDone,
@@ -724,6 +725,7 @@ public partial class WorldLab
         foreach (var (k, v) in _benchAblationRestore) if (GameSettings.All.FirstOrDefault(s => s.Key == k) is { } s) s.Value = v;
         _benchAblationRestore.Clear();
         foreach (var s in GameSettings.All) if (run.Saved.TryGetValue(s.Key, out double v)) s.Value = v;
+        GameSettings.SaveSuspended = false;
         BenchMist(null);
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), false);
         _benchLabel.Visible = false;

@@ -446,9 +446,13 @@ public static class GameSettings
         }
     }
 
+    /// <summary>A benchmark is changing settings: nothing is written until it ends (D146: a benchmark that hung and was
+    /// killed left its test profile in Tom's settings file).</summary>
+    public static bool SaveSuspended { get; set; }
+
     public static void Save()
     {
-        if (!_loaded) return;
+        if (!_loaded || SaveSuspended) return;
         var file = new ConfigFile();
         foreach (var s in All) file.SetValue("settings", s.Key, Own.TryGetValue(s, out double own) ? own : s.Value);
         file.Save(FilePath);

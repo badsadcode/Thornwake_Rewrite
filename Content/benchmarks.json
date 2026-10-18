@@ -136,6 +136,18 @@
     { "id": "rays-sunrise", "name": "M2 rays: temperate forest at sunrise (05:24, sun ~10° up, light mist), facing the sun (first person)", "world": "patch32",
       "face": "sun", "at": [-3141.8, 2362.6], "view": [0, 0.12, 0.3], "height": 0, "hour": 5.4, "seconds": 6, "mist": [0.35],
       "settings": { "fx.forest_rays": 1, "fx.light_model": 1, "fx.volumetric_fog": 1, "fx.ground_fog": 2 } },
+    { "id": "rays-dawn-turn", "name": "M2 rays: temperate forest, sunrise (05:24, sun ~10° up), light mist, turning", "world": "patch32",
+      "move": "turn", "at": [-3141.8, 2362.6], "view": [0, 0.08, 0.3], "height": 0, "hour": 5.4, "seconds": 20, "mist": [0.35],
+      "settings": { "fx.forest_rays": 3, "fx.light_model": 1, "fx.volumetric_fog": 1, "fx.ground_fog": 2, "perf.fog_quality": 3 } },
+    { "id": "rays-morning-turn", "name": "M2 rays: temperate forest, morning (08:30, sun ~40° up), light mist, turning", "world": "patch32",
+      "move": "turn", "at": [-3141.8, 2362.6], "view": [0, 0.08, 0.3], "height": 0, "hour": 8.5, "seconds": 20, "mist": [0.35],
+      "settings": { "fx.forest_rays": 3, "fx.light_model": 1, "fx.volumetric_fog": 1, "fx.ground_fog": 2, "perf.fog_quality": 3 } },
+    { "id": "rays-noon-turn", "name": "M2 rays: temperate forest, noon (12:00, sun ~68° up), light mist, turning", "world": "patch32",
+      "move": "turn", "at": [-3141.8, 2362.6], "view": [0, 0.08, 0.3], "height": 0, "hour": 12, "seconds": 20, "mist": [0.35],
+      "settings": { "fx.forest_rays": 3, "fx.light_model": 1, "fx.volumetric_fog": 1, "fx.ground_fog": 2, "perf.fog_quality": 3 } },
+    { "id": "rays-evening-turn", "name": "M2 rays: temperate forest, evening (18:30, sun ~10° up), light mist, turning", "world": "patch32",
+      "move": "turn", "at": [-3141.8, 2362.6], "view": [0, 0.08, 0.3], "height": 0, "hour": 18.5, "seconds": 20, "mist": [0.35],
+      "settings": { "fx.forest_rays": 3, "fx.light_model": 1, "fx.volumetric_fog": 1, "fx.ground_fog": 2, "perf.fog_quality": 3 } },
     { "id": "rays-sunrise-turn", "name": "M2 rays: temperate forest at sunrise (05:24, light mist), turning", "world": "patch32",
       "move": "turn", "at": [-3141.8, 2362.6], "view": [0, 0.08, 0.3], "height": 0, "hour": 5.4, "seconds": 20, "mist": [0.35],
       "settings": { "fx.forest_rays": 1, "fx.light_model": 1, "fx.volumetric_fog": 1, "fx.ground_fog": 2 } },
@@ -179,6 +191,11 @@
       "name": "Atmosphere 2.0 M2: forest rays shoot-out — every still with build 47, A (volumetric forest air) and B (screen-space shafts)",
       "scenarios": ["art-forest-shafts", "atmo-forest-walk", "atmo-forest-noon"],
       "ablate": false, "capture": true, "stills": 4, "compare": "fx.forest_rays=0,1,2"
+    },
+    "rays3": {
+      "name": "Atmosphere 2.0 M2: forest rays A2 through the day (sunrise, morning, noon, evening), forward scattering 0.75 / 0.3",
+      "scenarios": ["rays-dawn-turn", "rays-morning-turn", "rays-noon-turn", "rays-evening-turn"],
+      "ablate": false, "capture": true, "stills": 4, "compare": "fx.ray_scatter=0.75,0.3"
     },
     "rays2": {
       "name": "Atmosphere 2.0 M2: forest rays at sunrise (target: Unity HDRP's volumetric lighting, D142)",

@@ -2194,6 +2194,21 @@ passes no time: the same sweep leaves Food 78, Warmth 54, Health 100. A fix, no 
 * My capture runs on Tom's PC (23:29, 23:48) had written `autosave.twsave` into his saves (the autosave ran in test
   runs too). Autosave is now off in shots, smoke runs and benchmarks.
 
+## D146 — A2 through the day; a frozen capture run left its settings in Tom's file (2026-10-19)
+* Suite **`rays3`**: the `rays2` spot turning at sunrise (05:24), morning (08:30, ~40°), noon (12:00, ~68°) and
+  evening (18:30), *Forest rays* A2, fog quality high, every still at forward scattering 0.75 and 0.3. Sunrise,
+  morning and evening: shafts as intended (0.3 adds milky haze). **Noon: the whole air went milky white** — a high sun
+  lets far more light through the crowns and A2's ×8–20 boost floods it. A2's boost now eases from a 30° to a 65° sun,
+  down to 35 % (draft, part of A2; captures of it still to take).
+* The rerun **froze** (00:20, between two noon stills while turning): 0 % CPU and GPU, nothing in Godot's log, no
+  driver reset in Windows' log. Cause unknown; not seen in the earlier runs of the same suite. Killed after Tom saw it.
+* **The benchmark wrote its test profile into Tom's settings file** while running (restored only at its end), so the
+  killed run left 44 changed values (season, view distances, grass, clouds, V-Sync…). Restored from his dump 232225
+  (the old file kept as `rewrite_settings.bench-left-20261019-0020.cfg`; *Forest rays A2: forward scattering* set to
+  0.75). Now **settings are not saved while a benchmark runs** (`GameSettings.SaveSuspended`), so a killed run leaves
+  the file as it was — Tom's rule that tests never save settings. Also: the fog grid reaches the renderer only when it
+  changes (ApplyAll runs on every setting change; it was resent on each A/B still).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
