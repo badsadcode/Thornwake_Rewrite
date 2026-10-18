@@ -43,6 +43,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   checks), placed objects in a grid, joined PCs no longer slowed by many pieces; host 60 fps, sync exact. Waiting for
   Tom's test with people (both ends' net logs). **Next: Atmosphere 2.0 (M2–M4) and shader fixes**, the torch lighting
   the ground fog evenly (dump 221438).
+  **Build 74** (`2323405`, `dist/Preview-74`, 2026-10-18): smoke from Tom's own texture for torches and campfires (D140);
+  *Torch in mist* draft — halo at the flame (D139), build 72's even glow still the default: **waiting for Tom's pick**.
+  Then M2 (forest rays A), M1 pause point 3, the cloud drafts, M3, M4 — all need Tom's look decisions.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
