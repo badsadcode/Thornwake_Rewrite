@@ -90,8 +90,10 @@ public sealed partial class Torch : Node3D
     public bool Lit
     {
         get => Visible;
-        set { Visible = value; _flame.Emitting = value; _smoke.Burning = value; }
+        set { Visible = value; if (IsInsideTree()) _flame.Emitting = value; _smoke.Burning = value; } // (Godot warns when set before)
     }
+
+    public override void _Ready() => _flame.Emitting = Visible; // (its children are in the scene by then)
 
     public override void _Process(double delta)
     {

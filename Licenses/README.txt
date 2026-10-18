@@ -6,3 +6,6 @@ Godot: https://godotengine.org/license/
 
 Game meshes and synthesized audio were created for this project. Interface
 fonts use Windows system fonts, which are not redistributed with the game.
+
+The smoke texture (Assets/Effects/smoke_puff.png) was made by Tom for this
+project.

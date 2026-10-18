@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 74 — your smoke texture, torch in mist
+**Host and everyone joining need build 74** (versions must match to connect).
+* **Smoke from your texture** for the torch and, new, **campfires** (they smoke while burning, not as blueprints or
+  once the wood is gone). The torch's smoke starts right at the flame, denser, as you asked. At night the smoke takes
+  the moonlight instead of glowing white; a campfire lights its own smoke from below.
+  Esc → Settings → Lighting and effects → **Smoke**: *smoke texture* (default) or *build 72 (soft dots, torch only)*.
+* **Torch in mist** (same page), to try and tell me: *build 72 (even glow)* is still the default — in a mist bank the
+  torch lit everything within 16 m evenly (your dump 221438); *halo at the flame* makes the mist glow round the flame
+  and fade within a few metres.
+* Debug dumps (F9) now also carry the mist's drift and the ground's wetness, so I can rebuild the same mist.
+
 ## New in build 73 — ready for the real multiplayer test (4–12 players)
 **Host and everyone joining must have build 73** (the network messages changed; build 72 does not connect).
 * Tested on one PC with 12 players (bot players that walk, hunt with the bow and build log huts): the host stays at

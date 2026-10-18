@@ -2106,7 +2106,7 @@ campfires". Moved to `Assets/Effects/smoke_puff.png` (mipmaps on: smoke is seen 
   Now visible from the flame's tip, bigger at birth, 36 instead of 18.
 * Fixed on the way: a newly built campfire's first puffs started at the scene's origin (the view was placed a frame
   later since D138) — object views are placed when created. `--shot-campfire` (captures): a lit campfire beside Alden.
-* The texture's source and licence: Tom's file; to be noted in `Licenses/` when Tom says where it is from.
+* The texture is Tom's own (self-made), noted in `Licenses/README.txt`.
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder

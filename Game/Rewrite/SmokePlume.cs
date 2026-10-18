@@ -39,8 +39,10 @@ public sealed partial class SmokePlume : CpuParticles3D
     public bool Burning
     {
         get => _burning;
-        set { _burning = value; Emitting = value && Shows; }
+        set { _burning = value; if (IsInsideTree()) Emitting = value && Shows; } // (Godot warns when set before)
     }
+
+    public override void _EnterTree() => Emitting = _burning && Shows;
 
     /// <summary>Build 72's dots: lit by the scene's lights (moon, sky, sun), or unshaded (as in build 72: white at night).
     /// The textured smoke is always lit.</summary>
