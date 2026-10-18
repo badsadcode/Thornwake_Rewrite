@@ -389,7 +389,7 @@ internal static class GameplayTests
         T.Check(!rules.Shoot(me, stag.Id, 1, 0, 6, 40, 0, 0).Ok, "an arrow at a time");
         for (int i = 0; i < 8; i++) { rules.StepWildlife(.5, far); rules.Shoot(me, 0, .5, 10 + i, 5, 30, 0, 0); }
         int stuck = rules.Objects.All.Count(o => o.Kind == "arrow");
-        T.Check(inv.Count("arrow") == 1 && stuck is > 0 and < 8, $"8 misses: {stuck} arrows lie where they fell");
+        T.Check(inv.Count("arrow") == 1 && stuck is >= 4 and <= 8, $"8 misses: {stuck} arrows lie where they fell (most can be found again)");
         T.Check(!rules.Gather(me, rules.Objects.All.First(o => o.Kind == "arrow").Id, 100, 100).Ok, "not from afar");
         // Wolves hunt at night: a pack chases a hunter close by and bites.
         rules.Wildlife.Clear();
@@ -509,6 +509,15 @@ internal static class GameplayTests
         T.Check(!door.Blueprint && rules.Use(me, door.Id, 1, 0).Ok && door.State == 1 && rules.Use(me, door.Id, 1, 0).Ok && door.State == 0, "it opens and shuts");
         // Turning a piece where it stands.
         T.Check(rules.Place(me, "log_door", 0, 0, 0, door.Yaw + Math.PI, door.Id, 0, -4).Message == "Turned.", "turned the other way round");
+        // A campfire on the deck (Tom, build 64): it stands on a floor or foundation as on the ground; not in the air.
+        inv.Add("branch", 8);
+        var deckFire = rules.Place(me, "campfire", .5, 5.3, -.5, 0, 0, 0, -4);
+        T.Check(deckFire.Ok && rules.Objects.All.Any(o => o.Kind == "campfire" && Math.Abs(o.Y - 5.3) < 1e-9), "a campfire on the foundation's deck: " + deckFire.Message);
+        T.Check(!rules.Place(me, "campfire", .5, 7.5, .5, 0, 0, 0, -4).Ok, "not floating above it");
+        var fireObj = rules.Objects.All.First(o => o.Kind == "campfire");
+        rules.Supply(me, fireObj.Id, 0, -4);
+        int logsBefore = inv.Count("log");
+        T.Check(rules.Dismantle(me, fireObj.Id, 0, -4).Ok && inv.Count("log") == logsBefore + 2, "taken down again: its logs back (the kindling burnt)");
         // Taking it down gives everything back.
         int logs = inv.Count("log");
         var down = rules.Dismantle(me, f.Id, 0, -4);

@@ -177,6 +177,7 @@ public partial class WorldLab : IWorldQuery
         UpdateHunting(delta, captured && !_building);
         UpdateBuilding(delta, captured);
         UpdatePieces(delta);
+        UpdatePrompt();
         if (NeedsOn)
         {
             var t = _sampler.Sample(PlayerX, PlayerZ);

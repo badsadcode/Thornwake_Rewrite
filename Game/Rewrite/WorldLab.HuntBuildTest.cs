@@ -463,6 +463,51 @@ public partial class WorldLab
             }
             case 23:
                 Shot("-house");
+                // A lone foundation in the open, then a campfire on its deck (Tom: not only on the ground).
+                var spot = Building.ToWorld(_btBase, new V3(-9, 0, 2));
+                var fp = Building.Free(_catalog.Pieces["log_foundation"], spot, _btBase.Yaw, 0, (x, z) => _sampler.Height(x, z));
+                Act(new ActionRequest(ActionKind.Place, 0, 0, "log_foundation", fp.X, fp.Y, fp.Z, (float)fp.Yaw));
+                _btBase = fp;
+                Go(231, .8); break;
+            case 231:
+                foreach (var o in _seenObjects.All.Where(o => o.Blueprint).ToList()) Act(new ActionRequest(ActionKind.Supply, o.Id, 0, "", 0, 0, 0, 0));
+                var deck = Building.ToWorld(_btBase, new V3(.4, 0, .4));
+                Act(new ActionRequest(ActionKind.Place, 0, 0, "campfire", deck.X, _btBase.Y, deck.Z, 0));
+                Go(24, .8); break;
+            case 24:
+            {
+                var fire = _seenObjects.All.FirstOrDefault(o => o.Kind == "campfire" && Math.Abs(o.Y - _btBase.Y) < .01);
+                Check(fire != null, $"a campfire on the deck ({_status})");
+                if (fire == null) { Done(); return; }
+                // Building open, aiming at it: right mouse → its menu; Tab → choosing with the mouse.
+                SetBuilding(true);
+                Teleport(Building.ToWorld(_btBase, new V3(0, 0, 6)).X, Building.ToWorld(_btBase, new V3(0, 0, 6)).Z);
+                _btAimAt = new V3(fire.X, fire.Y + .25, fire.Z);
+                Go(25, 2); break;
+            }
+            case 25: case 26: case 27:
+                AimAt(_btAimAt);
+                Go(_btStage + 1, .25); break;
+            case 28:
+            {
+                var fire = _seenObjects.All.First(o => o.Kind == "campfire" && Math.Abs(o.Y - _btBase.Y) < .01);
+                Check(_aimedAny == fire.Id, $"the campfire can be aimed at (aimed {_aimedAny}, fire {fire.Id})");
+                OpenPieceMenu(fire.Id);
+                Go(29, .6); break;
+            }
+            case 29:
+                Shot("-piecemenu");
+                ClosePieceMenu(true);
+                SetPicking(true);
+                Go(30, .8); break;
+            case 30:
+                Shot("-picking");
+                SetPicking(false);
+                Dismantle(); // (the aimed campfire)
+                Go(31, .8); break;
+            case 31:
+                Check(!_seenObjects.All.Any(o => o.Kind == "campfire" && Math.Abs(o.Y - _btBase.Y) < .01), $"the campfire taken down by aiming at it ({_status})");
+                SetBuilding(false);
                 Done(); break;
         }
 

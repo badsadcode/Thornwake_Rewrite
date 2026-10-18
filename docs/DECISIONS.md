@@ -1823,6 +1823,30 @@ and up to 12 per player's surroundings (was 9). At Tom's swamp spot: 13 animals 
 wolves; `--census=45`). A HUD line tells how many animals are within 230 m and where the nearest is ("nearest deer 78 m
 W"), or that they are switched off. Hot biomes (desert, savanna, jungle) still have none: the pack has no animals for them.
 
+## D127 — Taking down and changing pieces with the mouse; campfires on decks; arrows found again (2026-10-18)
+Tom (build 64): "I need to be able to dismantle and build objects; the campfire must be allowed on the floor, not only
+on the ground; a mode that lets me use the mouse while building — selecting what to place and changing the type of a
+placed blueprint; a way to retrieve arrows if I find them."
+* **The campfire and the lean-to could not be aimed at** (drawn in code, they had no collision), so they could not be
+  taken down or swapped. Every piece now has something to aim at; theirs is a box on the aim-only layer (nobody bumps
+  into it).
+* **Ground pieces stand on floors and foundations too**: a piece that may stand on the ground is also supported when its
+  origin is on the top of a floor or foundation (`Building.OnFloor`) — a campfire on the deck, a free wall on a floor.
+* **Choosing with the mouse**: **Tab** while building frees the cursor over the menu (a gold title says so); a click on a
+  category tab changes the category, a click on a piece's picture picks it and goes straight back to placing it. Tab or
+  Esc returns without changing.
+* **The right mouse on a placed piece** (building open) opens its menu at the screen's centre: what it is (a blueprint's
+  needs), **every shape of its category in every material** as pictures — a click changes it (blueprint or built: its
+  materials come back and go into the new one) — and **Turn it round**, **Bring materials**, **Take it down**, **Close**.
+  The right mouse elsewhere still closes building; the middle mouse and Backspace still take the aimed piece down.
+  Every piece's picture is made as soon as building opens (about a second), so no menu waits for one.
+* **Arrows**: a missed arrow is left where it fell 85 % of the time (was 65 %), one that struck an animal is in its
+  carcass 75 % of the time (was 50 %). An **E prompt** under the screen's centre now says what E will do — pick up an arrow
+  (or logs, a pack…), butcher the deer, bring materials to the aimed blueprint, open the door, put wood on the fire, pick
+  up the stone — so a lost arrow is found by walking over it.
+* Checked: headless (a campfire on a deck and not in the air, taken down again; arrows) and `--build-test` (a campfire on
+  a lone foundation's deck, aimed at, its menu, choosing with the mouse, taken down by aiming at it).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

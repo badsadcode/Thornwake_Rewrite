@@ -110,9 +110,14 @@ public static class Building
         {
             double g = ground(pose.X, pose.Z);
             if (g <= pose.Y + .6 && g >= pose.Y - def.Legs - .6) return true;
+            if (OnFloor(pose, nearby, ignore)) return true;
         }
         return def.Snap.Count > 0 && Joints(def, pose, nearby, ignore) > 0;
     }
+
+    /// <summary>Standing on the top of a floor or foundation (Tom: a campfire on the deck, not only on the ground).</summary>
+    public static bool OnFloor(Pose pose, IEnumerable<Placed> nearby, long ignore = 0) =>
+        nearby.Any(p => p.Id != ignore && p.Def.Has("floor") && Math.Abs(pose.Y - p.Pose.Y) < .15 && Inside(p.Def, p.Pose, new V3(pose.X, p.Pose.Y - .02, pose.Z), .05));
 
     /// <summary>
     /// Where a new piece goes when the player aims at <paramref name="aim"/> wanting it to face <paramref name="desiredYaw"/>

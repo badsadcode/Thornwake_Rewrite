@@ -31,7 +31,7 @@ public partial class WorldLab
     private long _ghostReplace;
     private string _ghostWhy = "";
     private readonly Dictionary<long, (Node3D Model, StaticBody3D? Body, Node3D? Leaf)> _pieceParts = new();
-    private long _aimedPiece;
+    private long _aimedPiece, _aimedAny;
 
     private void SetBuilding(bool on)
     {
@@ -45,7 +45,7 @@ public partial class WorldLab
             _tools.Select(0);
             _status = "Building: choose with the number keys and V; the left mouse places a blueprint, E brings the materials.";
         }
-        else { _ghost?.QueueFree(); _ghost = null; _ghostPiece = ""; _ghostPose = null; _status = "Building closed."; }
+        else { _ghost?.QueueFree(); _ghost = null; _ghostPiece = ""; _ghostPose = null; _status = "Building closed."; ClosePieceMenu(); _buildPicking = false; }
         ShowBuildMenu(on);
     }
 
@@ -80,6 +80,9 @@ public partial class WorldLab
         if (!_building) return false;
         switch (key.Keycode)
         {
+            case Key.Escape when _pieceMenu != null: ClosePieceMenu(true); return true;
+            case Key.Escape or Key.Tab when _buildPicking: SetPicking(false); return true;
+            case Key.Tab: SetPicking(true); return true;
             case Key.Escape or Key.B: SetBuilding(false); return true;
             case >= Key.Key1 and <= Key.Key9 when (int)(key.Keycode - Key.Key1) < _catalog.Categories.Count:
                 _buildCategory = (int)(key.Keycode - Key.Key1); return true;
@@ -107,7 +110,13 @@ public partial class WorldLab
         double step = (Input.IsKeyPressed(Key.Shift) ? 5 : 15) * Math.PI / 180;
         if (button.ButtonIndex == MouseButton.WheelUp) { _buildTurn += step; return true; }
         if (button.ButtonIndex == MouseButton.WheelDown) { _buildTurn -= step; return true; }
-        if (button.ButtonIndex == MouseButton.Right) { SetBuilding(false); return true; }
+        // The right mouse on a placed piece: its menu (change, turn, take down); elsewhere it closes building.
+        if (button.ButtonIndex == MouseButton.Right)
+        {
+            if (BuildAim((float)GameRules.BuildReach) is { Piece: not 0 } a) OpenPieceMenu(a.Piece);
+            else SetBuilding(false);
+            return true;
+        }
         return false;
     }
 
@@ -130,11 +139,14 @@ public partial class WorldLab
     private void UpdateBuilding(double delta, bool captured)
     {
         bool lmb = captured && Input.IsMouseButtonPressed(MouseButton.Left), mmb = captured && Input.IsMouseButtonPressed(MouseButton.Middle);
-        bool place = lmb && !_buildLmbWas || _buildTestPlace, take = mmb && !_buildMmbWas;
+        bool closedNow = captured && (_pieceMenu != null || _buildPicking); // (clicked back into the world: that click places nothing)
+        if (closedNow) { ClosePieceMenu(); _buildPicking = false; if (_pickTitle != null) _pickTitle.Visible = false; }
+        bool place = lmb && !_buildLmbWas && !closedNow || _buildTestPlace, take = mmb && !_buildMmbWas;
         _buildTestPlace = false;
         _buildLmbWas = lmb; _buildMmbWas = mmb;
         // (not building: what you aim at — a blueprint's needs — still shows, and E acts on it)
         var aim = BuildAim((float)GameRules.BuildReach);
+        _aimedAny = aim?.Piece ?? 0;
         SetAimed(aim?.Piece ?? 0);
         if (!_building)
         {
@@ -286,6 +298,15 @@ public partial class WorldLab
             }
             model.AddChild(body);
         }
+        else
+        {
+            // (drawn in code — the campfire, the lean-to: a box to aim at, to take down or swap; nobody bumps into it)
+            body = new StaticBody3D { Name = "Body", CollisionMask = 0, CollisionLayer = BlueprintLayer };
+            body.SetMeta("object", o.Id);
+            body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3((float)def.BoxHalf.X, (float)def.BoxHalf.Y, (float)def.BoxHalf.Z) * 2 },
+                Position = new Vector3((float)def.BoxCenter.X, (float)def.BoxCenter.Y, (float)def.BoxCenter.Z) });
+            model.AddChild(body);
+        }
         _pieceParts[o.Id] = (model, body, leaf);
         RefreshPiece(o, def);
         return root;
@@ -296,7 +317,7 @@ public partial class WorldLab
     {
         if (!_pieceParts.TryGetValue(o.Id, out var parts)) return;
         GameplayModels.Wear(parts.Model, o.Blueprint ? GameplayModels.Blueprint(o.Id == _aimedPiece) : null);
-        uint layer = o.Blueprint ? BlueprintLayer : 1;
+        uint layer = o.Blueprint || def.Model.Length == 0 ? BlueprintLayer : 1;
         if (parts.Body != null) parts.Body.CollisionLayer = layer;
         if (parts.Leaf?.GetNodeOrNull<StaticBody3D>("LeafBody") is { } lb) lb.CollisionLayer = layer;
         // (the lean-to and the campfire wear the ghost look while blueprints; their flames show only when lit)

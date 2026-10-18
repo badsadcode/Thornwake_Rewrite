@@ -5,6 +5,7 @@ using System.Linq;
 using Godot;
 using Thornwake.Gameplay;
 using Thornwake.Rewrite.Net;
+using Thornwake.WorldGen;
 
 namespace Thornwake.Rewrite;
 
@@ -44,6 +45,44 @@ public partial class WorldLab
         _crosshair.AddThemeFontSizeOverride("font_size", 22);
         _crosshair.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .9f));
         layer.AddChild(_crosshair);
+        _prompt = new Label { AnchorLeft = .5f, AnchorRight = .5f, AnchorTop = .5f, AnchorBottom = .5f, OffsetLeft = -300, OffsetRight = 300, OffsetTop = 46,
+            HorizontalAlignment = HorizontalAlignment.Center, MouseFilter = Control.MouseFilterEnum.Ignore };
+        _prompt.AddThemeFontSizeOverride("font_size", 17);
+        _prompt.AddThemeColorOverride("font_color", new Color(1, .95f, .82f));
+        _prompt.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .9f));
+        _prompt.AddThemeConstantOverride("shadow_offset_x", 1); _prompt.AddThemeConstantOverride("shadow_offset_y", 1);
+        layer.AddChild(_prompt);
+    }
+
+    private Label? _prompt;
+
+    /// <summary>Per frame: what E would do here, under the screen's centre (Tom: arrows and the like are easy to miss).</summary>
+    private void UpdatePrompt()
+    {
+        if (_prompt == null) return;
+        _prompt.Text = _gathering != null || _menu.Visible || _pack.Visible || _map.Visible || _pieceMenu != null || _buildPicking ? "" : InteractHint() is { } h ? "E   " + h : "";
+    }
+
+    private string? InteractHint()
+    {
+        if (_aimedAny != 0 && _seenObjects.Get(_aimedAny) is { } aimed && _catalog.Piece(aimed.Kind) is { } piece)
+        {
+            if (aimed.Blueprint) return $"Bring materials: {piece.Name.ToLowerInvariant()} (needs {NeedsHere(piece, aimed)})";
+            if (piece.Has("door")) return aimed.State == 1 ? "Shut the door" : "Open the door";
+        }
+        var near = _seenObjects.Near(PlayerX, PlayerZ, GameRules.UseReach + 1.5).Where(o => o.Contents.Count > 0 || o.Kind == "campfire")
+            .OrderBy(o => (o.X - PlayerX) * (o.X - PlayerX) + (o.Z - PlayerZ) * (o.Z - PlayerZ)).FirstOrDefault();
+        if (near != null)
+            return near.Kind switch
+            {
+                "carcass" => $"Butcher the {(_catalog.Animals.TryGetValue(near.Ref, out var a) ? a.Name.ToLowerInvariant() : "animal")}" + (_myInv.HasTag("cutting") ? "" : " (needs a knife, an axe or a sword)"),
+                "campfire" => near.Blueprint ? "Bring materials: campfire" : "Put wood on the fire",
+                "pack" => "Pick up the pack",
+                _ => "Pick up " + string.Join(", ", near.Contents.Select(c => $"{(c.Count > 1 ? c.Count + " " : "")}{_catalog.Item(c.Item).Name.ToLowerInvariant()}")),
+            };
+        var spot = _streamer.GatherablesNear(PlayerX, PlayerZ, GameRules.UseReach - .5).FirstOrDefault();
+        if (spot.Layer != 0 || spot.X != 0 || spot.Z != 0) return spot.Layer == ObjectRemovals.Stones ? "Pick up the stone" : "Pick berries";
+        return null;
     }
 
     private void HuntingWorldReady()

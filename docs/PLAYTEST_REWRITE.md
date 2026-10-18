@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 65 — building with the mouse, campfires on decks, arrows found again
+* **Choose with the mouse**: while building, press **Tab** — the cursor is free over the menu; click a category, then a
+  piece's picture, and you are back placing it (Tab or Esc returns without changing).
+* **Right-click a placed piece** (while building): its menu shows every shape of its kind with pictures — click one to
+  change it (a blueprint, or a finished piece: its materials go into the new one) — plus *Turn it round*, *Bring
+  materials*, *Take it down*. The middle mouse / Backspace still take down the piece you aim at.
+* **Campfires and lean-tos can be taken down and changed** now (they could not be aimed at before).
+* **A campfire (or any piece that stands on the ground) can stand on a floor or foundation** too.
+* **Arrows**: most missed arrows can be found where they fell, most that hit come back with the carcass, and a prompt under
+  the screen's centre tells you what E will do ("E  Pick up arrow", "E  Butcher the deer", "E  Bring materials…").
+
 ## New in build 64 — after your first try of hunting and building
 * **Walls go on the foundation**, not under it (the ghost now keeps to the side of the surface you aim at).
 * **Foundation height**: placed on a slope, a foundation stands level above the highest ground under it. **Page Up /

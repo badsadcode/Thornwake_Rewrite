@@ -82,11 +82,11 @@ public sealed partial class GameRules
         if (animal > 0 && Wildlife.Get(animal) is { State: not AnimalState.Dead } a && Dist(px, pz, a.X, a.Z) <= ShootRange)
         {
             double damage = bow.Prop("damage", 30) * (.35 + .65 * Math.Clamp(draw, 0, 1));
-            if (_huntRng.NextDouble() < .5) _arrowsIn[animal] = _arrowsIn.GetValueOrDefault(animal) + 1;
+            if (_huntRng.NextDouble() < .75) _arrowsIn[animal] = _arrowsIn.GetValueOrDefault(animal) + 1;
             bool killed = Wildlife.Damage(animal, damage, player, px, pz);
             return new(true, killed ? $"The {a.Def.Name.ToLowerInvariant()} falls." : $"A hit! The {a.Def.Name.ToLowerInvariant()} is wounded.");
         }
-        if (Dist(px, pz, x, z) <= ShootRange + 20 && double.IsFinite(x + y + z) && _huntRng.NextDouble() < .65)
+        if (Dist(px, pz, x, z) <= ShootRange + 20 && double.IsFinite(x + y + z) && _huntRng.NextDouble() < .85)
         {
             var stuck = Objects.Add("arrow", x, y, z, (float)Math.Atan2(x - px, z - pz), 0);
             stuck.Contents.Add(("arrow", 1));
