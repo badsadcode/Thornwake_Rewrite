@@ -52,6 +52,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   Tom to try at different sun angles (he liked the captures; he has no HDRP screenshots, so his eye is the reference).
   **Build 77** (`c44b4bb`, `dist/Preview-77`): A2's shafts vanished away from the sun (anisotropy 0.75) — slider *Forest
   rays A2: forward scattering* (D144). **Waiting for Tom**: the value he likes; then A2's defaults and M2's next step.
+  **Build 78** (`b29f017`, `dist/Preview-78`, 2026-10-19): the time slider froze Tom to death ("teleported back to spawn") —
+  setting the clock passes no time for the body; test runs never autosave (D145).
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
