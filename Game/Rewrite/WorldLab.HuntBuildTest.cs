@@ -361,6 +361,12 @@ public partial class WorldLab
                 Go(3, .5); break;
             }
             case 3:
+                AimAt(new V3(_btBase.X, _btBase.Y - .1, _btBase.Z)); // (on the blueprint: the camera has left the shoulder)
+                Go(301, .3); break;
+            case 301:
+                AimAt(new V3(_btBase.X, _btBase.Y - .1, _btBase.Z));
+                Go(302, .3); break;
+            case 302:
                 Shot("-blueprint");
                 Interact(); // E on the aimed blueprint
                 Go(4, 2); break;
