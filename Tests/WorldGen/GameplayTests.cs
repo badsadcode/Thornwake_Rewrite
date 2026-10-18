@@ -449,14 +449,25 @@ internal static class GameplayTests
         // Snapping: a foundation beside it, aimed a little off, goes edge to edge.
         var pieces = rules.PiecesNear(0, 0, 12).ToList();
         var next = Building.Snap(foundation, new V3(3.3, 5.3, .4), .2, pieces);
-        T.Check(next is { } n && Math.Abs(n.Pose.X - 3) < 1e-6 && Math.Abs(n.Pose.Z) < 1e-6 && Math.Abs(n.Pose.Y - 5.3) < 1e-6 && n.Joints == 3, $"a foundation snaps beside it: {next}");
-        // A wall on its east edge: along the edge (both ends on the corners), whichever way you face.
+        T.Check(next is { } n && Math.Abs(n.Pose.X - 3) < 1e-6 && Math.Abs(n.Pose.Z) < 1e-6 && Math.Abs(n.Pose.Y - 5.3) < 1e-6 && n.Joints == 5, $"a foundation snaps beside it: {next}");
+        // A wall on its east edge: facing it (turned along the edge) it stands along the edge, both ends on the corners;
+        // turned a quarter, it stands across the deck on a grid line (an inner wall; Tom, build 65: the player's turn decides).
         var wall = c.Pieces["log_wall"];
-        foreach (double facing in new[] { 0, 1.2, 3.0 })
+        foreach (double facing in new[] { 1.2, 1.9, 4.5 })
         {
             var w = Building.Snap(wall, new V3(1.4, 5.3, .3), facing, pieces);
-            T.Check(w is { } wp && Math.Abs(wp.Pose.X - 1.5) < 1e-6 && Math.Abs(wp.Pose.Z) < 1e-6 && Math.Abs(Math.Cos(wp.Pose.Yaw)) < 1e-6 && wp.Joints == 3,
+            T.Check(w is { } wp && Math.Abs(wp.Pose.X - 1.5) < 1e-6 && Math.Abs(wp.Pose.Z) < 1e-6 && Math.Abs(Math.Cos(wp.Pose.Yaw)) < 1e-6 && wp.Joints == 5,
                 $"facing {facing:0.0}: the wall stands along the edge ({w})");
+        }
+        var across = Building.Snap(wall, new V3(.2, 5.3, .1), 0, pieces, new V3(0, 1, 0));
+        T.Check(across is { } aw && Math.Abs(Math.Sin(aw.Pose.Yaw)) < 1e-6 && Math.Abs(aw.Pose.Y - 5.3) < 1e-6 && aw.Joints == 5,
+            $"turned across: an inner wall on the deck's grid ({across})");
+        // Stairs and half floors face the way they are turned (R): each quarter turn.
+        var half = c.Pieces["log_floor_half"];
+        foreach (double turn in new[] { 0, Math.PI / 2, Math.PI, 3 * Math.PI / 2 })
+        {
+            var h = Building.Snap(half, new V3(.4, 5.3, .4), turn, pieces, new V3(0, 1, 0));
+            T.Check(h is { } hp && Math.Abs(Math.IEEERemainder(hp.Pose.Yaw - turn, Math.PI)) < 1e-6, $"a half floor turned {turn:0.0}: {h}");
         }
         // Tom (build 63): a wall aimed at a foundation's top went under it (hanging from the edge: as many joints as on
         // top). Aimed anywhere along the edges, from any heading, it stands on the deck.
@@ -482,7 +493,7 @@ internal static class GameplayTests
         var roof = c.Pieces["log_roof_slope_steep"];
         T.Check(!rules.Place(me, roof.Id, 20, 9, 0, 0, 0, 15, 0).Ok, "a roof on nothing: refused");
         var rs = Building.Snap(roof, new V3(1.5, 8.3, .2), -Math.PI / 2, pieces);
-        T.Check(rs is { } r && Math.Abs(r.Pose.X) < 1e-6 && Math.Abs(r.Pose.Y - 8.3) < 1e-6 && Math.Abs(r.Pose.Z) < 1e-6 && r.Joints == 3, $"the roof's eave sits along the wall top: {rs}");
+        T.Check(rs is { } r && Math.Abs(r.Pose.X) < 1e-6 && Math.Abs(r.Pose.Y - 8.3) < 1e-6 && Math.Abs(r.Pose.Z) < 1e-6 && r.Joints == 5, $"the roof's eave sits along the wall top: {rs}");
         var rp = rs!.Value.Pose;
         T.Check(rules.Place(me, roof.Id, rp.X, rp.Y, rp.Z, rp.Yaw, 0, 0, -4).Ok, "the roof's blueprint");
         var roofObj = rules.Objects.All.Single(o => o.Kind == roof.Id);
@@ -535,7 +546,9 @@ internal static class GameplayTests
         }
         r2.Place(me, "log_foundation", 0, 5.3, 0, 0, 0, 0, 0);
         Put("log_foundation", 3.2, 5.3, .2, 0); Put("log_foundation", .2, 5.3, 3.2, 0); Put("log_foundation", 3.2, 5.3, 3.2, 0);
-        foreach (var (lx, lz) in new[] { (-1.4, 0.0), (-1.4, 3.0), (4.4, 0.0), (4.4, 3.0), (0.0, -1.4), (3.0, -1.4), (0.0, 4.4), (3.0, 4.4) }) Put("log_wall", lx, 5.3, lz, 0);
+        // (each turned as a player facing that side would have it: along the side)
+        foreach (var (lx, lz) in new[] { (-1.4, 0.0), (-1.4, 3.0), (4.4, 0.0), (4.4, 3.0), (0.0, -1.4), (3.0, -1.4), (0.0, 4.4), (3.0, 4.4) })
+            Put("log_wall", lx, 5.3, lz, Math.Abs(lz % 3) < .01 && Math.Abs(lx) > 1 ? Math.PI / 2 : 0);
         foreach (var o in r2.Objects.All.ToList()) r2.Supply(me, o.Id, 1.5, 1.5);
         Put("log_roof_outer_steep", -1.2, 8.3, -1.2, Math.PI / 4);
         Put("log_roof_outer_steep", 4.2, 8.3, -1.2, -Math.PI / 4);
@@ -543,6 +556,14 @@ internal static class GameplayTests
         Put("log_roof_outer_steep", 4.2, 8.3, 4.2, -Math.PI * 3 / 4);
         var tops = r2.Objects.All.Where(o => o.Kind == "log_roof_outer_steep").Select(o => Building.ToWorld(new Pose(o.X, o.Y, o.Z, o.Yaw), new V3(1.5, 3, 1.5))).ToList();
         T.Check(tops.Count == 4 && tops.All(p => p.DistanceTo(new V3(1.5, 11.3, 1.5)) < .01), $"a hip roof: the corners meet at the top ({string.Join("; ", tops)})");
+        // Testing tools (D128): off, no kits; on, kits and pieces built at once without materials.
+        var t3 = new GameRules(c, new World());
+        T.Check(!t3.Give(me, "materials").Ok, "no free kits unless the testing tools are on");
+        t3.Testing = true;
+        T.Check(t3.Give(me, "materials").Ok && t3.Inventory(me).Count("log") >= 50 && t3.Give(me, "tools").Ok && t3.Inventory(me).HasTag("bow"), "kits given");
+        int logs3 = t3.Inventory(me).Count("log");
+        T.Check(t3.Place(me, "log_foundation", 0, 5.3, 0, 0, 0, 0, -4).Ok && t3.Objects.All.Single() is { Blueprint: false } && t3.Inventory(me).Count("log") == logs3,
+            "free building: the foundation stands at once, nothing taken from the pack");
         // Overlap geometry: turned boxes.
         var pa = new Pose(0, 0, 0, 0); var pb = new Pose(2.9, 0, 0, Math.PI / 4);
         T.Check(Building.Overlaps(foundation, pa, foundation, pb) && !Building.Overlaps(foundation, pa, foundation, new Pose(3, 0, 0, 0)) && !Building.Overlaps(foundation, pa, foundation, new Pose(4.6, 0, 0, Math.PI / 4)),

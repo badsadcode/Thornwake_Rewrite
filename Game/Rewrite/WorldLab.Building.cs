@@ -88,7 +88,7 @@ public partial class WorldLab
                 _buildCategory = (int)(key.Keycode - Key.Key1); return true;
             case Key.V: CycleShape(key.ShiftPressed ? -1 : 1); return true;
             case Key.X: CycleMaterial(); return true;
-            case Key.R: _buildTurn += (key.ShiftPressed ? -1 : 1) * Math.PI / 4; return true;
+            case Key.R: _buildTurn += (key.ShiftPressed ? -1 : 1) * Math.PI / 2; return true;
             case Key.Pageup: _buildRaise += key.ShiftPressed ? 1 : .25; return true;
             case Key.Pagedown: _buildRaise -= key.ShiftPressed ? 1 : .25; return true;
             case Key.Home: _buildRaise = 0; _buildTurn = 0; return true;

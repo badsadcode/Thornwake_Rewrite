@@ -3,6 +3,7 @@ using System.Linq;
 using Godot;
 using Thornwake.Gameplay;
 using Thornwake.Rewrite.Net;
+using Thornwake.WorldGen;
 
 namespace Thornwake.Rewrite;
 
@@ -33,6 +34,7 @@ public partial class WorldLab
         _pitch = Mathf.Asin(d.Y);
     }
     private double _htHealth;
+    private (long Cx, long Cz, double X, double Y, double Z) _htTree;
 
     private void HuntTest(double delta)
     {
@@ -151,7 +153,27 @@ public partial class WorldLab
             case 14:
                 Shot("-wolf");
                 Check(_needs.Health < _htHealth, $"the wolf bit: health {_htHealth:0} → {_needs.Health:0} ({_status})");
+                _rules.Wildlife.Clear();
+                Go(15, .2); break;
+            case 15:
+            {
+                // Tom (build 65): a tree hit once lost its collision. One axe hit, then is its trunk still solid?
+                var tree = Vegetation.TreesNear(_sampler, PlayerX, PlayerZ, 80, DetailConfig.For(_sampler)).FirstOrDefault();
+                if (tree.Scale <= 0) { Print("no tree within 80 m: the trunk check skipped"); Done(); return; }
+                _htTree = (tree.Cx, tree.Cz, tree.X, tree.Y, tree.Z);
+                Teleport(tree.X + 1.5, tree.Z);
+                Go(16, 3); break;
+            }
+            case 16:
+                _rules.Chop((int)NetServer.HostPeer, _htTree.Cx, _htTree.Cz, _htTree.X + 1.5, _htTree.Z);
+                Go(17, 1.5); break;
+            case 17:
+            {
+                var at = new Vector3((float)(_htTree.X - _originX), (float)_htTree.Y + 1, (float)(_htTree.Z - _originZ));
+                var hits = _player.GetWorld3D().DirectSpaceState.IntersectPoint(new PhysicsPointQueryParameters3D { Position = at, CollisionMask = 1 }, 4);
+                Check(_fallingTrees.ContainsKey((_htTree.Cx, _htTree.Cz)) && hits.Count > 0, $"a tree hit once is still solid ({hits.Count} colliders in its trunk)");
                 Done(); break;
+            }
         }
 
         Animal Put(string kind, double ahead)
@@ -321,8 +343,8 @@ public partial class WorldLab
                 Go(45, .3); break;
             case 45:
                 // The walls: snapped onto the foundation's four edges, as the ghost would.
-                Snapped("log_wall", 1.4, 0, 0);
-                Snapped("log_wall", -1.4, 0, 0);
+                Snapped("log_wall", 1.4, 0, 0, Math.PI / 2); // (turned along the side, as a player facing it)
+                Snapped("log_wall", -1.4, 0, 0, Math.PI / 2);
                 Snapped("log_wall_doorway", 0, 0, 1.4);
                 Snapped("log_wall", 0, 0, -1.4);
                 Go(5, .6); break;
@@ -332,12 +354,12 @@ public partial class WorldLab
                 Check(walls.Count == 4, $"four wall blueprints ({walls.Count}; {_status})");
                 foreach (var w in walls) Act(new ActionRequest(ActionKind.Supply, w.Id, 0, "", 0, 0, 0, 0));
                 // The roof: a thatch ridge across the walls running along X (eaves on the walls at ±z), peaks on the others.
-                Snapped("thatch_roof_ridge_steep", 0, 3, 1.5, Math.PI / 2);
+                Snapped("thatch_roof_ridge_steep", 0, 3, 1.5); // (its eaves on the walls along X, the peaks on the others)
                 Go(6, .6); break;
             }
             case 6:
-                Snapped("log_peak_steep", 1.5, 3, 0);
-                Snapped("log_peak_steep", -1.5, 3, 0);
+                Snapped("log_peak_steep", 1.5, 3, 0, Math.PI / 2);
+                Snapped("log_peak_steep", -1.5, 3, 0, Math.PI / 2);
                 Snapped("log_door", 0, .9, 1.5);
                 Go(7, .6); break;
             case 7:
@@ -426,7 +448,8 @@ public partial class WorldLab
             case 18:
                 // (the house's frame: its centre is the shared corner at local (1.5, 1.5))
                 foreach (var (lx, lz) in new[] { (-1.4, 0.0), (-1.4, 3.0), (4.4, 0.0), (4.4, 3.0), (0.0, -1.4), (3.0, -1.4), (0.0, 4.4), (3.0, 4.4) })
-                    Snapped(lx == 0 && lz == 4.4 ? "log_wall_doorway" : lx == 4.4 && lz == 0 ? "log_wall_window" : "log_wall", lx, 0, lz);
+                    Snapped(lx == 0 && lz == 4.4 ? "log_wall_doorway" : lx == 4.4 && lz == 0 ? "log_wall_window" : "log_wall", lx, 0, lz,
+                        Math.Abs(lx) > 1 && Math.Abs(lz % 3) < .01 ? Math.PI / 2 : 0);
                 Go(19, .6); break;
             case 19:
                 foreach (var o in _seenObjects.All.Where(o => o.Blueprint).ToList()) Act(new ActionRequest(ActionKind.Supply, o.Id, 0, "", 0, 0, 0, 0));

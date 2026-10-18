@@ -324,6 +324,9 @@ public static class GameSettings
     public static readonly Setting ShoulderAim = Add(new("ui.shoulder_aim", "Interface", "Over-the-shoulder aim", 0, 1, 1, 1,
         "With the bow in hand or while building, the camera moves over Alden's right shoulder so the aim (the screen's centre) " +
         "is not hidden behind him. Off: the camera stays straight behind (as before build 63)."));
+    public static readonly Setting TestingTools = Add(new("sim.testing", "Simulation", "Testing tools", 0, 1, 1, 0,
+        "For trying things out (D128): building needs no materials (blueprints are built at once), and the pack (I) gets buttons " +
+        "that give materials, weapons and tools. A sandbox rule: in multiplayer the host's applies to everyone."));
     public static readonly Setting NeedsOn = Add(new("sim.needs", "Simulation", "Hunger and cold", 0, 1, 1, 1,
         "Step 1 placeholder needs (D110): food, body warmth, wetness and health. Off: none of them change (testing the world)."));
     public static readonly Setting Animals = Add(new("sim.animals", "Simulation", "Animals", 0, 3, 1, 2,

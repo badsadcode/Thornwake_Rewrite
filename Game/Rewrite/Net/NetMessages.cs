@@ -53,6 +53,8 @@ public enum ActionKind : byte
     Attack = 11, Shoot = 12, Butcher = 13,
     // building (D121): a blueprint of piece Id at X, Y, Z turned Yaw (in place of object A); bring materials to, take down, use object A
     Place = 14, Supply = 15, Dismantle = 16, Use = 17,
+    // testing tools (D128): kit Id into the pack
+    Give = 18,
 }
 
 /// <summary>An action request: hit the tree of lattice cell (A, B); make recipe Id (placing at X, Y, Z facing Yaw);

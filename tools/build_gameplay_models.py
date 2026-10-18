@@ -475,7 +475,8 @@ def main():
         jobs.append((name, OUT_BUILD, lambda k=kind: piece_wall(k)))
     jobs += [("log_foundation", OUT_BUILD, piece_foundation), ("log_foundation_stilts", OUT_BUILD, piece_foundation_stilts), ("log_floor", OUT_BUILD, piece_floor),
              ("log_floor_half", OUT_BUILD, lambda: piece_floor(True)), ("log_door", OUT_BUILD, piece_door),
-             ("log_stairs", OUT_BUILD, lambda: piece_stairs(3.0, 4.0, 12)), ("log_steps", OUT_BUILD, lambda: piece_stairs(1.5, 2.0, 6))]
+             ("log_stairs", OUT_BUILD, lambda: piece_stairs(3.0, 4.0, 12)), ("log_steps", OUT_BUILD, lambda: piece_stairs(1.5, 2.0, 6)),
+             ("log_stairs_steep", OUT_BUILD, lambda: piece_stairs(3.0, 3.0, 12))]
     for mat in ("log", "thatch"):
         for shape in ("slope", "ridge", "outer", "inner", "peak"):
             for pitch in ("steep", "low"):

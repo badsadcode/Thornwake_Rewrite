@@ -1256,6 +1256,7 @@ public partial class WorldLab : Node3D
         sb.AppendLine($"Time: {_clock.Describe()} (hour {F(_clock.Hour)})");
         sb.AppendLine(_atmosphere.DebugInfo());
         if (_water.Sim is { Added: > 0 } sim) sb.AppendLine($"Water simulation: {F(sim.Volume())} m³ on the land, {sim.Sources.Count} spring(s){(_rain ? ", raining" : "")}");
+        sb.Append(GameplayDump(F));
         sb.AppendLine();
         if (_net != null) { sb.AppendLine(_net.Stats.Summary(_net.Peers())); }
         sb.AppendLine("Settings:");

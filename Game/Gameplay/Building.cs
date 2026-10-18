@@ -137,6 +137,10 @@ public static class Building
                 for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++) for (int dz = -1; dz <= 1; dz++)
                     cells.Add(((long)Math.Floor(q.X / .1) + dx, (long)Math.Floor(q.Y / .1) + dy, (long)Math.Floor(q.Z / .1) + dz));
         var candidates = new List<(double Score, Pose Pose, int Joints)>();
+        // The way the player turns it decides where it faces (Tom, build 65: stairs and half floors would not turn): a
+        // quarter turn away costs more than a few joints; snapping only finds the place. Doors line up with their doorway.
+        bool align = ghost.Has("align");
+        double turnWeight = align ? .45 : 2;
         foreach (var p in joinable)
         {
             foreach (var t in SnapPoints(p.Def, p.Pose))
@@ -145,6 +149,7 @@ public static class Building
                 if (toAim > SnapRadius) continue;
                 for (int k = 0; k < 4; k++)
                 {
+                    if (align && k % 2 == 1) continue; // (a door turns only in line with what it joins)
                     double yaw = p.Pose.Yaw + k * Math.PI / 2;
                     double turn = Math.Abs(Math.IEEERemainder(yaw - desiredYaw, Math.Tau)) / (Math.PI / 2); // 0 … 2
                     foreach (var g in ghost.Snap)
@@ -163,7 +168,7 @@ public static class Building
                         var off = centre - aim;
                         double side = normal is { } nv ? off.X * nv.X + off.Y * nv.Y + off.Z * nv.Z : 0;
                         double below = .8 * Math.Max(0, -side) + .25 * Math.Max(0, -off.Y);
-                        candidates.Add((toAim - .7 * (joints - 1) + .35 * body + .45 * turn + below, pose, joints));
+                        candidates.Add((toAim - .7 * (joints - 1) + .35 * body + turnWeight * turn + below, pose, joints));
                     }
                 }
             }

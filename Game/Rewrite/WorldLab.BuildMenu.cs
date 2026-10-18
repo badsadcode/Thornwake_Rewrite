@@ -85,6 +85,7 @@ public partial class WorldLab
         _buildPicking = on && _building;
         ClosePieceMenu();
         Input.MouseMode = _buildPicking ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Captured;
+        _buildLmbWas = true; // (the click that picked is still held: it must not place — Tom, build 65; the next click does)
         if (_pickTitle != null) _pickTitle.Visible = _buildPicking;
         _buildPanel?.AddThemeStyleboxOverride("panel", Box(new Color(.06f, .07f, .07f, _buildPicking ? .88f : .72f), 8, 10, _buildPicking ? Gold : null, _buildPicking ? 1 : 0));
     }
@@ -146,7 +147,7 @@ public partial class WorldLab
         _pieceMenu.QueueFree();
         _pieceMenu = null;
         _pieceMenuId = 0;
-        if (recapture) Input.MouseMode = Input.MouseModeEnum.Captured;
+        if (recapture) { Input.MouseMode = Input.MouseModeEnum.Captured; _buildLmbWas = true; }
     }
 
     private void ShowBuildMenu(bool on)
@@ -189,6 +190,24 @@ public partial class WorldLab
             : _ghostFree ? $"[color=#9fd3ff]free{(_buildRaise != 0 ? $", raised {_buildRaise:+0.00;-0.00} m" : "")} — LMB places the blueprint[/color]"
             : "[color=#9fd3ff]snapped — LMB places the blueprint[/color]";
         _buildInfo.Text = $"[b]{def.Name}[/b]   needs {cost}   ·   {state}";
+    }
+
+    /// <summary>The F9 dump's gameplay part (Tom's building reports): what is held, the building state and the ghost, the
+    /// pieces within 25 m (kind, place, turn, blueprint), the animals near and the pack.</summary>
+    private string GameplayDump(System.Func<double, string> f)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"Holding: {(_axeHeld ? "axe" : _me.RodHeld ? "rod" : _me.Weapon ?? "nothing")} · building {(_building ? "open" : "closed")}" +
+            (_building ? $" · {Category} / {Material} / {Shape} ({Piece.Id}) · turn {f(_buildTurn * 180 / System.Math.PI)}° · raise {f(_buildRaise)} m · " +
+                $"ghost {(_ghostPose is { } g ? $"at {f(g.X)}, {f(g.Y)}, {f(g.Z)} yaw {f(g.Yaw * 180 / System.Math.PI)}° {(_ghostFree ? "free" : _ghostReplace != 0 ? $"swap {_ghostReplace}" : "snapped")}" : "none")}" +
+                (_ghostWhy.Length > 0 ? $" — {_ghostWhy}" : "") : ""));
+        var pieces = _seenObjects.Near(PlayerX, PlayerZ, 25).Where(o => _catalog.Piece(o.Kind) != null).ToList();
+        sb.AppendLine($"Pieces within 25 m: {pieces.Count}{(_aimedAny != 0 ? $" · aimed at {_aimedAny}" : "")}");
+        foreach (var o in pieces.Take(80))
+            sb.AppendLine($"  {o.Id} {o.Kind} at {f(o.X)}, {f(o.Y)}, {f(o.Z)} yaw {f(o.Yaw * 180 / System.Math.PI)}°{(o.Blueprint ? " blueprint" : "")}{(o.State != 0 ? $" state {o.State}" : "")}");
+        sb.AppendLine($"Animals near: {_animalViews.Count} ({string.Join(", ", _animalViews.Values.GroupBy(v => v.Def.Id).Select(g => $"{g.Key} {g.Count()}"))})");
+        sb.AppendLine("Pack: " + string.Join(", ", _myInv.Stacks.Select(s => $"{s.Item} {s.Count}")));
+        return sb.ToString();
     }
 
     private static void Fill(Container box, IEnumerable<Control> items)

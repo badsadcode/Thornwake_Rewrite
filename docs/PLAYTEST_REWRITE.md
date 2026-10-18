@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 66 — testing tools, snapping you can steer, steep stairs
+* **Testing tools**: in the pack (I) tick *Testing tools (free building)* (or Settings → Simulation). Blueprints are then
+  built at once without materials, and *Give materials* / *Give weapons and tools* fill your pack.
+* **Turning**: a snapped piece now faces the way you turn it — **R turns 90°**, the wheel 15°. Facing a foundation's edge,
+  a wall goes along it; turn it a quarter and it stands across the deck (an inner wall). Stairs and half floors turn with R.
+* **Many more snap points** (every 0.75 m on decks, floors, walls and roof edges): inner walls anywhere on a deck's grid,
+  half floors and stairs at quarter positions, staggered foundations.
+* **Steep stairs** (Stairs, V): 3 m up over 3 m, so a staircase fits inside a 3 × 3 m room.
+* **Fixed**: picking a piece with the mouse placed it at once (now the next click places); a tree being chopped could be
+  walked through; F9 dumps now include what you are building and the pieces around you.
+
 ## New in build 65 — building with the mouse, campfires on decks, arrows found again
 * **Choose with the mouse**: while building, press **Tab** — the cursor is free over the menu; click a category, then a
   piece's picture, and you are back placing it (Tab or Esc returns without changing).

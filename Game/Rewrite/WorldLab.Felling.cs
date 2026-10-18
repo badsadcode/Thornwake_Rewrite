@@ -34,6 +34,7 @@ public partial class WorldLab
         public string Species = "";
         public bool Falling, Landed, Hurt, Creaked;
         public MeshInstance3D? Notch, BackCut;
+        public StaticBody3D? Body;    // its trunk's collision while it stands (it left the forest's batches)
     }
 
     private sealed class Trunk
@@ -142,6 +143,14 @@ public partial class WorldLab
         var f = new FallingTree { Pivot = pivot, Model = model, Cx = t.Cx, Cz = t.Cz, X = t.X, Y = t.Y, Z = t.Z, Scale = t.Scale, Height = GameRules.TreeHeight(t.Scale),
             Species = Vegetation.Species[t.Species].Split('_')[0].ToLowerInvariant() };
         _fallingTrees[(t.Cx, t.Cz)] = f;
+        // (Tom, build 65: drawn on its own it lost its collision — you walked through a tree being chopped)
+        float trunkRadius = ObjectCollision.TrunkRadius(t.Species) * (float)t.Scale;
+        if (trunkRadius > 0)
+        {
+            f.Body = new StaticBody3D { Name = "TrunkBody", CollisionLayer = 1, CollisionMask = 0 };
+            f.Body.AddChild(new CollisionShape3D { Shape = new CylinderShape3D { Radius = trunkRadius, Height = 4 }, Position = Vector3.Up * 2 });
+            pivot.AddChild(f.Body);
+        }
         _sampler!.Hidden.Remove(ObjectRemovals.Trees, t.Cx, t.Cz, 0);
         _streamer.Invalidate(t.X - 8, t.Z - 8, t.X + 8, t.Z + 8);
         PlaceFalling(f);
@@ -177,6 +186,7 @@ public partial class WorldLab
         if (f.Falling) return;
         // It tips over its base toward Dir, about the horizontal axis across that direction.
         f.Falling = true;
+        f.Body?.QueueFree(); f.Body = null;
         f.NotchDir = dir;
         f.Axis = Vector3.Up.Cross(dir).Normalized();
         f.Angle = Math.Max(f.Lean, .05f); f.Lean = 0; f.LeanTarget = 0;

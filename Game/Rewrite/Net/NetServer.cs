@@ -152,6 +152,7 @@ public sealed class NetServer
                         ActionKind.Supply => rules.Supply(id, a.A, at.X, at.Z),
                         ActionKind.Dismantle => rules.Dismantle(id, a.A, at.X, at.Z),
                         ActionKind.Use => rules.Use(id, a.A, at.X, at.Z),
+                        ActionKind.Give => rules.Give(id, a.Id),
                         _ => ActionResult.Fail("Unknown action."),
                     };
                 }

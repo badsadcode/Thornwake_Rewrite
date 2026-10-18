@@ -37,6 +37,8 @@ public partial class WorldLab : IWorldQuery
     private PanelContainer _pack = null!;
     private ItemList _packItems = null!, _packRecipes = null!;
     private Label _packInfo = null!;
+    private CheckBox? _testingBox;
+    private Control[] _testingButtons = System.Array.Empty<Control>();
 
     private NetClient? GameClient => _net?.Client ?? _localClient;
     private static bool NeedsOn => GameSettings.NeedsOn.On;
@@ -168,6 +170,7 @@ public partial class WorldLab : IWorldQuery
         if (_rules != null && !IsNetClient)
         {
             _rules.Step(dh * 60);
+            _rules.Testing = GameSettings.TestingTools.On;
             _rules.Wildlife.Density = _animalsOverride ?? GameSettings.Animals.Index switch { 0 => 0, 1 => .5, 2 => 1, _ => 2 };
         }
         _seenObjects.Step(dh * 60); _seenObjects.TakeChanged(); // (the copy burns down too, for the fires drawn here)
@@ -399,6 +402,17 @@ public partial class WorldLab : IWorldQuery
         hold.Pressed += ToggleAxe;
         itemButtons.AddChild(eat); itemButtons.AddChild(hold);
         left.AddChild(itemButtons);
+        // Testing tools (Tom: "so I don't have to chop down a lot of trees before testing"; D128): the host's rule.
+        var testing = new HBoxContainer();
+        _testingBox = new CheckBox { Text = "Testing tools (free building)", TooltipText = GameSettings.TestingTools.Tip };
+        _testingBox.Toggled += on => { if (!IsNetClient) GameSettings.TestingTools.Value = on ? 1 : 0; RefreshPack(); };
+        var giveMaterials = new Button { Text = "Give materials" };
+        giveMaterials.Pressed += () => Act(new ActionRequest(ActionKind.Give, 0, 0, "materials", 0, 0, 0, 0));
+        var giveTools = new Button { Text = "Give weapons and tools" };
+        giveTools.Pressed += () => Act(new ActionRequest(ActionKind.Give, 0, 0, "tools", 0, 0, 0, 0));
+        testing.AddChild(_testingBox); testing.AddChild(giveMaterials); testing.AddChild(giveTools);
+        _testingButtons = new Control[] { giveMaterials, giveTools };
+        left.AddChild(testing);
         right.AddChild(new Label { Text = "Make" });
         _packRecipes = new ItemList { SizeFlagsVertical = Control.SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(0, 300) };
         _packRecipes.ItemSelected += _ => ShowRecipe();
@@ -437,6 +451,12 @@ public partial class WorldLab : IWorldQuery
         }
         if (recipe >= 0 && recipe < _packRecipes.ItemCount) _packRecipes.Select(recipe);
         _packInfo.Text = $"Carrying {_myInv.Weight:0.0} kg. " + (NeedsOn ? _needs.Describe() : "");
+        if (_testingBox != null)
+        {
+            _testingBox.SetPressedNoSignal(GameSettings.TestingTools.On);
+            _testingBox.Disabled = IsNetClient; // (the host decides)
+            foreach (var b in _testingButtons) b.Visible = GameSettings.TestingTools.On;
+        }
     }
 
     /// <summary>A joined player's own check (the host checks again): its copy of the pack and the fires it sees.</summary>

@@ -1847,6 +1847,36 @@ placed blueprint; a way to retrieve arrows if I find them."
 * Checked: headless (a campfire on a deck and not in the air, taken down again; arrows) and `--build-test` (a campfire on
   a lone foundation's deck, aimed at, its menu, choosing with the mouse, taken down by aiming at it).
 
+## D128 — Testing tools (2026-10-18)
+Tom: "a menu or a checkbox in the crafting menu so I don't have to chop down a lot of trees before I start testing."
+A sandbox rule **Simulation → Testing tools** (off by default; in multiplayer the host's), also a checkbox in the pack
+(I; a joined player sees the host's choice). On: **blueprints are built at once without materials** (recorded as
+supplied, so taking them down gives the materials back), and the pack shows **Give materials** (60 logs, 60 branches, 60
+plant fibre, 30 stones, 20 bones, 10 hides, berries) and **Give weapons and tools** (axe, knife, spear, bow, 40 arrows,
+sword, rod, bait, roast meat) — the host checks the rule.
+
+## D129 — Snapping that does what you turn it to; more snap points; steep stairs; fixes (2026-10-18)
+Tom (build 65, dumps 133310, 133701, 142416): building is not versatile enough — "maybe more snapping points"; stairs
+and half floors would not turn; picking a piece with the mouse placed it at once; a tree being chopped could be walked
+through.
+* **More snap points**: foundations and floors have a **0.75 m grid over their whole top** (25 points; a half floor 15),
+  walls and half walls points every 0.75 m along their bottom and top, gables and peaks along their bottom (and the
+  middle of a gable's slope), roof slopes and ridges every 0.75 m along their eaves and top. Inner walls can stand on any
+  grid line of a deck, half floors, stairs and walls can sit at quarter positions, foundations can be staggered.
+* **The player's turn decides the facing**: a snapped piece faces the quarter turn nearest the way you want it (the
+  camera's heading, plus R in **90°** steps, the wheel in 15°) — a quarter turn away now costs more than a few meeting
+  points, so snapping finds the *place* and you choose the *direction* (Valheim's way). Facing a foundation's edge, a wall
+  lies along it; turned a quarter, it stands across the deck as an inner wall. Only **doors** still line up with their
+  doorway by themselves (tag `align`).
+* **Steep stairs** (3 m up over 3 m: 45°; Stairs → V): a staircase fits inside one 3 × 3 m room (the 4 m stairs do not).
+* **Picking with the mouse no longer places**: the click that picks a piece (or a piece menu's button) was still held
+  when the cursor was captured again and counted as a placing click; it is swallowed — the next click places.
+* **A tree being chopped keeps its collision**: from the first hit it is drawn on its own (it can shake and fall), out of
+  the forest's tiles — and their collision with it. It now carries its own trunk collision until it falls. Checked in the
+  game: one hit, a probe in the trunk finds it solid (0 colliders before the fix, 1 after).
+* **Dumps (F9) carry the building state**: what you hold, the chosen piece, turn and raise, the ghost's place and why it
+  cannot go there, the pieces within 25 m (kind, place, turn, blueprint), the animals near and the pack.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

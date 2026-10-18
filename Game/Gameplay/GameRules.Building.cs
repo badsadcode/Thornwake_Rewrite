@@ -12,6 +12,9 @@ namespace Thornwake.Gameplay;
 /// </summary>
 public sealed partial class GameRules
 {
+    /// <summary>Testing tools (D128; a sandbox rule): pieces are built at once without materials, and Give hands out kits.</summary>
+    public bool Testing { get; set; }
+
     /// <summary>Farthest from the player a piece can be placed, supplied or taken down (m).</summary>
     public const double BuildReach = 9;
 
@@ -56,7 +59,8 @@ public sealed partial class GameRules
             _inventoryChanged.Add(player);
         }
         var o = Objects.Add(def.Id, pose.X, pose.Y, pose.Z, (float)pose.Yaw, 0);
-        o.Blueprint = def.Cost.Count > 0;
+        o.Blueprint = def.Cost.Count > 0 && !Testing;
+        if (Testing) foreach (var c in def.Cost) o.Supplied.Add((c.Item!, c.Count)); // (built for free, as if supplied)
         o.Owner = 0;
         if (!o.Blueprint) Finish(o, def);
         if (old != null && o.Blueprint)
@@ -121,6 +125,23 @@ public sealed partial class GameRules
         Objects.Remove(o.Id);
         _inventoryChanged.Add(player);
         return new(true, back.Count > 0 ? $"{def.Name} taken down: {string.Join(", ", back.Select(b => $"{b.Item2} {Catalog.Item(b.Item1).Name.ToLowerInvariant()}"))} back." : $"{def.Name} taken down.");
+    }
+
+    /// <summary>Testing tools (D128): a kit into the pack — "materials" or "tools" (weapons, tools, arrows, food).</summary>
+    public ActionResult Give(int player, string kit)
+    {
+        if (!Testing) return ActionResult.Fail("Testing tools are off (Settings → Simulation → Testing tools, the host's).");
+        (string Item, int Count)[] items = kit switch
+        {
+            "materials" => new[] { ("log", 60), ("branch", 60), ("plant_fibre", 60), ("stone", 30), ("bone", 20), ("hide", 10), ("berries", 20) },
+            "tools" => new[] { ("stone_axe", 1), ("stone_knife", 1), ("spear", 1), ("bow", 1), ("arrow", 40), ("stone_sword", 1), ("fishing_rod", 1), ("bait", 20), ("cooked_meat", 10) },
+            _ => System.Array.Empty<(string, int)>(),
+        };
+        if (items.Length == 0) return ActionResult.Fail("Unknown kit.");
+        var inv = Inventory(player);
+        foreach (var (item, count) in items) if (Catalog.Items.ContainsKey(item)) inv.Add(item, count);
+        _inventoryChanged.Add(player);
+        return new(true, kit == "materials" ? "Testing: materials added to the pack." : "Testing: weapons, tools, arrows and food added to the pack.");
     }
 
     /// <summary>Use a piece (E): a door opens or shuts.</summary>

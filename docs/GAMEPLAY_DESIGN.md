@@ -170,7 +170,7 @@ or with friends. **Categories with shapes, Soulmask style**: B opens building; t
 foundation, floor, wall, door, stairs, roof), **V** cycles its shapes (wall → window → doorway → half → gables and peaks),
 **X** its materials (roofs: logs or thatch) — shown as a menu with a picture of each piece (D124); aiming at the middle of a placed piece of the same category swaps it for the
 chosen shape (its materials go into the new one). **Versatile placement**: pieces snap by their points to the pieces
-around (edges to edges, eaves to wall tops), turned in quarter turns of what they join and the way you face; R and the
+around (edges to edges, eaves to wall tops), turned the way you turn them (R: quarter turns) while snapping finds the place; R and the
 wheel turn freely, Page Up/Down raise, Ctrl places freely without snapping. Roofs come in five shapes (slope, ridge,
 hip and valley corners, peak) at two pitches, so gabled, hip, L-shaped and lean-to roofs can all be built. Later:
 structural strength (a piece needs support, heavy roofs need posts), more materials (stone, planks, wattle and daub),
