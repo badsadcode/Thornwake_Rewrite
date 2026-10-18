@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 75** (caustics by the sun, shorter scan wave with glowing items, crouching bends the waist D141) | `b983a4f` | Thornwake-Rewrite-Preview-75 (v0.9.75) | Versions must match to connect; Caustics → build 74 gives build 74's water; build 74 = `2323405` |
 | **Build 74** (smoke from Tom's own texture for torches and campfires D140; Torch in mist draft, halo at the flame D139; dumps carry mist drift and wetness) | `2323405` | Thornwake-Rewrite-Preview-74 (v0.9.74) | Versions must match to connect; Smoke → build 72 and Torch in mist → build 72 give build 73's look; build 73 = `13d6865` |
 | **Build 73** (the real multiplayer test with 12 players D138: compact positions and animals, far players 4× a second, animal trunk checks cached, a grid for placed objects, object views updated on change; bots, `--net-lag`, TEST_MP_BOTS.cmd; protocol 11) | `13d6865` | Thornwake-Rewrite-Preview-73 (v0.9.73) | Does not connect to build 72 (protocol 11); build 72 = `4b0c9c6` |
 | **Build 72** (vertical half and quarter walls, fences, stairs on floors, floors over rooms, an edge crash fixed D137) | `4b0c9c6` | Thornwake-Rewrite-Preview-72 (v0.9.72) | Versions must match to connect; build 71 = `6717ae6` |
