@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 75 — caustics, scan, crouching (your notes on build 74)
+**Host and everyone joining need build 75** (versions must match to connect).
+* **Caustics follow the sun**: the light net on the bed of shallow water fades at dusk, is gone at night and weaker
+  under clouds (it glowed white at dawn in your pond dump). Settings → Lighting and effects → **Caustics**:
+  *by the sun* (default) or *build 74 (always)*.
+* **Scan (Z)**: the blue wave and its tint are gone after 3 s, leaving the marks; **items glow like animals** — stones
+  (grey-white), berry bushes (pink), carcasses, piles and blueprints — as the ring reaches them.
+* Fixed: the scan's wave did not draw while your torch smoked (only a patch round Alden).
+* **Crouching (C)**: Alden bends forward at the waist with his head up, legs one before the other — no more legs
+  swinging forward into the ground.
+
 ## New in build 74 — your smoke texture, torch in mist
 **Host and everyone joining need build 74** (versions must match to connect).
 * **Smoke from your texture** for the torch and, new, **campfires** (they smoke while burning, not as blueprints or
