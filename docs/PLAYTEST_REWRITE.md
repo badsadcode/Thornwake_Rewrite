@@ -90,6 +90,7 @@ milestone M6), caves.
 * **Bots for your own test** (developer folder): `TEST_MP_BOTS.cmd [address] [players] [spread m] [seconds]` joins your
   hosted game with bot players, no window. `TEST_MP_BOTS.cmd 127.0.0.1 8` adds 7 bots beside you; a spread of 3000 puts
   each in its own place 3 km out.
+  Without the developer folder, from the game folder: `Thornwake.exe --headless -- --world --join=<address> --bots=7` (8 players: that one and 7 bots).
 * **Please, when you test with friends**: after the session send me the network logs of the host and of each friend
   (`%APPDATA%\Thornwake\debug\net-….log`) — they now record the host's load every second (frame times, animals,
   pieces, where the time goes) — and say how it felt (anyone jumping or lagging, actions slow to happen).
