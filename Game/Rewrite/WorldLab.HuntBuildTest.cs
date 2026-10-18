@@ -393,8 +393,12 @@ public partial class WorldLab
                 Shot("-menu-roof");
                 _buildCategory = _catalog.Categories.ToList().IndexOf("Foundation");
                 _buildShape["Foundation"] = "On stilts";
-                AimAt(Building.ToWorld(_btBase, new V3(6, 0, -5)) is var g ? g with { Y = _sampler.Height(g.X, g.Z) } : default);
-                Go(442, 2); break;
+                _btAimAt = Building.ToWorld(_btBase, new V3(6, 0, -5)) is var g ? g with { Y = _sampler.Height(g.X, g.Z) } : default;
+                AimAt(_btAimAt);
+                Go(4411, .3); break;
+            case 4411: case 4412:
+                AimAt(_btAimAt);
+                Go(_btStage == 4411 ? 4412 : 442, _btStage == 4411 ? .3 : 1.4); break;
             case 442:
                 Check(_ghostPiece == "log_foundation_stilts" && _ghostFree, $"the stilts foundation's ghost stands freely ({_ghostWhy})");
                 Shot("-stilts");
