@@ -34,6 +34,28 @@ public partial class WorldLab
     private ShaderMaterial? _waveMat, _glowMat;
     private double _scanX, _scanY, _scanZ;
     private readonly HashSet<int> _glowing = new();
+    // Items glowing after a scan (Tom, build 74: "would be nice if the items would also glow like animals"): copies of
+    // a stone's or bush's meshes wearing the glow, and the glow laid over objects' own meshes (carcasses, piles…).
+    private readonly List<MeshInstance3D> _glowCopies = new();
+    private readonly List<MeshInstance3D> _glowOverlays = new();
+    private readonly Dictionary<Color, ShaderMaterial> _itemGlows = new();
+    private (double X, double Z) _glowOrigin;
+
+    private ShaderMaterial ItemGlow(Color colour)
+    {
+        if (_itemGlows.TryGetValue(colour, out var m)) return m;
+        m = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/AnimalGlow.gdshader") };
+        m.SetShaderParameter("colour", colour);
+        return _itemGlows[colour] = m;
+    }
+
+    private void ClearItemGlows()
+    {
+        foreach (var c in _glowCopies) c.QueueFree();
+        _glowCopies.Clear();
+        foreach (var o in _glowOverlays) if (IsInstanceValid(o)) o.MaterialOverlay = null;
+        _glowOverlays.Clear();
+    }
     private bool _crouch, _winded;
     private float _stamina = 100, _shoulderSide = 1, _shoulderSideSmooth = 1;
 
@@ -71,18 +93,31 @@ public partial class WorldLab
         { v.SetGlow(_glowMat); _glowing.Add(v.Id); }
         foreach (var (l, _) in _scanMarks) l.QueueFree();
         _scanMarks.Clear();
+        ClearItemGlows();
+        _glowOrigin = (_originX, _originZ);
         var marks = new List<(double X, double Y, double Z, string Text, Color Colour)>();
         // (the 30 nearest stones and bushes; named within 15 m, a mark only farther out: less clutter)
         foreach (var g in _streamer.GatherablesNear(PlayerX, PlayerZ, ScanRadius).Take(30))
         {
             bool close = (g.X - PlayerX) * (g.X - PlayerX) + (g.Z - PlayerZ) * (g.Z - PlayerZ) < 15 * 15;
-            marks.Add((g.X, g.Y + .35, g.Z, close ? g.Layer == ObjectRemovals.Stones ? "stone" : "berries" : "", g.Layer == ObjectRemovals.Stones ? new Color(.85f, .85f, .8f) : new Color(.9f, .4f, .6f)));
+            var colour = g.Layer == ObjectRemovals.Stones ? new Color(.85f, .85f, .8f) : new Color(.9f, .4f, .6f);
+            marks.Add((g.X, g.Y + .35, g.Z, close ? g.Layer == ObjectRemovals.Stones ? "stone" : "berries" : "", colour));
+            foreach (var (mesh, at) in _streamer.GatherableMeshes(g.Layer, g.Cx, g.Cz, _originX, _originZ))
+            {
+                var copy = new MeshInstance3D { Mesh = mesh, Transform = at, MaterialOverride = ItemGlow(colour), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+                AddChild(copy);
+                _glowCopies.Add(copy);
+            }
         }
         foreach (var o in _seenObjects.Near(PlayerX, PlayerZ, ScanRadius))
         {
+            int before = marks.Count;
             if (o.Kind == "carcass") marks.Add((o.X, o.Y + .8, o.Z, $"{(_catalog.Animals.TryGetValue(o.Ref, out var d) ? d.Name.ToLowerInvariant() : "carcass")} (butcher)", new Color(1, .45f, .35f)));
             else if (o.Blueprint && _catalog.Piece(o.Kind) is { } p) marks.Add((o.X, o.Y + 1.2, o.Z, $"{p.Name.ToLowerInvariant()} (needs materials)", new Color(.55f, .8f, 1f)));
             else if (o.Contents.Count > 0) marks.Add((o.X, o.Y + .4, o.Z, string.Join(", ", o.Contents.Select(c => _catalog.Item(c.Item).Name.ToLowerInvariant())), new Color(1, .9f, .5f)));
+            if (marks.Count > before && _objectViews.TryGetValue(o.Id, out var view))
+                foreach (var mi in view.FindChildren("*", "MeshInstance3D", true, false).OfType<MeshInstance3D>())
+                { mi.MaterialOverlay = ItemGlow(marks[^1].Colour); _glowOverlays.Add(mi); }
         }
         foreach (var v in _animalViews.Values.Where(v => v.State != AnimalState.Dead))
         {
@@ -128,14 +163,28 @@ public partial class WorldLab
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, ExtraCullMargin = 16384 };
             _camera.AddChild(_scanWave); // (always in view; its shader covers the screen)
         }
-        _scanWave.Visible = sonar && age < 6;
+        // (Tom, build 74: the wave and its tint gone by 3 s, leaving the marks and glows; build 69–74: 6 s)
+        _scanWave.Visible = sonar && age < 3;
         _waveMat!.SetShaderParameter("origin", new Vector3((float)(_scanX - _originX), (float)_scanY, (float)(_scanZ - _originZ)));
         _waveMat.SetShaderParameter("radius", (float)(ScanRadius * Math.Min(1.15, age / 1.4)));
         _waveMat.SetShaderParameter("max_radius", (float)ScanRadius);
-        _waveMat.SetShaderParameter("tint", (float)Math.Clamp(1 - (age - 1.4) / 4.5, 0, 1));
-        _waveMat.SetShaderParameter("fade", (float)Math.Clamp((6 - age) / 1.5, 0, 1));
+        _waveMat.SetShaderParameter("tint", (float)Math.Clamp(1 - (age - 1.4) / 1.2, 0, 1));
+        _waveMat.SetShaderParameter("fade", (float)Math.Clamp((3 - age) / .8, 0, 1));
         _glowMat?.SetShaderParameter("strength", (float)Math.Clamp((12 - age) / 4, 0, 1));
-        if (age > 12) { foreach (var id in _glowing) if (_animalViews.TryGetValue(id, out var gv)) gv.SetGlow(null); _glowing.Clear(); }
+        // Items glow as the ring reaches them, as long as the animals.
+        foreach (var m in _itemGlows.Values) m.SetShaderParameter("strength", (float)Math.Clamp((12 - age) / 4, 0, 1));
+        if (_glowOrigin != (_originX, _originZ))
+        {
+            var shift = new Vector3((float)(_glowOrigin.X - _originX), 0, (float)(_glowOrigin.Z - _originZ));
+            foreach (var c in _glowCopies) c.Position += shift;
+            _glowOrigin = (_originX, _originZ);
+        }
+        foreach (var c in _glowCopies)
+        {
+            double cx = c.Position.X + _originX - _scanX, cz = c.Position.Z + _originZ - _scanZ;
+            c.Visible = cx * cx + cz * cz <= reach * reach;
+        }
+        if (age > 12) { foreach (var id in _glowing) if (_animalViews.TryGetValue(id, out var gv)) gv.SetGlow(null); _glowing.Clear(); ClearItemGlows(); }
         _scanRing.Position = _player.Position + Vector3.Up * .3f;
         _scanRing.Scale = new Vector3(Math.Max(.1f, reach), 1 + reach * .04f, Math.Max(.1f, reach));
         ((StandardMaterial3D)_scanRing.MaterialOverride).AlbedoColor = new Color(.6f, .9f, 1f, .5f * (1 - (float)Math.Min(1, age / 1.2)));
@@ -197,6 +246,7 @@ public partial class WorldLab
     private void TrackingWorldReady()
     {
         _tracks.Clear(); _trackLast.Clear(); _scanAt = -1e9;
+        ClearItemGlows();
         foreach (var (l, _) in _scanMarks) l.QueueFree();
         _scanMarks.Clear();
     }

@@ -2108,6 +2108,26 @@ campfires". Moved to `Assets/Effects/smoke_puff.png` (mipmaps on: smoke is seen 
   later since D138) — object views are placed when created. `--shot-campfire` (captures): a lit campfire beside Alden.
 * The texture is Tom's own (self-made), noted in `Licenses/README.txt`.
 
+## D141 — Caustics by the sun; a shorter scan wave, items glow; crouching bends the waist (2026-10-18)
+Tom on build 74 (dumps 214459, 214534, 214828):
+* **Caustics bright at dawn and at night** (a white net on a pond bed, the sun 4° up): the water shaders added a fixed
+  amount (`0.4 + ground`) whatever the light. Now scaled by a global `caustic_light`, the direct sun the caustics focus:
+  smoothstep from 2° to 30° of sun elevation, less under a storm and an overcast (Atmosphere). Setting **Caustics**
+  (`fx.caustic_light`): *by the sun* (default) or *build 74 (always)*. Water.gdshader, WaterExperimental.gdshader,
+  WaterSea.gdshaderinc (all the water styles).
+* **The scan's circle should fade sooner, leaving the marks**: the sonar wave and its tint are gone by 3 s (were 6 s);
+  the marks stay their 20 s, the glows their 12 s. **Items glow like animals**: stones and berry bushes get a copy of
+  their own meshes wearing the glow (in the marks' colours: grey-white, pink), shown as the ring reaches them;
+  carcasses, piles and blueprints get the glow over their own meshes. `--scan-test` takes a third picture at 4 s.
+* Found on the way: the textured smoke's **backlight** (D140) stopped the sonar wave from drawing while a torch smoked
+  (the wave showed only round Alden). Backlight off.
+* **Crouching bent the legs**: the figure's legs are rigid, swung forward from the hip into the ground. Now the body
+  from the belt up hangs from a waist pivot that leans forward (0.55 rad), the head from a neck pivot turned back
+  (85 %), so the gaze stays almost level; the legs stand one before the other, angled so both feet reach the ground,
+  0.1 m lower. Built in Character from Visuals.Person (unchanged: the original game uses it). `--shot-crouch`.
+* Checked: `--hunt-test`, `--build-test` (weapons and tools hang from the arms, now under the waist), captures of
+  each change.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

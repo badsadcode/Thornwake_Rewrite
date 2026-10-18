@@ -606,6 +606,11 @@ public partial class Atmosphere : Node3D
         // The real sun, also below the horizon (the light stops at −4°): twilight colours follow it (Sky.gdshader).
         var trueSun = GameClock.Direction(sky.SunElevation, sky.SunAzimuth);
         RenderingServer.GlobalShaderParameterSet("sun_true", new Vector4(trueSun.X, trueSun.Y, trueSun.Z, (float)sky.SunElevation));
+        // Caustics are the sun's light focused by the waves: none at night, faint at dawn, weak under an overcast (Tom,
+        // dump 214459: bright white nets on a pond bed with the sun 4° up). Build 74: always at full strength.
+        float causticLight = GameSettings.CausticLight.Index == 0 ? 1
+            : Mathf.SmoothStep(2, 30, (float)sky.SunElevation) * (1 - .85f * _storm) * (1 - .6f * _gloom);
+        RenderingServer.GlobalShaderParameterSet("caustic_light", causticLight);
         // Auroras: high latitudes (toward the pole: sign = hemisphere), dark nights, clear skies; some nights strong,
         // some quiet (activity per night from the day number).
         double absLat = Math.Abs(sky.Latitude);

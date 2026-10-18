@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using Thornwake.World;
 
@@ -22,21 +23,49 @@ public sealed partial class Character : Node3D
     public Node3D Body { get; private set; }
     private Color _tunic;
     public Torch Torch { get; }
-    private float _walkPhase;
+    private float _walkPhase, _lean;
     private bool _bodyHidden;
 
     public Character(Color tunic, Wind wind)
     {
         Name = "Character";
         _tunic = tunic;
-        Body = Visuals.Person(tunic);
+        Body = Person(tunic);
         AddChild(Body);
         Torch = new Torch();
         Torch.Follow(wind);
-        Body.GetNode<Node3D>("RightArm").AddChild(Torch);
+        Part("RightArm").AddChild(Torch);
         TorchInHand();
         Torch.Lit = false;
     }
+
+    /// <summary>
+    /// Visuals.Person with a waist and a neck (Tom, build 74: crouching should bend the torso, not the legs, the head kept
+    /// almost straight): everything from the belt up hangs from a pivot at the hips ("Upper"), the head from one at the
+    /// neck ("Neck"). The model itself is unchanged (the original game uses it).
+    /// </summary>
+    private static Node3D Person(Color tunic)
+    {
+        var body = Visuals.Person(tunic);
+        var upper = new Node3D { Name = "Upper", Position = new Vector3(0, WaistY, 0) };
+        var neck = new Node3D { Name = "Neck", Position = new Vector3(0, NeckY - WaistY, 0) };
+        upper.AddChild(neck);
+        foreach (var part in body.GetChildren().OfType<Node3D>().ToList())
+        {
+            if (part.Name.ToString().EndsWith("Leg") || part.Position.Y < WaistY + .03f) continue; // (legs and the tunic's hem stay)
+            bool head = part.Position.Y >= NeckY - .01f;
+            body.RemoveChild(part);
+            part.Position -= new Vector3(0, head ? NeckY : WaistY, 0);
+            (head ? neck : upper).AddChild(part);
+        }
+        body.AddChild(upper);
+        return body;
+    }
+
+    private const float WaistY = .9f, NeckY = 1.43f;
+
+    /// <summary>A limb or another named part of the figure, wherever it hangs.</summary>
+    private Node3D? Part(string name) => Body.FindChild(name, true, false) as Node3D;
 
     /// <summary>Dress in another colour (a joining player learns their id, and with it their colour, from the host).</summary>
     public void SetTunic(Color tunic)
@@ -52,9 +81,9 @@ public sealed partial class Character : Node3D
         if (hidden) SetFirstPerson(null);
         Torch.Reparent(this, false);
         Body.QueueFree();
-        Body = Visuals.Person(tunic);
+        Body = Person(tunic);
         AddChild(Body);
-        Torch.Reparent(Body.GetNode<Node3D>("RightArm"), false);
+        Torch.Reparent(Part("RightArm"), false);
         TorchInHand();
         Facing = facing;
         if (hold != null) SetFirstPerson(hold);
@@ -103,9 +132,14 @@ public sealed partial class Character : Node3D
         }
         else _chopPhase = 0;
         AnimateWeapon(dt, swing);
-        // Sneaking: lower, knees forward (placeholder pose).
-        Body.Position = Body.Position with { Y = Mathf.Lerp(Body.Position.Y, Crouching ? -.32f : 0, 1 - Mathf.Exp(-10 * dt)) };
-        if (Crouching) { Limb("LeftLeg", swing * .5f - .75f); Limb("RightLeg", -swing * .5f - .75f); }
+        // Sneaking (Tom, build 74): bent forward at the waist, the head kept up, a little lower on legs set one before the
+        // other (the legs are rigid: angled, both feet still reach the ground). Build 68–74 swung both legs forward.
+        float ease = 1 - Mathf.Exp(-10 * dt);
+        _lean = Mathf.Lerp(_lean, Crouching ? .55f : 0, ease);
+        Body.Position = Body.Position with { Y = Mathf.Lerp(Body.Position.Y, Crouching ? -.1f : 0, ease) };
+        if (Part("Upper") is { } upper) upper.Rotation = new Vector3(_lean, 0, 0);
+        if (Part("Neck") is { } neck) neck.Rotation = new Vector3(-_lean * .85f, 0, 0);
+        if (Crouching) { Limb("LeftLeg", swing * .4f - .45f); Limb("RightLeg", -swing * .4f + .45f); }
     }
 
     /// <summary>The hand the bow is held in (setting Interface → Bow hand; Tom: the right).</summary>
@@ -136,7 +170,7 @@ public sealed partial class Character : Node3D
             _weapon = GameplayModels.Weapon(value);
             var hold = new Node3D { Name = "Weapon", Position = new Vector3(0, -.49f, 0) };
             hold.AddChild(_weapon);
-            Body.GetNode<Node3D>(value == "bow" ? BowHand : AxeHand).AddChild(hold);
+            Part(value == "bow" ? BowHand : AxeHand).AddChild(hold);
             _weapon = hold;
             if (value == "bow")
             {
@@ -238,7 +272,7 @@ public sealed partial class Character : Node3D
                     _rodJoints.Add(joint);
                     parent = joint;
                 }
-                Body.GetNode<Node3D>(AxeHand).AddChild(_rod);
+                Part(AxeHand).AddChild(_rod);
             }
             else { _rod!.QueueFree(); _rod = null; _rodJoints.Clear(); Fishing = false; }
         }
@@ -267,7 +301,7 @@ public sealed partial class Character : Node3D
         set
         {
             if (value == (_axe != null)) return;
-            var right = Body.GetNode<Node3D>(AxeHand);
+            var right = Part(AxeHand);
             if (value) { if (RodHeld) RodHeld = false; Weapon = null; _axe = Thornwake.World.Visuals.Tool(0); right.AddChild(_axe); }
             else { _axe.QueueFree(); _axe = null; Chopping = false; }
         }
@@ -275,7 +309,7 @@ public sealed partial class Character : Node3D
 
     private void Limb(string name, float angle)
     {
-        if (Body.GetNodeOrNull<Node3D>(name) is { } limb) limb.Rotation = new Vector3(angle, limb.Rotation.Y, limb.Rotation.Z);
+        if (Part(name) is { } limb) limb.Rotation = new Vector3(angle, limb.Rotation.Y, limb.Rotation.Z);
     }
 
     /// <summary>
@@ -291,7 +325,7 @@ public sealed partial class Character : Node3D
             if (mesh is MeshInstance3D m && !Torch.IsAncestorOf(m))
                 m.CastShadow = hide ? GeometryInstance3D.ShadowCastingSetting.ShadowsOnly : GeometryInstance3D.ShadowCastingSetting.On;
         if (viewHold != null) { Torch.Reparent(viewHold, false); Torch.Position = Vector3.Zero; Torch.Rotation = Vector3.Zero; }
-        else { Torch.Reparent(Body.GetNode<Node3D>("RightArm"), false); TorchInHand(); }
+        else { Torch.Reparent(Part("RightArm"), false); TorchInHand(); }
     }
 
     /// <summary>In the right fist, the stick up and a little forward while the arm is raised; tilted out, away from the head.</summary>

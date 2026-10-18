@@ -148,8 +148,8 @@ public sealed partial class SmokePlume : CpuParticles3D
             BillboardKeepScale = true, // (without it every particle is drawn 1 m wide: a white ball)
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Mix,
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, DepthDrawMode = BaseMaterial3D.DepthDrawModeEnum.Disabled, Roughness = 1,
-            // (shaded: soft — lit from behind as well, as thin smoke is)
-            DiffuseMode = BaseMaterial3D.DiffuseModeEnum.Lambert, BacklightEnabled = true, Backlight = new Color(.5f, .5f, .5f),
+            // (no backlight: with it the scan's sonar wave stopped drawing while a torch smoked, D141)
+            DiffuseMode = BaseMaterial3D.DiffuseModeEnum.Lambert,
         };
     }
 }

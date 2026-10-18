@@ -1578,6 +1578,7 @@ public partial class WorldLab : Node3D
                 }
                 foreach (var (x, z, v) in _shotPours) _water.Sim?.Sources.Add(new Thornwake.Hydraulics.LocalWater.Source { X = x, Z = z, Rate = (float)(v / Math.Max(1, _shotWait * .5)) });
                 if (_shotRain) _rain = true;
+                if (OS.GetCmdlineUserArgs().Contains("--shot-crouch")) { _crouch = true; _me.Crouching = true; } // (sneaking, D141)
                 // --shot-campfire: a lit campfire 4 m ahead of Alden, 2.5 m to the right (smoke and firelight captures; the testing tools
                 // forced for it, never saved)
                 if (OS.GetCmdlineUserArgs().Contains("--shot-campfire"))

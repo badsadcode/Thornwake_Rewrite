@@ -204,6 +204,10 @@ public static class GameSettings
         "Natural: stronger colour and contrast (ACES tone mapping), deeper shade, glow only on real highlights (no " +
         "spilling light), less grey haze. Classic: the look of build 29.",
         options: new[] { "classic", "natural" }));
+    public static readonly Setting CausticLight = Add(new("fx.caustic_light", "Lighting and effects", "Caustics", 0, 1, 1, 1,
+        "The bright light patterns on the bed of shallow water. By the sun: they are the sun's light focused by the waves, " +
+        "so they fade at dusk, are gone at night and weak under clouds. Build 74: always at full strength.",
+        options: new[] { "build 74 (always)", "by the sun" }));
     public static readonly Setting SmokeLook = Add(new("fx.smoke", "Lighting and effects", "Smoke", 0, 1, 1, 1,
         "Smoke from torches and campfires. Smoke texture: puffs of a smoke picture (Tom's), turning and spreading as they " +
         "rise, campfires smoking too. Build 72: soft round dots from the torch only, no campfire smoke.",

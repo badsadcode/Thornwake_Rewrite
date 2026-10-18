@@ -86,11 +86,11 @@ public partial class WorldStreamer : Node3D
     private readonly Dictionary<TileKey, Node3D> _tiles = new();
     // What can be gathered on the level-0 tiles drawn now (D113): loose stones and berry bushes with fruit, by lattice
     // cell, at their world place (E finds the nearest).
-    private readonly Dictionary<TileKey, List<(int Layer, long Cx, long Cz, double X, double Y, double Z)>> _gatherables = new();
+    private readonly Dictionary<TileKey, List<(int Layer, long Cx, long Cz, double X, double Y, double Z, int Kind, Transform3D Local)>> _gatherables = new();
 
     private void RememberGatherables(TileData data)
     {
-        var list = new List<(int, long, long, double, double, double)>();
+        var list = new List<(int, long, long, double, double, double, int, Transform3D)>();
         foreach (var r in data.Rocks)
             if (r.Kind == GroundCover.Stone && r.Cell != 0) Add(ObjectRemovals.Stones, r);
         foreach (var p in data.Props)
@@ -101,7 +101,7 @@ public partial class WorldStreamer : Node3D
         {
             var (cx, cz) = GroundCover.UnpackCell(r.Cell);
             var o = r.Transform.Origin;
-            list.Add((layer, cx, cz, data.Key.MinX + o.X, o.Y, data.Key.MinZ + o.Z));
+            list.Add((layer, cx, cz, data.Key.MinX + o.X, o.Y, data.Key.MinZ + o.Z, r.Kind, r.Transform));
         }
     }
 
@@ -110,7 +110,24 @@ public partial class WorldStreamer : Node3D
         _gatherables.Where(t => _tiles.ContainsKey(t.Key) && t.Key.MinX - radius <= x && x <= t.Key.MinX + t.Key.Size + radius && t.Key.MinZ - radius <= z && z <= t.Key.MinZ + t.Key.Size + radius)
             .SelectMany(t => t.Value)
             .Where(g => (g.X - x) * (g.X - x) + (g.Z - z) * (g.Z - z) <= radius * radius && (_sampler?.Removals.Contains(g.Layer, g.Cx, g.Cz) != true))
-            .OrderBy(g => (g.X - x) * (g.X - x) + (g.Z - z) * (g.Z - z)).ToList();
+            .OrderBy(g => (g.X - x) * (g.X - x) + (g.Z - z) * (g.Z - z)).Select(g => (g.Layer, g.Cx, g.Cz, g.X, g.Y, g.Z)).ToList();
+
+    /// <summary>The meshes a gatherable is drawn with, placed in the world (x, z relative to <paramref name="originX"/>,
+    /// <paramref name="originZ"/>): the scan lays a glow over them (Tom: "the items would also glow like animals").</summary>
+    public List<(Mesh Mesh, Transform3D At)> GatherableMeshes(int layer, long cx, long cz, double originX, double originZ)
+    {
+        var found = new List<(Mesh, Transform3D)>();
+        foreach (var (key, list) in _gatherables)
+            foreach (var g in list)
+            {
+                if (g.Layer != layer || g.Cx != cx || g.Cz != cz) continue;
+                var at = g.Local with { Origin = g.Local.Origin + new Vector3((float)(key.MinX - originX), 0, (float)(key.MinZ - originZ)) };
+                if (layer == ObjectRemovals.Stones) found.Add((RockMeshes.Get(g.Kind), at));
+                else foreach (var (mesh, part) in _props.Parts(g.Kind)) found.Add((mesh, at * part));
+                return found;
+            }
+        return found;
+    }
     private readonly Dictionary<TileKey, long> _tileTriangles = new();
     private readonly Dictionary<TileKey, long> _tileRevision = new();
     private DetailConfig _config;

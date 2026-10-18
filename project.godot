@@ -98,6 +98,10 @@ sun_true={
 "type": "vec4",
 "value": Vector4(0, 1, 0, 45)
 }
+caustic_light={
+"type": "float",
+"value": 1.0
+}
 aurora={
 "type": "float",
 "value": 0.0

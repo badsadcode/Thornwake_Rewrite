@@ -295,7 +295,9 @@ public partial class WorldLab
                 Scan();
                 GD.Print($"SCAN {_status} · tracks kept {_tracks.Count} · marks {_scanMarks.Count}");
                 GetTree().CreateTimer(.7).Timeout += () => TestShot("-wave");
-                GetTree().CreateTimer(1.6).Timeout += () => { TestShot("-scan"); GetTree().CreateTimer(1).Timeout += () => GetTree().Quit(); };
+                GetTree().CreateTimer(1.6).Timeout += () => TestShot("-scan");
+                // (after the wave: only the marks and the glows left, D141)
+                GetTree().CreateTimer(4).Timeout += () => { GD.Print($"SCAN glowing items {_glowCopies.Count + _glowOverlays.Count}, animals {_glowing.Count}"); TestShot("-after"); GetTree().CreateTimer(1).Timeout += () => GetTree().Quit(); };
             }
         }
         if (!IsNetClient || _sampler == null || _generation != null || ((IClientGame)this).LocalState() == null) return;

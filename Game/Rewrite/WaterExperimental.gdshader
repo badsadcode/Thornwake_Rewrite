@@ -47,6 +47,7 @@ uniform vec3 sun_color : source_color = vec3(1.0);
 uniform vec3 crest_glow : source_color = vec3(0.10, 0.55, 0.50);
 const float wave_phase[12] = { 0.0, 1.7, 4.1, 2.6, 5.3, 0.9, 3.3, 5.9, 1.1, 4.6, 2.2, 0.4 };
 global uniform float ocean_time;
+global uniform float caustic_light; // the direct sunlight the caustics focus (Atmosphere: 0 at night; 1 = build 74)
 global uniform vec4 wind; // dir.x, speed/8, dir.z, gust
 uniform vec3 sky_horizon : source_color = vec3(0.70, 0.76, 0.78);
 uniform vec3 sky_zenith : source_color = vec3(0.32, 0.47, 0.62);
@@ -362,7 +363,7 @@ void fragment() {
 	// Transmitted light: the bed through clear shallows, absorbed with depth; biome tint inside the absorption.
 	vec3 ground = textureLod(screen_tex, ruv, 0.0).rgb;
 	float caustic = caustics(bottom_world.xz * 0.6, TIME * 1.3) * smoothstep(0.0, 0.1, depth_below) * exp(-depth_below * 0.35);
-	ground += caustic * caustic_strength * 0.3 * vec3(1.0, 0.97, 0.85) * (0.4 + ground);
+	ground += caustic * caustic_strength * 0.3 * vec3(1.0, 0.97, 0.85) * (0.4 + ground) * caustic_light; // (sunlight focused: dims with the sun)
 	vec3 transmittance = exp(-absorption * path * mix(1.0, 2.2, river));
 	vec3 scatter = mix(sea * sea_scatter + lake * lake_scatter + river * river_scatter, river_scatter * vec3(1.15, 1.1, 0.9), plume * 0.85);
 	transmittance = mix(transmittance, exp(-absorption * path * 2.2), plume * 0.6);
