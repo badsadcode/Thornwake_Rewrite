@@ -42,6 +42,9 @@ dusty haze, swamp an olive-green haze.*
   them, tinted by the light.
 * **M2 rays.** The sunrise forest: soft beams through the canopy into bright haze, the background lifted. Both
   approaches (native volumetric fog in forests vs screen-space) are compared on this scene type.
+  *Tom, 2026-10-18 (D142):* the target quality is **Unity HDRP's volumetric lighting** (volumetric fog lit by the sun
+  through its shadow map: crepuscular rays / god rays with every trunk and branch casting its shadow into the air).
+  Tom's HDRP screenshots go here when he sends them (`docs/references/hdrp-*.png`).
 * **M3 clouds.** The painted references: cauliflower cumulus with bright tops and flat, blue-grey bases; cirrus
   streaks above; a cloud bank on the horizon; low cloud clinging to mountains and lying in valleys; warm-lit edges and
   dark-grey cores at golden hour; towering storm cells with rain shafts.

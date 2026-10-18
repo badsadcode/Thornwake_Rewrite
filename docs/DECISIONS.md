@@ -2128,6 +2128,18 @@ Tom on build 74 (dumps 214459, 214534, 214828):
 * Checked: `--hunt-test`, `--build-test` (weapons and tools hang from the arms, now under the waist), captures of
   each change.
 
+## D142 — Rays like Unity HDRP's as M2's target; heavy effects stay player settings (2026-10-18)
+Tom, after trying Unity HDRP: its volumetric lighting (volumetric fog lit through the sun's shadow map — crepuscular
+rays / god rays) is the quality he wants for the forest rays. Godot 4.7 has the same family of technique (a froxel
+grid, shadow-mapped lights, temporal reprojection); it falls short by default on grid resolution (ours 96 × 96 × 96 over
+180 m), on denoising (reprojection only) and on per-light controls. M2's plan (HANDOFF "Next" item 3): captures beside
+Tom's HDRP screenshots, then tune the native fog (finer grid, shorter length, sun energy, anisotropy) with benchmarks,
+and only if that falls short, our own ray-marching pass.
+**Rule (Tom): settings that may be heavy for some GPUs and PCs stay selectable in the options, also in the finished
+game**, so players choose: the volumetric fog's resolution and the rays' quality join *Camera and performance* (or the
+effect's own page) as levels with an *off*, and presets (M6) only set them. This adds to CLAUDE.md's rule that visual
+changes stay switchable: switches made for comparing looks may go once Tom picks; performance and quality levels stay.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

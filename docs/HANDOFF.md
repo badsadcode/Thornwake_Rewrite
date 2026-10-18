@@ -111,7 +111,14 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
 2. **Lens cloud** (Tom's second screenshot): `ct_lens` in `CloudShapes.gdshaderinc` draws four perfectly elliptical
    13 × 6.4 km plates; from ~5 km away it fills half the sky with stepped rims. Part of M3 (cloud types in the volume);
    artistic — ask Tom before reshaping.
-3. **M2: finish forest rays A** (`Game/Rewrite/ForestAir.gdshader`, `Atmosphere.UpdateForestRays`).
+3. **M2: finish forest rays A** (`Game/Rewrite/ForestAir.gdshader`, `Atmosphere.UpdateForestRays`). **Target (Tom,
+   D142): Unity HDRP's volumetric lighting** — sharp crepuscular rays, each trunk shadowing the air. Plan:
+   (1) a sunrise forest scene beside Tom's HDRP screenshots, captures of rays A as they are now;
+   (2) tune Godot's own volumetric fog first — froxel grid finer than 96 × 96 × 96 (`project.godot`
+   `environment/volumetric_fog/volume_size` / `volume_depth`), a shorter fog length and detail spread so the cells sit
+   near the camera, more sun energy into the forest air, stronger forward scattering; benchmark the cost (`docs/BENCHMARK.md`);
+   (3) if that cannot reach it: our own ray pass (a CompositorEffect marching each pixel's view ray through the sun's
+   shadow map), the feasibility review's second option. Every new quality level is a **player setting** (D142).
 4. Make captures smaller for Tom (downscaled JPGs, one side-by-side image per A/B) — promised.
 5. Later milestones: M1 pause point 3 (warm sun glow, moon halo), M3 single-pass cloud model (acceptance shots: dumps
    115949 / 120402), M4 haze and distance, biome light profile tuning (`Content/light_profiles.json`).
