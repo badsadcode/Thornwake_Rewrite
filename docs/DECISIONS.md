@@ -2091,6 +2091,23 @@ raised to white by the night's exposure (the torch's own light already skipped i
   in their Reproduce line, so the same mist comes back.
 * Captures (top build 72, bottom halo): `artifacts/torch/torch-in-mist-…jpg`, `torch-no-mist-…jpg`.
 
+## D140 — Smoke from Tom's texture, for torches and campfires (2026-10-18)
+Tom added `smoke_particles_texture.png` (a 256 px puff with soft alpha): "add this texture for smoke for torches and maybe
+campfires". Moved to `Assets/Effects/smoke_puff.png` (mipmaps on: smoke is seen from afar). One emitter for both,
+`Game/Rewrite/SmokePlume.cs`; each puff turned its own way and slowly spinning, so the one picture does not repeat.
+* Setting **Lighting and effects → Smoke** (`fx.smoke`): *smoke texture* (default, Tom asked for it) or *build 72 (soft
+  dots, torch only)* — build 72's torch smoke unchanged, and no campfire smoke, as before.
+* The textured smoke is always lit by the scene (moon, sky, sun), so it is not raised to white at night (D139); the
+  torch's lights skip it (its layer), a campfire's firelight lights it — a warm glow over the fire at night. Near-white
+  ramp: grey picture × grey ramp under daylight read almost black.
+* **Campfires smoke** while finished and burning (not as blueprints, not once the fuel is out): a taller, slower plume.
+* Tom (first look): the torch's smoke "starts a little too far off the torch … denser, more particles"; the campfire
+  looked good. Cause: the first puffs were clear and tiny, seen only after the wind had carried them toward the camera.
+  Now visible from the flame's tip, bigger at birth, 36 instead of 18.
+* Fixed on the way: a newly built campfire's first puffs started at the scene's origin (the view was placed a frame
+  later since D138) — object views are placed when created. `--shot-campfire` (captures): a lit campfire beside Alden.
+* The texture's source and licence: Tom's file; to be noted in `Licenses/` when Tom says where it is from.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

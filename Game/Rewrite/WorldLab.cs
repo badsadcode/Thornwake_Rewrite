@@ -1578,6 +1578,15 @@ public partial class WorldLab : Node3D
                 }
                 foreach (var (x, z, v) in _shotPours) _water.Sim?.Sources.Add(new Thornwake.Hydraulics.LocalWater.Source { X = x, Z = z, Rate = (float)(v / Math.Max(1, _shotWait * .5)) });
                 if (_shotRain) _rain = true;
+                // --shot-campfire: a lit campfire 4 m ahead of Alden, 2.5 m to the right (smoke and firelight captures; the testing tools
+                // forced for it, never saved)
+                if (OS.GetCmdlineUserArgs().Contains("--shot-campfire"))
+                {
+                    _testingOverride = true; if (_rules != null) _rules.Testing = true;
+                    // (ahead and to the right: straight ahead it hid behind Alden)
+                    double fx = PlayerX - Math.Sin(_yaw) * 4 + Math.Cos(_yaw) * 2.5, fz = PlayerZ - Math.Cos(_yaw) * 4 - Math.Sin(_yaw) * 2.5;
+                    Act(new Thornwake.Rewrite.Net.ActionRequest(Thornwake.Rewrite.Net.ActionKind.Place, 0, 0, "campfire", fx, _sampler!.Height(fx, fz), fz, 0));
+                }
                 _smokeStage = 2; _smokeTimer = 0; _simTime = 0;
             }
             else if (_smokeStage == 2 && _shotPours.Count > 0 && _simTime > _shotWait * .5 && _water.Sim is { } sim && sim.Sources.Count > 0) sim.Sources.Clear();

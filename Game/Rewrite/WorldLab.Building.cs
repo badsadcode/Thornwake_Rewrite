@@ -282,12 +282,20 @@ public partial class WorldLab
 
     // ---- placed pieces as this PC draws them
     /// <summary>A piece's model: its GLB, or the campfire and lean-to drawn in code.</summary>
-    private static Node3D? PieceModel(PieceDef def) => def.Id switch
+    private Node3D? PieceModel(PieceDef def) => def.Id switch
     {
-        "campfire" => Thornwake.World.Visuals.Campfire(),
+        "campfire" => CampfireModel(),
         "lean_to" => LeanTo(),
         _ => def.Model.Length > 0 ? GameplayModels.Instance(def.Model) : null,
     };
+
+    /// <summary>The campfire drawn in code, with a plume of smoke while it burns (SmokePlume; setting Smoke).</summary>
+    private Node3D CampfireModel()
+    {
+        var fire = Thornwake.World.Visuals.Campfire();
+        fire.AddChild(new SmokePlume(SmokePlume.Kind.Campfire, _atmosphere.Wind));
+        return fire;
+    }
 
     private Node3D PieceView(PlacedObject o, PieceDef def)
     {
@@ -337,6 +345,7 @@ public partial class WorldLab
         if (parts.Leaf?.GetNodeOrNull<StaticBody3D>("LeafBody") is { } lb) lb.CollisionLayer = layer;
         // (the lean-to and the campfire wear the ghost look while blueprints; their flames show only when lit)
         if (def.Model.Length == 0) foreach (var light in parts.Model.FindChildren("*", "Light3D", true, false)) ((Node3D)light).Visible = !o.Blueprint && o.Lit;
+        if (parts.Model.GetNodeOrNull<SmokePlume>("FlameSmoke") is { } smoke) smoke.Burning = !o.Blueprint && o.Lit;
     }
 
     /// <summary>Per frame: doors swing toward open or shut.</summary>

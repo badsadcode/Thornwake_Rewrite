@@ -371,6 +371,8 @@ public partial class WorldLab : IWorldQuery
                 var view = _catalog.Piece(o.Kind) is { } piece ? PieceView(o, piece)
                     : o.Kind switch { "log_pile" => LogPile(o), "branch_pile" => BranchPile(o), "pack" => Pack(), "carcass" => CarcassView(o), "arrow" => StuckArrow(), _ => new Node3D() };
                 view.Rotation = new Vector3(0, o.Yaw, 0);
+                // (placed at once: a campfire's smoke began at the scene's origin, the view moved there a frame later)
+                view.Position = new Vector3((float)(o.X - _originX), (float)o.Y, (float)(o.Z - _originZ));
                 AddChild(view);
                 _objectViews[id] = view;
                 WaitForImpact(id, view, o); // (a felled tree's branches appear when its crown comes down)

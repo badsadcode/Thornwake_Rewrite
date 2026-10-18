@@ -13,14 +13,14 @@ namespace Thornwake.Rewrite;
 public sealed partial class Torch : Node3D
 {
     private readonly OmniLight3D _light, _halo;
-    private readonly StandardMaterial3D _smokeMaterial;
     private int _look = -1;
-    private readonly CpuParticles3D _flame, _smoke;
+    private readonly CpuParticles3D _flame;
+    private readonly SmokePlume _smoke;
     private readonly FastNoiseLite _noise = new() { Frequency = 1, Seed = 9 };
     private readonly Vector3 _lightHome = new(0, .66f, 0);
     // The smoke sits on its own render layer, which the torch's light skips: lit from a few cm away it burned to a white
     // ball (first render); it takes the moon and the sky instead.
-    private const uint SmokeLayer = 1u << 19;
+    private const uint SmokeLayer = SmokePlume.SmokeLayer;
     private Wind? _wind;
     private double _t;
 
@@ -48,23 +48,8 @@ public sealed partial class Torch : Node3D
         };
         AddChild(_flame);
 
-        // Smoke: lit grey puffs, growing and thinning as they rise and drift away with the wind.
-        var smokeRamp = new Gradient();
-        smokeRamp.SetColor(0, new Color(.3f, .16f, .07f, 0f));
-        smokeRamp.AddPoint(.12f, new Color(.16f, .12f, .1f, .16f));
-        smokeRamp.AddPoint(.5f, new Color(.09f, .09f, .09f, .1f));
-        smokeRamp.SetColor(1, new Color(.08f, .08f, .08f, 0f));
-        _smoke = new CpuParticles3D
-        {
-            Name = "Smoke", Amount = 26, Lifetime = 3.2, Randomness = .5f, LocalCoords = false, Position = new Vector3(0, .78f, 0),
-            // (unshaded: warm just above the flame, then dim grey — shaded, the torch's light burned it to white balls)
-            Mesh = new QuadMesh { Size = Vector2.One, Material = _smokeMaterial = Billboard(additive: false, shaded: false) },
-            EmissionShape = CpuParticles3D.EmissionShapeEnum.Sphere, EmissionSphereRadius = .05f,
-            Direction = Vector3.Up, Spread = 18, InitialVelocityMin = .25f, InitialVelocityMax = .55f, DampingMin = .2f, DampingMax = .5f,
-            ScaleAmountMin = .16f, ScaleAmountMax = .28f, ScaleAmountCurve = Curve(.35f, 1.2f, 2.6f), ColorRamp = smokeRamp,
-            AngleMin = 0, AngleMax = 360, AngularVelocityMin = -25, AngularVelocityMax = 25,
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Layers = SmokeLayer,
-        };
+        // Smoke (SmokePlume: build 72's soft dots or Tom's smoke texture, setting Smoke).
+        _smoke = new SmokePlume(SmokePlume.Kind.Torch, null);
         AddChild(_smoke);
 
         _light = new OmniLight3D
@@ -95,17 +80,17 @@ public sealed partial class Torch : Node3D
         _halo.LightVolumetricFogEnergy = 3.5f;
         // (unshaded, its dark grey was raised to white by the night's exposure; shaded it takes the moon and the sky —
         // the torch's own lights skip it, see SmokeLayer)
-        _smokeMaterial.ShadingMode = halo ? BaseMaterial3D.ShadingModeEnum.PerPixel : BaseMaterial3D.ShadingModeEnum.Unshaded;
+        _smoke.Shaded = halo;
     }
 
     /// <summary>The wind the flame and smoke follow (Atmosphere.Wind).</summary>
-    public void Follow(Wind wind) => _wind = wind;
+    public void Follow(Wind wind) { _wind = wind; _smoke.Wind = wind; }
 
     /// <summary>Lit (visible, burning) or out.</summary>
     public bool Lit
     {
         get => Visible;
-        set { Visible = value; _flame.Emitting = value; _smoke.Emitting = value; }
+        set { Visible = value; _flame.Emitting = value; _smoke.Burning = value; }
     }
 
     public override void _Process(double delta)
@@ -123,7 +108,6 @@ public sealed partial class Torch : Node3D
         // The flame leans and streams downwind, the smoke drifts off with it (gusts included).
         var w = _wind is { } wind ? new Vector3(wind.Direction.X, 0, wind.Direction.Y) * Mathf.Min(wind.Speed, 18) : Vector3.Zero;
         _flame.Gravity = Vector3.Up * 1.2f + w * .2f;
-        _smoke.Gravity = Vector3.Up * .35f + w * .16f;
     }
 
     private static Curve Curve(float a, float b, float c)
