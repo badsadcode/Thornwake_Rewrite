@@ -48,6 +48,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   Then M2 (forest rays A), M1 pause point 3, the cloud drafts, M3, M4 — all need Tom's look decisions.
   **Build 75** (`b983a4f`, `dist/Preview-75`, 2026-10-18): Tom's notes on 74 (D141) — caustics by the sun, scan wave
   gone by 3 s with items glowing, crouching bends the waist; the smoke's backlight had hidden the scan wave.
+  **Build 76** (`653ddfc`, `dist/Preview-76`, 2026-10-18): forest rays *A2* draft and *Volumetric fog quality* (D143) for
+  Tom to try at different sun angles (he liked the captures; he has no HDRP screenshots, so his eye is the reference).
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
