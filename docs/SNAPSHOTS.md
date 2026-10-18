@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 79** (forest rays A2 eased at a high sun, benchmarks never save settings D146) | `6550c2a` | Thornwake-Rewrite-Preview-79 (v0.9.79) | Versions must match to connect; A2 at noon = build 78 only by going back to it; build 78 = `b29f017` |
 | **Build 78** (the time slider no longer ages the body; no autosave in test runs D145) | `b29f017` | Thornwake-Rewrite-Preview-78 (v0.9.78) | Versions must match to connect; build 77 = `c44b4bb` |
 | **Build 77** (forest rays A2 forward scattering slider, --set not saved D144) | `c44b4bb` | Thornwake-Rewrite-Preview-77 (v0.9.77) | Versions must match to connect; forward scattering 0.75 = build 76; build 76 = `653ddfc` |
 | **Build 76** (forest rays A2 draft, volumetric fog quality levels D143) | `653ddfc` | Thornwake-Rewrite-Preview-76 (v0.9.76) | Versions must match to connect; Forest rays and Volumetric fog quality default to build 75; build 75 = `b983a4f` |

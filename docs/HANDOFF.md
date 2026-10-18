@@ -54,6 +54,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   rays A2: forward scattering* (D144). **Waiting for Tom**: the value he likes; then A2's defaults and M2's next step.
   **Build 78** (`b29f017`, `dist/Preview-78`, 2026-10-19): the time slider froze Tom to death ("teleported back to spawn") —
   setting the clock passes no time for the body; test runs never autosave (D145).
+  **Build 79** (`6550c2a`, `dist/Preview-79`, 2026-10-19): A2 eased at a high sun (noon was milky white), suite `rays3`
+  (A2 through the day); benchmarks never save settings (D146). Capture runs: use a hang watchdog (one froze, cause unknown).
+  **Waiting for Tom**: his forward scattering value and how A2 looks through the day.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
