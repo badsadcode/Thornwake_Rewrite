@@ -1954,6 +1954,27 @@ lights the surroundings — and scanned animals could glow for a while.
 * **Next (Tom)**: diagonal walls — snapping at 45° with their own turning steps (a diagonal wall piece 3·√2 m long, points
   on the diagonals of foundations and floors, and triangle foundations and floors to close the corners).
 
+## D135 — Diagonal walls, triangles; animals go round trees and buildings (2026-10-18)
+The last pieces of the multiplayer proof of concept (§14.a step 1; Tom: "allow players to build diagonal walls — rotate
+and snap them diagonally with different rotation steps").
+* **Diagonal walls** (full and half height, 3·√2 = 4.24 m long, 4 and 2 logs) with points every 1.06 m along their bottom
+  and top: corner to corner across a foundation or floor their points meet the corners, the quarter points and the middle
+  of the 0.75 m grid. Pieces tagged `diagonal` snap in **eighth turns** of what they join and **R turns them 45°** (the
+  rest: quarter turns, R 90°). **Triangle foundation** and **triangle floor** (half of a 3 × 3 m square cut along its
+  diagonal; 2 and 1 logs) close the corners: their overlap box is the triangle's core, so two complete one cell, while the
+  same triangle twice or a square over them is in the way.
+* **Animals go round obstacles** (host): steering probes a body length and a stride ahead in nine directions for water,
+  too-steep ground, **tree trunks** (from the world's tree lattice, so it works wherever the animals are, not only near
+  the host) and **finished building pieces** (a point at the animal's back height inside a piece's box, grown by its body:
+  walls, stairs and low decks block; a deck high on stilts can be walked under); a step into an obstacle is not taken. An
+  animal already inside one (spawned in a thicket) ignores obstacles until it is out. Loose rocks are not seen (only the
+  drawn tiles know them; the slope check keeps animals off boulder fields). Cost: none measurable (33 → 32 FPS with 24
+  animals in a dense forest at Tom's settings).
+* Checked: headless (a diagonal wall corner to corner on both diagonals, five points meeting; triangles beside a square
+  and completing a cell; a deer fleeing at a trunk goes round it — without the avoidance it ran through, 0.10 m from the
+  trunk's centre; a deer fleeing at a row of walls never inside them) and `--build-test` (a diagonal wall and a triangle
+  foundation built, pictured).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

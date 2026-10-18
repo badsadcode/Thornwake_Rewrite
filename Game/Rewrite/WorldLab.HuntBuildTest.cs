@@ -275,7 +275,7 @@ public partial class WorldLab
                 _censusTimer = -1e9;
                 var tags = ((IWorldQuery)this).BiomeTags(PlayerX, PlayerZ);
                 GD.Print($"CENSUS biome tags here: {string.Join(", ", tags)}");
-                GD.Print($"CENSUS {AnimalsHud()}");
+                GD.Print($"CENSUS {AnimalsHud()} · FPS {Engine.GetFramesPerSecond():0}");
                 GD.Print($"CENSUS kinds: {string.Join(", ", _animalViews.Values.GroupBy(v => v.Def.Id).Select(g => $"{g.Key} {g.Count()}"))}" +
                     (_rules != null ? $"; on the host {_rules.Wildlife.All.Count}" : ""));
                 TestShot("-census");
@@ -590,6 +590,26 @@ public partial class WorldLab
             case 31:
                 Check(!_seenObjects.All.Any(o => o.Kind == "campfire" && Math.Abs(o.Y - _btBase.Y) < .01), $"the campfire taken down by aiming at it ({_status})");
                 SetBuilding(false);
+                // A diagonal wall across the lone foundation and a triangle foundation beside it (D135).
+                Snapped("log_wall_diagonal", .2, 0, .2, Math.PI / 4);
+                Snapped("log_foundation_triangle", 3.4, 0, -.6);
+                Go(32, .8); break;
+            case 32:
+            {
+                foreach (var o in _seenObjects.All.Where(o => o.Blueprint).ToList()) Act(new ActionRequest(ActionKind.Supply, o.Id, 0, "", 0, 0, 0, 0));
+                Check(_seenObjects.All.Any(o => o.Kind == "log_wall_diagonal") && _seenObjects.All.Any(o => o.Kind == "log_foundation_triangle"), $"a diagonal wall and a triangle foundation ({_status})");
+                var view = Building.ToWorld(_btBase, new V3(-3, 0, 7));
+                Teleport(view.X, view.Z);
+                Go(33, 2.5); break;
+            }
+            case 33:
+            {
+                var c = Building.ToWorld(_btBase, new V3(1.5, 1, 0));
+                _yaw = Mathf.Atan2(-(float)(c.X - PlayerX), -(float)(c.Z - PlayerZ)); _pitch = -.35f; _zoom = 6;
+                Go(34, 1.2); break;
+            }
+            case 34:
+                Shot("-diagonal");
                 Done(); break;
         }
 

@@ -61,6 +61,9 @@ public sealed class Wildlife
     private double _acc, _spawnTimer;
     private int _next = 1, _nextGroup = 1;
 
+    /// <summary>Building pieces in the way (x, y, z, radius); the rules give it (D135).</summary>
+    public Func<double, double, double, double, bool>? PieceBlocked { get; set; }
+
     /// <summary>How many animals (sandbox: 0 none … 1 normal … 2 many).</summary>
     public double Density { get; set; } = 1;
     /// <summary>Animals per player's surroundings at density 1.</summary>
@@ -271,22 +274,31 @@ public sealed class Wildlife
     private void Move(Animal a, double heading, double speed, double dt)
     {
         double want = heading;
-        for (int i = 0; i < 7; i++)
+        // (stuck inside something — spawned in a thicket, a wall built around it: obstacles do not count until it is out)
+        double r = a.Def.Radius + .15;
+        bool free = !InTheWay(a.X, a.Y, a.Z, r);
+        for (int i = 0; i < 9; i++)
         {
-            double h = heading + (i == 0 ? 0 : (i % 2 == 1 ? 1 : -1) * ((i + 1) / 2) * .6);
+            double h = heading + (i == 0 ? 0 : (i % 2 == 1 ? 1 : -1) * ((i + 1) / 2) * .45);
             double ax = a.X + Math.Sin(h) * 2.5, az = a.Z + Math.Cos(h) * 2.5;
-            if (Walkable(ax, az) && Math.Abs(_world.Ground(ax, az) - a.Y) < 2.2) { want = h; break; }
-            if (i == 6) { a.Speed = 0; a.Yaw = TurnToward(a.Yaw, heading + Math.PI, 3 * dt); return; }
+            double mx = a.X + Math.Sin(h) * 1.1, mz = a.Z + Math.Cos(h) * 1.1;
+            // Round water, too-steep ground, tree trunks and building pieces: probed a stride and a body ahead.
+            if (Walkable(ax, az) && Math.Abs(_world.Ground(ax, az) - a.Y) < 2.2 && (!free || !InTheWay(mx, a.Y, mz, r) && !InTheWay(ax, a.Y, az, r))) { want = h; break; }
+            if (i == 8) { a.Speed = 0; a.Yaw = TurnToward(a.Yaw, heading + Math.PI, 3 * dt); return; }
         }
         a.Yaw = TurnToward(a.Yaw, want, (speed > a.Def.Walk * 1.5 ? 5 : 2.5) * dt);
         // (accelerates and slows over ~half a second; goes the way it faces)
         a.Speed += (speed - a.Speed) * Math.Min(1, 4 * dt);
-        a.X += Math.Sin(a.Yaw) * a.Speed * dt;
-        a.Z += Math.Cos(a.Yaw) * a.Speed * dt;
+        double nx = a.X + Math.Sin(a.Yaw) * a.Speed * dt, nz = a.Z + Math.Cos(a.Yaw) * a.Speed * dt;
+        if (free && InTheWay(nx, a.Y, nz, r)) { a.Speed *= .3; return; } // (still turning toward the way round: it waits)
+        a.X = nx; a.Z = nz;
         a.Y = _world.Ground(a.X, a.Z);
     }
 
     private bool Walkable(double x, double z) => !_world.IsWater(x, z);
+
+    private bool InTheWay(double x, double y, double z, double radius) =>
+        _world.Obstacle(x, z, radius) || PieceBlocked?.Invoke(x, y, z, radius) == true;
 
     private static double TurnToward(double yaw, double target, double maxStep)
     {

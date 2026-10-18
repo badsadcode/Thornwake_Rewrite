@@ -70,6 +70,8 @@ internal static class GameplayTests
         public string WaterNear(double x, double z, double radius) => x > 1000 ? "river" : "";
         public IReadOnlySet<string> BiomeTags(double x, double z) => new HashSet<string> { "temperate", "forest" };
         public bool IsWater(double x, double z) => x > 1000;
+        public List<(double X, double Z, double R)> Trees { get; } = new();
+        public bool Obstacle(double x, double z, double radius) => Trees.Any(t => (t.X - x) * (t.X - x) + (t.Z - z) * (t.Z - z) < (t.R + radius) * (t.R + radius));
     }
 
     private static void Slice()
@@ -409,7 +411,36 @@ internal static class GameplayTests
         T.Check(rules.TakeHurts().Count == 0 && below.State is AnimalState.Chase or AnimalState.Attack, $"a wolf under a platform bites nobody ({below.State})");
         rules.Wildlife.Clear();
         wolf = rules.Wildlife.Spawn(c.Animals["wolf"], 0, -1.2, group: 9);
-                // Hurt badly, it runs.
+                // Round trees and through no walls (Tom, build 69; D135): a deer fleeing straight at a trunk goes round it, and one
+        // fleeing at a row of walls never passes through them.
+        var woods = new World { Hours = 12 };
+        woods.Trees.Add((0, 6, .5));
+        var wr = new GameRules(c, woods) { Testing = true };
+        wr.Wildlife.Density = 0;
+        var runner = wr.Wildlife.Spawn(deer, 0, 0);
+        runner.Yaw = 0;
+        var chaser = new[] { new Hunter(me, 0, 5, -6, 1, false) };
+        double nearest = double.MaxValue, farthest = 0;
+        for (int i = 0; i < 60; i++)
+        {
+            wr.StepWildlife(.1, chaser);
+            nearest = Math.Min(nearest, Math.Sqrt(runner.X * runner.X + (runner.Z - 6) * (runner.Z - 6)));
+            farthest = Math.Max(farthest, runner.Z);
+        }
+        T.Check(nearest > .5 + deer.Radius && farthest > 12, $"round the tree: never nearer its trunk than {nearest:0.00} m, on to {farthest:0} m");
+        foreach (double x in new[] { -3.0, 0, 3 }) wr.Place(me, "log_wall", x, 5, 30, 0, 0, x, 25);
+        var walls = wr.PiecesNear(0, 30, 10).ToList();
+        var runner2 = wr.Wildlife.Spawn(deer, 0, 24);
+        runner2.Yaw = 0;
+        var chaser2 = new[] { new Hunter(me, 0, 5, 18, 1, false) };
+        bool through = false;
+        for (int i = 0; i < 80; i++)
+        {
+            wr.StepWildlife(.1, chaser2);
+            if (walls.Any(p => Building.Inside(p.Def, p.Pose, new V3(runner2.X, runner2.Y + .5, runner2.Z)))) through = true;
+        }
+        T.Check(!through && (runner2.Z < 30 || Math.Abs(runner2.X) > 4.4), $"not through the walls (it ended at {runner2.X:0.0}, {runner2.Z:0.0})");
+        // Hurt badly, it runs.
         wolf.Health = c.Animals["wolf"].Health * .2;
         for (int i = 0; i < 5; i++) rules.StepWildlife(.1, hunter);
         T.Check(wolf.State == AnimalState.Flee, $"a badly hurt wolf runs ({wolf.State})");

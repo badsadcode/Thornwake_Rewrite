@@ -26,6 +26,8 @@ public interface IWorldQuery
     IReadOnlySet<string> BiomeTags(double x, double z);
     /// <summary>Water at a point (animals keep out of it).</summary>
     bool IsWater(double x, double z);
+    /// <summary>A natural obstacle within <paramref name="radius"/> m of a point: a tree's trunk (animals go round; D135).</summary>
+    bool Obstacle(double x, double z, double radius);
 }
 
 /// <summary>A tree was hit (shake it) or felled (it falls toward Dir); everyone draws it.</summary>

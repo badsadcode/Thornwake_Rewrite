@@ -20,7 +20,13 @@ public sealed partial class GameRules
     private readonly Random _huntRng = new(7);
 
     /// <summary>The animals around the players (the host's true ones).</summary>
-    public Wildlife Wildlife => _wildlife ??= new Wildlife(Catalog.Animals.Values.ToList(), _world);
+    public Wildlife Wildlife => _wildlife ??= new Wildlife(Catalog.Animals.Values.ToList(), _world) { PieceBlocked = PieceBlocks };
+
+    /// <summary>A finished building piece fills a point (an animal's body there: radius, at its back's height) — walls,
+    /// stairs, low decks; a deck high on stilts can be walked under.</summary>
+    private bool PieceBlocks(double x, double y, double z, double radius) =>
+        Objects.Near(x, z, 6).Any(o => !o.Blueprint && Catalog.Piece(o.Kind) is { } p
+            && Building.Inside(p, new Pose(o.X, o.Y, o.Z, o.Yaw), new V3(x, y + .5, z), radius));
     /// <summary>Real seconds the rules have run (cooldowns: game time runs faster than real time).</summary>
     public double Seconds { get; private set; }
 

@@ -78,6 +78,14 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 70 — diagonal walls, triangles, animals that go round things
+* **Diagonal walls** (Wall, V: *Diagonal wall*, *Diagonal half wall*): corner to corner across a foundation or floor.
+  With a diagonal piece **R turns 45°**.
+* **Triangle foundation** and **triangle floor** (Foundation / Floor, V): half a square, to close the corners a diagonal
+  wall leaves; two make a full square.
+* **Animals go round trees and your buildings** instead of walking through them (they can still pass under a deck on
+  stilts).
+
 ## New in build 69 — sonar scan, blockers shown, no bites through floors
 * **Scan (Z)** sweeps out like sonar: a glowing wave lights the land as it passes, and the animals it finds glow for a
   while (Settings → Interface → Scan look: the old ring).

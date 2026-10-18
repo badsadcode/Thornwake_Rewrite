@@ -106,6 +106,19 @@ public partial class WorldLab : IWorldQuery
         if (share < .8) tags.UnionWith(b.Def.Tags);
         return tags;
     }
+    bool IWorldQuery.Obstacle(double x, double z, double radius)
+    {
+        if (_sampler == null) return false;
+        _treeConfig ??= DetailConfig.For(_sampler);
+        foreach (var t in Vegetation.TreesNear(_sampler, x, z, radius + 1.2, _treeConfig.Value))
+        {
+            double reach = radius + ObjectCollision.TrunkRadius(t.Species) * t.Scale;
+            if ((t.X - x) * (t.X - x) + (t.Z - z) * (t.Z - z) < reach * reach && ObjectCollision.TrunkRadius(t.Species) > 0) return true;
+        }
+        return false;
+    }
+    private DetailConfig? _treeConfig;
+
     bool IWorldQuery.IsWater(double x, double z) =>
         _sampler == null || _sampler.Sample(x, z) is var t && (t.Water != WaterKind.None || t.Height < _sampler.Plan.Profile.SeaLevel + .2);
     ObjectRemovals? IWorldHost.Removals => _generation == null ? _sampler?.Removals : null;
@@ -121,6 +134,7 @@ public partial class WorldLab : IWorldQuery
         FellingWorldReady();
         HuntingWorldReady();
         BuildingWorldReady();
+        _treeConfig = null;
         if (_rules != null && !IsNetClient) { _rules.Objects.Clear(); _rules.Wildlife.Clear(); _seenObjects.Clear(); _seenObjects.TakeChanged(); }
         if (IsNetClient) _seenObjects.Clear();
         _gameplayHours = double.NaN;
