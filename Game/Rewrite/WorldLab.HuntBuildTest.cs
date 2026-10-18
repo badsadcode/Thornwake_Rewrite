@@ -24,6 +24,7 @@ public partial class WorldLab
     private long _btFoundation, _btEastWall;
     private Pose _btBase;
     private V3 _btAimAt;
+    private int _btRetry;
 
     /// <summary>Turn the camera so the screen's centre is on a world point (a few calls: the camera orbits as it turns).</summary>
     private void AimAt(V3 world)
@@ -372,6 +373,7 @@ public partial class WorldLab
                 Interact(); // E on the aimed blueprint
                 Go(4, 2); break;
             case 4:
+                if (_seenObjects.Get(_btFoundation) is { Blueprint: true } && _btRetry++ < 2) { Go(3, .5); break; } // (the camera still settling: aim and E again)
                 Check(_seenObjects.Get(_btFoundation) is { Blueprint: false }, $"E brought the logs: built ({_status})");
                 // Tom's case (build 63): a wall aimed just past the deck's edge, at the ground — it must stand on the deck.
                 SetBuilding(true);
