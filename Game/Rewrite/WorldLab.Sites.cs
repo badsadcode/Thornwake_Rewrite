@@ -137,6 +137,29 @@ public partial class WorldLab
         GetTree().Quit(0);
     }
 
+    private bool _sunBlockPending = OS.GetCmdlineUserArgs().Contains("--sun-block");
+
+    /// <summary><c>--sun-block</c> (developer tool, with --at/--day/--hour): walk from the player toward the sun and print
+    /// where the land first rises above the line to the sun (the sun hidden behind it), then quit (D147).</summary>
+    private void SunBlock()
+    {
+        var s = _sampler!;
+        var (px, pz) = _shotAt ?? (PlayerX, PlayerZ);
+        double lat = s.Plan.Climate.Latitude(pz);
+        var (el, az) = GameClock.Position(lat, GameClock.Declination(GameSettings.Season.Index), (_clock.Hour - 12) * 15);
+        double sx = Math.Sin(Mathf.DegToRad(az)), sz = -Math.Cos(Mathf.DegToRad(az)), h0 = s.Sample(px, pz).Height + 1.7, tan = Math.Tan(Mathf.DegToRad(el));
+        GD.Print(string.Create(CultureInfo.InvariantCulture, $"SUN_BLOCK sun {el:0.0}° up, azimuth {az:0}°, eye {h0:0} m (hour {_clock.Hour:0.00}, latitude {lat:0.0})"));
+        double highest = double.NegativeInfinity;
+        for (double d = 20; d <= 30000; d += d < 2000 ? 20 : 100)
+        {
+            double above = s.Sample(px + sx * d, pz + sz * d).Height - (h0 + d * tan);
+            double angle = Mathf.RadToDeg(Math.Atan2(s.Sample(px + sx * d, pz + sz * d).Height - h0, d));
+            if (angle > highest) { highest = angle; if (above > 0) GD.Print(string.Create(CultureInfo.InvariantCulture, $"SUN_BLOCK land {above:0} m above the sun line at {d:0} m (horizon {angle:0.0}°)")); }
+        }
+        GD.Print(string.Create(CultureInfo.InvariantCulture, $"SUN_BLOCK_DONE highest horizon toward the sun {highest:0.0}° ({(highest > el ? "sun hidden" : "sun visible")})"));
+        GetTree().Quit(0);
+    }
+
     private void FindSites()
     {
         var s = _sampler!;

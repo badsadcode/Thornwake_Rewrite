@@ -2211,6 +2211,23 @@ passes no time: the same sweep leaves Food 78, Warmth 54, Health 100. A fix, no 
   the file as it was — Tom's rule that tests never save settings. Also: the fog grid reaches the renderer only when it
   changes (ApplyAll runs on every setting change; it was resent on each A/B still).
 
+## D147 — Shafts with the sun behind a mountain; why nothing shows on a high peak (2026-10-19)
+Tom on build 79: dump 005618 (taiga 1,896 m, facing the sun) shows a bright shaft "even though the sun is behind the
+mountain"; dump 005742 (tundra 3,729 m) shows no sun effects at all: "is there a certain height where it works?"
+* **005618**, rebuilt with one effect off at a time (`artifacts/rays/m2-dump005618-what-lights-the-air.jpg`): the glow
+  goes only without *volumetric fog* or without *Forest rays A2* (light beams under clouds and the screen-space sun
+  shafts change almost nothing). Without the sun's shadows the whole valley glows evenly, so the shadow map does shade
+  the air: the band is the air past the edge of the mountain's shadow, where the sun slips past its shoulder (a real
+  effect when the sun stands just behind a ridge). New probe **`--sun-block`** (with a dump's arguments): toward the sun
+  the land rises above the sun's line from 120 m out (horizon 29.4° against a 17.9° sun) — the sun is hidden from
+  Tom's spot, the air beside the peak is not. It reads strongly because A2 is on in this taiga (canopy from the forest
+  density, though the trees there are sparse) with forward scattering 0.85 (Tom's value): very bright toward the sun.
+* **005742**: no effect applies there. A/A2 need forest around and switch off 12–30 m above the ground; mist pools in
+  valleys below the player; the light beams belong under the cloud deck (bases ~1,500 m above the sea; that shader
+  places the deck 1,600 m over the camera wherever it is — wrong above the deck, to fix with M3); the sun was not
+  hidden there (horizon 4°), so nothing cut shafts; the global volumetric fog is thin, even haze. No change yet:
+  rays in open mountain air would be a new effect (Tom's call).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

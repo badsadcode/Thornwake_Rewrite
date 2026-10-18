@@ -833,6 +833,7 @@ public partial class WorldLab : Node3D
         if (_findSitesPending && _sampler != null && _generation == null && !_holding) { _findSitesPending = false; FindSites(); }
         if (_clearSpotPending && _sampler != null && _generation == null && !_holding) { _clearSpotPending = false; ClearSpot(); }
         if (_raySpotPending && _sampler != null && _generation == null && !_holding) { _raySpotPending = false; RaySpot(); }
+        if (_sunBlockPending && _sampler != null && _generation == null && !_holding) { _sunBlockPending = false; SunBlock(); }
         if (_probeWaterPending && _sampler != null && _generation == null) { _probeWaterPending = false; ProbeWater(); }
         if (_collisionTestPending && _streamer.Settled && _streamer.PendingCollision == 0 && !_holding && _generation == null)
         {
