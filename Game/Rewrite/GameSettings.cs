@@ -336,6 +336,8 @@ public static class GameSettings
         "yourself (as in builds 63–66).", options: new[] { "allow for the drop", "straight (hold over yourself)" }));
     public static readonly Setting ArrowTrails = Add(new("ui.arrow_trails", "Interface", "Arrow trails", 0, 1, 1, 1,
         "A thin trail behind every arrow, fading in about a second: you see the arc it flew."));
+    public static readonly Setting BowHand = Add(new("ui.bow_hand", "Interface", "Bow hand", 0, 1, 1, 0,
+        "Which of Alden's hands holds the bow (the other draws the string).", options: new[] { "right", "left (as builds 63–67)" }));
     public static readonly Setting NeedsOn = Add(new("sim.needs", "Simulation", "Hunger and cold", 0, 1, 1, 1,
         "Step 1 placeholder needs (D110): food, body warmth, wetness and health. Off: none of them change (testing the world)."));
     public static readonly Setting Animals = Add(new("sim.animals", "Simulation", "Animals", 0, 3, 1, 2,

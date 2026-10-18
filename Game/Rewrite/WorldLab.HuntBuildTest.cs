@@ -237,7 +237,7 @@ public partial class WorldLab
     }
 
     private bool _spawned, _testAim;
-    private double _censusTimer = double.NaN;
+    private double _censusTimer = double.NaN, _scanTestTimer = double.NaN;
     private double _guestTimer = double.NaN;
     private int _guestStage;
 
@@ -280,6 +280,19 @@ public partial class WorldLab
                     (_rules != null ? $"; on the host {_rules.Wildlife.All.Count}" : ""));
                 TestShot("-census");
                 GetTree().CreateTimer(1).Timeout += () => GetTree().Quit();
+            }
+        }
+        // --scan-test=seconds: after that long (animals about, leaving tracks), Z, a picture of what it marks, and quit.
+        if (_sampler != null && _generation == null && ((IClientGame)this).LocalState() != null && args.FirstOrDefault(a => a.StartsWith("--scan-test=")) is { } st)
+        {
+            if (double.IsNaN(_scanTestTimer)) { _scanTestTimer = double.Parse(st[12..], System.Globalization.CultureInfo.InvariantCulture); if (_shotAt is { } at) Teleport(at.X, at.Z); }
+            if ((_scanTestTimer -= delta) <= 0 && _scanTestTimer > -1e8)
+            {
+                _scanTestTimer = -1e9;
+                _pitch = -.45f; _zoom = 6;
+                Scan();
+                GD.Print($"SCAN {_status} · tracks kept {_tracks.Count} · marks {_scanMarks.Count}");
+                GetTree().CreateTimer(1.6).Timeout += () => { TestShot("-scan"); GetTree().CreateTimer(1).Timeout += () => GetTree().Quit(); };
             }
         }
         if (!IsNetClient || _sampler == null || _generation != null || ((IClientGame)this).LocalState() == null) return;
@@ -327,6 +340,7 @@ public partial class WorldLab
                 inv.Add("log", 200); inv.Add("plant_fibre", 80); inv.Add("branch", 40);
                 _rules.InventoryChanged((int)NetServer.HostPeer);
                 if (!OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--spawn="))) _animalsOverride = 0;
+                _testingOverride = false; // (blueprints first: the player's own Testing tools setting does not count here)
                 SetBuilding(true);
                 _buildCategory = _catalog.Categories.ToList().IndexOf("Foundation");
                 _pitch = -.55f; _zoom = 5;

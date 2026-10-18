@@ -81,9 +81,10 @@ public sealed partial class RemotePlayer : Node3D
         _character.RodHeld = (s.Flags & PlayerFlags.Rod) != 0;
         _character.Fishing = (s.Flags & PlayerFlags.Fishing) != 0;
         // The weapon in hand (D120) and its swing or draw.
-        _character.Weapon = s.Held switch { 1 => "spear", 2 => "stone_sword", 3 => "bow", _ => null };
+        _character.Weapon = (s.Held & 0x7f) switch { 1 => "spear", 2 => "stone_sword", 3 => "bow", _ => null };
+        _character.Crouching = (s.Held & 0x80) != 0;
         bool attacking = (s.Flags & PlayerFlags.Attacking) != 0;
-        if (s.Held == 3) _character.Draw = attacking ? 1 : 0;
+        if ((s.Held & 0x7f) == 3) _character.Draw = attacking ? 1 : 0;
         else if (attacking && !_wasAttacking) _character.Strike();
         _wasAttacking = attacking;
         _character.Animate(dt, new Vector3(s.Vx, s.Vy, s.Vz), (s.Flags & PlayerFlags.Flying) != 0, holdFacing: true);

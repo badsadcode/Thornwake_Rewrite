@@ -1900,6 +1900,38 @@ arrow to see the arc, fading out."
   1.4 s — the whole arc visible for a moment, gone shortly after the arrow lands. *Interface → Arrow trails* (on).
 * The E prompt hides while drawing or aiming.
 
+## D132 — Tracking and scanning, blood, sneaking, stamina, aiming from either shoulder (2026-10-18)
+Tom (build 67, after his first deer): blood where an animal is hit; a Soulmask-like scan key that highlights the
+terrain's interactable things and shows animal tracks that stay for a while (a base for a tracking skill and skill
+levels later); sneaking to approach animals; the bow in the right hand; a key to switch the camera's shoulder while
+aiming; aiming should slow you down — stamina; he could not see the loose stones.
+* **Blood**: when an animal's health falls (it comes with the positions, so every PC sees it), a burst of dark red drops.
+* **Tracks**: every animal this PC sees leaves a pair of prints every 1.2 m (smaller for foxes and wolves), kept 5 minutes,
+  hidden until you scan. **Z scans**: a ring sweeps out 45 m in a second; what it passes is marked for 20 s (fading in the
+  last 5): the 30 nearest loose stones and berry bushes (named within 15 m), arrows, piles and packs, carcasses ("deer
+  (butcher)"), blueprints and what they need, animals with their distance (to 72 m) — and the tracks light up amber. A
+  6 s rest between scans. The radius and the tracks' lifetime are constants a tracking skill will raise later.
+* **Loose stones** are drawn, but at 15–25 cm and partly sunk they disappear in dense grass (Tom's grass density 3): the
+  scan marks them and the E prompt names the one at your feet. (Bare ground around them would change the ground
+  cover's generation: left for Tom to decide.)
+* **Sneaking**: **C** crouches (walking only): 2.2 m/s, the body low; animals hear a sneaking hunter at 35 % and see them
+  at 60 % of the usual distance (the top bit of the state's held byte tells the host). Flying stands you up.
+* **Stamina** (with *Hunger and cold* on): sprinting spends 16 a second (about six seconds from full), a jump 8; it
+  refills at 14 a second standing, 8 walking, half as fast when hungry or cold; at 0 you are out of breath until 30.
+  **Aiming or drawing the bow** slows you to 2.6 m/s and allows no sprint. The needs line shows it.
+* **V switches the shoulder** the camera sits over (eased); **Interface → Bow hand**: right (default now) or left (builds
+  63–67).
+
+## D133 — Smaller pieces; walls on upper floors (2026-10-18)
+Tom: "a little bit more blocks, like quarter blocks, half blocks"; walls aimed at a second floor snapped to the floor
+below (dump 154613: wedged between the storeys — its top on the upper floor's grid, its bottom on the foundation's,
+twice the joints of a wall standing on the floor). New pieces (Blender): **half foundation** (3 × 1.5 m, 2 logs),
+**quarter foundation** (1.5 × 1.5 m, 1), **quarter floor** (1.5 × 1.5 m, 1), **narrow wall** (1.5 m wide, 2), **narrow half
+wall** (1.5 × 1.5 m, 1), all on the 0.75 m grid. The snap now charges **2.5 per metre for a body behind the surface you
+aim at** (was 0.8), so a wall aimed at a floor stands on it; a test builds a foundation, a wall and an upper floor and
+aims at the upper floor from eight places and headings. (A first try capping the joints at five broke ridge roofs,
+which truly meet ten points: reverted.)
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

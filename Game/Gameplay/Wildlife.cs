@@ -41,7 +41,7 @@ public sealed class Animal
 public readonly record struct Hurt(int Player, double Damage, double FromX, double FromZ, string Who);
 
 /// <summary>Where a player is and how loud they are, as the animals sense them.</summary>
-public readonly record struct Hunter(int Id, double X, double Y, double Z, double Speed, bool Flying);
+public readonly record struct Hunter(int Id, double X, double Y, double Z, double Speed, bool Flying, bool Sneaking = false);
 
 /// <summary>
 /// The animals around the players (GAMEPLAY_DESIGN §2 *Creatures*, §9; D120), simulated by the host only (§14.1: the
@@ -169,6 +169,7 @@ public sealed class Wildlife
             if (h.Flying) continue;
             double d = Dist(h.X, h.Z, a.X, a.Z);
             double hear = def.Hearing * (h.Speed > 7 ? 2 : h.Speed > 1.5 ? 1 : .5), see = def.Sight * (night ? .55 : 1);
+            if (h.Sneaking) { hear *= .35; see *= .6; } // (crouched, slow: D132)
             if ((d < hear || d < see) && d < threatDist) { threat = h; threatDist = d; }
         }
         switch (a.State)

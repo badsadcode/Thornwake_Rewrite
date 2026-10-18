@@ -246,6 +246,36 @@ def piece_foundation():
     m.build()
 
 
+def piece_foundation_sized(hx, hz):
+    """A foundation hx x hz half-sizes (half: 1.5 x 0.75, quarter: 0.75 x 0.75): deck, beams, corner posts."""
+    m = Mesh("Foundation")
+    n = max(1, int(round(hz * 2 / 0.3)))
+    for i in range(n):
+        z = -hz + 0.15 + i * (2 * hz - 0.3) / max(1, n - 1) if n > 1 else 0
+        log(m, (-hx, 0, z), (hx, 0, z), 0.15, half=True, flat=(0, 1, 0), wobble=0.02)
+    for x in (-hx + 0.18, hx - 0.18):
+        log(m, (x, -0.42, -hz), (x, -0.42, hz), 0.15)
+    for x in (-hx + 0.18, hx - 0.18):
+        for z in (-hz + 0.18, hz - 0.18):
+            log(m, (x, -0.3, z), (x, -2.6, z), 0.15, taper=0.9)
+    m.build()
+
+
+def piece_floor_sized(hx, hz):
+    m = Mesh("Floor")
+    n = max(1, int(round(hz * 2 / 0.3)))
+    for i in range(n):
+        z = -hz + 0.15 + i * (2 * hz - 0.3) / max(1, n - 1) if n > 1 else 0
+        log(m, (-hx, 0, z), (hx, 0, z), 0.15, half=True, flat=(0, 1, 0), wobble=0.02)
+    m.build()
+
+
+def piece_wall_narrow(height):
+    m = Mesh("Wall")
+    wall_rows(m, height, profile=lambda y: (-0.75 - 0.15, 0.75 + 0.15))
+    m.build()
+
+
 def piece_foundation_stilts():
     """The foundation's deck on long posts (swamps, steep ground): posts to -6.2 m, braced."""
     m = Mesh("Foundation")
@@ -476,7 +506,12 @@ def main():
     jobs += [("log_foundation", OUT_BUILD, piece_foundation), ("log_foundation_stilts", OUT_BUILD, piece_foundation_stilts), ("log_floor", OUT_BUILD, piece_floor),
              ("log_floor_half", OUT_BUILD, lambda: piece_floor(True)), ("log_door", OUT_BUILD, piece_door),
              ("log_stairs", OUT_BUILD, lambda: piece_stairs(3.0, 4.0, 12)), ("log_steps", OUT_BUILD, lambda: piece_stairs(1.5, 2.0, 6)),
-             ("log_stairs_steep", OUT_BUILD, lambda: piece_stairs(3.0, 3.0, 12))]
+             ("log_stairs_steep", OUT_BUILD, lambda: piece_stairs(3.0, 3.0, 12)),
+             ("log_foundation_half", OUT_BUILD, lambda: piece_foundation_sized(1.5, 0.75)),
+             ("log_foundation_quarter", OUT_BUILD, lambda: piece_foundation_sized(0.75, 0.75)),
+             ("log_floor_quarter", OUT_BUILD, lambda: piece_floor_sized(0.75, 0.75)),
+             ("log_wall_narrow", OUT_BUILD, lambda: piece_wall_narrow(3.0)),
+             ("log_wall_narrow_half", OUT_BUILD, lambda: piece_wall_narrow(1.5))]
     for mat in ("log", "thatch"):
         for shape in ("slope", "ridge", "outer", "inner", "peak"):
             for pitch in ("steep", "low"):

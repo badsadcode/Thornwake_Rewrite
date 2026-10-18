@@ -103,7 +103,13 @@ public sealed partial class Character : Node3D
         }
         else _chopPhase = 0;
         AnimateWeapon(dt, swing);
+        // Sneaking: lower, knees forward (placeholder pose).
+        Body.Position = Body.Position with { Y = Mathf.Lerp(Body.Position.Y, Crouching ? -.32f : 0, 1 - Mathf.Exp(-10 * dt)) };
+        if (Crouching) { Limb("LeftLeg", swing * .5f - .75f); Limb("RightLeg", -swing * .5f - .75f); }
     }
+
+    /// <summary>The hand the bow is held in (setting Interface → Bow hand; Tom: the right).</summary>
+    private static string BowHand => GameSettings.BowHand.Index == 0 ? AxeHand : TorchHand;
 
     // ---- weapons (D120): a spear or a sword in the right hand, a bow in the left (the torch goes out)
     private Node3D? _weapon, _nocked;
@@ -130,7 +136,7 @@ public sealed partial class Character : Node3D
             _weapon = GameplayModels.Weapon(value);
             var hold = new Node3D { Name = "Weapon", Position = new Vector3(0, -.49f, 0) };
             hold.AddChild(_weapon);
-            Body.GetNode<Node3D>(value == "bow" ? TorchHand : AxeHand).AddChild(hold);
+            Body.GetNode<Node3D>(value == "bow" ? BowHand : AxeHand).AddChild(hold);
             _weapon = hold;
             if (value == "bow")
             {
@@ -141,6 +147,9 @@ public sealed partial class Character : Node3D
             }
         }
     }
+
+    /// <summary>Crouched (sneaking): the body low, the knees bent.</summary>
+    public bool Crouching { get; set; }
 
     /// <summary>The bow drawn: 0 (resting) … 1 (full draw); an arrow shows on the string while above 0.</summary>
     public float Draw { get; set; }
@@ -159,8 +168,8 @@ public sealed partial class Character : Node3D
         {
             // The bow arm held out toward the target, the string hand drawn back to the chin.
             float d = Mathf.Clamp(Draw, 0, 1);
-            Limb(TorchHand, d > 0 ? -1.5f : swing * .8f);
-            if (d > 0) Limb(AxeHand, -1.35f - .15f * d);
+            Limb(BowHand, d > 0 ? -1.5f : swing * .8f);
+            if (d > 0) Limb(BowHand == AxeHand ? TorchHand : AxeHand, -1.35f - .15f * d);
             if (_nocked != null) { _nocked.Visible = d > 0; _nocked.Position = new Vector3(0, .12f, .3f - .35f * d); }
             return;
         }

@@ -198,7 +198,8 @@ public sealed class NetServer
         if (_world.Rules is not { } rules || _world.Removals == null) return;
         var hunters = _players.Where(p => p.Value.Welcomed && p.Value.HasState)
             .Select(p => new Hunter((int)p.Key, p.Value.State.X, p.Value.State.Y, p.Value.State.Z,
-                Math.Sqrt(p.Value.State.Vx * p.Value.State.Vx + p.Value.State.Vz * p.Value.State.Vz), (p.Value.State.Flags & PlayerFlags.Flying) != 0)).ToList();
+                Math.Sqrt(p.Value.State.Vx * p.Value.State.Vx + p.Value.State.Vz * p.Value.State.Vz), (p.Value.State.Flags & PlayerFlags.Flying) != 0,
+                (p.Value.State.Held & 0x80) != 0)).ToList();
         if (hunters.Count == 0) return;
         rules.StepWildlife(dt, hunters);
         foreach (var hurt in rules.TakeHurts())

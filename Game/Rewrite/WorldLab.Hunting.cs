@@ -19,6 +19,7 @@ namespace Thornwake.Rewrite;
 public partial class WorldLab
 {
     private readonly Dictionary<int, AnimalView> _animalViews = new();
+    private readonly Dictionary<int, double> _animalHealth = new();
     private bool _huntLmbWas, _strikeHooked;
     private float _draw, _shoulder;
     /// <summary>Aiming with the right mouse (bow): 0 … 1, eased in and out (Tom, build 63; D124).</summary>
@@ -103,6 +104,8 @@ public partial class WorldLab
         foreach (var f in _arrows) f.Node.QueueFree();
         _arrows.Clear();
         _trails.Clear();
+        _animalHealth.Clear();
+        TrackingWorldReady();
     }
 
     /// <summary>8 / 9 / 0: the spear, the bow, the sword in hand or put away (the axe and rod go away).</summary>
@@ -156,6 +159,7 @@ public partial class WorldLab
         }
         UpdateArrows(delta);
         DrawTrails();
+        UpdateTracking();
         double now = Now;
         foreach (var v in _animalViews.Values) v.Step(now, (float)delta, _originX, _originZ);
     }
@@ -338,12 +342,16 @@ public partial class WorldLab
                 AddChild(view);
                 _animalViews[a.Id] = view;
             }
+            // (its health fell since the last report: it was hit — blood, D132)
+            if (_animalHealth.TryGetValue(a.Id, out double before) && a.Health < before - .5) Blood(view);
+            _animalHealth[a.Id] = a.Health;
             view.Push(a, now);
         }
         foreach (var id in _animalViews.Keys.Where(id => !seen.Contains(id)).ToList())
         {
             _animalViews[id].QueueFree();
             _animalViews.Remove(id);
+            _animalHealth.Remove(id); _trackLast.Remove(id);
         }
     }
 

@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 68 — tracking, sneaking, stamina, smaller pieces
+* **Z — look around (scan)**: a ring sweeps out 45 m and marks stones, berry bushes, arrows, carcasses, blueprints and
+  animals (with distance) for 20 seconds, and lights up the **animal tracks** around (they stay for five minutes).
+* **Blood** where an animal is hit.
+* **C — sneak**: slow and low; animals hear and see you much less.
+* **Stamina**: sprinting and jumping tire you, rest refills it (shown with your needs). Aiming or drawing the bow slows
+  you down.
+* **V** switches the camera to the other shoulder. The bow is now in the **right** hand (Settings → Interface → Bow hand).
+* **New pieces**: half and quarter foundations, a quarter floor, a narrow wall and a narrow half wall.
+* **Fixed**: walls aimed at a second floor went below it.
+
 ## New in build 67 — snap points shown, the bow hits where you aim, arrow trails
 * **Snap points**: while building, dots show where pieces can join — blue on the pieces near the ghost, yellow on the
   ghost, green where they meet. **P** shows or hides them (Settings → Interface → Show snap points).

@@ -136,6 +136,8 @@ public partial class WorldLab : IWorldQuery
     private bool _dying;
     /// <summary>Animal numbers set by a test (never the player's saved setting).</summary>
     private double? _animalsOverride;
+    /// <summary>Testing tools forced by a test (never the player's saved setting).</summary>
+    private bool? _testingOverride;
 
     /// <summary>After dying (D115): a new character at the world's start, fed, warm and whole; the old one's pack lies
     /// where they fell.</summary>
@@ -170,7 +172,7 @@ public partial class WorldLab : IWorldQuery
         if (_rules != null && !IsNetClient)
         {
             _rules.Step(dh * 60);
-            _rules.Testing = GameSettings.TestingTools.On;
+            _rules.Testing = _testingOverride ?? GameSettings.TestingTools.On;
             _rules.Wildlife.Density = _animalsOverride ?? GameSettings.Animals.Index switch { 0 => 0, 1 => .5, 2 => 1, _ => 2 };
         }
         _seenObjects.Step(dh * 60); _seenObjects.TakeChanged(); // (the copy burns down too, for the fires drawn here)
@@ -195,7 +197,7 @@ public partial class WorldLab : IWorldQuery
                 _swimming, GameRules.FireWarmth(_catalog, _seenObjects, PlayerX, PlayerZ), _me.Chopping ? 1 : sprint ? .6 : 0);
             _needs.Step(dh, body);
             if (_needs.Health <= 0 && !_dying) { _dying = true; Act(new ActionRequest(ActionKind.Die, 0, 0, "", 0, 0, 0, 0)); }
-            _needsLabel.Text = $"{_needs.Describe()} · feels {_needs.FeelsLike(body):0} °C" + (sheltered ? " · sheltered" : "") + (_needs.Health <= 0 ? "\nYou are dying: eat, get warm (a fire)." : "");
+            _needsLabel.Text = $"{_needs.Describe()} · Stamina {_stamina:0}{(_winded ? " (out of breath)" : "")} · feels {_needs.FeelsLike(body):0} °C" + (sheltered ? " · sheltered" : "") + (_needs.Health <= 0 ? "\nYou are dying: eat, get warm (a fire)." : "");
         }
         else _needsLabel.Text = "";
         UpdateGameplayViews(delta);
@@ -518,6 +520,12 @@ public partial class WorldLab : IWorldQuery
         switch (key)
         {
             case Key.B when !_menu.Visible && !_pack.Visible && !_map.Visible: SetBuilding(!_building); return true;
+            case Key.Z when !_menu.Visible && !_pack.Visible && !_map.Visible: Scan(); return true;
+            case Key.C when !_menu.Visible && !_pack.Visible && !_fly && !_swimming:
+                _crouch = !_crouch; _me.Crouching = _crouch;
+                _status = _crouch ? "Sneaking (C stands up): slow and quiet — animals hear and see you much less." : "Standing.";
+                return true;
+            case Key.V when !_menu.Visible && !_pack.Visible: _shoulderSide = -_shoulderSide; return true;
             case Key.Key8 when !_menu.Visible && !_pack.Visible: ToggleWeapon("spear"); return true;
             case Key.Key9 when !_menu.Visible && !_pack.Visible: ToggleWeapon("bow"); return true;
             case Key.Key0 when !_menu.Visible && !_pack.Visible: ToggleWeapon("stone_sword"); return true;

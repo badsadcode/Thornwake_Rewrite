@@ -167,8 +167,10 @@ public static class Building
                         // joints either way, Tom's build 63), and rather up than down.
                         var off = centre - aim;
                         double side = normal is { } nv ? off.X * nv.X + off.Y * nv.Y + off.Z * nv.Z : 0;
-                        double below = .8 * Math.Max(0, -side) + .25 * Math.Max(0, -off.Y);
-                        candidates.Add((toAim - .7 * (Math.Min(joints, 5) - 1) + .35 * body + turnWeight * turn + below, pose, joints)); // (joints count up to a line's five: more is a piece wedged between two)
+                        // (behind the surface costs 2.5 a metre: a wall aimed at an upper floor must not wedge between the
+                        // storeys, its top on that floor and its bottom on the one below — twice the joints; Tom, build 67)
+                        double below = 2.5 * Math.Max(0, -side) + .25 * Math.Max(0, -off.Y);
+                        candidates.Add((toAim - .7 * (joints - 1) + .35 * body + turnWeight * turn + below, pose, joints));
                     }
                 }
             }

@@ -938,9 +938,22 @@ public partial class WorldLab : Node3D
         }
         else
         {
-            float speed = sprint ? 11 : 5;
+            // Stamina (D132): sprinting spends it, resting refills it (slower hungry or cold); sneaking and aiming the bow
+            // are slow and never a sprint.
+            bool aimingBow = _me.Weapon == "bow" && (_aimFocus > 0 || _draw > 0);
+            bool moving = input.LengthSquared() > .01f;
+            bool running = sprint && moving && !_crouch && !aimingBow && !_winded && _stamina > 0;
+            float speed = running ? 11 : _crouch ? 2.2f : aimingBow ? 2.6f : 5;
+            if (NeedsOn)
+            {
+                if (running) _stamina = Mathf.Max(0, _stamina - 16 * dt);
+                else _stamina = Mathf.Min(100, _stamina + (moving ? 8 : 14) * dt * (_needs.Food < 15 || _needs.Warmth < 25 ? .5f : 1));
+                if (_stamina <= 0) _winded = true;
+                if (_winded && _stamina > 30) _winded = false;
+            }
+            else { _stamina = 100; _winded = false; }
             velocity.X = move.X * speed; velocity.Z = move.Z * speed;
-            if (_player.IsOnFloor()) { if ((!typing && Input.IsKeyPressed(Key.Space)) || (CollisionTestActive && _testJump)) velocity.Y = 6.5f; }
+            if (_player.IsOnFloor()) { if (((!typing && Input.IsKeyPressed(Key.Space)) || (CollisionTestActive && _testJump)) && (_stamina >= 8 || !NeedsOn)) { velocity.Y = 6.5f; if (NeedsOn) _stamina -= 8; } }
             else velocity.Y -= 20 * dt;
         }
         _player.Velocity = velocity;
@@ -1086,7 +1099,8 @@ public partial class WorldLab : Node3D
             bool aiming = GameSettings.ShoulderAim.On && (_me.Weapon == "bow" || _building);
             _shoulder = Mathf.Lerp(_shoulder, aiming ? .7f + .35f * _aimFocus : 0, .15f);
             var right = new Vector3(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));
-            _pivot.Position = _player.Position + Vector3.Up * 1.55f + right * _shoulder;
+            _shoulderSideSmooth = Mathf.Lerp(_shoulderSideSmooth, _shoulderSide, .15f); // (V: the other shoulder)
+            _pivot.Position = _player.Position + Vector3.Up * (_crouch ? 1.2f : 1.55f) + right * _shoulder * _shoulderSideSmooth;
             // Aiming (right mouse with the bow): in close behind the shoulder.
             _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, Mathf.Lerp(_zoom, Mathf.Min(_zoom, 2.2f), _aimFocus), .2f);
         }
@@ -1209,7 +1223,7 @@ public partial class WorldLab : Node3D
 
     private bool _gridShown;
 
-    private void SetFly(bool fly) { _fly = fly; _flyToggle.SetPressedNoSignal(fly); if (!fly) SetNoclip(false); }
+    private void SetFly(bool fly) { _fly = fly; _flyToggle.SetPressedNoSignal(fly); if (!fly) SetNoclip(false); if (fly) { _crouch = false; _me.Crouching = false; } }
     private void SetNoclip(bool noclip) { _noclip = noclip; _noclipToggle.SetPressedNoSignal(noclip); _player.CollisionMask = noclip ? 0u : 1u; if (noclip) SetFly(true); }
 
     private void ToggleMenu(bool open)
