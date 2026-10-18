@@ -223,6 +223,10 @@ public static class GameSettings
         "A2 (M2 draft, aiming at Unity HDRP's rays): A with more sunlight into the air, less sky light in the shadows and " +
         "the fog's cells close to the camera, so each trunk's shadow shows in the air. Build 47 = as until now.",
         options: new[] { "build 47", "A: volumetric forest air", "B: screen-space shafts", "A2: sharp rays (M2 draft)" }));
+    public static readonly Setting RayScatter = Add(new("fx.ray_scatter", "Lighting and effects", "Forest rays A2: forward scattering", .2, .85, .05, .75,
+        "How much the forest air throws the sun's light forward (A2 only). High: bright, crisp shafts when you look toward " +
+        "the sun, almost none from the side or with the sun behind you. Low: shafts seen from every side, softer and with " +
+        "more glowing haze between the trees. 0.75 = build 76.", "×"));
     public static readonly Setting LightModel = Add(new("fx.light_model", "Lighting and effects", "Light model", 0, 1, 1, 0,
         "Atmosphere 2.0 (experimental, M1): sunlight by phase of the day — golden hour, a softer morning and afternoon, " +
         "a stronger white noon — with the sky light following. Build 47 = the light until now.",

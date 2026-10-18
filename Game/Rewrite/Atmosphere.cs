@@ -1139,7 +1139,12 @@ public partial class Atmosphere : Node3D
     }
 
     // A2 (M2 draft, D143): the forest air of A, tuned toward Unity HDRP's rays.
-    private const float A2Density = .03f, A2Boost = 8, A2Aniso = .75f, A2Ambient = .15f, A2Length = 80, A2Spread = 3;
+    private const float A2Density = .03f, A2Ambient = .15f, A2Length = 80, A2Spread = 3;
+    // Forward scattering (Tom, build 76 dumps 232115/232214: the shaft vanished once the sun was off screen) is a setting;
+    // less of it scatters less light toward the camera overall, so the sun's energy into the air rises as it falls
+    // (0.75 → ×8 as build 76, 0.3 → ×20).
+    private static float A2Aniso => GameSettings.RayScatter.F;
+    private static float A2Boost => 8 + (.75f - A2Aniso) * 26.7f;
 
     private void UpdateForestRays(double delta)
     {

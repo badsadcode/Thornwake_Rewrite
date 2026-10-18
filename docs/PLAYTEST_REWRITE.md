@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 77 — rays seen from the side
+**Host and everyone joining need build 77** (versions must match to connect).
+* New slider: Settings → Lighting and effects → **Forest rays A2: forward scattering** (0.75 = build 76).
+  Lower (try **0.3–0.45**): the shafts stay visible when you turn away from the sun or have it behind you, with more
+  glowing haze between the trees; higher: crisper and brighter toward the sun, gone from the side. Tell me the value
+  you like (and a dump where it looks wrong).
+* The noon sun stood only 23° up because your *Season* is **winter** (Time → Season): at your latitude (43.6°) that is
+  real. In summer it reaches ~70°; straight overhead only happens in the tropics.
+* The game opens on the monitor it was last moved to: Settings → Display → **Monitor** brings it back.
+
 ## New in build 76 — forest rays A2 (draft) and fog quality
 **Host and everyone joining need build 76** (versions must match to connect).
 Nothing changes until you switch it on; to try the rays:

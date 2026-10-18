@@ -2165,6 +2165,24 @@ Step 1–2 of M2 (D142). Tom's HDRP screenshots are not in `docs/references/` ye
   160 × 160 × 128 / very high 256 × 256 × 160.
 * Captures (local, `artifacts/rays/`): `m2-sunrise-A-vs-A2.jpg` (A vs A2, same frames, grid 160), `m2-sunrise-tuning-variants.jpg`.
 
+## D144 — Rays seen from the side: forward scattering as a slider; the noon sun; test --set not saved (2026-10-18)
+Tom on build 76 (dumps 232115, 232214, 232225): A2's shaft through the crowns looked good, but turning away it was
+gone — "only when I look at the sun, or the sun is on the screen". Cause: Godot's fog has one phase function for the
+whole volume (Henyey–Greenstein); A2's anisotropy 0.75 sends ~650× more light straight forward than sideways, so a
+shaft lights up only within a few tens of degrees of the sun. Reproduced from his dump at four yaws.
+* New setting **Forest rays A2: forward scattering** (`fx.ray_scatter`, 0.2–0.85, default 0.75 = build 76). Less
+  forward scattering throws less light toward the camera, so the sun's energy into the air rises as it falls (×8 at
+  0.75 → ×20 at 0.3). At 0.3 the shaft toward the sun is nearly as bright and the side and back views gain lit haze
+  and soft lanes, at some cost in contrast. Tom to pick by playing (no HDRP screenshots: his eye is the reference).
+* **"The sun at zenith is not above my head"**: his Season is *winter* at latitude 43.6°, so the noon sun reaches
+  90 − 43.6 − 23.4 = 23° (8.9 h of daylight). Correct astronomy: in summer it reaches ~70°, overhead only in the tropics.
+  No change.
+* **Command-line `--set` no longer saves** into the player's settings (`GameSettings.Override`): a Reproduce run with a
+  changed value would have kept it in Tom's settings file. (Earlier runs only wrote his own values back.)
+* Game window on the other monitor: `display.cfg` remembers monitor 2 (saved when the window was last moved or
+  resized there); test runs open on the saved monitor too. Settings → Display → Monitor picks it. No change.
+* Capture: `artifacts/rays/m2-dump232214-scatter-0.75-vs-0.3.jpg`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
