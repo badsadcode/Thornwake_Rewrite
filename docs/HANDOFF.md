@@ -53,7 +53,7 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   over-the-shoulder aim (D122). Tests: `--hunt-test`, `--build-test`, `--spawn=deer,wolf…`, `--guest-check=s`. **Waiting
   for Tom**: how the pieces should look (they are placeholders; the shape contract is §5e), costs, animal numbers.
   Next ideas: structural strength, animals avoiding trees and buildings, tanning hides, stone and plank pieces.
-  **Build 64** (2026-10-18), after Tom's first try (dumps 130414/130944): walls no longer snap under a foundation (D123),
+  **Build 64** (`e6a53a2`, `dist/Preview-64`, 2026-10-18), after Tom's first try (dumps 130414/130944): walls no longer snap under a foundation (D123),
   foundations level on slopes, raise keys, stilts (D123), a build menu with rendered pictures (D124), right-mouse bow
   aiming (D125), animals more common and in swamps, a HUD line for the nearest (D126; build 63's tests had saved
   *Animals: none* into Tom's settings — reset). `--census=s` counts animals where `--at` puts you. Open from Tom (dump 221438): the torch lights the ground fog evenly far

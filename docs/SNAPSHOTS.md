@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 64** (after Tom's first try: walls stay on the foundation, foundation height and stilts D123; build menu with pictures D124; right-mouse bow aiming D125; animals easier to find D126) | `e6a53a2` | Thornwake-Rewrite-Preview-64 (v0.9.64) | Same protocol as 63 but versions must match to connect; the text build bar = build 63 (`93785c0`) |
 | **Build 63** (hunting D120: deer, stag, fox, wolf; spear, bow, sword, butchering — building D121: blueprints, shapes by category, snapping, log and thatch pieces; over-the-shoulder aim D122; protocol 10, save version 2) | `93785c0` | Thornwake-Rewrite-Preview-63 (v0.9.63) | Does not connect to build 62; loads its saves; over-the-shoulder aim: *Interface* setting; animals: *Simulation → Animals → none*; build 62 = `e28d621` |
 | **Build 62** (bare grass patches D119, progress bar over the head and longer fish runs D118) | `e28d621` | Thornwake-Rewrite-Preview-62 (v0.9.62) | Connects to builds 60–61 (same protocol); build 61 = `b2cd143` |
 | **Build 61** (fishing as Tom plays it D117: walk while fishing, rod turned with A/D, bending rod, red line with tension, bobbing bobber; lean-to roof fixed) | `b2cd143` | Thornwake-Rewrite-Preview-61 (v0.9.61) | Connects to build 60 (same protocol); build 60 = `a5f4be8` |
