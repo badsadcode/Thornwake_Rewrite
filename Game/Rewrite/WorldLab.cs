@@ -165,6 +165,14 @@ public partial class WorldLab : Node3D
             if (arg == "--cloud-flash") _atmosphere.ShotFlash = true;
             // --front=km,strength: an approaching rain front at this distance (bearing from --storm-at, else upwind)
             if (arg.StartsWith("--front=")) { var v = arg[8..].Split(','); _atmosphere.ForceFront = new Vector2(float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture)); }
+            if (arg == "--shot-live") _atmosphere.LiveFog = true;
+            if (arg.StartsWith("--mist-drift=") && arg[13..].Split(',') is [var mx, var mz])
+                _atmosphere.MistDrift = (double.Parse(mx, CultureInfo.InvariantCulture), double.Parse(mz, CultureInfo.InvariantCulture));
+            if (arg.StartsWith("--mist=") && arg[7..].Split(',') is { } mv)
+            {
+                _atmosphere.MistOverride = float.Parse(mv[0], CultureInfo.InvariantCulture);
+                _atmosphere.MistBankEverywhere = mv.Length > 1 && mv[1] == "1";
+            }
             if (arg.StartsWith("--wait=")) _shotWait = float.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg == "--weather-probe") _weatherProbe = true;
             if (arg.StartsWith("--rain-here=")) _shotRainHere = float.Parse(arg[12..], CultureInfo.InvariantCulture);
@@ -1294,7 +1302,9 @@ public partial class WorldLab : Node3D
         sb.AppendLine("Reproduce:");
         sb.AppendLine($"  {_worldArgs} --at={F(PlayerX)},{F(PlayerZ)} --view={F(_yaw)},{F(_pitch)},{F(_zoom)} --day={_clock.Day} --hour={F(_clock.Hour)}" +
             (_fly ? $" --fly-height={F(fly)}" : "") + (_rain ? " --rain" : "") + (_me.Torch.Lit ? " --torch" : "") +
-            $" --cloud-drift={string.Join(",", _atmosphere.CloudDrift.Select(v => v.ToString("R", c)))} {settings}");
+            $" --cloud-drift={string.Join(",", _atmosphere.CloudDrift.Select(v => v.ToString("R", c)))}" +
+            $" --mist-drift={_atmosphere.MistDrift.X.ToString("R", c)},{_atmosphere.MistDrift.Z.ToString("R", c)}" +
+            $" --wet={F(_atmosphere.Wetness.Wetness)},{F(_atmosphere.Wetness.Puddles)} {settings}");
         File.WriteAllText(path, sb.ToString());
         Screenshot(Path.Combine(dir, $"dump-{stamp}.png"));
         _status = $"Debug dump saved: {path} (send me the .txt and .png)";

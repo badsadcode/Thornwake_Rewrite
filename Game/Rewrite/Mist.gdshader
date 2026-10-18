@@ -12,6 +12,7 @@ uniform float ground = 0.0;        // ground height under the player (m)
 uniform vec2 origin = vec2(0.0);   // floating-origin offset: world xz of scene (0, 0)
 uniform vec2 drift = vec2(0.0);    // wind drift of the banks (m)
 uniform vec3 tint : source_color = vec3(0.86, 0.89, 0.9);
+uniform float force_bank = 0.0;    // tests only (--mist=amount,1): a bank everywhere
 uniform sampler3D noise3d : repeat_enable, filter_linear;
 
 // The texture's channels sit in a narrow band (Perlin-Worley R: 5–95 % = 0.45–0.77, median 0.62; Worley G/B/A:
@@ -26,7 +27,7 @@ void fog() {
 	// Banks: where there is mist at all (drifting with the wind, slowly changing shape).
 	vec2 b = xz + drift;
 	float bank = tex(vec3(b.x / 170.0, t * 0.0006, b.y / 170.0), 0) * 0.65 + tex(vec3(b.x / 60.0 + 0.3, 0.5 + t * 0.001, b.y / 60.0), 0) * 0.35;
-	bank = smoothstep(0.58, 0.69, bank);
+	bank = max(smoothstep(0.58, 0.69, bank), force_bank);
 	DENSITY = 0.0;
 	ALBEDO = tint;
 	if (bank > 0.0) {

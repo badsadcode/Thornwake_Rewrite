@@ -451,6 +451,7 @@ public partial class Atmosphere : Node3D
     /// </summary>
     /// <summary>Sets the cosmetic rain wetness and puddles directly (screenshots and tests).</summary>
     public void SetWetness(float wetness, float puddles) { _wetness = wetness; _puddles = puddles; }
+    public (float Wetness, float Puddles) Wetness => (_wetness, _puddles);
 
     public void Update(double delta, SkyState sky, double cameraWorldX, double cameraWorldZ, double originX, double originZ, Vector3 cameraLocal)
     {
@@ -1009,6 +1010,15 @@ public partial class Atmosphere : Node3D
     private static bool Natural => GameSettings.Look.Index == 1;
     /// <summary>Scripted screenshots (a few frames at ~1 FPS): no temporal fog smoothing, which would still be fading in.</summary>
     public bool StillShot { get; set; }
+    /// <summary>A still shot that keeps the fog's smoothing over frames, as in play (<c>--shot-live</c>): the torch's
+    /// haze in Tom's dump 221438 only builds up with it.</summary>
+    public bool LiveFog { get; set; }
+    /// <summary>The mist banks' wind drift so far (dumps carry it: --mist-drift, so a Reproduce line has the same banks).</summary>
+    public (double X, double Z) MistDrift { get => (_mistDriftX, _mistDriftZ); set { _mistDriftX = value.X; _mistDriftZ = value.Z; } }
+    /// <summary>Mist amount forced by a test (<c>--mist=0..1</c>; never a setting).</summary>
+    public float? MistOverride { get; set; }
+    /// <summary>Tests: a mist bank everywhere (<c>--mist=amount,1</c>).</summary>
+    public bool MistBankEverywhere { get; set; }
 
     /// <summary>0 open … 1 closed forest around the camera (WorldLab, for the exposure of light model 1).</summary>
     public float Canopy { get; set; }
@@ -1047,7 +1057,7 @@ public partial class Atmosphere : Node3D
         float noon = Mathf.Exp(-Mathf.Pow((hour - 13f) / (_daylightHours / 4f), 2));
         float target = mode == 0 || float.IsNaN(_mistGround) ? 0
             : Mathf.Clamp((.7f * dawn + .5f * _mistBiome + .1f * _mistWater) * (1 - .65f * noon) + .35f * afterRain + .3f * _storm, 0, 1) * .75f;
-        _mistAmount = Mathf.MoveToward(_mistAmount, target, (float)delta / 6);
+        _mistAmount = MistOverride ?? Mathf.MoveToward(_mistAmount, target, (float)delta / 6);
         if (float.IsNaN(_mistGround)) return;
         // Follow the ground slowly, so walking down into a valley wades into its mist before it settles around you.
         // (a jump — teleport, map travel — snaps: the mist stayed at the old height, buried or hanging in the air)
@@ -1086,12 +1096,13 @@ public partial class Atmosphere : Node3D
                 _mistDriftX += delta * drift * Wind.Direction.X; _mistDriftZ += delta * drift * Wind.Direction.Y;
                 _mistDriftX %= 8192; _mistDriftZ %= 8192;
                 _mistMaterial.SetShaderParameter("amount", _mistAmount);
+                _mistMaterial.SetShaderParameter("force_bank", MistBankEverywhere ? 1f : 0f);
                 _mistMaterial.SetShaderParameter("ground", _mistGround);
                 _mistMaterial.SetShaderParameter("origin", new Vector2((float)(originX % 8192), (float)(originZ % 8192)));
                 _mistMaterial.SetShaderParameter("drift", new Vector2((float)_mistDriftX, (float)_mistDriftZ));
             }
             e.VolumetricFogEnabled = GameSettings.VolumetricFog.On || patches;
-            e.VolumetricFogTemporalReprojectionEnabled = !StillShot;
+            e.VolumetricFogTemporalReprojectionEnabled = !StillShot || LiveFog;
             e.VolumetricFogTemporalReprojectionAmount = GameSettings.FogSmoothing.F;
             e.VolumetricFogDensity = GameSettings.VolumetricFog.On ? (Natural ? .002f : .0035f) : 0;
         }

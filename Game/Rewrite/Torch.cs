@@ -12,7 +12,9 @@ namespace Thornwake.Rewrite;
 /// </summary>
 public sealed partial class Torch : Node3D
 {
-    private readonly OmniLight3D _light;
+    private readonly OmniLight3D _light, _halo;
+    private readonly StandardMaterial3D _smokeMaterial;
+    private int _look = -1;
     private readonly CpuParticles3D _flame, _smoke;
     private readonly FastNoiseLite _noise = new() { Frequency = 1, Seed = 9 };
     private readonly Vector3 _lightHome = new(0, .66f, 0);
@@ -56,7 +58,7 @@ public sealed partial class Torch : Node3D
         {
             Name = "Smoke", Amount = 26, Lifetime = 3.2, Randomness = .5f, LocalCoords = false, Position = new Vector3(0, .78f, 0),
             // (unshaded: warm just above the flame, then dim grey — shaded, the torch's light burned it to white balls)
-            Mesh = new QuadMesh { Size = Vector2.One, Material = Billboard(additive: false, shaded: false) },
+            Mesh = new QuadMesh { Size = Vector2.One, Material = _smokeMaterial = Billboard(additive: false, shaded: false) },
             EmissionShape = CpuParticles3D.EmissionShapeEnum.Sphere, EmissionSphereRadius = .05f,
             Direction = Vector3.Up, Spread = 18, InitialVelocityMin = .25f, InitialVelocityMax = .55f, DampingMin = .2f, DampingMax = .5f,
             ScaleAmountMin = .16f, ScaleAmountMax = .28f, ScaleAmountCurve = Curve(.35f, 1.2f, 2.6f), ColorRamp = smokeRamp,
@@ -71,6 +73,29 @@ public sealed partial class Torch : Node3D
             OmniAttenuation = 1.3f, ShadowEnabled = true, LightSize = .06f, LightSpecular = .3f, LightCullMask = ~SmokeLayer,
         };
         AddChild(_light);
+
+        // Torch in mist, halo (fx.torch_look 1): the light above lights the ground but hardly the fog; this one lights
+        // only the fog (no surfaces: cull mask 0), strongly and briefly — a glow round the flame fading within ~5 m, so the
+        // mist is shaped by the flame instead of a whole 16 m bank glowing evenly.
+        _halo = new OmniLight3D
+        {
+            Name = "Halo", Position = _lightHome, LightColor = new Color(1f, .6f, .28f), LightEnergy = 0, OmniRange = 5,
+            OmniAttenuation = 2.4f, ShadowEnabled = false, LightSpecular = 0, LightCullMask = 0, Visible = false,
+        };
+        AddChild(_halo);
+    }
+
+    /// <summary>Fog energies and the smoke's shading for the chosen torch look.</summary>
+    private void ApplyLook(int look)
+    {
+        _look = look;
+        bool halo = look == 1;
+        _light.LightVolumetricFogEnergy = halo ? .12f : 1;
+        _halo.Visible = halo;
+        _halo.LightVolumetricFogEnergy = 3.5f;
+        // (unshaded, its dark grey was raised to white by the night's exposure; shaded it takes the moon and the sky —
+        // the torch's own lights skip it, see SmokeLayer)
+        _smokeMaterial.ShadingMode = halo ? BaseMaterial3D.ShadingModeEnum.PerPixel : BaseMaterial3D.ShadingModeEnum.Unshaded;
     }
 
     /// <summary>The wind the flame and smoke follow (Atmosphere.Wind).</summary>
@@ -86,12 +111,15 @@ public sealed partial class Torch : Node3D
     public override void _Process(double delta)
     {
         if (!Visible) return;
+        if (GameSettings.TorchLook.Index != _look) ApplyLook(GameSettings.TorchLook.Index);
         _t += delta;
         float t = (float)_t;
         // Flicker: a slow breathing and quick licks of the flame; the light moves a few cm with them (trembling shadows).
         float f = .82f + .12f * _noise.GetNoise1D(t * 2.2f) + .08f * _noise.GetNoise1D(t * 9 + 40) + .05f * _noise.GetNoise1D(t * 23 + 80);
         _light.LightEnergy = 2.2f * f;
+        _halo.LightEnergy = 2.2f * f;
         _light.Position = _lightHome + new Vector3(_noise.GetNoise1D(t * 7 + 10), _noise.GetNoise1D(t * 6 + 20) * .6f, _noise.GetNoise1D(t * 7 + 30)) * .04f;
+        _halo.Position = _light.Position;
         // The flame leans and streams downwind, the smoke drifts off with it (gusts included).
         var w = _wind is { } wind ? new Vector3(wind.Direction.X, 0, wind.Direction.Y) * Mathf.Min(wind.Speed, 18) : Vector3.Zero;
         _flame.Gravity = Vector3.Up * 1.2f + w * .2f;

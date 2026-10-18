@@ -204,6 +204,11 @@ public static class GameSettings
         "Natural: stronger colour and contrast (ACES tone mapping), deeper shade, glow only on real highlights (no " +
         "spilling light), less grey haze. Classic: the look of build 29.",
         options: new[] { "classic", "natural" }));
+    public static readonly Setting TorchLook = Add(new("fx.torch_look", "Lighting and effects", "Torch in mist", 0, 1, 1, 0,
+        "How a torch lights mist and fog (Tom, dump 221438: the torch lit a whole mist bank evenly, far trees standing dark " +
+        "against an orange haze). Halo: the mist glows around the flame and fades within a few metres, the ground is lit as " +
+        "before, and the smoke takes the light of the night instead of glowing white. Build 72: as before.",
+        options: new[] { "build 72 (even glow)", "halo at the flame" }));
     public static readonly Setting ForestRays = Add(new("fx.forest_rays", "Lighting and effects", "Forest rays", 0, 2, 1, 0,
         "Atmosphere 2.0 M2, two candidates to compare: A = a thin volumetric haze under the canopy, lit through the gaps in " +
         "the crowns (real shafts, needs volumetric fog's cost); B = the screen-space sun shafts, stronger inside forests. " +

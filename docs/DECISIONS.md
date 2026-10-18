@@ -2074,6 +2074,23 @@ campfire through the host. Not measured here: real routers, playit.gg's relay un
 **Next for the test with people**: Tom hosts, friends join (and `TEST_MP_BOTS.cmd` fills up to 12); the logs of both ends
 tell the rest.
 
+## D139 — The torch in mist: a halo at the flame (draft, Tom to pick); mist in dumps (2026-10-18)
+Tom (dump 221438, build 57): the torch lights the ground fog evenly far into the night — far trees stand dark against an
+orange haze. **Reproduced** on build 73 with Tom's Reproduce line once a mist bank sits round Alden (the banks drift
+with the wind and the drift was not in dumps): the torch's light (16 m, fog energy 1, Godot's default) lights all of the
+bank within its reach evenly — a 30 m orange ball the trees stand in. Only with the fog's frame-to-frame smoothing on,
+which still shots switch off. Also in the same shots: **the smoke as white balls** at night — unshaded dark grey,
+raised to white by the night's exposure (the torch's own light already skipped it, D98).
+* New setting **Lighting and effects → Torch in mist** (`fx.torch_look`): *build 72 (even glow)* — the default until
+  Tom picks — or *halo at the flame*: the torch's light lights the ground as before but the fog only at 0.12; a second
+  light without shadows, lighting no surfaces (cull mask 0), only the fog (energy 3.5, 5 m, falling off steeply) makes a
+  glow round the flame that fades within a few metres; the smoke is shaded (moonlight and sky, so dark at night).
+  Without mist the two look the same on the ground (shots compared).
+* Test tools: `--shot-live` (a `--world-shot` that keeps the fog's smoothing), `--mist=amount[,1]` (mist forced; `,1` a
+  bank everywhere — a test-only shader input, 0 in play), and dumps now carry `--mist-drift=x,z` and `--wet=ground,puddles`
+  in their Reproduce line, so the same mist comes back.
+* Captures (top build 72, bottom halo): `artifacts/torch/torch-in-mist-…jpg`, `torch-no-mist-…jpg`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
