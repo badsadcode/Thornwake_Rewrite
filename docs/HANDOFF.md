@@ -45,7 +45,7 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   and fall side, impact, a physical trunk cut into logs; **build 59** (`bc32f36`, `dist/Preview-59`).
   Since build 59: E-gathering (D113: stones, berries that regrow, grass → plant fibre), fishing (D114: rod 7, berry
   bait, cast, strike, A/D tug-of-war, fish by water and hour). Then death (D115: the pack dropped where you
-  fall), a lean-to (shelter for a cold rainy night), saving (D116). **The first slice (§15) is complete.** **Build 60** (`a5f4be8`, `dist/Preview-60`). **Build 61** (`b2cd143`): fishing as Tom plays it, lean-to fixed (D117). Open from Tom (dump 221438): the torch lights the ground fog evenly far
+  fall), a lean-to (shelter for a cold rainy night), saving (D116). **The first slice (§15) is complete.** **Build 60** (`a5f4be8`, `dist/Preview-60`). **Build 61** (`b2cd143`): fishing as Tom plays it, lean-to fixed (D117). **Build 62** (`e28d621`): bare grass patches (D119), action bar, longer fish runs (D118). Open from Tom (dump 221438): the torch lights the ground fog evenly far
   into the night — trees far away stand dark against an orange haze; light sources should shape the fog, but less
   uniformly (look at the torch's `LightVolumetricFogEnergy` / range and the fog's density near the ground; atmosphere
   work, after the mechanics).
