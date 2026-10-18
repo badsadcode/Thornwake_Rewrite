@@ -292,6 +292,17 @@ def piece_wall_diagonal_opening(kind):
     m.build()
 
 
+def piece_fence(length):
+    """A rail fence: a post at each end (into the ground), two rails between."""
+    m = Mesh("Fence")
+    h = length / 2
+    for x in (-h + 0.08, h - 0.08):
+        log(m, (x, -0.7, 0), (x, 1.25, 0), 0.08, taper=0.85, wobble=0.04)
+    for y in (0.45, 0.95):
+        log(m, (-h, y, 0), (h, y, 0), 0.055, wobble=0.05)
+    m.build()
+
+
 def piece_wall_diagonal(height):
     """A wall across a 3 x 3 m square's diagonal (4.24 m), its ends flush (it meets edge walls at 45 degrees)."""
     m = Mesh("Wall")
@@ -555,6 +566,9 @@ def main():
              ("log_wall_diagonal", OUT_BUILD, lambda: piece_wall_diagonal(3.0)),
              ("log_wall_diagonal_half", OUT_BUILD, lambda: piece_wall_diagonal(1.5)),
              ("log_wall_window_diagonal", OUT_BUILD, lambda: piece_wall_diagonal_opening("window")),
+             ("log_fence", OUT_BUILD, lambda: piece_fence(3.0)),
+             ("log_fence_diagonal", OUT_BUILD, lambda: piece_fence(3 * math.sqrt(2))),
+             ("log_fence_narrow", OUT_BUILD, lambda: piece_fence(1.5)),
              ("log_wall_doorway_diagonal", OUT_BUILD, lambda: piece_wall_diagonal_opening("doorway")),
              ("log_foundation_triangle", OUT_BUILD, lambda: piece_triangle(True)),
              ("log_floor_triangle", OUT_BUILD, lambda: piece_triangle(False))]

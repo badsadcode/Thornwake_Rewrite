@@ -654,7 +654,7 @@ internal static class GameplayTests
         var en = ed.PiecesNear(0, 0, 12).ToList();
         var stdWall = c.Pieces["log_wall"];
         (PieceDef Piece, Pose Pose)? E(string piece, double x, double z, double facing = 0) =>
-            Building.SnapPiece(c.Pieces[piece], c.Family(c.Pieces[piece]), new V3(x, 5.3, z), facing, en, new V3(0, 1, 0));
+            Building.SnapPiece(c.Pieces[piece], c.Family(c.Pieces[piece]), new V3(x, 5.3, z), facing, en, new V3(0, 1, 0), c.Smaller(c.Pieces[piece]));
         T.Check(E("log_wall", .6, .55) is { } d1 && d1.Piece.Id == "log_wall_diagonal" && Math.Abs(d1.Pose.X) < 1e-6 && Math.Abs(d1.Pose.Z) < 1e-6,
             $"a wall aimed near the diagonal is the diagonal wall, corner to corner: {E("log_wall", .6, .55)}");
         T.Check(E("log_wall", 1.4, .3) is { } s1 && s1.Piece.Id == "log_wall" && Math.Abs(s1.Pose.X - 1.5) < 1e-6 && Math.Abs(s1.Pose.Z) < 1e-6,
@@ -670,6 +670,36 @@ internal static class GameplayTests
         var ss = E("log_stairs", 1.8, .2, -Math.PI / 2); // (a player east of it, facing it)
         T.Check(ss is { } sp3 && Math.Abs(Math.IEEERemainder(sp3.Pose.Yaw + Math.PI / 2, Math.Tau)) < 1e-6 && Math.Abs(sp3.Pose.X - 3.5) < 1e-6 && Math.Abs(sp3.Pose.Y - 2.3) < 1e-6,
             $"stairs up onto the foundation's east side: {ss}");
+        // Half walls standing up and quarter walls (Tom: "we are missing the vertical half wall, and a quarter wall"; D137):
+        // on a 3 m side each takes the half nearest the aim. Fences: on edges like walls, or chained on open ground.
+        T.Check(E("log_wall_narrow", 1.4, 1.0, -Math.PI / 2) is { } vh && vh.Piece.Id == "log_wall_narrow" && Math.Abs(vh.Pose.X - 1.5) < 1e-6 && Math.Abs(vh.Pose.Z - .75) < 1e-6,
+            $"a vertical half wall in the side's half nearest the aim: {E("log_wall_narrow", 1.4, 1.0, -Math.PI / 2)?.Pose}");
+        T.Check(E("log_wall_narrow_half", 1.4, -1.0, -Math.PI / 2) is { } qw && qw.Piece.Id == "log_wall_narrow_half" && Math.Abs(qw.Pose.Z + .75) < 1e-6,
+            $"a quarter wall in the other half: {E("log_wall_narrow_half", 1.4, -1.0, -Math.PI / 2)?.Pose}");
+        T.Check(E("log_fence", 1.4, .3, -Math.PI / 2) is { } fe && fe.Piece.Id == "log_fence" && Math.Abs(fe.Pose.X - 1.5) < 1e-6, "a fence along the foundation's side");
+        T.Check(E("log_fence", .6, .55) is { } fd && fd.Piece.Id == "log_fence_diagonal", "and across its diagonal, the diagonal fence");
+        var fr = new GameRules(c, new World()) { Testing = true };
+        T.Check(fr.Place(me, "log_fence", 20, 5, 0, 0, 0, 18, 0).Ok, "a fence on open ground");
+        var fs = Building.Snap(c.Pieces["log_fence"], new V3(21.7, 5, .2), .1, fr.PiecesNear(20, 0, 12).ToList(), new V3(0, 1, 0));
+        T.Check(fs is { } fn && Math.Abs(fn.Pose.X - 23) < 1e-6 && Math.Abs(fn.Pose.Z) < 1e-6, $"the next one chained to its end: {fs}");
+        var fs45 = Building.Snap(c.Pieces["log_fence"], new V3(21.7, 5, .4), Math.PI / 4, fr.PiecesNear(20, 0, 12).ToList(), new V3(0, 1, 0));
+        T.Check(fs45 is { } f45 && Math.Abs(Math.IEEERemainder(f45.Pose.Yaw - Math.PI / 4, Math.PI)) < 1e-6, $"or turned 45° at the joint: {fs45}");
+        // Tom (build 71): a floor on the walls went in the middle (its centre line on a wall's top); stairs could not stand on
+        // a floor to reach the next storey. A room of four walls: the floor aimed at a wall's top lies over the room; a half
+        // floor along that wall; stairs aimed at the deck stand on it.
+        var rm = new GameRules(c, new World()) { Testing = true };
+        rm.Place(me, "log_foundation", 0, 5.3, 0, 0, 0, 0, -4);
+        foreach (var (x, z, yaw) in new[] { (1.5, 0.0, Math.PI / 2), (-1.5, 0.0, Math.PI / 2), (0.0, 1.5, 0.0), (0.0, -1.5, 0.0) }) rm.Place(me, "log_wall", x, 5.3, z, yaw, 0, 0, -4);
+        var rn = rm.PiecesNear(0, 0, 12).ToList();
+        foreach (var (ax, az, facing) in new[] { (1.45, .2, -Math.PI / 2), (1.55, -.4, Math.PI / 2), (.2, 1.45, Math.PI), (-1.4, .3, 0.0) })
+        {
+            var fl = Building.SnapPiece(c.Pieces["log_floor"], c.Family(c.Pieces["log_floor"]), new V3(ax, 8.3, az), facing, rn, new V3(0, 1, 0));
+            T.Check(fl is { } f2 && Math.Abs(f2.Pose.X) < 1e-6 && Math.Abs(f2.Pose.Z) < 1e-6 && Math.Abs(f2.Pose.Y - 8.3) < 1e-6, $"a floor aimed at a wall top ({ax}, {az}) lies over the room: {fl?.Pose}");
+        }
+        var hf = Building.SnapPiece(c.Pieces["log_floor_half"], c.Family(c.Pieces["log_floor_half"]), new V3(1.45, 8.3, .2), -Math.PI / 2 + .1, rn, new V3(0, 1, 0));
+        T.Check(hf is { } h2 && Math.Abs(h2.Pose.Y - 8.3) < 1e-6 && Math.Abs(Math.Abs(h2.Pose.X) - .75) < 1e-6 && h2.Pose.X > 0, $"a half floor along the east wall, inside: {hf?.Pose}");
+        var st2 = Building.SnapPiece(c.Pieces["log_stairs_steep"], c.Family(c.Pieces["log_stairs_steep"]), new V3(-.3, 5.3, -.2), 0, rn, new V3(0, 1, 0));
+        T.Check(st2 is { } s4 && Math.Abs(s4.Pose.Y - 5.3) < 1e-6, $"steep stairs aimed at the deck stand on it, toward the next storey: {st2?.Pose}");
         // Testing tools (D128): off, no kits; on, kits and pieces built at once without materials.
         var t3 = new GameRules(c, new World());
         T.Check(!t3.Give(me, "materials").Ok, "no free kits unless the testing tools are on");

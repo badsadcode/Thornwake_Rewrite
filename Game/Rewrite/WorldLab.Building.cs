@@ -178,7 +178,7 @@ public partial class WorldLab
                 placing = _catalog.Family(def).FirstOrDefault(m => Math.Abs(m.Length - target.Def.Length) < .05) ?? def;
                 if (target.Def.Id == def.Id && flip == 0) _ghostWhy = "it is that already (R turns it)";
             }
-            else if (snap && Building.SnapPiece(def, _catalog.Family(def), point, desired, nearby, new V3(a.Normal.X, a.Normal.Y, a.Normal.Z)) is { } s)
+            else if (snap && Building.SnapPiece(def, _catalog.Family(def), point, desired, nearby, new V3(a.Normal.X, a.Normal.Y, a.Normal.Z), _catalog.Smaller(def)) is { } s)
             { _ghostPose = s.Pose; placing = s.Piece; }
             else
             {

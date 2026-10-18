@@ -78,6 +78,15 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 72 — vertical half and quarter walls, fences, stairs on floors
+* **Half wall, vertical** (half width, full height) and **Quarter wall** (Wall, V): on a 3 m side they take the half you
+  aim at. The old half wall is now *Half wall, horizontal*.
+* **Fences** (category Fence): straight, narrow and diagonal; on floor edges like walls, or on the ground — the next one
+  chains to the end of the last and can turn 45° (R).
+* **Stairs on a floor**: aim at the floor and the stairs stand on it, up toward the next storey.
+* **Floors on walls** lie over the room now, not centred on the wall; a half floor goes along the wall, inside.
+* **Fixed**: the ghost could freeze near some short edges (stairs especially).
+
 ## New in build 71 — walls and stairs find their edge
 * **Walls snap to edges** of floors and foundations (their sides, the lines through their middle, a square's diagonals,
   a triangle's long side) and to the tops of walls. Choose the shape with V — wall, window, doorway, half wall, gables —

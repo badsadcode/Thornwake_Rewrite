@@ -2001,6 +2001,29 @@ Soulmask and Conan Exiles:
   doorway aimed at a diagonal is the diagonal doorway, a door in it, steep stairs onto a triangle's long side; the earlier
   houses built through the edges).
 
+## D137 — Vertical half and quarter walls, fences; stairs on floors, floors over rooms; a crash on edges (2026-10-18)
+Tom (build 71): "we're missing half a wall — we have the horizontal one, not the vertical; and maybe a quarter wall; and
+a fence"; stairs could not be placed on floors and foundations (no second storey); a floor put on walls snapped in the
+middle (dump screenshots).
+* **Half wall, vertical** (1.5 m wide, full height) and **quarter wall** (1.5 × 1.5 m) are shapes of their own again
+  (build 71 had hidden them as sizes of the wall): on a 3 m edge they **slot into the half nearest the aim**; the
+  horizontal one is now called *Half wall, horizontal*. Walls and half walls on a 1.5 m edge still use them by themselves
+  (`smaller` in the content file).
+* **Fences** (new category *Fence*): a 3 m rail fence, the diagonal one, the narrow one (posts into the ground, two rails;
+  1 log and 2 branches); on floor and foundation edges like walls, or freely on the ground, **chained end to end**,
+  turning at the joints in 45° steps.
+* **Stairs aimed at the top of a floor or foundation stand on it** (by their points, toward the next storey) instead of
+  hanging from its edge; aimed at an edge from outside, they still run up onto it.
+* **Floors join others only by the points of their outer edges** (`joins`), and a floor whose middle lies over a floor or
+  foundation a storey below gets a 0.8 bonus: on a room's walls a floor lies over the room, a half floor along the wall,
+  inside.
+* **A crash**: placing on an edge a hair shorter than its nominal length (2.9999999 m for 3, from rounding) made a clamp
+  throw and the ghost stop updating — build 71's stairs on 1.5 m edges too. Clamped safely now.
+* Checked: headless (vertical half and quarter walls in either half of a side; fences on a side, on the diagonal, chained
+  on open ground and turned 45° at a joint; a floor aimed at any of a room's wall tops lies over the room; a half floor
+  along the east wall, inside; steep stairs aimed at the deck stand on it) and `--build-test` (vertical half and quarter
+  walls, two fences chained on the ground).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

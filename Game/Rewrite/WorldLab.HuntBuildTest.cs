@@ -387,7 +387,7 @@ public partial class WorldLab
                 Go(_btStage + 1, .25); break;
             case 44:
                 Check(_ghostPose is { } wg && Math.Abs(wg.Y - _btBase.Y) < .01 && !_ghostFree,
-                    $"a wall aimed at the ground just past the deck stands on the deck (ghost at {_ghostPose?.Y:0.00}, deck {_btBase.Y:0.00}; {_ghostWhy})");
+                    $"a wall aimed at the ground just past the deck stands on the deck (ghost {_ghostDef?.Id} at {_ghostPose?.Y:0.00}, deck {_btBase.Y:0.00}, free {_ghostFree}; {_ghostWhy})");
                 Shot("-wallghost");
                 _buildCategory = _catalog.Categories.ToList().IndexOf("Roof");
                 Go(441, 2.5); break;
@@ -623,7 +623,25 @@ public partial class WorldLab
                 Go(34, 1.2); break;
             }
             case 34:
+            {
                 Shot("-diagonal");
+                // A vertical half wall and a quarter wall on the lone foundation's west side, and a fence run on the ground (D137).
+                Snapped("log_wall_narrow", -1.4, 0, 1.0, Math.PI / 2);
+                Snapped("log_wall_narrow_half", -1.4, 0, -1.0, Math.PI / 2);
+                var f0 = Building.ToWorld(_btBase, new V3(-1.5, 0, 5));
+                Act(new ActionRequest(ActionKind.Place, 0, 0, "log_fence", f0.X, _sampler.Height(f0.X, f0.Z), f0.Z, (float)_btBase.Yaw));
+                Go(35, .8); break;
+            }
+            case 35:
+                Snapped("log_fence", 1.3, _sampler.Height(Building.ToWorld(_btBase, new V3(1.3, 0, 5)).X, Building.ToWorld(_btBase, new V3(1.3, 0, 5)).Z) - _btBase.Y, 5.1);
+                Go(36, .8); break;
+            case 36:
+                foreach (var o in _seenObjects.All.Where(o => o.Blueprint).ToList()) Act(new ActionRequest(ActionKind.Supply, o.Id, 0, "", 0, 0, 0, 0));
+                Check(_seenObjects.All.Any(o => o.Kind == "log_wall_narrow") && _seenObjects.All.Any(o => o.Kind == "log_wall_narrow_half") && _seenObjects.All.Count(o => o.Kind == "log_fence") >= 2,
+                    $"a vertical half wall, a quarter wall, two fences ({_status})");
+                Go(37, 1.2); break;
+            case 37:
+                Shot("-fence");
                 Done(); break;
         }
 
@@ -633,7 +651,7 @@ public partial class WorldLab
             var def = _catalog.Pieces[piece];
             var aim = Building.ToWorld(_btBase, new V3(lx, ly, lz));
             var near = GameRules.PiecesNear(_catalog, _seenObjects, aim.X, aim.Z, 12).ToList();
-            if (Building.SnapPiece(def, _catalog.Family(def), aim, _btBase.Yaw + turn, near, new V3(0, 1, 0)) is not { } s) { Check(false, $"{piece} found nothing to snap to"); return; }
+            if (Building.SnapPiece(def, _catalog.Family(def), aim, _btBase.Yaw + turn, near, new V3(0, 1, 0), _catalog.Smaller(def)) is not { } s) { Check(false, $"{piece} found nothing to snap to"); return; }
             Act(new ActionRequest(ActionKind.Place, 0, 0, s.Piece.Id, s.Pose.X, s.Pose.Y, s.Pose.Z, (float)s.Pose.Yaw));
         }
         void Go(int stage, double wait) { _btStage = stage; _btTimer = wait; }

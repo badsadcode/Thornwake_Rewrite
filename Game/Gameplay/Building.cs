@@ -37,6 +37,12 @@ public sealed record PieceDef(string Id, string Name, string Category, string Sh
     public double Length { get; init; }
     /// <summary>How it attaches to an edge: "wall" (centred on it, along it), "stairs" (its top on it, running away), or "".</summary>
     public string EdgeKind { get; init; } = "";
+    /// <summary>The family to use on an edge too short for this one (a wall on a 1.5 m side: the vertical half wall).</summary>
+    public string Smaller { get; init; } = "";
+    /// <summary>The points it joins others by when placed (floors: their outer edges, so a floor on a wall lies with its
+    /// edge on it, not its middle — Tom, build 71); null: all its snap points.</summary>
+    public IReadOnlyList<V3>? Joins { get; init; }
+    public IReadOnlyList<V3> JoinPoints => Joins ?? Snap;
     /// <summary>Joins pieces of that group by their points (null: any group).</summary>
     public bool JoinsTo(PieceDef other) => Attach == null || Attach.Contains(other.Group);
 }
@@ -109,7 +115,7 @@ public static class Building
     /// <summary>How many of the piece's points meet a point of the pieces nearby.</summary>
     public static int Joints(PieceDef def, Pose pose, IEnumerable<Placed> nearby, long ignore = 0)
     {
-        var mine = SnapPoints(def, pose).ToList();
+        var mine = def.JoinPoints.Select(s => ToWorld(pose, s)).ToList();
         var others = nearby.Where(p => p.Id != ignore && def.JoinsTo(p.Def)).ToList();
         int n = 0;
         foreach (var m in mine)
@@ -146,7 +152,10 @@ public static class Building
     public static (Pose Pose, int Joints)? Snap(PieceDef ghost, V3 aim, double desiredYaw, IReadOnlyList<Placed> nearby, V3? normal = null)
     {
         var joinable = nearby.Where(p => ghost.JoinsTo(p.Def)).ToList();
-        if (ghost.Snap.Count == 0 || joinable.Count == 0) return null;
+        if (ghost.JoinPoints.Count == 0 || joinable.Count == 0) return null;
+        // (a floor over a room: its middle above a floor or foundation a storey or so below — rather than out over the wall)
+        bool floorGhost = ghost.Has("floor");
+        var floorsBelow = floorGhost ? nearby.Where(p => p.Def.Has("floor")).ToList() : new List<Placed>();
         // Every point it may join, in a hash of 0.1 m cells (fast "is there a point here").
         var cells = new HashSet<(long, long, long)>();
         foreach (var p in joinable)
@@ -171,12 +180,12 @@ public static class Building
                     if (align && k % 2 == 1) continue; // (a door turns only in line with what it joins)
                     double yaw = p.Pose.Yaw + k * Math.Tau / steps;
                     double turn = Math.Abs(Math.IEEERemainder(yaw - desiredYaw, Math.Tau)) / (Math.PI / 2); // 0 … 2
-                    foreach (var g in ghost.Snap)
+                    foreach (var g in ghost.JoinPoints)
                     {
                         var at = ToWorld(new Pose(0, 0, 0, yaw), g);
                         var pose = new Pose(t.X - at.X, t.Y - at.Y, t.Z - at.Z, yaw);
                         int joints = 0;
-                        foreach (var m in SnapPoints(ghost, pose))
+                        foreach (var m in ghost.JoinPoints.Select(j => ToWorld(pose, j)))
                             if (cells.Contains(((long)Math.Floor(m.X / .1), (long)Math.Floor(m.Y / .1), (long)Math.Floor(m.Z / .1)))) joints++;
                         // Near the aim first; more meeting points; the piece's body toward where you aim (a roof corner
                         // in the corner you point at, not half a cell along the wall); then the heading the player wants.
@@ -189,6 +198,7 @@ public static class Building
                         // (behind the surface costs 2.5 a metre: a wall aimed at an upper floor must not wedge between the
                         // storeys, its top on that floor and its bottom on the one below — twice the joints; Tom, build 67)
                         double below = 2.5 * Math.Max(0, -side) + .25 * Math.Max(0, -off.Y);
+                        if (floorGhost && floorsBelow.Count > 0 && FloorUnder(centre, floorsBelow)) below -= .8;
                         candidates.Add((toAim - .7 * (joints - 1) + .35 * body + turnWeight * turn + below, pose, joints));
                     }
                 }
@@ -216,9 +226,14 @@ public static class Building
     /// their top on it (slid along it to the nearest quarter, inside it), running away from the piece that has the edge
     /// (toward the wanted heading's side when it is shared). Not overlapping its group. Null: no edge fits near the aim.
     /// </summary>
-    public static EdgeSnap? SnapToEdge(IReadOnlyList<PieceDef> family, V3 aim, double desiredYaw, IReadOnlyList<Placed> nearby)
+    public static EdgeSnap? SnapToEdge(IReadOnlyList<PieceDef> family, V3 aim, double desiredYaw, IReadOnlyList<Placed> nearby,
+        IReadOnlyList<PieceDef>? smaller = null)
     {
         if (family.Count == 0 || family[0].EdgeKind.Length == 0) return null;
+        // Stairs aimed at the top of a floor or foundation (in from its edges) stand on it — by their points — instead of
+        // hanging from an edge (Tom, build 71: no stairs up to a second storey).
+        if (family[0].EdgeKind == "stairs" && nearby.Any(p => p.Def.Has("floor") && Math.Abs(aim.Y - p.Pose.Y) < .3
+            && Inside(p.Def, p.Pose, new V3(aim.X, p.Pose.Y + p.Def.BoxCenter.Y, aim.Z), -.35))) return null;
         var found = new List<EdgeSnap>();
         foreach (var p in nearby)
             foreach (var (la, lb) in p.Def.Edges)
@@ -241,8 +256,16 @@ public static class Building
                 double rank = dist + (inner ? .25 : 0) + .4 * (1 - Math.Abs(Math.Cos(desiredYaw - yawAlong)));
                 if (family[0].EdgeKind == "wall")
                 {
-                    if (family.FirstOrDefault(m => Math.Abs(m.Length - len) < .05) is not { } member) continue;
-                    var mid = new V3((a.X + b.X) / 2, (a.Y + b.Y) / 2, (a.Z + b.Z) / 2);
+                    // The size that fills the edge; on an edge too short, the smaller family's; a piece shorter than the
+                    // edge (a vertical half wall on a 3 m side) slots into its halves — the one nearest the aim (D137).
+                    var member = family.FirstOrDefault(m => Math.Abs(m.Length - len) < .05)
+                        ?? smaller?.FirstOrDefault(m => Math.Abs(m.Length - len) < .05)
+                        ?? family.FirstOrDefault(m => m.Length > .1 && m.Length < len - .05 && Math.Abs(len / m.Length - Math.Round(len / m.Length)) < .02);
+                    if (member == null) continue;
+                    double piece = member.Length, slots = Math.Round(len / piece);
+                    double centre = Within((Math.Floor(s / piece) + .5) * piece, piece / 2, len - piece / 2);
+                    if (slots <= 1) centre = len / 2;
+                    var mid = new V3(a.X + dir.X * centre, a.Y + dir.Y * centre, a.Z + dir.Z * centre);
                     double yaw = Nearer(yawAlong, yawAlong + Math.PI, desiredYaw);
                     found.Add(new EdgeSnap(member, new Pose(mid.X, mid.Y, mid.Z, yaw), rank));
                 }
@@ -252,7 +275,7 @@ public static class Building
                     double half = st.BoxHalf.X, run = st.BoxHalf.Z * 2, rise = st.BoxHalf.Y * 2;
                     if (len < half * 2 - .01) continue;
                     // Slid along the edge to the nearest quarter of it, kept inside it.
-                    double q = len / 4, sq = Math.Clamp(Math.Round(s / q) * q, half, len - half);
+                    double q = len / 4, sq = Within(Math.Round(s / q) * q, half, len - half);
                     var top = new V3(a.X + dir.X * sq, a.Y, a.Z + dir.Z * sq);
                     // Away from the piece that has the edge (its centre's side), or toward the wanted heading's side.
                     var n = new V3(-dir.Z, 0, dir.X);
@@ -274,12 +297,20 @@ public static class Building
 
     /// <summary>Where a chosen piece goes (D136): on an edge (walls and stairs; the family member that fits), else by its
     /// points. The piece returned may be another size of the chosen one.</summary>
-    public static (PieceDef Piece, Pose Pose)? SnapPiece(PieceDef chosen, IReadOnlyList<PieceDef> family, V3 aim, double desiredYaw, IReadOnlyList<Placed> nearby, V3? normal = null)
+    public static (PieceDef Piece, Pose Pose)? SnapPiece(PieceDef chosen, IReadOnlyList<PieceDef> family, V3 aim, double desiredYaw, IReadOnlyList<Placed> nearby, V3? normal = null,
+        IReadOnlyList<PieceDef>? smaller = null)
     {
-        if (SnapToEdge(family, aim, desiredYaw, nearby) is { } e) return (e.Piece, e.Pose);
+        if (SnapToEdge(family, aim, desiredYaw, nearby, smaller) is { } e) return (e.Piece, e.Pose);
         if (Snap(chosen, aim, desiredYaw, nearby, normal) is { } s) return (chosen, s.Pose);
         return null;
     }
+
+    private static bool FloorUnder(V3 centre, List<Placed> floors) =>
+        floors.Any(p => centre.Y - p.Pose.Y is > 1 and < 7 && Inside(p.Def, p.Pose, new V3(centre.X, p.Pose.Y + p.Def.BoxCenter.Y, centre.Z)));
+
+    /// <summary>Clamped into [lo, hi]; the middle when the edge is a hair too short for the piece (rounding: 2.9999999 m
+    /// for 3 — Math.Clamp throws then, and the ghost stopped: Tom's stairs, build 71).</summary>
+    private static double Within(double v, double lo, double hi) => lo > hi ? (lo + hi) / 2 : Math.Clamp(v, lo, hi);
 
     private static double Nearer(double a, double b, double want) =>
         Math.Abs(Math.IEEERemainder(a - want, Math.Tau)) <= Math.Abs(Math.IEEERemainder(b - want, Math.Tau)) ? a : b;

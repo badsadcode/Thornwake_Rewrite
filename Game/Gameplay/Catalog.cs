@@ -141,6 +141,8 @@ public sealed class Catalog
                     Family = Str(e, "family") ?? Str(e, "id")!,
                     Length = Num(e, "length"),
                     EdgeKind = Str(e, "edge") ?? "",
+                    Smaller = Str(e, "smaller") ?? "",
+                    Joins = e.TryGetProperty("joins", out var jn) ? jn.EnumerateArray().Select(p => { var v = p.EnumerateArray().Select(x => x.GetDouble()).ToArray(); return new V3(v[0], v[1], v[2]); }).ToList() : null,
                 };
                 foreach (var x in piece.Cost) Check(x);
                 if (piece.Cost.Any(x => x.Item == null)) throw new FormatException($"piece {piece.Id}: costs must name items");
@@ -155,6 +157,10 @@ public sealed class Catalog
     /// <summary>The pieces of a family, the standard size (3 m) first (D136).</summary>
     public List<PieceDef> Family(PieceDef piece) =>
         Pieces.Values.Where(p => p.Family == piece.Family).OrderBy(p => Math.Abs(p.Length - 3)).ToList();
+
+    /// <summary>The family a piece uses on edges too short for it (empty: none).</summary>
+    public List<PieceDef> Smaller(PieceDef piece) =>
+        piece.Smaller.Length == 0 ? new List<PieceDef>() : Pieces.Values.Where(p => p.Family == piece.Smaller).ToList();
 
     /// <summary>The piece of a placed object's kind, or null (a log pile, a trunk…).</summary>
     public PieceDef? Piece(string kind) => Pieces.GetValueOrDefault(kind);
