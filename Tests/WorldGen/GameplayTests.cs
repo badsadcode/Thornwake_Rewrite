@@ -184,6 +184,7 @@ internal static class GameplayTests
         T.Check(!world.Removals.Contains(ObjectRemovals.Berries, 2, 3) && world.Removals.Contains(ObjectRemovals.Stones, 10, 10), "two days later the berries are back (the stone is not)");
         T.Check(rules.Eat(me, "berries").Ok && inv.Count("berries") == 3, "berries are food");
         T.Check(!rules.Forage(me, "grass", 0, 0, 50, 50, 0, 0).Ok, "grass out of reach");
+        T.Check(!rules.Forage(me, "grass", 0, 0, 6, 6, 6, 6, py: 8.5).Ok, "not from a platform 3.5 m above the ground");
         for (int i = 0; i < 2; i++) T.Check(rules.Forage(me, "grass", 0, 0, 1 + 3 * i, 1, 1 + 3 * i, 1).Ok, "grass pulled");
         T.Check(inv.Count("plant_fibre") == 4, "4 plant fibre");
         T.Check(world.Removals.Contains(ObjectRemovals.Grass, 1, 1) && world.Removals.Contains(ObjectRemovals.Grass, 0, 0) && world.Removals.Contains(ObjectRemovals.Grass, 2, 2), "the grass around the spot is gone (a 3 × 3 m patch)");
@@ -399,7 +400,16 @@ internal static class GameplayTests
         var bites = new List<Hurt>();
         for (int i = 0; i < 60; i++) { rules.StepWildlife(.1, hunter); bites.AddRange(rules.TakeHurts()); }
         T.Check(bites.Count > 0 && bites.All(h => h.Player == me && h.Damage == c.Animals["wolf"].Damage), $"the wolf bites ({bites.Count} bites in 6 s)");
-        // Hurt badly, it runs.
+        // Not through a floor (Tom, build 68): on a platform 3 m up, no bites — it waits below.
+        rules.Wildlife.Clear();
+        var below = rules.Wildlife.Spawn(c.Animals["wolf"], 0, -1, group: 10);
+        var up = new[] { new Hunter(me, 0, 8, 0, 0, false) };
+        rules.TakeHurts();
+        for (int i = 0; i < 60; i++) rules.StepWildlife(.1, up);
+        T.Check(rules.TakeHurts().Count == 0 && below.State is AnimalState.Chase or AnimalState.Attack, $"a wolf under a platform bites nobody ({below.State})");
+        rules.Wildlife.Clear();
+        wolf = rules.Wildlife.Spawn(c.Animals["wolf"], 0, -1.2, group: 9);
+                // Hurt badly, it runs.
         wolf.Health = c.Animals["wolf"].Health * .2;
         for (int i = 0; i < 5; i++) rules.StepWildlife(.1, hunter);
         T.Check(wolf.State == AnimalState.Flee, $"a badly hurt wolf runs ({wolf.State})");
@@ -569,6 +579,23 @@ internal static class GameplayTests
                 var up2 = Building.Snap(wall, new V3(ax, 8.3, az), facing, near2s, new V3(0, 1, 0));
                 T.Check(up2 is { } u && Math.Abs(u.Pose.Y - 8.3) < 1e-6, $"a wall aimed at the upper floor ({ax}, {az}) stands on it ({up2})");
             }
+        // Tom (build 68, dump 164356): "something is in the way" at a corner with nothing there — two walls meeting in an L
+        // touched exactly (1.42 + 0.08 = 1.5 m apart), so rounding decided. His corner, far out and turned 208°.
+        var cw = c.Pieces["log_wall"];
+        double yw = 208.362 * Math.PI / 180;
+        var west = new Pose(-209832.973, 17.696, 1798.103, yw + Math.PI / 2);
+        var southWall = new Pose(-209829.726, 17.696, 1794.645, yw);
+        var corner = new Pose(-209832.366, 17.696, 1796.07, yw); // (the ghost of the dump: the next one along, at the west wall)
+        int touching = 0;
+        for (int k = 0; k < 200; k++)
+        {
+            double j = (k - 100) * 1e-7; // (nudged both ways: the tie fell either side of 1.5 m)
+            var placedL = new List<Building.Placed> { new(1, cw, west with { X = west.X + j }), new(2, cw, southWall) };
+            if (Building.Blocked(cw, corner with { Z = corner.Z + j }, placedL)) touching++;
+        }
+        T.Check(touching == 0, $"an L corner of walls is never in the way ({touching} of 200 nudged tries were)");
+        T.Check(Building.Blocked(cw, southWall, new List<Building.Placed> { new(2, cw, southWall) }) && Building.Blocked(c.Pieces["log_door"], new Pose(0, 0, 0, 0),
+            new List<Building.Placed> { new(3, c.Pieces["log_door"], new Pose(0, 0, 0, 0)) }), "but the same place twice still is (walls, doors)");
         // Testing tools (D128): off, no kits; on, kits and pieces built at once without materials.
         var t3 = new GameRules(c, new World());
         T.Check(!t3.Give(me, "materials").Ok, "no free kits unless the testing tools are on");

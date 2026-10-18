@@ -231,7 +231,7 @@ public partial class WorldLab : IWorldQuery
             return;
         }
         if (near != null) { Act(new ActionRequest(near.Contents.Count > 0 ? ActionKind.Gather : ActionKind.Fuel, near.Id, 0, "", 0, 0, 0, 0)); return; }
-        var spot = _streamer.GatherablesNear(PlayerX, PlayerZ, GameRules.UseReach - .5).FirstOrDefault();
+        var spot = _streamer.GatherablesNear(PlayerX, PlayerZ, GameRules.UseReach - .5).FirstOrDefault(g => Math.Abs(g.Y - _player.Position.Y) < 1.6); // (on your level)
         if (spot.Layer != 0 || spot.X != 0 || spot.Z != 0)
         {
             bool stone = spot.Layer == ObjectRemovals.Stones;
@@ -252,7 +252,8 @@ public partial class WorldLab : IWorldQuery
         double slope = Math.Abs(_sampler.Height(PlayerX + 1, PlayerZ) - t.Height) + Math.Abs(_sampler.Height(PlayerX, PlayerZ + 1) - t.Height);
         // (and not pulled already: the patch you stand on grows back in a few days)
         long gx = (long)Math.Floor(PlayerX / ObjectRemovals.GrassCell), gz = (long)Math.Floor(PlayerZ / ObjectRemovals.GrassCell);
-        return grass > .3 && slope < .9 && !_sampler.Removals.Contains(ObjectRemovals.Grass, gx, gz);
+        // (and your feet on the ground there: not from a platform above it)
+        return grass > .3 && slope < .9 && !_sampler.Removals.Contains(ObjectRemovals.Grass, gx, gz) && Math.Abs(_player.Position.Y - t.Height) < 1.2;
     }
 
     private (ActionRequest Request, double Seconds, double Left, string Label)? _gathering;

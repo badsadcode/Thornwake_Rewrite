@@ -88,7 +88,7 @@ public static class GameplayModels
     public static Material Blueprint(bool aimed = false) => aimed ? _blueprintAimed ??= SeeThrough(new Color(.75f, .92f, 1f, .42f)) : _blueprint ??= SeeThrough(new Color(.62f, .82f, 1f, .26f));
 
     /// <summary>Every mesh of the model (not its Col… meshes) wears <paramref name="m"/> (null: its own again).</summary>
-    public static void Wear(Node3D model, Material? m)
+    public static void Wear(Node3D model, Material? m, bool shadow = false)
     {
         foreach (var child in model.FindChildren("*", "MeshInstance3D", true, false))
             if (child is MeshInstance3D mi && !mi.Name.ToString().StartsWith("Col"))
@@ -97,7 +97,7 @@ public static class GameplayModels
                 // (Godot drops a null meta value: "own_set" marks that the own one, maybe none, was noted)
                 if (!mi.HasMeta("own_set")) { mi.SetMeta("own_set", true); if (mi.MaterialOverride != null) mi.SetMeta("own_material", mi.MaterialOverride); }
                 mi.MaterialOverride = m ?? (mi.HasMeta("own_material") ? mi.GetMeta("own_material").As<Material>() : null);
-                mi.CastShadow = m == null ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
+                mi.CastShadow = m == null || shadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
             }
     }
 

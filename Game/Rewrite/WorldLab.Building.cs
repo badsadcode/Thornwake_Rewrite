@@ -45,7 +45,7 @@ public partial class WorldLab
             _tools.Select(0);
             _status = "Building: choose with the number keys and V; the left mouse places a blueprint, E brings the materials.";
         }
-        else { _ghost?.QueueFree(); _ghost = null; _ghostPiece = ""; _ghostPose = null; _status = "Building closed."; ClosePieceMenu(); _buildPicking = false; }
+        else { _ghost?.QueueFree(); _ghost = null; _ghostPiece = ""; _ghostPose = null; _status = "Building closed."; ClosePieceMenu(); _buildPicking = false; UnflashBlocker(); }
         ShowBuildMenu(on);
     }
 
@@ -181,7 +181,11 @@ public partial class WorldLab
                 var free = Building.Free(def, point, desired, _buildRaise, (x, z) => _sampler!.Height(x, z));
                 _ghostFree = true;
                 _ghostPose = free;
-                if (Building.Blocked(def, free, nearby)) _ghostWhy = "something is in the way";
+                if (Building.BlockedBy(def, free, nearby) is { } blocker)
+                {
+                    _ghostWhy = $"in the way: {blocker.Def.Name.ToLowerInvariant()} ({blocker.Id}, shown red)";
+                    FlashBlocker(blocker.Id);
+                }
                 else if (!Building.Supported(def, free, (x, z) => _sampler!.Height(x, z), nearby))
                     _ghostWhy = def.Ground ? "it needs firm ground (Page Up / Down) or something to rest on" : "it needs something to rest on";
             }
@@ -189,6 +193,7 @@ public partial class WorldLab
         }
         else _ghostWhy = "aim at the ground or a piece nearby";
         _ghostOk = _ghostPose != null && _ghostWhy.Length == 0;
+        if (!_ghostWhy.StartsWith("in the way")) UnflashBlocker();
         if (_ghost != null)
         {
             _ghost.Visible = _ghostPose != null;
@@ -249,10 +254,10 @@ public partial class WorldLab
     {
         if (id == _aimedPiece) return;
         if (_aimedPiece != 0 && _pieceParts.TryGetValue(_aimedPiece, out var old) && _seenObjects.Get(_aimedPiece) is { Blueprint: true })
-            GameplayModels.Wear(old.Model, GameplayModels.Blueprint());
+            GameplayModels.Wear(old.Model, GameplayModels.Blueprint(), GameSettings.BlueprintShadows.On);
         _aimedPiece = id;
         if (id != 0 && _pieceParts.TryGetValue(id, out var now) && _seenObjects.Get(id) is { Blueprint: true })
-            GameplayModels.Wear(now.Model, GameplayModels.Blueprint(true));
+            GameplayModels.Wear(now.Model, GameplayModels.Blueprint(true), GameSettings.BlueprintShadows.On);
     }
 
     /// <summary>E on the aimed piece: a blueprint gets materials (a moment's work), a door opens or shuts. False: nothing aimed.</summary>
@@ -319,7 +324,7 @@ public partial class WorldLab
     private void RefreshPiece(PlacedObject o, PieceDef def)
     {
         if (!_pieceParts.TryGetValue(o.Id, out var parts)) return;
-        GameplayModels.Wear(parts.Model, o.Blueprint ? GameplayModels.Blueprint(o.Id == _aimedPiece) : null);
+        GameplayModels.Wear(parts.Model, o.Blueprint ? GameplayModels.Blueprint(o.Id == _aimedPiece) : null, GameSettings.BlueprintShadows.On);
         uint layer = o.Blueprint || def.Model.Length == 0 ? BlueprintLayer : 1;
         if (parts.Body != null) parts.Body.CollisionLayer = layer;
         if (parts.Leaf?.GetNodeOrNull<StaticBody3D>("LeafBody") is { } lb) lb.CollisionLayer = layer;
@@ -339,10 +344,40 @@ public partial class WorldLab
             }
     }
 
+    private long _flashed;
+
+    /// <summary>The piece that blocks the ghost glows red while it does (Tom: "it said something was there, but nothing was visible").</summary>
+    private void FlashBlocker(long id)
+    {
+        if (_flashed == id) return;
+        UnflashBlocker();
+        if (!_pieceParts.TryGetValue(id, out var parts)) return;
+        _flashed = id;
+        GameplayModels.Wear(parts.Model, GameplayModels.Ghost(false));
+    }
+
+    private void UnflashBlocker()
+    {
+        if (_flashed == 0) return;
+        long id = _flashed; _flashed = 0;
+        if (_seenObjects.Get(id) is { } o && _catalog.Piece(o.Kind) is { } def) RefreshPiece(o, def);
+    }
+
     private void PieceGone(long id) { _pieceParts.Remove(id); if (_aimedPiece == id) _aimedPiece = 0; }
+
+    private bool _shadowHooked;
 
     private void BuildingWorldReady()
     {
+        if (!_shadowHooked)
+        {
+            _shadowHooked = true;
+            GameSettings.BlueprintShadows.Changed += _ =>
+            {
+                foreach (var id in _pieceParts.Keys.ToList())
+                    if (_seenObjects.Get(id) is { } o && _catalog.Piece(o.Kind) is { } d) RefreshPiece(o, d);
+            };
+        }
         _pieceParts.Clear();
         _aimedPiece = 0;
         if (_building) SetBuilding(false);

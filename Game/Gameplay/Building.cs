@@ -78,7 +78,10 @@ public static class Building
     private static double Extent(PieceDef d, double yaw, double ux, double uz, double margin)
     {
         double s = Math.Sin(yaw), c = Math.Cos(yaw);
-        double hx = Math.Max(0, d.BoxHalf.X - margin), hz = Math.Max(0, d.BoxHalf.Z - margin);
+        // (shrunk by the margin, but never past half a thin side, and the long sides by a little more: walls meeting in an L
+        // sit exactly side to end — Tom, build 68 — and must not count as overlapping by a rounding)
+        double Shrink(double h) => h - Math.Min(h > .5 ? margin * 1.5 : margin, h * .5);
+        double hx = Shrink(d.BoxHalf.X), hz = Shrink(d.BoxHalf.Z);
         return hx * Math.Abs(c * ux - s * uz) + hz * Math.Abs(s * ux + c * uz);
     }
 
@@ -86,8 +89,15 @@ public static class Building
     public readonly record struct Placed(long Id, PieceDef Def, Pose Pose);
 
     /// <summary>Overlaps a piece of its own group (ignoring <paramref name="ignore"/>: the one it replaces).</summary>
-    public static bool Blocked(PieceDef def, Pose pose, IEnumerable<Placed> nearby, long ignore = 0) =>
-        nearby.Any(p => p.Id != ignore && p.Def.Group == def.Group && def.Group.Length > 0 && Overlaps(def, pose, p.Def, p.Pose));
+    public static bool Blocked(PieceDef def, Pose pose, IEnumerable<Placed> nearby, long ignore = 0) => BlockedBy(def, pose, nearby, ignore) != null;
+
+    /// <summary>The piece of its group it would overlap (null: none) — shown to the player, so nothing blocks unseen.</summary>
+    public static Placed? BlockedBy(PieceDef def, Pose pose, IEnumerable<Placed> nearby, long ignore = 0)
+    {
+        foreach (var p in nearby)
+            if (p.Id != ignore && p.Def.Group == def.Group && def.Group.Length > 0 && Overlaps(def, pose, p.Def, p.Pose)) return p;
+        return null;
+    }
 
     /// <summary>How many of the piece's points meet a point of the pieces nearby.</summary>
     public static int Joints(PieceDef def, Pose pose, IEnumerable<Placed> nearby, long ignore = 0)

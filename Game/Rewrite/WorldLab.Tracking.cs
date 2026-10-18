@@ -30,6 +30,10 @@ public partial class WorldLab
     private MultiMeshInstance3D? _trackPrints;
     private readonly List<(Label3D Label, double Distance)> _scanMarks = new();
     private StandardMaterial3D? _printMat;
+    private MeshInstance3D? _scanWave;
+    private ShaderMaterial? _waveMat, _glowMat;
+    private double _scanX, _scanY, _scanZ;
+    private readonly HashSet<int> _glowing = new();
     private bool _crouch, _winded;
     private float _stamina = 100, _shoulderSide = 1, _shoulderSideSmooth = 1;
 
@@ -57,7 +61,14 @@ public partial class WorldLab
         double now = Now;
         if (now - _scanAt < ScanRest) { _status = $"Catching your breath before looking around again ({ScanRest - (now - _scanAt):0} s)."; return; }
         _scanAt = now;
+        _scanX = PlayerX; _scanY = _player.Position.Y; _scanZ = PlayerZ;
         if (_scanRoot == null) { _scanRoot = new Node3D { Name = "Scan" }; AddChild(_scanRoot); }
+        // The animals within reach glow for a while (D134).
+        _glowMat ??= new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/AnimalGlow.gdshader") };
+        foreach (var id in _glowing) if (_animalViews.TryGetValue(id, out var was)) was.SetGlow(null);
+        _glowing.Clear();
+        foreach (var v in _animalViews.Values.Where(v => v.State != AnimalState.Dead && (v.X - PlayerX) * (v.X - PlayerX) + (v.Z - PlayerZ) * (v.Z - PlayerZ) <= ScanRadius * ScanRadius * 2.56))
+        { v.SetGlow(_glowMat); _glowing.Add(v.Id); }
         foreach (var (l, _) in _scanMarks) l.QueueFree();
         _scanMarks.Clear();
         var marks = new List<(double X, double Y, double Z, string Text, Color Colour)>();
@@ -107,7 +118,24 @@ public partial class WorldLab
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
             _scanRoot.AddChild(_scanRing);
         }
-        _scanRing.Visible = age < 1.2;
+        // The look of the wave (setting): the sonar shader over everything, or build 68's ring.
+        bool sonar = GameSettings.ScanLook.Index == 0;
+        _scanRing.Visible = age < 1.2 && !sonar;
+        if (_scanWave == null)
+        {
+            _waveMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/ScanWave.gdshader") };
+            _scanWave = new MeshInstance3D { Name = "ScanWave", Mesh = new QuadMesh { Size = Vector2.One }, MaterialOverride = _waveMat,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, ExtraCullMargin = 16384 };
+            _camera.AddChild(_scanWave); // (always in view; its shader covers the screen)
+        }
+        _scanWave.Visible = sonar && age < 6;
+        _waveMat!.SetShaderParameter("origin", new Vector3((float)(_scanX - _originX), (float)_scanY, (float)(_scanZ - _originZ)));
+        _waveMat.SetShaderParameter("radius", (float)(ScanRadius * Math.Min(1.15, age / 1.4)));
+        _waveMat.SetShaderParameter("max_radius", (float)ScanRadius);
+        _waveMat.SetShaderParameter("tint", (float)Math.Clamp(1 - (age - 1.4) / 4.5, 0, 1));
+        _waveMat.SetShaderParameter("fade", (float)Math.Clamp((6 - age) / 1.5, 0, 1));
+        _glowMat?.SetShaderParameter("strength", (float)Math.Clamp((12 - age) / 4, 0, 1));
+        if (age > 12) { foreach (var id in _glowing) if (_animalViews.TryGetValue(id, out var gv)) gv.SetGlow(null); _glowing.Clear(); }
         _scanRing.Position = _player.Position + Vector3.Up * .3f;
         _scanRing.Scale = new Vector3(Math.Max(.1f, reach), 1 + reach * .04f, Math.Max(.1f, reach));
         ((StandardMaterial3D)_scanRing.MaterialOverride).AlbedoColor = new Color(.6f, .9f, 1f, .5f * (1 - (float)Math.Min(1, age / 1.2)));

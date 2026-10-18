@@ -210,7 +210,8 @@ public sealed class Wildlife
                 { a.State = AnimalState.Walk; a.HomeX = a.X; a.HomeZ = a.Z; NextCalm(a); break; }
                 if (def.Predator && a.Health < def.Health * .3) { Scare(a, prey.X, prey.Z, 10); break; }
                 double d = Dist(prey.X, prey.Z, a.X, a.Z), toward = Math.Atan2(prey.X - a.X, prey.Z - a.Z);
-                if (d <= def.AttackRange + .4)
+                // (and on its level: a hunter on a platform above cannot be bitten through the floor — Tom, build 68; it waits below)
+                if (d <= def.AttackRange + .4 && Math.Abs(prey.Y - a.Y) < 1.6)
                 {
                     a.State = AnimalState.Attack; a.Speed = 0;
                     a.Yaw = TurnToward(a.Yaw, toward, 6 * dt);

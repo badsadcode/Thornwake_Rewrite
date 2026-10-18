@@ -160,6 +160,13 @@ public sealed partial class AnimalView : Node3D
         };
     }
 
+    /// <summary>A glow laid over the model (the scan, D134), or null for none.</summary>
+    public void SetGlow(Material? glow)
+    {
+        foreach (var child in _model.FindChildren("*", "MeshInstance3D", true, false))
+            if (child is MeshInstance3D mi) mi.MaterialOverlay = glow;
+    }
+
     /// <summary>A fallen animal (a carcass): the death animation's last frame.</summary>
     public static Node3D Carcass(AnimalDef def)
     {

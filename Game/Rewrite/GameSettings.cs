@@ -338,6 +338,11 @@ public static class GameSettings
         "A thin trail behind every arrow, fading in about a second: you see the arc it flew."));
     public static readonly Setting BowHand = Add(new("ui.bow_hand", "Interface", "Bow hand", 0, 1, 1, 0,
         "Which of Alden's hands holds the bow (the other draws the string).", options: new[] { "right", "left (as builds 63–67)" }));
+    public static readonly Setting BlueprintShadows = Add(new("ui.blueprint_shadows", "Interface", "Blueprint shadows", 0, 1, 1, 0,
+        "Whether placed blueprints (the see-through pieces waiting for materials) cast shadows. Off: as before (D134)."));
+    public static readonly Setting ScanLook = Add(new("ui.scan_look", "Interface", "Scan look", 0, 1, 1, 0,
+        "How the scan (Z) sweeps out (D134): a sonar wave lighting the land as it passes, or build 68's thin ring.",
+        options: new[] { "sonar wave", "ring (build 68)" }));
     public static readonly Setting NeedsOn = Add(new("sim.needs", "Simulation", "Hunger and cold", 0, 1, 1, 1,
         "Step 1 placeholder needs (D110): food, body warmth, wetness and health. Off: none of them change (testing the world)."));
     public static readonly Setting Animals = Add(new("sim.animals", "Simulation", "Animals", 0, 3, 1, 2,

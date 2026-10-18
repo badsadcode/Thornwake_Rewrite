@@ -78,6 +78,14 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 69 — sonar scan, blockers shown, no bites through floors
+* **Scan (Z)** sweeps out like sonar: a glowing wave lights the land as it passes, and the animals it finds glow for a
+  while (Settings → Interface → Scan look: the old ring).
+* **When something is in the way** of a piece, the menu names it and it flashes red.
+* **Blueprint shadows** can be switched on (Settings → Interface).
+* **Wolves cannot bite you through a floor** any more; on a platform you are safe (they wait below).
+* **No gathering from up on a platform**: stones, berries and grass only on your level.
+
 ## New in build 68 — tracking, sneaking, stamina, smaller pieces
 * **Z — look around (scan)**: a ring sweeps out 45 m and marks stones, berry bushes, arrows, carcasses, blueprints and
   animals (with distance) for 20 seconds, and lights up the **animal tracks** around (they stay for five minutes).

@@ -1932,6 +1932,28 @@ aim at** (was 0.8), so a wall aimed at a floor stands on it; a test builds a fou
 aims at the upper floor from eight places and headings. (A first try capping the joints at five broke ridge roofs,
 which truly meet ten points: reverted.)
 
+## D134 — Building and hunting after build 68; a sonar scan (2026-10-18)
+Tom (build 68, dumps 164310–165142): a wall would not go somewhere ("something is in the way", nothing visible), then did
+from a higher spot; toggleable shadows for blueprints; wolves bit him through the floor of a high foundation; grass and
+stones could be gathered from up on a platform; the scan should look like sonar — a wave growing from the player that
+lights the surroundings — and scanned animals could glow for a while.
+* **Nothing blocks unseen**: when a piece is in the way, the bar names it (kind and id) and it **flashes red** while it
+  blocks. The overlap test shrinks long sides a little more than thin ones (walls meeting in an L touch exactly side to
+  end; a test at Tom's corner, turned 208° and 210 km out, nudged both ways). The dumps did not catch the blocked moment;
+  the likeliest cause is the facing (D129): from his first spot the camera turned the wall across the one beside it.
+* **Blueprint shadows**: *Interface → Blueprint shadows* (off = as before).
+* **Bites need the same level**: a predator bites only within 1.6 m up or down — on a platform you are safe; it waits
+  below (animals still walk through pieces).
+* **Gathering on your level**: stones and berries within 1.6 m of your feet's height, grass only with your feet on the
+  ground there; the host refuses foraging more than 2 m above the ground.
+* **Sonar scan** (`ScanWave.gdshader`): a screen-filling pass reads each pixel's world position from the depth buffer and
+  lights a 3 m band where its distance from the scan's centre is the wave's front (out to 45 m in 1.4 s), leaving a faint
+  rippled tint behind it that fades over five seconds. Scanned animals (within 72 m) **glow** (`AnimalGlow.gdshader`: a
+  rim of light laid over their materials, seen through grass and trees) for 12 s, fading. *Interface → Scan look*: sonar
+  wave / ring (build 68).
+* **Next (Tom)**: diagonal walls — snapping at 45° with their own turning steps (a diagonal wall piece 3·√2 m long, points
+  on the diagonals of foundations and floors, and triangle foundations and floors to close the corners).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

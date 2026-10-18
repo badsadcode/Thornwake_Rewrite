@@ -92,7 +92,7 @@ public partial class WorldLab
                 "pack" => "Pick up the pack",
                 _ => "Pick up " + string.Join(", ", near.Contents.Select(c => $"{(c.Count > 1 ? c.Count + " " : "")}{_catalog.Item(c.Item).Name.ToLowerInvariant()}")),
             };
-        var spot = _streamer.GatherablesNear(PlayerX, PlayerZ, GameRules.UseReach - .5).FirstOrDefault();
+        var spot = _streamer.GatherablesNear(PlayerX, PlayerZ, GameRules.UseReach - .5).FirstOrDefault(g => Math.Abs(g.Y - _player.Position.Y) < 1.6); // (on your level)
         if (spot.Layer != 0 || spot.X != 0 || spot.Z != 0) return spot.Layer == ObjectRemovals.Stones ? "Pick up the stone" : "Pick berries";
         return null;
     }

@@ -204,9 +204,11 @@ public sealed partial class GameRules
     /// Whether one really lies there is the player's PC's word (it draws them); the host checks the reach and that it
     /// was not taken already.
     /// </summary>
-    public ActionResult Forage(int player, string what, long cx, long cz, double x, double z, double px, double pz)
+    public ActionResult Forage(int player, string what, long cx, long cz, double x, double z, double px, double pz, double py = double.NaN)
     {
         var inv = Inventory(player);
+        // (on the ground's level: not from up on a platform — Tom, build 68)
+        if (!double.IsNaN(py) && Math.Abs(py - _world.Ground(x, z)) > 2) return ActionResult.Fail("You cannot reach the ground from up here.");
         switch (what)
         {
             case "stone" or "berries":

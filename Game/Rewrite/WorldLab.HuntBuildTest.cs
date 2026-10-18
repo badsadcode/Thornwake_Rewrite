@@ -292,6 +292,7 @@ public partial class WorldLab
                 _pitch = -.45f; _zoom = 6;
                 Scan();
                 GD.Print($"SCAN {_status} · tracks kept {_tracks.Count} · marks {_scanMarks.Count}");
+                GetTree().CreateTimer(.7).Timeout += () => TestShot("-wave");
                 GetTree().CreateTimer(1.6).Timeout += () => { TestShot("-scan"); GetTree().CreateTimer(1).Timeout += () => GetTree().Quit(); };
             }
         }

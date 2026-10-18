@@ -142,7 +142,7 @@ public sealed class NetServer
                         ActionKind.Gather => rules.Gather(id, a.A, at.X, at.Z),
                         ActionKind.ChopTrunk => rules.ChopTrunk(id, a.A, at.X, at.Z),
                         ActionKind.Claim => new ActionResult(rules.Claim(id, a.A, at.X, at.Z), ""),
-                        ActionKind.Forage => rules.Forage(id, a.Id, a.A, a.B, a.X, a.Z, at.X, at.Z),
+                        ActionKind.Forage => rules.Forage(id, a.Id, a.A, a.B, a.X, a.Z, at.X, at.Z, at.Y),
                         ActionKind.Catch => rules.Catch(id, a.Id, a.X, at.X, at.Z),
                         ActionKind.Die => rules.Die(id, at.X, at.Z),
                         ActionKind.Attack => rules.Attack(id, (int)a.A, a.Id, at.X, at.Z),
