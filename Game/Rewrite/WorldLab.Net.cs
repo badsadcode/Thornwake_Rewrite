@@ -130,9 +130,9 @@ public partial class WorldLab : IWorldHost, IClientGame
                 if (!_net.IsHost) return drawn + " | " + frame;
                 var (wild, animalMsgs) = _net.Server!.TakeTimes();
                 return _rules == null ? frame : string.Format(c,
-                    "players {0}, animals {1}, objects {2} (pieces {3}) | animals' thinking {4:0.0} ms/s, their messages {5:0.0} ms/s | memory {6:0} MB | {7} | {8}",
+                    "players {0}, animals {1}, objects {2} (pieces {3}) | animals' thinking {4:0.0} ms/s (world: {9}), their messages {5:0.0} ms/s | memory {6:0} MB | {7} | {8}",
                     _net.Server.PlayerCount, _rules.Wildlife.All.Count, _rules.Objects.All.Count, _rules.Objects.All.Count(o => _catalog.Piece(o.Kind) != null),
-                    wild, animalMsgs, OS.GetStaticMemoryUsage() / 1048576.0, drawn, frame);
+                    wild, animalMsgs, OS.GetStaticMemoryUsage() / 1048576.0, drawn, frame, TakeQueries());
             };
         }
         if ((_netRun -= delta) <= 0 && _netRun > -1e8)
@@ -149,6 +149,7 @@ public partial class WorldLab : IWorldHost, IClientGame
             && ((IClientGame)this).LocalState() != null && args.FirstOrDefault(a => a.StartsWith("--bots=")) is { } bots)
         {
             double spread = args.FirstOrDefault(a => a.StartsWith("--bot-spread=")) is { } sp ? double.Parse(sp[13..], CultureInfo.InvariantCulture) : 0;
+            if (args.FirstOrDefault(a => a.StartsWith("--bot-huts=")) is { } huts) NetBots.KeepHuts = int.Parse(huts[11..], CultureInfo.InvariantCulture);
             var sampler = _sampler;
             _bots = new NetBots(int.Parse(bots[7..], CultureInfo.InvariantCulture), spread, jt.Address, jt.Port, jt.Name, jt.Version, _catalog,
                 (x, z) => sampler.Height(x, z), (x, z) => ((Thornwake.Gameplay.IWorldQuery)this).IsWater(x, z), _net.Stats.Event);

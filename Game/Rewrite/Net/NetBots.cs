@@ -25,6 +25,9 @@ public sealed class NetBots
 
     public IReadOnlyList<Bot> Bots => _bots;
 
+    /// <summary>Huts a bot keeps standing before it takes its oldest down (<c>--bot-huts=n</c>; more: more pieces pile up).</summary>
+    public static int KeepHuts { get; set; } = 3;
+
     public NetBots(int count, double spread, string address, int port, string name, string version, Catalog catalog,
         Func<double, double, double> ground, Func<double, double, bool> water, Action<string> log)
     {
@@ -135,7 +138,16 @@ public sealed class NetBots
             _phaseTimer = 20 + _index * 3;
         }
 
+        private readonly NetLag _lag = NetLag.FromArgs();
+
         private void Send(byte[] data, bool reliable)
+        {
+            if (_peer == null || _peer.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Connected) return;
+            if (_lag.Hold(NetServer.HostPeer, data, reliable)) return;
+            SendNow(data, reliable);
+        }
+
+        private void SendNow(byte[] data, bool reliable)
         {
             if (_peer == null || _peer.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Connected) return;
             PeriodOut += data.Length + 28;
@@ -161,6 +173,7 @@ public sealed class NetBots
         {
             _now += dt; _dt = dt;
             if (_peer == null) return;
+            _lag.Release((_, data, reliable) => SendNow(data, reliable));
             _mp.Poll();
             if (!_client.Welcomed || !_placed) return;
             Think(dt);
@@ -263,7 +276,7 @@ public sealed class NetBots
         {
             _plan.Clear();
             // (the oldest of three huts taken down — from beside it: the bot goes back there first)
-            if (_huts.Count >= 3)
+            if (_huts.Count >= KeepHuts)
             {
                 var old = _huts[0];
                 _huts.RemoveAt(0);

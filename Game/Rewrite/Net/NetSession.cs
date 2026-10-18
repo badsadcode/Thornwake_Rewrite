@@ -93,9 +93,22 @@ public sealed partial class NetSession : Node
     {
         // Not (or no longer) connected: nothing to send to (it used to fill the log with errors after a drop).
         if (_peer == null || _peer.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Connected) return;
+        if (Lag.Hold(peer, data, reliable)) return;
+        SendNow(peer, data, reliable);
+    }
+
+    private void SendNow(long peer, byte[] data, bool reliable)
+    {
+        if (_peer == null || _peer.GetConnectionStatus() != MultiplayerPeer.ConnectionStatus.Connected) return;
+        // (a peer leaving — its connection closing — or gone while its messages waited in the simulated lag: ENet would
+        // print "Unable to send packet on channel 0, max channels: 0" for each, as at the end of the 12-player test)
+        if (_peer.GetPeer((int)peer) is not { } to || to.GetState() != ENetPacketPeer.PeerState.Connected) return;
         Stats.Counted((Msg)data[0], true, data.Length);
         _mp.SendBytes(data, (int)peer, reliable ? MultiplayerPeer.TransferModeEnum.Reliable : MultiplayerPeer.TransferModeEnum.Unreliable, reliable ? 0 : 1);
     }
+
+    /// <summary>A simulated slow line for tests (<c>--net-lag=ms[,loss%]</c>; D138): what this PC sends waits that long.</summary>
+    public NetLag Lag { get; } = NetLag.FromArgs();
 
     /// <summary>Every connected peer with its name, round trip, jitter (ms) and packet loss (%) as ENet measures them.</summary>
     public List<(long Id, string Name, int Rtt, int Jitter, double Loss)> Peers()
@@ -116,6 +129,7 @@ public sealed partial class NetSession : Node
     public override void _Process(double delta)
     {
         if (_peer == null) return;
+        Lag.Release(SendNow);
         _watch.Restart();
         Server?.Tick(delta, _hostState());
         Stats.Frame(delta, Server != null ? _watch.Elapsed.TotalMilliseconds : 0);

@@ -83,7 +83,23 @@ public partial class WorldLab : IWorldQuery
     ObjectRemovals IWorldQuery.Removals => _sampler!.Removals;
     double IWorldQuery.Hours => _clock.Day * 24 + _clock.Hour;
     (double X, double Z, double Speed) IWorldQuery.Wind => (_atmosphere.Wind.Direction.X, _atmosphere.Wind.Direction.Y, _atmosphere.Wind.Speed);
-    double IWorldQuery.Ground(double x, double z) => _sampler!.Height(x, z);
+    double IWorldQuery.Ground(double x, double z) { long t = Query(); var h = _sampler!.Height(x, z); Queried(0, t); return h; }
+
+    // How often the rules ask the world, and how long it takes (D138: the animals' share of the host's time).
+    private readonly System.Diagnostics.Stopwatch _queryWatch = System.Diagnostics.Stopwatch.StartNew();
+    private readonly (long Calls, long Ticks)[] _queries = new (long, long)[4];
+    private static readonly string[] QueryNames = { "ground", "obstacle", "water", "biome" };
+    private long Query() => _queryWatch.ElapsedTicks;
+    private void Queried(int kind, long start) { _queries[kind].Calls++; _queries[kind].Ticks += _queryWatch.ElapsedTicks - start; }
+
+    /// <summary>The world queries since the last call: calls and ms per kind.</summary>
+    private string TakeQueries()
+    {
+        var c = CultureInfo.InvariantCulture;
+        string line = string.Join(", ", _queries.Select((q, i) => string.Format(c, "{0} {1}× {2:0.0} ms", QueryNames[i], q.Calls, q.Ticks * 1000.0 / System.Diagnostics.Stopwatch.Frequency)));
+        Array.Clear(_queries);
+        return line;
+    }
     string IWorldQuery.WaterNear(double x, double z, double radius)
     {
         // The nearest water on rings around the point (every ~3 m).
@@ -100,33 +116,58 @@ public partial class WorldLab : IWorldQuery
     IReadOnlySet<string> IWorldQuery.BiomeTags(double x, double z)
     {
         if (_sampler == null) return new HashSet<string>();
+        long start = Query();
         // Where two biomes blend (a swamp's edge into forest), animals of either may live.
         var (a, b, share) = Vegetation.BiomeOf(_sampler, x, z);
         var tags = a.Def.Tags.ToHashSet();
         if (share < .8) tags.UnionWith(b.Def.Tags);
+        Queried(3, start);
         return tags;
     }
     bool IWorldQuery.Obstacle(double x, double z, double radius)
     {
         if (_sampler == null) return false;
+        long start = Query();
         _treeConfig ??= DetailConfig.For(_sampler);
-        foreach (var t in Vegetation.TreesNear(_sampler, x, z, radius + 1.2, _treeConfig.Value))
-        {
-            double reach = radius + ObjectCollision.TrunkRadius(t.Species) * t.Scale;
-            if ((t.X - x) * (t.X - x) + (t.Z - z) * (t.Z - z) < reach * reach && ObjectCollision.TrunkRadius(t.Species) > 0) return true;
-        }
-        return false;
+        // The trees of the lattice cells around, as Vegetation.TreesNear finds them, but each cell's tree worked out once
+        // (D138: animals ask this ~17 times a second each; with 300 animals round twelve players it was 80 % of their
+        // time, every call growing the trees again from the terrain, biome and rivers). Felled trees are left out live.
+        double cell = Vegetation.LatticeCell(_treeConfig.Value), around = radius + 1.2;
+        bool hit = false;
+        for (long cz = (long)Math.Floor((z - around) / cell); cz <= (long)Math.Floor((z + around) / cell) && !hit; cz++)
+            for (long cx = (long)Math.Floor((x - around) / cell); cx <= (long)Math.Floor((x + around) / cell); cx++)
+            {
+                if (_sampler.Removals.Contains(ObjectRemovals.Trees, cx, cz)) continue;
+                if (!_obstacleTrees.TryGetValue((cx, cz), out var tree))
+                {
+                    if (_obstacleTrees.Count > 400_000) _obstacleTrees.Clear(); // (players far apart for hours: start again)
+                    _obstacleTrees[(cx, cz)] = tree = Vegetation.TreeAt(_sampler, cx, cz, _treeConfig.Value);
+                }
+                if (tree is not { } t || (t.X - x) * (t.X - x) + (t.Z - z) * (t.Z - z) > around * around) continue;
+                double reach = radius + ObjectCollision.TrunkRadius(t.Species) * t.Scale;
+                if ((t.X - x) * (t.X - x) + (t.Z - z) * (t.Z - z) < reach * reach && ObjectCollision.TrunkRadius(t.Species) > 0) { hit = true; break; }
+            }
+        Queried(1, start);
+        return hit;
     }
     private DetailConfig? _treeConfig;
+    private readonly Dictionary<(long, long), Vegetation.LatticeTree?> _obstacleTrees = new();
 
-    bool IWorldQuery.IsWater(double x, double z) =>
-        _sampler == null || _sampler.Sample(x, z) is var t && (t.Water != WaterKind.None || t.Height < _sampler.Plan.Profile.SeaLevel + .2);
+    bool IWorldQuery.IsWater(double x, double z)
+    {
+        if (_sampler == null) return true;
+        long start = Query();
+        var t = _sampler.Sample(x, z);
+        Queried(2, start);
+        return t.Water != WaterKind.None || t.Height < _sampler.Plan.Profile.SeaLevel + .2;
+    }
     ObjectRemovals? IWorldHost.Removals => _generation == null ? _sampler?.Removals : null;
     GameRules? IWorldHost.Rules => _rules;
 
     /// <summary>A new world here: nothing placed or felled carries over (inventories do: the character is the same).</summary>
     private void GameplayWorldReady()
     {
+        _obstacleTrees.Clear(); _treeConfig = null;
         foreach (var v in _objectViews.Values) v.QueueFree();
         _objectViews.Clear();
         foreach (var s in _stumps.Values) s.Node.QueueFree();
