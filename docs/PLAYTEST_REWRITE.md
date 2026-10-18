@@ -78,6 +78,22 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 73 — ready for the real multiplayer test (4–12 players)
+**Host and everyone joining must have build 73** (the network messages changed; build 72 does not connect).
+* Tested on one PC with 12 players (bot players that walk, hunt with the bow and build log huts): the host stays at
+  60 fps with 12 players together or in 12 different places, everyone sees the same pieces, others are drawn within
+  ~0.4 m of where they really are (~0.6 m over a 320 ms line like the Brazil test).
+* **Less to download**: each player now receives ~14 KB/s with 12 players together (was 26), ~8 KB/s when far apart;
+  the host sends ~160 KB/s for 12 (1.3 Mbit/s). Players more than 400 m away are updated 4 times a second.
+* **Faster host**: animals far apart no longer slow the host (350 animals around 12 players: from a quarter of a frame
+  budget to almost nothing); many buildings no longer slow anyone's game.
+* **Bots for your own test** (developer folder): `TEST_MP_BOTS.cmd [address] [players] [spread m] [seconds]` joins your
+  hosted game with bot players, no window. `TEST_MP_BOTS.cmd 127.0.0.1 8` adds 7 bots beside you; a spread of 3000 puts
+  each in its own place 3 km out.
+* **Please, when you test with friends**: after the session send me the network logs of the host and of each friend
+  (`%APPDATA%\Thornwake\debug\net-….log`) — they now record the host's load every second (frame times, animals,
+  pieces, where the time goes) — and say how it felt (anyone jumping or lagging, actions slow to happen).
+
 ## New in build 72 — vertical half and quarter walls, fences, stairs on floors
 * **Half wall, vertical** (half width, full height) and **Quarter wall** (Wall, V): on a 3 m side they take the half you
   aim at. The old half wall is now *Half wall, horizontal*.

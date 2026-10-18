@@ -169,7 +169,7 @@ public partial class WorldLab : IWorldQuery
     {
         _obstacleTrees.Clear(); _treeConfig = null;
         foreach (var v in _objectViews.Values) v.QueueFree();
-        _objectViews.Clear();
+        _objectViews.Clear(); _fires.Clear(); _viewsChanged.Clear(); _viewsOrigin = (double.NaN, double.NaN);
         foreach (var s in _stumps.Values) s.Node.QueueFree();
         _stumps.Clear();
         FellingWorldReady();
@@ -363,8 +363,9 @@ public partial class WorldLab : IWorldQuery
         for (int n = r.ReadInt32(); n > 0; n--)
         {
             var (id, o) = _seenObjects.Read(r);
-            if (o == null) { ObjectGone(id); PieceGone(id); if (_objectViews.Remove(id, out var gone)) gone.QueueFree(); continue; }
+            if (o == null) { ObjectGone(id); PieceGone(id); _fires.Remove(id); if (_objectViews.Remove(id, out var gone)) gone.QueueFree(); continue; }
             if (o.Kind == "trunk") { TrunkChanged(o); continue; } // (drawn and moved by the felling part)
+            _viewsChanged.Add(id);
             if (_objectViews.ContainsKey(id)) { if (_catalog.Piece(o.Kind) is { } changed) RefreshPiece(o, changed); continue; }
             {
                 var view = _catalog.Piece(o.Kind) is { } piece ? PieceView(o, piece)
@@ -416,16 +417,33 @@ public partial class WorldLab : IWorldQuery
 
     private double _flicker;
 
+    // Objects drawn: placed where they are when they change or the floating origin moves, not every frame; fires (their
+    // flames and light, found once) flicker every frame (D138: with 200 pieces about, the walk over every view and its
+    // children each frame was 2 ms a frame on a joined PC, growing with every piece built).
+    private readonly Dictionary<long, (List<Node3D> Flames, OmniLight3D? Light)> _fires = new();
+    private readonly HashSet<long> _viewsChanged = new();
+    private (double X, double Z) _viewsOrigin = (double.NaN, double.NaN);
+
     private void UpdateGameplayViews(double delta)
     {
         _flicker += delta;
-        foreach (var (id, view) in _objectViews)
+        bool all = _viewsOrigin != (_originX, _originZ);
+        _viewsOrigin = (_originX, _originZ);
+        foreach (long id in all ? _objectViews.Keys.ToList() : _viewsChanged.ToList())
+        {
+            if (!_objectViews.TryGetValue(id, out var view) || _seenObjects.Get(id) is not { } o) continue;
+            view.Position = new Vector3((float)(o.X - _originX), (float)o.Y, (float)(o.Z - _originZ));
+            if (all && _fires.ContainsKey(id)) continue;
+            var flames = view.GetChildren().OfType<Node3D>().Where(n => n.Name.ToString().StartsWith("Flame")).ToList();
+            var firelight = view.GetNodeOrNull<OmniLight3D>("Firelight");
+            if (flames.Count > 0 || firelight != null) _fires[id] = (flames, firelight); else _fires.Remove(id);
+        }
+        _viewsChanged.Clear();
+        foreach (var (id, (flames, light)) in _fires)
         {
             if (_seenObjects.Get(id) is not { } o) continue;
-            view.Position = new Vector3((float)(o.X - _originX), (float)o.Y, (float)(o.Z - _originZ));
-            foreach (var child in view.GetChildren())
-                if (child is Node3D n && n.Name.ToString().StartsWith("Flame")) n.Visible = o.Lit;
-            if (view.GetNodeOrNull<OmniLight3D>("Firelight") is { } light)
+            foreach (var n in flames) n.Visible = o.Lit;
+            if (light != null)
             {
                 light.Visible = o.Lit;
                 // Flicker (placeholder): a few out-of-step waves; a dying fire (under 10 minutes of wood) dims.

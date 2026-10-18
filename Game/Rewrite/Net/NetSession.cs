@@ -69,7 +69,9 @@ public sealed partial class NetSession : Node
     private void Setup(string name, string version)
     {
         _name = name; _version = version;
-        _mp = new SceneMultiplayer { AllowObjectDecoding = false };
+        // (no relay: every message goes through the server part; Godot's own notices of others joining and leaving, sent
+        // to everyone, only produced "Unable to send packet" errors when several left at once — D138)
+        _mp = new SceneMultiplayer { AllowObjectDecoding = false, ServerRelay = false };
         GetTree().SetMultiplayer(_mp);
         _mp.PeerPacket += OnPacket;
     }

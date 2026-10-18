@@ -90,7 +90,7 @@ public sealed class NetBots
         private readonly Action<string> _log;
         private readonly double _spread;
         private readonly int _count;
-        private readonly SceneMultiplayer _mp = new() { AllowObjectDecoding = false };
+        private readonly SceneMultiplayer _mp = new() { AllowObjectDecoding = false, ServerRelay = false };
         private ENetMultiplayerPeer? _peer;
         private readonly NetClient _client;
         private readonly Random _rng;

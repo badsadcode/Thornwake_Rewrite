@@ -2024,6 +2024,56 @@ middle (dump screenshots).
   along the east wall, inside; steep stairs aimed at the deck stand on it) and `--build-test` (vertical half and quarter
   walls, two fences chained on the ground).
 
+## D138 — The real multiplayer test: 12 players hunting and building (2026-10-18)
+GAMEPLAY_DESIGN §14 step 2 / §14.a item 2: 4–12 players with hunting and building, host load, bandwidth, sync.
+**How it was run**: no twelve people, so **bot players** (`Game/Rewrite/Net/NetBots.cs`): a joined game started with
+`--bots=N` opens N more connections to the host, each its own player with its own client part, sending exactly what a
+player's PC sends — positions 20 a second, `Give` (testing tools), bow shots (`Shot` + `Shoot`), `Butcher`, `Place` of
+log huts (4 foundations, 8 walls snapped with `Building.SnapPiece`, a campfire), and `Dismantle` of the oldest hut. They
+walk on the ground this PC built and draw nothing. `--bot-spread=m` (0: together; 3000: each in a place of its own),
+`--bot-huts=n`, `--net-run=s` (summary and quit; the host turns on testing tools and **many** animals for the run, never
+saved), `--net-lag=ms[,loss%]` (a simulated slow line). The bot carrier and/or the host can run `--headless`, so two games
+on one PC do not share the GPU. `TEST_MP_BOTS.cmd [address] [bots] [spread] [seconds]` for Tom: bots into his own game.
+The network log gained the host's load each second (players, animals, objects, frame times, the server part's time, the
+animals' thinking and messages, the world queries they make, main-thread steps, GPU time, draw calls), and every 10 s a
+**BOTS** line (bytes per bot by kind, actions done and refused and why, how long the host took to answer, gaps between
+positions, objects each bot knows, how far from their true place this PC draws them). Place: Tom's forest from dump
+190242 (`--at=-40494.721,-105936.31`), 12 players = host + carrier + 10 bots, late joiners with `--guest-check`.
+
+**Found and fixed**
+1. **Bandwidth**: each player received **26 KB/s** (host upload ~300 KB/s for 12 together): positions 11 KB/s (46 bytes a
+   player, doubles), animals 14 KB/s (~40 bytes an animal, its kind as a string). Now **compact** (protocol 11): positions
+   26 bytes a player (offsets from one point, half-float velocity), each player is not sent itself, players farther than
+   400 m 4× a second instead of 20 (`NetServer.NearPlayers`); animals 18 bytes (kind as an index, centimetres from the
+   player, 1/65536-turn heading). Together: **14 KB/s per player (host ~160 KB/s, 1.3 Mbit/s)**; apart: **7.6 KB/s
+   (host ~85 KB/s)**.
+2. **Host CPU, players apart**: 12 places = ~350 animals; their thinking took **250 ms a second** of the host's main
+   thread (48 fps, frames up to 45 ms). 80 % of it was the trunk check (`IWorldQuery.Obstacle`, ~5,000 calls a second
+   at 27 µs, each growing the trees of its lattice cells again from terrain, biome and rivers). Each cell's tree is now
+   worked out once (cache, felled trees still checked live): **5 ms**; the animals' total **~35 ms a second**, host
+   steady **60 fps**.
+3. **Placed objects were found by walking all of them** (`PlacedObjects.Near`: animals ten times a second, building
+   ghosts, the rules): a 16 m grid now, kept up to date through moves and network copies (test *placed objects found by a
+   grid*).
+4. **A joined PC's time grew with every piece built**: each frame, every object view was moved and its children searched
+   for flames (2 ms a frame at 206 pieces, climbing). Views are now placed when they change or the floating origin
+   moves; fires keep their flames and light, found once. Flat at ~1 ms a frame from 13 to 492 pieces.
+5. **Errors when several players left at once** ("Unable to send packet on channel 0") came from Godot's server relay
+   (notices of others joining and leaving, which the game does not use): off; nothing is sent to a closing connection.
+6. A window sized on the command line (`--window=`: tests, benchmarks, TEST_MP windows) no longer saves its size into
+   the player's display settings; `--guest-check` accepts a campfire built at once when the host has testing tools on.
+
+**Measured after the fixes** (Ryzen 9 5950X, RTX 3080, all on one PC): host with 12 players together, ~45 animals, 400
+pieces: 60 fps, server part ~40 ms a second (animals ~35), GPU 8 ms a frame (host alone: 9 ms; the earlier 25 ms and 45
+fps were the second game window sharing the GPU). A joined PC drawing 11 players, ~50 animals and 500 pieces: GPU
+9–11 ms, 60 fps. **Sync**: every bot and the carrier always knew the same objects as the host (all 413 / 492 / 373 in
+the runs); positions arrive every 50 ms (far ones 250 ms), drawn **0.3–0.4 m** from where the player really is (100 ms
+interpolation; **0.6 m, max 1.7 m** with 320 ms round trips); actions answered in 15–40 ms locally, **~350 ms** at
+`--net-lag=160,1` (the Brazil line); late joiners received all pieces (316–444) and the animals near them, and placed a
+campfire through the host. Not measured here: real routers, playit.gg's relay under 12 players' traffic, Tom's upload.
+**Next for the test with people**: Tom hosts, friends join (and `TEST_MP_BOTS.cmd` fills up to 12); the logs of both ends
+tell the rest.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

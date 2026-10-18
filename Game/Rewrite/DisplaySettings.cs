@@ -32,7 +32,7 @@ public static class DisplaySettings
     public static readonly float[] UiScales = { .75f, .9f, 1, 1.1f, 1.25f, 1.5f, 1.75f, 2 };
 
     private const string FilePath = "user://display.cfg";
-    private static bool _loaded, _automation;
+    private static bool _loaded, _automation, _commandLine;
 
     private static readonly Vector2I[] Common =
     {
@@ -89,11 +89,11 @@ public static class DisplaySettings
         {
             if (a.StartsWith("--window=") && a[9..].Split('x') is { Length: 2 } wh
                 && int.TryParse(wh[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int w) && int.TryParse(wh[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int h))
-            { Size = new Vector2I(w, h); WindowMode = Mode.Windowed; _automation = false; }
+            { Size = new Vector2I(w, h); WindowMode = Mode.Windowed; _automation = false; _commandLine = true; }
             if (a.StartsWith("--window-mode="))
             {
                 WindowMode = a[14..] switch { "windowed" => Mode.Windowed, "fullscreen" => Mode.Fullscreen, _ => Mode.Borderless };
-                _automation = false;
+                _automation = false; _commandLine = true;
             }
         }
     }
@@ -143,7 +143,8 @@ public static class DisplaySettings
     /// <summary>The player resized or moved the window themselves: remember it (windowed only).</summary>
     public static void WindowChanged()
     {
-        if (_automation || WindowMode != Mode.Windowed || DisplayServer.WindowGetMode() != DisplayServer.WindowMode.Windowed) return;
+        // (a window sized on the command line — a test, a benchmark, the multiplayer test windows — is not the player's)
+        if (_automation || _commandLine || WindowMode != Mode.Windowed || DisplayServer.WindowGetMode() != DisplayServer.WindowMode.Windowed) return;
         Size = DisplayServer.WindowGetSize();
         Screen = DisplayServer.WindowGetCurrentScreen();
         Save();
