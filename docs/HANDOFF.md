@@ -62,7 +62,7 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   **Build 66** (`9eea9ed`, `dist/Preview-66`, 2026-10-18): testing tools (D128), denser snap points, the player's turn decides a snapped piece's
   facing (R 90°), steep stairs, picking no longer places, a tree being chopped keeps its collision, dumps with building
   data (D129).
-  **Build 67** (2026-10-18): snap points shown, P (D130); the bow allows for the drop to the crosshair, animals under the
+  **Build 67** (`14ac82e`, `dist/Preview-67`, 2026-10-18): snap points shown, P (D130); the bow allows for the drop to the crosshair, animals under the
   crosshair are the target, arrows fly the exact arc, fading trails (D131). Open from Tom (dump 221438): the torch lights the ground fog evenly far
   into the night — trees far away stand dark against an orange haze; light sources should shape the fog, but less
   uniformly (look at the torch's `LightVolumetricFogEnergy` / range and the fog's density near the ground; atmosphere

@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 67** (snap points shown with P D130; the bow hits where you aim, exact arcs, arrow trails D131) | `14ac82e` | Thornwake-Rewrite-Preview-67 (v0.9.67) | Versions must match to connect; Bow aim → straight and Arrow trails off give build 66's bow (its frame-by-frame flight = build 66 `9eea9ed`) |
 | **Build 66** (testing tools D128; denser snap points, the player's turn decides the facing, steep stairs, picking no longer places, chopped trees keep collision, dumps with building data D129) | `9eea9ed` | Thornwake-Rewrite-Preview-66 (v0.9.66) | Versions must match to connect; the old snapping (the joints decide the facing) = build 65 `edbd7c9` |
 | **Build 65** (choosing pieces with the mouse, a menu on placed pieces, campfires on decks and taken down, arrows found again with an E prompt D127) | `edbd7c9` | Thornwake-Rewrite-Preview-65 (v0.9.65) | Versions must match to connect; build 64 = `e6a53a2` |
 | **Build 64** (after Tom's first try: walls stay on the foundation, foundation height and stilts D123; build menu with pictures D124; right-mouse bow aiming D125; animals easier to find D126) | `e6a53a2` | Thornwake-Rewrite-Preview-64 (v0.9.64) | Same protocol as 63 but versions must match to connect; the text build bar = build 63 (`93785c0`) |
