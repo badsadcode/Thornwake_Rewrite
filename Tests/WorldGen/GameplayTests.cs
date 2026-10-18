@@ -596,6 +596,24 @@ internal static class GameplayTests
         T.Check(touching == 0, $"an L corner of walls is never in the way ({touching} of 200 nudged tries were)");
         T.Check(Building.Blocked(cw, southWall, new List<Building.Placed> { new(2, cw, southWall) }) && Building.Blocked(c.Pieces["log_door"], new Pose(0, 0, 0, 0),
             new List<Building.Placed> { new(3, c.Pieces["log_door"], new Pose(0, 0, 0, 0)) }), "but the same place twice still is (walls, doors)");
+        // Diagonal walls and triangles (Tom, build 69; D135): a diagonal wall across a foundation, corner to corner, either
+        // diagonal as you turn it; triangle foundations beside a square one, and two completing one cell.
+        var dg = new GameRules(c, new World()) { Testing = true };
+        dg.Place(me, "log_foundation", 0, 5.3, 0, 0, 0, 0, -4);
+        var dgNear = dg.PiecesNear(0, 0, 12).ToList();
+        var diag = c.Pieces["log_wall_diagonal"];
+        foreach (var (want, label) in new[] { (Math.PI / 4, "one diagonal"), (3 * Math.PI / 4, "the other") })
+        {
+            var ds2 = Building.Snap(diag, new V3(.3, 5.3, .2), want + .1, dgNear, new V3(0, 1, 0));
+            T.Check(ds2 is { } dwp && Math.Abs(dwp.Pose.X) < 1e-6 && Math.Abs(dwp.Pose.Z) < 1e-6 && Math.Abs(Math.IEEERemainder(dwp.Pose.Yaw - want, Math.PI)) < 1e-6 && dwp.Joints == 5,
+                $"a diagonal wall corner to corner, {label}: {ds2}");
+        }
+        var tri = c.Pieces["log_foundation_triangle"];
+        var ts = Building.Snap(tri, new V3(3.4, 5.3, -.6), 0, dgNear, new V3(0, 1, 0));
+        T.Check(ts is { } tp && Math.Abs(tp.Pose.X - 3) < 1e-6 && Math.Abs(tp.Pose.Z) < 1e-6 && Math.Abs(tp.Pose.Y - 5.3) < 1e-6, $"a triangle foundation beside the square one: {ts}");
+        T.Check(dg.Place(me, tri.Id, 3, 5.3, 0, 0, 0, 0, -4).Ok, "placed");
+        T.Check(dg.Place(me, tri.Id, 3, 5.3, 0, Math.PI, 0, 0, -4).Ok, "its other half: the cell completed");
+        T.Check(!dg.Place(me, tri.Id, 3, 5.3, 0, 0, 0, 0, -4).Ok && !dg.Place(me, "log_foundation", 3, 5.3, 0, 0, 0, 0, -4).Ok, "but not the same triangle twice, nor a square over them");
         // Testing tools (D128): off, no kits; on, kits and pieces built at once without materials.
         var t3 = new GameRules(c, new World());
         T.Check(!t3.Give(me, "materials").Ok, "no free kits unless the testing tools are on");

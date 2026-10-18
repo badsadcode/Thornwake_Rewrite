@@ -276,6 +276,30 @@ def piece_wall_narrow(height):
     m.build()
 
 
+def piece_wall_diagonal(height):
+    """A wall across a 3 x 3 m square's diagonal (4.24 m), its ends flush (it meets edge walls at 45 degrees)."""
+    m = Mesh("Wall")
+    wall_rows(m, height, profile=lambda y: (-2.12, 2.12))
+    m.build()
+
+
+def piece_triangle(foundation):
+    """Half of a 3 x 3 m square cut along its diagonal (x + z <= 0): a deck of split logs, on beams and posts (a foundation)."""
+    m = Mesh("Foundation" if foundation else "Floor")
+    for i in range(10):
+        z = -1.35 + i * 0.3
+        x1 = -z + 0.12  # (the row ends at the diagonal)
+        if x1 - (-1.5) > 0.2:
+            log(m, (-1.5, 0, z), (min(1.5, x1), 0, z), 0.15, half=True, flat=(0, 1, 0), wobble=0.02)
+    if foundation:
+        log(m, (-1.32, -0.42, -1.5), (-1.32, -0.42, 1.5), 0.15)
+        log(m, (-1.5, -0.42, -1.32), (1.5, -0.42, -1.32), 0.15)
+        log(m, (-1.3, -0.42, 1.3), (1.3, -0.42, -1.3), 0.13)  # along the diagonal
+        for (x, z) in ((-1.32, -1.32), (1.2, -1.32), (-1.32, 1.2)):
+            log(m, (x, -0.3, z), (x, -2.6, z), 0.15, taper=0.9)
+    m.build()
+
+
 def piece_foundation_stilts():
     """The foundation's deck on long posts (swamps, steep ground): posts to -6.2 m, braced."""
     m = Mesh("Foundation")
@@ -511,7 +535,11 @@ def main():
              ("log_foundation_quarter", OUT_BUILD, lambda: piece_foundation_sized(0.75, 0.75)),
              ("log_floor_quarter", OUT_BUILD, lambda: piece_floor_sized(0.75, 0.75)),
              ("log_wall_narrow", OUT_BUILD, lambda: piece_wall_narrow(3.0)),
-             ("log_wall_narrow_half", OUT_BUILD, lambda: piece_wall_narrow(1.5))]
+             ("log_wall_narrow_half", OUT_BUILD, lambda: piece_wall_narrow(1.5)),
+             ("log_wall_diagonal", OUT_BUILD, lambda: piece_wall_diagonal(3.0)),
+             ("log_wall_diagonal_half", OUT_BUILD, lambda: piece_wall_diagonal(1.5)),
+             ("log_foundation_triangle", OUT_BUILD, lambda: piece_triangle(True)),
+             ("log_floor_triangle", OUT_BUILD, lambda: piece_triangle(False))]
     for mat in ("log", "thatch"):
         for shape in ("slope", "ridge", "outer", "inner", "peak"):
             for pitch in ("steep", "low"):

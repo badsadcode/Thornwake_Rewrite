@@ -89,7 +89,7 @@ public partial class WorldLab
             case Key.V: CycleShape(key.ShiftPressed ? -1 : 1); return true;
             case Key.P: GameSettings.ShowSnapPoints.Value = GameSettings.ShowSnapPoints.On ? 0 : 1; _status = GameSettings.ShowSnapPoints.On ? "Snap points shown (P hides them)." : "Snap points hidden (P shows them)."; return true;
             case Key.X: CycleMaterial(); return true;
-            case Key.R: _buildTurn += (key.ShiftPressed ? -1 : 1) * Math.PI / 2; return true;
+            case Key.R: _buildTurn += (key.ShiftPressed ? -1 : 1) * (Piece.Has("diagonal") ? Math.PI / 4 : Math.PI / 2); return true; // (diagonal pieces: 45°)
             case Key.Pageup: _buildRaise += key.ShiftPressed ? 1 : .25; return true;
             case Key.Pagedown: _buildRaise -= key.ShiftPressed ? 1 : .25; return true;
             case Key.Home: _buildRaise = 0; _buildTurn = 0; return true;

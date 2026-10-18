@@ -157,10 +157,12 @@ public static class Building
             {
                 double toAim = t.DistanceTo(aim);
                 if (toAim > SnapRadius) continue;
-                for (int k = 0; k < 4; k++)
+                // (a diagonal piece turns in eighths of what it joins — Tom: diagonal walls; the rest in quarters)
+                int steps = ghost.Has("diagonal") ? 8 : 4;
+                for (int k = 0; k < steps; k++)
                 {
                     if (align && k % 2 == 1) continue; // (a door turns only in line with what it joins)
-                    double yaw = p.Pose.Yaw + k * Math.PI / 2;
+                    double yaw = p.Pose.Yaw + k * Math.Tau / steps;
                     double turn = Math.Abs(Math.IEEERemainder(yaw - desiredYaw, Math.Tau)) / (Math.PI / 2); // 0 … 2
                     foreach (var g in ghost.Snap)
                     {
