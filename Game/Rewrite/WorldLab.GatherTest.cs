@@ -18,6 +18,8 @@ public partial class WorldLab
     private double _gsTimer;
     private (int Layer, long Cx, long Cz, double X, double Y, double Z) _gsTarget;
     private int _gsBefore;
+    private double _gsPatchX, _gsPatchZ;
+    private int _gsTufts;
 
     private void GatherTest(double delta)
     {
@@ -53,11 +55,33 @@ public partial class WorldLab
                 Check(_sampler.Removals.Contains(ObjectRemovals.Berries, _gsTarget.Cx, _gsTarget.Cz), "the bush is picked");
                 Go(6, 1); break;
             case 6:
-                if (!GrassHere()) Print("no grass right here");
+            {
+                // Somewhere grassy nearby (rings outward), the camera looking down at the spot.
+                for (double r = 0; r < 40 && !GrassHere(); r += 2) Teleport(PlayerX + 2, PlayerZ + 1);
+                if (!GrassHere()) Print("no grass found");
+                _gsPatchX = PlayerX; _gsPatchZ = PlayerZ;
+                _pitch = -.75f; _zoom = 5;
+                Go(61, 3); break;
+            }
+            case 61:
+                Shot("-grass-before");
+                _gsTufts = TuftsInPatch();
+                Print($"{_gsTufts} grass tufts in the 3 x 3 m patch before");
                 Interact();
-                Go(7, 2); break;
+                Go(62, 2); break;
+            case 62:
+                Check(_sampler.Removals.Contains(ObjectRemovals.Grass, (long)Math.Floor(_gsPatchX), (long)Math.Floor(_gsPatchZ)), "the pulled grass is gone from the world");
+                Check(!GrassHere(), "nothing left to pull right here");
+                int after = TuftsInPatch();
+                Check(_gsTufts > 0 && after == 0, $"the patch is bare: {_gsTufts} tufts before, {after} after");
+                Teleport(_gsPatchX + 3.2, _gsPatchZ);
+                Go(63, 3); break;
+            case 63:
+                _yaw = Mathf.Atan2(-(float)(_gsPatchX - PlayerX), -(float)(_gsPatchZ - PlayerZ)); _pitch = -.6f; _zoom = 4;
+                Go(7, 1.5); break;
             case 7:
-                Interact();
+                Shot("-grass-after");
+                Interact(); // (a fresh patch here)
                 Go(8, 2); break;
             case 8:
                 Check(_myInv.Count("plant_fibre") >= 4, $"plant fibre: {_myInv.Count("plant_fibre")} ({_status})");
@@ -82,6 +106,24 @@ public partial class WorldLab
             return true;
         }
         void Go(int stage, double wait) { _gsStage = stage; _gsTimer = wait; }
+        int TuftsInPatch()
+        {
+            // The tile's plants as the game builds them now, counted in the 3 x 3 cells around the spot.
+            long gx = (long)Math.Floor(_gsPatchX), gz = (long)Math.Floor(_gsPatchZ);
+            var key = new TileKey(0, (long)Math.Floor(_gsPatchX / TileBuilder.BaseTile), (long)Math.Floor(_gsPatchZ / TileBuilder.BaseTile));
+            var data = TileBuilder.Build(_sampler!, key, DetailConfig.For(_sampler!));
+            return data.Flora?.Count(f =>
+            {
+                double wx = key.MinX + f.Transform.Origin.X, wz = key.MinZ + f.Transform.Origin.Z;
+                return Math.Abs(Math.Floor(wx) - gx) <= 1 && Math.Abs(Math.Floor(wz) - gz) <= 1;
+            }) ?? -1;
+        }
+        bool Shot(string suffix)
+        {
+            if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--gather-shot=")) is not { } shot) return false;
+            Screenshot(shot[14..].Replace(".png", suffix + ".png"));
+            return true;
+        }
         void Print(string s) { GD.Print("GATHER " + s); _net?.Stats.Event("gather test: " + s); }
         void Check(bool ok, string what) { GD.Print((ok ? "GATHER ok: " : "GATHER_FAIL: ") + what); _net?.Stats.Event("gather test: " + (ok ? "ok " : "FAIL ") + what); }
         void Fail(string what) { GD.Print("GATHER_FAIL: " + what); _gsStage = -2; }

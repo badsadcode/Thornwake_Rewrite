@@ -217,10 +217,19 @@ public sealed class GameRules
                 return new(true, what == "stone" ? "A good stone." : "4 handfuls of berries.");
             }
             case "grass":
+            {
                 if (Dist(px, pz, x, z) > UseReach) return ActionResult.Fail("Too far away.");
-                inv.Add("plant_fibre", 2);
+                // The grass is pulled: the cells around the spot are bare (for everyone) until it grows back (Tom).
+                long gx = (long)Math.Floor(x / ObjectRemovals.GrassCell), gz = (long)Math.Floor(z / ObjectRemovals.GrassCell);
+                int pulled = 0;
+                for (long dz = -1; dz <= 1; dz++)
+                    for (long dx = -1; dx <= 1; dx++)
+                        if (_world.Removals.Remove(ObjectRemovals.Grass, gx + dx, gz + dz, _world.Hours)) pulled++;
+                if (pulled == 0) return ActionResult.Fail("No long grass left here.");
+                inv.Add("plant_fibre", pulled >= 5 ? 2 : 1);
                 _inventoryChanged.Add(player);
-                return new(true, "Plant fibre x2.");
+                return new(true, pulled >= 5 ? "Plant fibre x2." : "Plant fibre x1 (little left here).");
+            }
         }
         return ActionResult.Fail("Nothing to gather there.");
     }
@@ -277,8 +286,8 @@ public sealed class GameRules
         return new(true, "You died." + dropped);
     }
 
-    /// <summary>Berries grow back on a picked bush after this many game hours (two days).</summary>
-    public const double BerryRegrowHours = 48;
+    /// <summary>Berries grow back on a picked bush after this many game hours (two days); pulled grass after three.</summary>
+    public const double BerryRegrowHours = 48, GrassRegrowHours = 72;
     private double _regrowCheck;
 
     /// <summary>A player close to a moving object takes it over (their PC moves it from now on: they can push it).</summary>
@@ -383,7 +392,8 @@ public sealed class GameRules
         _regrowCheck = 10; // (every ten game minutes)
         double now = _world.Hours;
         foreach (var (layer, x, z) in _world.Removals.Keys())
-            if (layer == ObjectRemovals.Berries && _world.Removals.Get(layer, x, z) is { } at && now - at >= BerryRegrowHours)
+            if (_world.Removals.Get(layer, x, z) is { } at
+                && (layer == ObjectRemovals.Berries && now - at >= BerryRegrowHours || layer == ObjectRemovals.Grass && now - at >= GrassRegrowHours))
                 _world.Removals.Restore(layer, x, z);
     }
 

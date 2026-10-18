@@ -324,7 +324,7 @@ public static class TileBuilder
         bool populations = config.GrassStyle == 1;
         if (key.Level == 0 && config.Grass > 0 && populations)
         {
-            data.Flora = GroundCover.LandFlora(key, grid, sea, coverSeed, config.Grass);
+            data.Flora = GroundCover.LandFlora(key, grid, sea, coverSeed, config.Grass, sampler.Removals);
             data.Flora.AddRange(GroundCover.WaterFlora(key, grid, sea, coverSeed, biomes, Math.Min(1.5, config.Grass)));
         }
         if (key.Level == 0 && config.Grass > 0 && !populations) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);

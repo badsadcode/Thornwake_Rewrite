@@ -207,7 +207,9 @@ public partial class WorldLab : IWorldQuery
         var (a, b, share) = Vegetation.BiomeOf(_sampler, PlayerX, PlayerZ);
         double grass = a.Def.Vegetation.Grass * share + b.Def.Vegetation.Grass * (1 - share);
         double slope = Math.Abs(_sampler.Height(PlayerX + 1, PlayerZ) - t.Height) + Math.Abs(_sampler.Height(PlayerX, PlayerZ + 1) - t.Height);
-        return grass > .3 && slope < .9;
+        // (and not pulled already: the patch you stand on grows back in a few days)
+        long gx = (long)Math.Floor(PlayerX / ObjectRemovals.GrassCell), gz = (long)Math.Floor(PlayerZ / ObjectRemovals.GrassCell);
+        return grass > .3 && slope < .9 && !_sampler.Removals.Contains(ObjectRemovals.Grass, gx, gz);
     }
 
     private (string What, long Cx, long Cz, double X, double Z, double Seconds, double Left, string Label)? _gathering;
@@ -278,6 +280,13 @@ public partial class WorldLab : IWorldQuery
         foreach (var (layer, cx, cz, at) in removals)
         {
             _sampler.Removals.Set(layer, cx, cz, at); // (on the host the same set: already there)
+            if (layer == ObjectRemovals.Grass)
+            {
+                // Grass pulled (or grown back): the tile there is drawn again, without (or with) it.
+                double gx = (cx + .5) * ObjectRemovals.GrassCell, gz = (cz + .5) * ObjectRemovals.GrassCell;
+                _streamer.Invalidate(gx - 1, gz - 1, gx + 1, gz + 1);
+                continue;
+            }
             if (layer is ObjectRemovals.Stones or ObjectRemovals.Berries)
             {
                 // A stone gone, a bush picked (or its berries back): the tiles around it are drawn again.

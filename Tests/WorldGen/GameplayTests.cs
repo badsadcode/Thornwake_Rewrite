@@ -173,8 +173,12 @@ internal static class GameplayTests
         T.Check(!world.Removals.Contains(ObjectRemovals.Berries, 2, 3) && world.Removals.Contains(ObjectRemovals.Stones, 10, 10), "two days later the berries are back (the stone is not)");
         T.Check(rules.Eat(me, "berries").Ok && inv.Count("berries") == 3, "berries are food");
         T.Check(!rules.Forage(me, "grass", 0, 0, 50, 50, 0, 0).Ok, "grass out of reach");
-        for (int i = 0; i < 2; i++) T.Check(rules.Forage(me, "grass", 0, 0, 1, 1, 0, 0).Ok, "grass pulled");
+        for (int i = 0; i < 2; i++) T.Check(rules.Forage(me, "grass", 0, 0, 1 + 3 * i, 1, 1 + 3 * i, 1).Ok, "grass pulled");
         T.Check(inv.Count("plant_fibre") == 4, "4 plant fibre");
+        T.Check(world.Removals.Contains(ObjectRemovals.Grass, 1, 1) && world.Removals.Contains(ObjectRemovals.Grass, 0, 0) && world.Removals.Contains(ObjectRemovals.Grass, 2, 2), "the grass around the spot is gone (a 3 × 3 m patch)");
+        T.Check(!rules.Forage(me, "grass", 0, 0, 1, 1, 1, 1).Ok, "nothing left to pull there");
+        world.Hours += 73; rules.Step(30);
+        T.Check(!world.Removals.Contains(ObjectRemovals.Grass, 1, 1), "three days later it has grown back");
         inv.Add("branch", 1);
         var rod = rules.Make(me, "fishing_rod", 0, 0, 0, 0, 0, 0);
         T.Check(rod.Ok && inv.HasTag("fishing") && inv.Count("plant_fibre") == 0, "a fishing rod: " + rod.Message);

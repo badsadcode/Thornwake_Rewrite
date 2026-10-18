@@ -1679,6 +1679,14 @@ player's head, with optional text.
   birch", "Picking berries") can be switched off: *Interface → Action text*. Own player only for now (others' busy bars
   would need their action in the state flags).
 
+## D119 — Pulled grass leaves a bare patch (2026-10-18)
+Tom: the grass should disappear when harvested (stones already do: D113). `ObjectRemovals` gains the layer **Grass**
+on a 1 m lattice; pulling long grass bares the 3 × 3 cells around the spot (for everyone, saved, sent to late joiners);
+`GroundCover.LandFlora` leaves out the plant populations' tufts there (the same way it leaves dug ground bare) and the
+tile is drawn again. Only bare cells: nothing left to pull ("No long grass left here"); a patch half-pulled gives one
+fibre. It grows back after 72 game hours (the rules restore it, like berries). Checked: headless (the patch, nothing
+twice, regrowth) and `--gather-test` (43 tufts in the patch before, 0 after).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

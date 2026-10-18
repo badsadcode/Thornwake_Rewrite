@@ -167,8 +167,10 @@ public static partial class GroundCover
     }
 
     /// <summary>Land plants (level 0): grass, tall grass, wild wheat, wet-meadow plants, in patches and communities.</summary>
-    public static List<FloraInstance> LandFlora(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1)
+    public static List<FloraInstance> LandFlora(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1, ObjectRemovals? removals = null)
     {
+        bool bare(double x, double z) => removals != null && !removals.IsEmpty
+            && removals.Contains(ObjectRemovals.Grass, (long)Math.Floor((key.MinX + x) / ObjectRemovals.GrassCell), (long)Math.Floor((key.MinZ + z) / ObjectRemovals.GrassCell));
         var result = new List<FloraInstance>();
         var g = grid;
         var field = new FloraField(g, FloraSeed(seed));
@@ -178,6 +180,7 @@ public static partial class GroundCover
         {
             if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || g.Edited(x, z)) return;
             if (up < .82f || height - sea < 1.4) return;
+            if (bare(x, z)) return; // pulled (it grows back)
             float alpine = g.Alpine(height, sea);
             float plants = g.Plants(x, z);
             float habitat = (1 - .7f * forest) * (1 - alpine) * (float)DetMath.Smooth((up - .82) / .08) * plants * plants;
