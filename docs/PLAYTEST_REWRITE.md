@@ -78,6 +78,13 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 67 — snap points shown, the bow hits where you aim, arrow trails
+* **Snap points**: while building, dots show where pieces can join — blue on the pieces near the ghost, yellow on the
+  ghost, green where they meet. **P** shows or hides them (Settings → Interface → Show snap points).
+* **Bow**: the arrow now comes down on the point under the crosshair (the shot allows for the drop), also with a short
+  draw, also when the crosshair is on an animal. Settings → Interface → Bow aim → *straight* gives the old behaviour.
+* **Arrow trails**: a thin fading trail shows each arrow's arc (Settings → Interface → Arrow trails).
+
 ## New in build 66 — testing tools, snapping you can steer, steep stairs
 * **Testing tools**: in the pack (I) tick *Testing tools (free building)* (or Settings → Simulation). Blueprints are then
   built at once without materials, and *Give materials* / *Give weapons and tools* fill your pack.

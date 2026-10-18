@@ -58,7 +58,7 @@ public partial class WorldLab
             CustomMinimumSize = new Vector2(700, 0), MouseFilter = Control.MouseFilterEnum.Ignore };
         _buildInfo.AddThemeFontSizeOverride("normal_font_size", 15);
         rows.AddChild(_buildInfo);
-        _buildHints = new Label { Text = "Tab: choose with the mouse · V shape · X material · R / wheel turn (Shift finer) · PgUp/PgDn or Alt+wheel raise · " +
+        _buildHints = new Label { Text = "Tab: choose with the mouse · V shape · X material · P snap points · R / wheel turn (Shift finer) · PgUp/PgDn or Alt+wheel raise · " +
             "Ctrl: no snapping · LMB place · E bring materials · RMB on a piece: change it, turn it, take it down · MMB take down · B close",
             MouseFilter = Control.MouseFilterEnum.Ignore };
         _buildHints.AddThemeFontSizeOverride("font_size", 12);

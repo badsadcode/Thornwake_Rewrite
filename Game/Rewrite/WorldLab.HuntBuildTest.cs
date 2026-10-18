@@ -35,6 +35,8 @@ public partial class WorldLab
     }
     private double _htHealth;
     private (long Cx, long Cz, double X, double Y, double Z) _htTree;
+    private (double X, double Z) _htStart;
+    private V3 _htAim;
 
     private void HuntTest(double delta)
     {
@@ -47,6 +49,7 @@ public partial class WorldLab
             case 0:
                 if (_shotAt is { } start && !_htMoved) { _htMoved = true; Teleport(start.X, start.Z); _htTimer = 5; return; }
                 _animalsOverride = 0; // (only the test's animals; not the saved setting)
+                _htStart = (PlayerX, PlayerZ);
                 _rules.Wildlife.Clear();
                 inv.Add("spear"); inv.Add("bow"); inv.Add("arrow", 20); inv.Add("stone_knife");
                 _rules.InventoryChanged((int)NetServer.HostPeer);
@@ -159,7 +162,7 @@ public partial class WorldLab
             {
                 // Tom (build 65): a tree hit once lost its collision. One axe hit, then is its trunk still solid?
                 var tree = Vegetation.TreesNear(_sampler, PlayerX, PlayerZ, 80, DetailConfig.For(_sampler)).FirstOrDefault();
-                if (tree.Scale <= 0) { Print("no tree within 80 m: the trunk check skipped"); Done(); return; }
+                if (tree.Scale <= 0) { Print("no tree within 80 m: the trunk check skipped"); Go(18, .2); return; }
                 _htTree = (tree.Cx, tree.Cz, tree.X, tree.Y, tree.Z);
                 Teleport(tree.X + 1.5, tree.Z);
                 Go(16, 3); break;
@@ -172,6 +175,41 @@ public partial class WorldLab
                 var at = new Vector3((float)(_htTree.X - _originX), (float)_htTree.Y + 1, (float)(_htTree.Z - _originZ));
                 var hits = _player.GetWorld3D().DirectSpaceState.IntersectPoint(new PhysicsPointQueryParameters3D { Position = at, CollisionMask = 1 }, 4);
                 Check(_fallingTrees.ContainsKey((_htTree.Cx, _htTree.Cz)) && hits.Count > 0, $"a tree hit once is still solid ({hits.Count} colliders in its trunk)");
+                Teleport(_htStart.X, _htStart.Z);
+                Go(18, 3); break;
+            }
+            case 18:
+            {
+                // Tom (build 66): the arrow did not come down where he aimed. A part draw at a point on the ground 30 m away.
+                if (_me.Weapon != "bow") ToggleWeapon("bow");
+                var ahead = new Vector2(-Mathf.Sin(_yaw), -Mathf.Cos(_yaw));
+                double tx = PlayerX + ahead.X * 30, tz = PlayerZ + ahead.Y * 30;
+                _htAim = new V3(tx, _sampler.Height(tx, tz), tz);
+                _testAim = true;
+                Go(19, .5); break;
+            }
+            case 19: case 20: case 21:
+                AimAt(_htAim);
+                _me.Facing = _yaw + Mathf.Pi;
+                Go(_htStage + 1, .3); break;
+            case 22:
+            {
+                // (the point the crosshair is on: the camera's ray, as Loose sees it)
+                var from = _camera.GlobalPosition; var look = -_camera.GlobalTransform.Basis.Z;
+                var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(from, from + look * 300, 1));
+                if (hit.Count > 0) { var p = hit["position"].AsVector3(); _htAim = new V3(p.X + _originX, p.Y, p.Z + _originZ); }
+                _lastLanding = null;
+                Loose(.6f);
+                Go(23, .45); break;
+            }
+            case 23:
+                Shot("-trail");
+                Go(24, 2); break;
+            case 24:
+            {
+                _testAim = false;
+                double miss = _lastLanding is { } l ? Math.Sqrt((l.X - _htAim.X) * (l.X - _htAim.X) + (l.Z - _htAim.Z) * (l.Z - _htAim.Z)) : double.NaN;
+                Check(miss < .6, $"a part-drawn arrow comes down where the crosshair was ({miss:0.00} m from it, 30 m away)");
                 Done(); break;
             }
         }

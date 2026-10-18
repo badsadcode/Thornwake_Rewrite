@@ -1877,6 +1877,29 @@ through.
 * **Dumps (F9) carry the building state**: what you hold, the chosen piece, turn and raise, the ghost's place and why it
   cannot go there, the pieces within 25 m (kind, place, turn, blueprint), the animals near and the pack.
 
+## D130 — Snap points shown (2026-10-18)
+Tom: "could we make the snapping points toggleable, visible or invisible?" While building, small dots (drawn through
+walls) mark the snap points of the pieces within 10 m of the ghost (pale blue), the ghost's own (yellow, larger) and the
+ghost's points that meet a piece's (green) — so you see where a piece can join and that it did. **P** while building
+switches them; *Interface → Show snap points* (on) remembers it.
+
+## D131 — The bow hits where you aim; arrow trails (2026-10-18)
+Tom: "there seems to be an offset when aiming a bow; it's hard to tell if I'm aiming correctly; a small trail after the
+arrow to see the arc, fading out."
+* **The offset was the drop**: the arrow left toward the point under the crosshair and fell on the way (about 1.6 m at
+  30 m at full draw, much more with a short draw). Now the shot is **raised just enough to come down on that point**
+  (the lower of the two ballistic arcs for the arrow's speed; beyond its reach, 45°), so a part-drawn arrow lands on the
+  crosshair: in the game, 0.00 m from it at 30 m. Setting *Interface → Bow aim*: *allow for the drop* (default) or
+  *straight* (as builds 63–66: hold over yourself). The arc stays real — longer shots fly visibly higher.
+* **An animal under the crosshair is the target**, not the ground behind it (animals have no physics shape, so the aim's
+  ray passed through them and the drop was allowed for the ground beyond: arrows went over the stag). Their body test is
+  now exact (closest points between the ray and the body's axis) instead of nine samples along the segment.
+* **Arrows fly the exact arc** from where they were loosed (no drag, computed from the time since): the same on every PC
+  and at any frame rate, and what the aim allowed for (the frame-by-frame flight with drag fell ~1 m short at 30 m).
+* **Trails**: a thin pale ribbon behind every arrow (yours and others'), turned to the camera, each part fading over
+  1.4 s — the whole arc visible for a moment, gone shortly after the arrow lands. *Interface → Arrow trails* (on).
+* The E prompt hides while drawing or aiming.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

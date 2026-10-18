@@ -182,15 +182,10 @@ public sealed partial class AnimalView : Node3D
         var axis = new Vector3(Mathf.Sin(Yaw), 0, Mathf.Cos(Yaw)) * (float)(Def.Length * .5);
         var p0 = centre - axis; var p1 = centre + axis;
         float r = (float)Def.Radius + .12f;
-        // closest points between the segments (sampled: the arrow moves < 1 m a step)
-        float best = float.MaxValue; at = a;
-        for (int i = 0; i <= 8; i++)
-        {
-            var q = a.Lerp(b, i / 8f);
-            var c = Geometry3D.GetClosestPointToSegment(q, p0, p1);
-            float d = q.DistanceTo(c);
-            if (d < best) { best = d; at = q; }
-        }
+        // The closest points between the segment and the body's axis.
+        var pts = Geometry3D.GetClosestPointsBetweenSegments(a, b, p0, p1);
+        at = pts[0];
+        float best = pts[0].DistanceTo(pts[1]);
         return best < r && State != AnimalState.Dead;
     }
 }

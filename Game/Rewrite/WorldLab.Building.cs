@@ -87,6 +87,7 @@ public partial class WorldLab
             case >= Key.Key1 and <= Key.Key9 when (int)(key.Keycode - Key.Key1) < _catalog.Categories.Count:
                 _buildCategory = (int)(key.Keycode - Key.Key1); return true;
             case Key.V: CycleShape(key.ShiftPressed ? -1 : 1); return true;
+            case Key.P: GameSettings.ShowSnapPoints.Value = GameSettings.ShowSnapPoints.On ? 0 : 1; _status = GameSettings.ShowSnapPoints.On ? "Snap points shown (P hides them)." : "Snap points hidden (P shows them)."; return true;
             case Key.X: CycleMaterial(); return true;
             case Key.R: _buildTurn += (key.ShiftPressed ? -1 : 1) * Math.PI / 2; return true;
             case Key.Pageup: _buildRaise += key.ShiftPressed ? 1 : .25; return true;
@@ -150,6 +151,7 @@ public partial class WorldLab
         SetAimed(aim?.Piece ?? 0);
         if (!_building)
         {
+            UpdateSnapMarkers(null);
             if (_aimedPiece != 0 && _seenObjects.Get(_aimedPiece) is { Blueprint: true } bp && _catalog.Piece(bp.Kind) is { } bdef && _gathering == null)
                 _status = $"{bdef.Name} (blueprint): needs {NeedsHere(bdef, bp)} — E brings them.";
             return;
@@ -204,6 +206,7 @@ public partial class WorldLab
         }
         if (take) Dismantle();
         UpdateBuildMenu(def);
+        UpdateSnapMarkers(def);
     }
 
     /// <summary>The hit point is within the middle of a piece (its thin side counts whole): a swap, not a snap beside it.</summary>

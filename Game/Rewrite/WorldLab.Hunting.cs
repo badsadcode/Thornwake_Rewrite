@@ -33,7 +33,18 @@ public partial class WorldLab
         public bool Mine, Stuck;
         public float Draw;
         public double Age;
+        public required List<(double X, double Y, double Z, double T)> Trail;
+        public double X0, Y0, Z0;       // where it was loosed (world): the flight is the exact arc from there
+        public Vector3 V0;
     }
+
+    /// <summary>Fading trails behind arrows (Tom, build 66: "a small trail so I can see the arc"; D131): the points each
+    /// arrow passed, kept for a moment after it lands, drawn as a thin ribbon facing the camera.</summary>
+    private readonly List<List<(double X, double Y, double Z, double T)>> _trails = new();
+    private MeshInstance3D? _trailMesh;
+    private const double TrailLife = 1.4;
+    /// <summary>Where this PC's last arrow came down (tests).</summary>
+    private (double X, double Y, double Z)? _lastLanding;
 
     private readonly List<Flight> _arrows = new();
     private static double Now => Time.GetTicksMsec() / 1000.0;
@@ -60,7 +71,7 @@ public partial class WorldLab
     private void UpdatePrompt()
     {
         if (_prompt == null) return;
-        _prompt.Text = _gathering != null || _menu.Visible || _pack.Visible || _map.Visible || _pieceMenu != null || _buildPicking ? "" : InteractHint() is { } h ? "E   " + h : "";
+        _prompt.Text = _gathering != null || _menu.Visible || _pack.Visible || _map.Visible || _pieceMenu != null || _buildPicking || _aimFocus > 0 || _draw > 0 ? "" : InteractHint() is { } h ? "E   " + h : "";
     }
 
     private string? InteractHint()
@@ -91,6 +102,7 @@ public partial class WorldLab
         _animalViews.Clear();
         foreach (var f in _arrows) f.Node.QueueFree();
         _arrows.Clear();
+        _trails.Clear();
     }
 
     /// <summary>8 / 9 / 0: the spear, the bow, the sword in hand or put away (the axe and rod go away).</summary>
@@ -143,6 +155,7 @@ public partial class WorldLab
                 break;
         }
         UpdateArrows(delta);
+        DrawTrails();
         double now = Now;
         foreach (var v in _animalViews.Values) v.Step(now, (float)delta, _originX, _originZ);
     }
@@ -183,10 +196,29 @@ public partial class WorldLab
         var look = -_camera.GlobalTransform.Basis.Z;
         var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(from, from + look * 300, 1));
         var target = hit.Count > 0 ? hit["position"].AsVector3() : from + look * 300;
-        var dir = (target - start).Normalized();
+        // An animal under the crosshair is the target, not the ground behind it (it has no physics shape to stop the ray).
+        bool aimed = hit.Count > 0;
+        foreach (var v in _animalViews.Values)
+            if (v.Hit(from, target, out var on) && on.DistanceTo(from) < target.DistanceTo(from)) { target = on; aimed = true; }
         float speed = (float)bow.Prop("speed", 50) * (.45f + .55f * draw);
+        // Aimed allowing for the drop (setting): the arrow arcs onto the point under the crosshair (D131).
+        var dir = aimed && GameSettings.BowDrop.Index == 0 ? Aimed(start, target, speed) : (target - start).Normalized();
         Shoot(start, dir * speed, true, draw);
         GameClient?.SendShot(start.X + _originX, start.Y, start.Z + _originZ, dir.X * speed, dir.Y * speed, dir.Z * speed);
+    }
+
+    /// <summary>The launch direction that carries an arrow at <paramref name="speed"/> from start onto target under gravity
+    /// (the lower of the two arcs); beyond its reach, the farthest-reaching 45°.</summary>
+    private static Vector3 Aimed(Vector3 start, Vector3 target, float speed)
+    {
+        var d = target - start;
+        var flat = new Vector2(d.X, d.Z);
+        float x = flat.Length(), y = d.Y, v2 = speed * speed, g = 9.8f;
+        if (x < .5f) return d.Normalized();
+        float root = v2 * v2 - g * (g * x * x + 2 * y * v2);
+        float angle = root < 0 ? Mathf.Pi / 4 : Mathf.Atan((v2 - Mathf.Sqrt(root)) / (g * x));
+        var h = flat / x;
+        return new Vector3(h.X * Mathf.Cos(angle), Mathf.Sin(angle), h.Y * Mathf.Cos(angle));
     }
 
     private void Shoot(Vector3 start, Vector3 velocity, bool mine, float draw)
@@ -194,7 +226,10 @@ public partial class WorldLab
         var node = new Node3D { Name = "Arrow" };
         node.AddChild(GameplayModels.Weapon("arrow"));
         AddChild(node);
-        _arrows.Add(new Flight { Node = node, X = start.X + _originX, Y = start.Y, Z = start.Z + _originZ, Velocity = velocity, Mine = mine, Draw = draw });
+        var trail = new List<(double, double, double, double)> { (start.X + _originX, start.Y, start.Z + _originZ, Now) };
+        _trails.Add(trail);
+        _arrows.Add(new Flight { Node = node, X = start.X + _originX, Y = start.Y, Z = start.Z + _originZ, Velocity = velocity, Mine = mine, Draw = draw, Trail = trail,
+            X0 = start.X + _originX, Y0 = start.Y, Z0 = start.Z + _originZ, V0 = velocity });
     }
 
     /// <summary>Arrows in flight: gravity and a little drag; one of this PC's that strikes an animal or the ground is
@@ -212,15 +247,18 @@ public partial class WorldLab
                 else f.Node.Position = new Vector3((float)(f.X - _originX), (float)f.Y, (float)(f.Z - _originZ));
                 continue;
             }
+            // The exact arc from where it was loosed (D131): the same on every PC and at any frame rate, and what the aim
+            // allowed for — no drag.
             var a = new Vector3((float)(f.X - _originX), (float)f.Y, (float)(f.Z - _originZ));
-            f.Velocity += Vector3.Down * 9.8f * dt;
-            f.Velocity *= 1 - .015f * dt;
-            var b = a + f.Velocity * dt;
+            double t = f.Age;
+            f.Velocity = f.V0 + Vector3.Down * 9.8f * (float)t;
+            var b = new Vector3((float)(f.X0 + f.V0.X * t - _originX), (float)(f.Y0 + f.V0.Y * t - 4.9 * t * t), (float)(f.Z0 + f.V0.Z * t - _originZ));
             bool done = false;
             if (f.Mine)
                 foreach (var v in _animalViews.Values)
                     if (v.Hit(a, b, out var at))
                     {
+                        f.Trail.Add((at.X + _originX, at.Y, at.Z + _originZ, Now));
                         Act(new ActionRequest(ActionKind.Shoot, v.Id, 0, "", at.X + _originX, at.Y, at.Z + _originZ, f.Draw));
                         f.Node.QueueFree(); _arrows.RemoveAt(i); done = true;
                         break;
@@ -231,13 +269,16 @@ public partial class WorldLab
             {
                 var p = hit["position"].AsVector3();
                 f.X = p.X + _originX; f.Y = p.Y; f.Z = p.Z + _originZ;
+                f.Trail.Add((f.X, f.Y, f.Z, Now));
                 f.Stuck = true; f.Age = 0;
+                if (f.Mine) _lastLanding = (f.X, f.Y, f.Z);
                 f.Node.Position = p - f.Velocity.Normalized() * .25f;
                 if (f.Mine) Act(new ActionRequest(ActionKind.Shoot, 0, 0, "", f.X, f.Y, f.Z, f.Draw));
                 continue;
             }
             f.X = b.X + _originX; f.Y = b.Y; f.Z = b.Z + _originZ;
             f.Node.Position = b;
+            f.Trail.Add((f.X, f.Y, f.Z, Now));
             if (f.Velocity.LengthSquared() > 1e-4f) f.Node.Basis = Basis.LookingAt(-f.Velocity.Normalized(), Mathf.Abs(f.Velocity.Normalized().Y) > .99f ? Vector3.Forward : Vector3.Up);
             if (f.Age > 8)
             {
@@ -245,6 +286,41 @@ public partial class WorldLab
                 f.Node.QueueFree(); _arrows.RemoveAt(i);
             }
         }
+    }
+
+    /// <summary>Every trail as a ribbon a few centimetres wide, turned to the camera, fading over its points' age.</summary>
+    private void DrawTrails()
+    {
+        double now = Now;
+        foreach (var t in _trails) t.RemoveAll(p => now - p.T > TrailLife);
+        _trails.RemoveAll(t => t.Count == 0 && !_arrows.Any(f => f.Trail == t));
+        if (_trailMesh == null)
+        {
+            var mat = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, VertexColorUseAsAlbedo = true,
+                Transparency = BaseMaterial3D.TransparencyEnum.Alpha, CullMode = BaseMaterial3D.CullModeEnum.Disabled };
+            _trailMesh = new MeshInstance3D { Name = "ArrowTrails", Mesh = new ImmediateMesh(), MaterialOverride = mat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+            AddChild(_trailMesh);
+        }
+        var mesh = (ImmediateMesh)_trailMesh.Mesh;
+        mesh.ClearSurfaces();
+        if (!GameSettings.ArrowTrails.On || !_trails.Any(t => t.Count > 1)) return;
+        var eye = _camera.GlobalPosition;
+        mesh.SurfaceBegin(Mesh.PrimitiveType.Triangles);
+        foreach (var t in _trails)
+            for (int i = 1; i < t.Count; i++)
+            {
+                var a = new Vector3((float)(t[i - 1].X - _originX), (float)t[i - 1].Y, (float)(t[i - 1].Z - _originZ));
+                var b = new Vector3((float)(t[i].X - _originX), (float)t[i].Y, (float)(t[i].Z - _originZ));
+                var along = b - a;
+                if (along.LengthSquared() < 1e-6f) continue;
+                var side = along.Cross(eye - a).Normalized() * .025f;
+                float fa = (float)(1 - (now - t[i - 1].T) / TrailLife), fb = (float)(1 - (now - t[i].T) / TrailLife);
+                var ca = new Color(1, .96f, .85f, .55f * fa * fa); var cb = new Color(1, .96f, .85f, .55f * fb * fb);
+                void V(Color c, Vector3 p) { mesh.SurfaceSetColor(c); mesh.SurfaceAddVertex(p); }
+                V(ca, a - side); V(ca, a + side); V(cb, b + side);
+                V(ca, a - side); V(cb, b + side); V(cb, b - side);
+            }
+        mesh.SurfaceEnd();
     }
 
     // ---- what the host sends

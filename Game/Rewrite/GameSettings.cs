@@ -327,6 +327,15 @@ public static class GameSettings
     public static readonly Setting TestingTools = Add(new("sim.testing", "Simulation", "Testing tools", 0, 1, 1, 0,
         "For trying things out (D128): building needs no materials (blueprints are built at once), and the pack (I) gets buttons " +
         "that give materials, weapons and tools. A sandbox rule: in multiplayer the host's applies to everyone."));
+    public static readonly Setting ShowSnapPoints = Add(new("ui.snap_points", "Interface", "Show snap points", 0, 1, 1, 1,
+        "While building, small dots mark the snap points of the pieces near the ghost (blue), the ghost's own (yellow) and " +
+        "those that meet (green). P while building switches them."));
+    public static readonly Setting BowDrop = Add(new("ui.bow_drop", "Interface", "Bow aim", 0, 1, 1, 0,
+        "Arrows fly in a real arc and drop with distance (D131). Allow for the drop: the shot is raised just enough to come down " +
+        "on the point under the crosshair. Straight: the arrow leaves toward the crosshair and drops below it — you hold over " +
+        "yourself (as in builds 63–66).", options: new[] { "allow for the drop", "straight (hold over yourself)" }));
+    public static readonly Setting ArrowTrails = Add(new("ui.arrow_trails", "Interface", "Arrow trails", 0, 1, 1, 1,
+        "A thin trail behind every arrow, fading in about a second: you see the arc it flew."));
     public static readonly Setting NeedsOn = Add(new("sim.needs", "Simulation", "Hunger and cold", 0, 1, 1, 1,
         "Step 1 placeholder needs (D110): food, body warmth, wetness and health. Off: none of them change (testing the world)."));
     public static readonly Setting Animals = Add(new("sim.animals", "Simulation", "Animals", 0, 3, 1, 2,
