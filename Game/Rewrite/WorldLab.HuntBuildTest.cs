@@ -557,12 +557,12 @@ public partial class WorldLab
                 // Building open, aiming at it: right mouse → its menu; Tab → choosing with the mouse.
                 SetBuilding(true);
                 Teleport(Building.ToWorld(_btBase, new V3(0, 0, 6)).X, Building.ToWorld(_btBase, new V3(0, 0, 6)).Z);
-                _btAimAt = new V3(fire.X, fire.Y + .25, fire.Z);
+                _btAimAt = new V3(fire.X, fire.Y + .4, fire.Z);
                 Go(25, 2); break;
             }
-            case 25: case 26: case 27:
+            case 25: case 26: case 27: case 271: case 272:
                 AimAt(_btAimAt);
-                Go(_btStage + 1, .25); break;
+                Go(_btStage switch { 27 => 271, 271 => 272, 272 => 28, _ => _btStage + 1 }, .25); break;
             case 28:
             {
                 var fire = _seenObjects.All.First(o => o.Kind == "campfire" && Math.Abs(o.Y - _btBase.Y) < .01);
