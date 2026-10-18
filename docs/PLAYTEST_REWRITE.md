@@ -78,6 +78,18 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 76 — forest rays A2 (draft) and fog quality
+**Host and everyone joining need build 76** (versions must match to connect).
+Nothing changes until you switch it on; to try the rays:
+1. Settings → Lighting and effects → **Forest rays** → *A2: sharp rays (M2 draft)*.
+2. Settings → Camera and performance → **Volumetric fog quality** → *high* (or *very high*: smoother shafts,
+   ~3 ms more on your 3080). *Off* removes all volumetric fog (rays, mist patches, the torch's glow) for weak PCs.
+3. Stand in a dense forest and move the time (Esc → time slider; *Time → Paused* keeps the sun still): the shafts are
+   strongest with the sun low (5–15° up) and when you look toward it. Tuned only at sunrise so far: tell me how noon,
+   evening and the light on the ground look (an F-key dump where something looks wrong).
+* A2 = A with more sunlight into the forest air, less sky light filling the shadows between the shafts, and the fog's
+  cells kept close to you. *A* is unchanged (build 75), *build 47* is no rays.
+
 ## New in build 75 — caustics, scan, crouching (your notes on build 74)
 **Host and everyone joining need build 75** (versions must match to connect).
 * **Caustics follow the sun**: the light net on the bed of shallow water fades at dusk, is gone at night and weaker
