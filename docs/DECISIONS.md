@@ -1687,6 +1687,104 @@ tile is drawn again. Only bare cells: nothing left to pull ("No long grass left 
 fibre. It grows back after 72 game hours (the rules restore it, like berries). Checked: headless (the patch, nothing
 twice, regrowth) and `--gather-test` (43 tufts in the patch before, 0 after).
 
+## D120 — Hunting: animals, a spear, a bow, a sword, butchering (2026-10-18)
+Tom: "implement hunting; for animals use the asset pack (ArtKit/AnimalsAssets.zip); basic weapons (sword, bow, spear,
+arrows); simple butchering." §2's *Creatures* block, §9's first weapons; step 1's "placeholder animal to hunt".
+* **Models**: the pack is Quaternius's *Ultimate Animated Animals* (CC0: free to use, no credit needed; credited anyway in
+  `Assets/Animals/LICENSE.txt`), rigged with walk, gallop, eating, idle, attack, hit and death animations. Taken: **deer,
+  stag, fox, wolf** (the wild ones); the horse, cow, bull, donkey, alpaca and dogs stay in the zip for the draft and farm
+  animals of §12. Copied unchanged as `.gltf`; each is scaled at run time to its kind's height (`Content/gameplay_animals.json`).
+* **The host simulates them** (§14.1: the host does everything first), ten steps a second (`Gameplay/Wildlife.cs`,
+  engine-free, tested). Groups appear **out of sight** (90–170 m from every player) where the biome's tags suit them and
+  go when nobody is within 280 m: the land keeps its animals, not each animal (they are not saved — cheap, and a
+  reloaded world is not emptied by hunting). Each player is sent the animals within 230 m ten times a second (~30 bytes
+  each, unreliable) and draws them 120 ms in the past, interpolated (`AnimalView.cs`), with the animation of their state.
+* **Behaviour by temper**: *shy* (deer, fox) graze and wander, notice a hunter by **sight** (less at night) or
+  **hearing** (a sprinter is heard twice as far, a still hunter half as far — so creeping up works), look up for a moment,
+  then **flee, the whole group**; hurt, they run. *Proud* (stag): flees, but may **turn on a hunter who hurt it** close by
+  (a kick, 22). *Predator* (wolf): packs of 2–4 hunt a player **at night or who comes close**, bite (12 every 1.3 s),
+  **run when badly hurt**. Bites are the host's word, health is the player's PC's (a `Hurt` message; with *Hunger and
+  cold* off nothing hurts). Flying players are not noticed. Sandbox setting **Simulation → Animals**: none / few /
+  normal / many (§3).
+* **Weapons** (items with `damage`, `reach`, `cooldown` props; Tom's controls of §9: what you hold decides the left
+  mouse): **8 hunting spear** (34, reach 2.7 m: a thrust), **9 rough bow** (hold to draw — longer draws fly farther and
+  hit harder, up to 40; release to shoot), **0 stone-edged sword** (27, quick cuts). The world has no metal yet, so the
+  sword is a **hardwood blade edged with stone flakes** (a macuahuitl): a sword that fits the stone-tool start; an iron
+  one comes with smithing. **The axe (6) strikes an animal in front of you** instead of a tree. **Arrows** (5 from 2
+  branches, a stone or a bone, 2 fibre) fly **with gravity and a little drag** — they drop with distance (§9) — and
+  others see them fly. The shooter's PC flies its own arrow and tells the host what it struck; the host checks the bow,
+  an arrow in the pack (one is used either way), range (90 m) and pace; a miss can be **found again where it fell**
+  (65 %, E), a hit may be **in the carcass** (50 %). Melee: the host checks reach (+1.2 m for the network's delay) and
+  pace. Recipes: stone knife, spear, bow, arrows, bone arrows, sword, roast meat.
+* **Butchering**: a fallen animal becomes a **carcass** (its model in the death pose; a placed object, saved). **E** with
+  anything sharp (knife, axe, sword) butchers it — a few seconds (deer 7 s; a **knife** 40 % quicker) — into **raw meat**
+  (cook at a fire: roast meat, 40 food), **hide** and **bone** (deer 4/1/2, stag 6/2/3, wolf 3/1/2, fox 1/1/0).
+* **Not yet**: animals do not avoid trees or buildings (they walk through), no blood, no sounds, no tracks, no
+  skinning or tanning steps, no PvP, others do not see your health. Values are placeholders to tune.
+* Checked: headless (senses, herds fleeing together, reach and pace, kills, carcasses, butchering, the bow's damage and
+  lost arrows, a wolf's bites, a hurt wolf running, spawning out of sight and none at *none*, leaving with the players, the
+  network format) and `--hunt-test` in the game (a deer struck twice with the spear, its death animation, butchered; a
+  stag shot through the camera's aim; a wolf's bite: health 100 → 64). Host + guest: the guest drew the host's four animals.
+
+## D121 — Building: blueprints first, shapes by category, snapping (2026-10-18)
+Tom: "basic shelter building (log foundation, log walls, log walls with window, stairs, roof from logs and/or thatch,
+different shapes of tiles allowing detailed roofs); better placement of built objects (including the lean-to and the
+campfire). First the player places a blueprint of the element of their choice, then adds the materials. Soulmask's
+approach: build a wall, then decide it needs a window or a doorway — press a key and get the other shapes; categories of
+objects. Snapping and rotation versatile: players build what they want from the available pieces. Use Blender if needed."
+* **Pieces are data** (`Content/gameplay_pieces.json`, `Gameplay/Building.cs`): category, shape, material, cost, the
+  box it fills, its **snap points**, the groups it may join (`attach`: a roof rests on walls and roofs, not on floors),
+  whether it may stand on bare ground (with how far its legs reach down). 36 pieces in 7 categories: **Camp** (campfire,
+  lean-to), **Foundation**, **Floor** (full, half: a stair opening), **Wall** (wall, window, doorway, half height; gables
+  steep and low, peaks steep and low), **Door**, **Stairs** (a storey, 3 m over 4 m; steps, 1.5 m), **Roof** — slope,
+  ridge, outer corner (hip), inner corner (valley), peak (pyramid cap) × steep (45°) and low (26.6°) × **logs or
+  thatch** (20 roof pieces: square, hip, gabled, L-shaped roofs). Grid 3 m (the original game's and the ArtKit's), walls 3 m
+  high so a steep roof's gable is one wall-sized triangle. Costs are placeholders (a wall 3 logs, a foundation 4…).
+* **Controls (Soulmask style)**: **B** opens building: a bar of categories (**1–7**), the current one's shapes — **V**
+  cycles them (Shift+V back), **X** the materials (roofs: logs / thatch); **R** turns 45°, the **wheel** 15° (Shift: 5°),
+  **Page Up/Down** raise or lower (foundations on slopes), **Home** resets, **Ctrl** places without snapping; the **left
+  mouse** places a **blueprint**, the **middle mouse** or **Backspace** takes the aimed piece down (all its materials
+  back: building should invite trying things; a sandbox share later), **B / right mouse / Esc** closes. **E** on an aimed
+  blueprint **brings materials** from the pack (as much as it still needs and you have; a second's work); a blueprint
+  shows what it needs when you look at it, glows when aimed, and is not solid. **Aiming at the middle of a piece of the same
+  category swaps it for the chosen shape** — its materials come back and go straight into the new one (Tom's wall →
+  window wall), or **turns** it if it is the same shape; aiming at its edges snaps beside or on top of it.
+* **Snapping** (engine-free, the host checks with the same code): the target is the snap point of a piece nearby
+  closest to where you aim; the new piece is turned in quarter turns of that piece, and the pose chosen is the one that
+  makes **the most of its points meet** others (a wall along a foundation's edge rather than across it; a roof's eave
+  along a wall's top), with **its body toward where you aim** (a hip corner in the corner you point at, not half a cell
+  along the wall), then **closest to the heading you want** (the camera's, plus your turns: R flips a roof between
+  sloping inward and outward). No snap point within 2.2 m, or Ctrl: placed **freely** where you aim, at any angle. A piece
+  may not overlap a piece of its own group (two walls in one place); a ground piece needs ground under it (or a joint),
+  others a joint. Free-standing pieces stay up when what they rest on is taken down (no structural strength yet).
+* **The campfire and the lean-to are pieces** (Tom: better placement): placed with the ghost (turned, anywhere in reach)
+  instead of 1.8 m in front; the campfire is lit when finished; their recipes left the pack. **Finished roofs shelter**
+  (rain off, wind ×0.3), like the lean-to; blueprints do not. **Doors** open and shut with E (the leaf swings, its
+  collision with it). Finished pieces are solid (collision from their meshes); walking into a piece's edge up to 0.55 m
+  steps up onto it (a foundation's deck) — only pieces, the terrain's own steps stay as they were.
+* **Models**: `tools/build_gameplay_models.py` (Blender 5.1, `--background`) builds every piece and the weapons from
+  simple shapes — stacked logs with their ends crossing at the corners, split-log decks and floors, log or layered thatch
+  roofs, a plank door on a hinge — as GLBs in `Assets/Gameplay/` (34 pieces + 5 weapons, under 1 MB). Their materials are
+  named (Bark, Wood, Thatch, Stone, Fibre) and get the game's own (a colour and a stretched noise grain:
+  `GameplayModels.cs`). **Placeholders**: the shapes and sizes are the contract (§5e), the looks are for Tom to decide —
+  any GLB can be replaced by a hand-made one of the same name, size and origin.
+* **Network and saves**: placing, supplying, taking down and using are actions the host checks (reach 9 m); a placed
+  object carries `Blueprint`, `Supplied` (what went into it), `State` (a door) and `Ref` (a carcass's animal): placed
+  objects format 2, **save version 2** (version 1 saves still load: their campfires and lean-tos are finished pieces),
+  **protocol 10** (build 63 does not connect to 62).
+* Checked: headless (blueprint → materials → finished; reach, overlaps, support; snapping a foundation beside, a wall
+  along an edge from three headings, a roof's eave on a wall top, a door into a doorway, a 6 × 6 m hip roof's four
+  corners meeting at the top; swapping a wall for a window wall and a doorway; turning; taking down; roofs shelter only
+  when finished; the saved blueprint) and `--build-test` in the game (the ghost and the left mouse; E; a 3 × 3 m hut with
+  four walls, a thatch ridge roof, two peaks and a door; standing on its floor inside, sheltered; the door opening; the
+  east wall swapped for a window wall; a 6 × 6 m house with a log hip roof). Host + guest: the guest saw all 26 pieces
+  and placed its own campfire blueprint through the host.
+
+## D122 — Over the shoulder when aiming (2026-10-18)
+With the bow in hand (or building) the camera's centre — the aim — was Alden's head: the target hidden behind him. The
+camera now slides 0.7 m over his right shoulder while the bow is held or building is open (*Interface → Over-the-shoulder
+aim*, on; off = as before), and a small cross marks the screen's centre.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

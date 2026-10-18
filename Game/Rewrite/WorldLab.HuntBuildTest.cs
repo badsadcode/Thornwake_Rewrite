@@ -164,6 +164,58 @@ public partial class WorldLab
         void Shot(string suffix) => TestShot(suffix);
     }
 
+    private bool _spawned;
+    private double _guestTimer = double.NaN;
+    private int _guestStage;
+
+    /// <summary>
+    /// --spawn=kind,kind…: animals put down around the player once the world is ready (host; a debug aid).
+    /// --guest-check=seconds (a joined player): after that long, what the host shared — animals, pieces — counted, a
+    /// campfire blueprint asked for and seen; GUEST lines, GUEST_FAIL, GUEST_DONE and quit.
+    /// </summary>
+    private void NetTestTools(double delta)
+    {
+        var args = OS.GetCmdlineUserArgs();
+        if (!_spawned && _rules != null && _sampler != null && _generation == null && ((IClientGame)this).LocalState() != null
+            && args.FirstOrDefault(a => a.StartsWith("--spawn=")) is { } spawn)
+        {
+            _spawned = true;
+            var rng = new Random(3);
+            foreach (var kind in spawn[8..].Split(','))
+                if (_catalog.Animals.TryGetValue(kind, out var def))
+                {
+                    double a = rng.NextDouble() * Math.Tau, d = 8 + rng.NextDouble() * 6;
+                    _rules.Wildlife.Spawn(def, PlayerX + Math.Cos(a) * d, PlayerZ + Math.Sin(a) * d);
+                }
+            GD.Print($"SPAWN {spawn[8..]}");
+        }
+        if (!IsNetClient || _sampler == null || _generation != null || ((IClientGame)this).LocalState() == null) return;
+        if (double.IsNaN(_guestTimer))
+        {
+            if (args.FirstOrDefault(a => a.StartsWith("--guest-check=")) is not { } check) { _guestTimer = double.PositiveInfinity; return; }
+            _guestTimer = double.Parse(check[14..], System.Globalization.CultureInfo.InvariantCulture);
+        }
+        if ((_guestTimer -= delta) > 0) return;
+        switch (_guestStage)
+        {
+            case 0:
+                GD.Print($"GUEST animals drawn: {_animalViews.Count} ({string.Join(", ", _animalViews.Values.Select(v => v.Def.Id))})");
+                GD.Print($"GUEST pieces seen: {_seenObjects.All.Count(o => _catalog.Piece(o.Kind) != null)}, finished {_seenObjects.All.Count(o => _catalog.Piece(o.Kind) != null && !o.Blueprint)}");
+                TestShot("-guest");
+                var dir = new Vector2(-Mathf.Sin(_yaw), -Mathf.Cos(_yaw));
+                double x = PlayerX + dir.X * 3, z = PlayerZ + dir.Y * 3;
+                Act(new ActionRequest(ActionKind.Place, 0, 0, "campfire", x, _sampler.Height(x, z), z, 0));
+                _guestStage = 1; _guestTimer = 2; break;
+            case 1:
+                bool ok = _seenObjects.All.Any(o => o.Kind == "campfire" && o.Blueprint && Math.Abs(o.X - PlayerX) < 6 && Math.Abs(o.Z - PlayerZ) < 6);
+                GD.Print((ok ? "GUEST ok: " : "GUEST_FAIL: ") + $"my campfire blueprint, placed through the host ({_status})");
+                GD.Print("GUEST_DONE");
+                _guestStage = 2;
+                GetTree().CreateTimer(1).Timeout += () => GetTree().Quit();
+                break;
+        }
+    }
+
     private void TestShot(string suffix)
     {
         if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--test-shot=")) is { } shot) Screenshot(shot[12..].Replace(".png", suffix + ".png"));
@@ -181,7 +233,7 @@ public partial class WorldLab
                 if (_shotAt is { } start && !_btMoved) { _btMoved = true; Teleport(start.X, start.Z); _btTimer = 5; return; }
                 inv.Add("log", 200); inv.Add("plant_fibre", 80); inv.Add("branch", 40);
                 _rules.InventoryChanged((int)NetServer.HostPeer);
-                GameSettings.Animals.Value = 0;
+                if (!OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--spawn="))) GameSettings.Animals.Value = 0;
                 SetBuilding(true);
                 _buildCategory = _catalog.Categories.ToList().IndexOf("Foundation");
                 _pitch = -.55f; _zoom = 5;
@@ -365,7 +417,7 @@ public partial class WorldLab
         void Go(int stage, double wait) { _btStage = stage; _btTimer = wait; }
         void Print(string s) { GD.Print("BUILD " + s); }
         void Check(bool ok, string what) => GD.Print((ok ? "BUILD ok: " : "BUILD_FAIL: ") + what);
-        void Done() { GD.Print("BUILD_DONE"); _btStage = -2; GetTree().CreateTimer(1).Timeout += () => GetTree().Quit(); }
+        void Done() { GD.Print("BUILD_DONE"); _btStage = -2; if (!OS.GetCmdlineUserArgs().Contains("--test-stay")) GetTree().CreateTimer(1).Timeout += () => GetTree().Quit(); }
         void Shot(string suffix) => TestShot(suffix);
     }
 }

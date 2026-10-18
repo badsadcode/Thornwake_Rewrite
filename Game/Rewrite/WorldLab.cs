@@ -775,6 +775,7 @@ public partial class WorldLab : Node3D
         GatherTest(delta);
         HuntTest(delta);
         BuildTest(delta);
+        NetTestTools(delta);
         FishTest(delta);
         SaveTest(delta);
         UpdateAutosave(delta);

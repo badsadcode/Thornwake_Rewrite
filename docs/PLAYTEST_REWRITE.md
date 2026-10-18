@@ -78,6 +78,34 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 63 — hunting and building
+**In multiplayer everyone needs build 63** (build 62 and 63 do not connect). Saves from builds 60–62 load.
+* **Animals**: deer, stags and foxes in temperate woods and meadows, wolves in forests and the cold north (none in
+  deserts, badlands or on ice). Deer and foxes see and hear you — walk, don't run, and they let you come closer — and
+  flee with their herd. A stag you hurt may turn on you. Wolves hunt in packs at night or when you come close; hurt one
+  badly and it runs. Settings → Simulation → *Animals*: none / few / normal / many.
+* **Weapons** (make them in the pack, I): **8** hunting spear (2 branches, a stone, 3 fibre), **9** rough bow (2
+  branches, 8 fibre) with **arrows** (5 from 2 branches, a stone or a bone, 2 fibre), **0** stone-edged sword (a log, 4
+  stones, 4 fibre), and a stone knife for butchering. The left mouse thrusts or cuts at what is in front of you; with the
+  bow, hold it to draw (longer = farther and harder) and release — arrows drop with distance; a missed arrow can often be
+  picked up where it fell (E). The camera moves over Alden's shoulder while the bow is out (Settings → Interface).
+  The axe (6) also strikes an animal in front of you.
+* **Butchering**: E on a fallen animal with a knife, axe or sword: raw meat, hide, bones. Roast the meat at a campfire
+  (I → *Roast meat*).
+* **Building — B**: the bar at the bottom shows the categories (**1–7**: camp, foundation, floor, wall, door, stairs,
+  roof) and the shapes of the current one. **V** changes the shape (a wall → a window wall → a doorway → half wall →
+  gables and peaks), **X** the material (roofs: logs or thatch). A see-through ghost shows where it goes: it **snaps** to
+  the pieces nearby (walls onto a foundation's edges, a roof's eave onto a wall's top, a door into a doorway), or stands
+  freely on the ground. **R** turns 45°, the **wheel** 15° (Shift: 5°), **Page Up / Page Down** raise or lower it,
+  **Home** resets, hold **Ctrl** to place without snapping. **Left mouse**: place a **blueprint** (free). Then **E** on it
+  brings the materials from your pack — friends can help. Aim at the **middle** of a wall (or any piece) with another
+  shape chosen to **swap** it — the logs go into the new one. **Middle mouse / Backspace** takes a piece down (everything
+  back). **B**, right mouse or Esc closes.
+* **The campfire and the lean-to are built the same way** now (Camp, 1): turn them and put them exactly where you want.
+* **Roofs keep the rain off** (and most of the wind) like the lean-to. **Doors** open and shut with E. You step up onto
+  foundations by walking into them.
+* The pieces' looks are placeholders (plain logs and straw) — tell me what you want them to look like.
+
 ## New in build 62 — bare patches where grass was pulled, a progress bar, longer fish runs
 * **Pulled grass** leaves a bare patch (about 3 × 3 m, for everyone; it grows back in three game days). Nothing left
   there to pull: move to fresh grass.

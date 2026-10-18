@@ -152,6 +152,47 @@ replaced. The rod needs plant fibre: E-gathering (grass, berries, loose stones; 
   every loose stone near a player physical (most alive, costliest: synced like felled trunks). For now picked-up stones
   simply disappear (D113).
 
+## 5d. Hunting (Tom, 2026-10-18; D120)
+
+Animals from the Quaternius pack (deer, stag, fox, wolf; more of the pack later for farms and draft animals, §12), living
+where their biome suits them, simulated by the host. **Shy** game notices a hunter by sight and sound (creep up slowly,
+downwind later) and flees with its herd; a **proud** stag may turn on a hunter who hurt it; **wolves** hunt in packs at
+night or when you come close, and run when badly hurt. Weapons: **spear** (8, reach), **bow** (9, hold to draw, arrows
+that drop with distance and can be found again), **stone-edged sword** (0), the axe in a pinch. A kill is a **carcass**:
+E with a knife (quickest), an axe or a sword butchers it into **meat** (roast it on a fire), **hide** and **bone** (bone
+arrows; hides wait for tanning). Later: tracks and scent (wind), traps, skinning and tanning, more animals, blood and
+sounds, animals that avoid trees and buildings, hunting skill.
+
+## 5e. Building (Tom, 2026-10-18; D121)
+
+**Blueprint first, then materials**: place the piece you want (it costs nothing yet), then bring what it needs (E) — alone
+or with friends. **Categories with shapes, Soulmask style**: B opens building; the number keys choose a category (camp,
+foundation, floor, wall, door, stairs, roof), **V** cycles its shapes (wall → window → doorway → half → gables and peaks),
+**X** its materials (roofs: logs or thatch); aiming at the middle of a placed piece of the same category swaps it for the
+chosen shape (its materials go into the new one). **Versatile placement**: pieces snap by their points to the pieces
+around (edges to edges, eaves to wall tops), turned in quarter turns of what they join and the way you face; R and the
+wheel turn freely, Page Up/Down raise, Ctrl places freely without snapping. Roofs come in five shapes (slope, ridge,
+hip and valley corners, peak) at two pitches, so gabled, hip, L-shaped and lean-to roofs can all be built. Later:
+structural strength (a piece needs support, heavy roofs need posts), more materials (stone, planks, wattle and daub),
+diagonal and triangular pieces, windows' shutters, furniture and stations, repairs and decay, who may build where.
+
+**Asset contract** (for Tom's hand-made replacements of `Assets/Gameplay/Building/*.glb`; Blender: 1 unit = 1 m,
+export glTF with +Y up; the piece faces Blender's −Y = the game's +Z): keep each file's name, origin and size —
+* **grid 3 m**; walls 3 m wide (X −1.5 … +1.5) and 3 m high from their origin at the bottom centre, about 0.3 m thick;
+  half wall 1.5 m; gables are right triangles rising to +X (steep 3 m, low 1.5 m), peaks isosceles (1.5 m, 0.75 m);
+  window opening 1.1 × 0.9 m from 1.2 m up; doorway 1.24 × 2.1 m;
+* **foundation** top at the origin (Y 0), 3 × 3 m, legs down to −2.6 m; **floors** top at Y 0, 0.15 m thick (half floor
+  3 × 1.5 m);
+* **roofs**: origin at the centre of the 3 × 3 m square at eave height; the underside rises 1 m per metre (steep) or 0.5 m
+  (low) from the eave at Z −1.5 (slope); ridge eaves at Z ±1.5; outer corner `Y = t·min(X+1.5, Z+1.5)`, inner corner
+  `Y = t·max(X+1.5, Z+1.5)`, peak `Y = t·(1.5 − max(|X|, |Z|))`;
+* **door**: a node named `Leaf` with its pivot at the hinge (X −0.55), the closed leaf along +X, 2.05 m high;
+* **stairs** 1.5 m wide, rising 3 m over 4 m (steps: 1.5 m over 2 m) from Z −2 to +2; a mesh named `Col…` is collision
+  only (the stairs' smooth ramp);
+* materials named **Bark, Wood, Thatch, Stone, Fibre** get the game's grain; any other name keeps its own material and
+  textures.
+The snap points are in `Content/gameplay_pieces.json` (not in the models), so a replacement only has to match the shape.
+
 ## 6. Survival, the world's memory, crafting quality
 
 * **Needs** as in §2; survival feeds everything else: hungry, cold, wet or exhausted means less stamina and slower

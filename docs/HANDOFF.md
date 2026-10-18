@@ -45,7 +45,14 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   and fall side, impact, a physical trunk cut into logs; **build 59** (`bc32f36`, `dist/Preview-59`).
   Since build 59: E-gathering (D113: stones, berries that regrow, grass → plant fibre), fishing (D114: rod 7, berry
   bait, cast, strike, A/D tug-of-war, fish by water and hour). Then death (D115: the pack dropped where you
-  fall), a lean-to (shelter for a cold rainy night), saving (D116). **The first slice (§15) is complete.** **Build 60** (`a5f4be8`, `dist/Preview-60`). **Build 61** (`b2cd143`): fishing as Tom plays it, lean-to fixed (D117). **Build 62** (`e28d621`): bare grass patches (D119), action bar, longer fish runs (D118). Open from Tom (dump 221438): the torch lights the ground fog evenly far
+  fall), a lean-to (shelter for a cold rainy night), saving (D116). **The first slice (§15) is complete.** **Build 60** (`a5f4be8`, `dist/Preview-60`). **Build 61** (`b2cd143`): fishing as Tom plays it, lean-to fixed (D117). **Build 62** (`e28d621`): bare grass patches (D119), action bar, longer fish runs (D118). **Build 63** (2026-10-18):
+  hunting (D120: deer, stag, fox, wolf from the Quaternius pack; spear 8, bow 9, sword 0, arrows; butchering) and
+  building (D121: B, blueprints then materials with E, categories with shapes cycled by V and materials by X, snapping,
+  swapping a piece's shape; log foundations, floors, walls, windows, doorways, doors, stairs, log and thatch roofs in five
+  shapes and two pitches; campfire and lean-to placed the same way; models from `tools/build_gameplay_models.py`);
+  over-the-shoulder aim (D122). Tests: `--hunt-test`, `--build-test`, `--spawn=deer,wolf…`, `--guest-check=s`. **Waiting
+  for Tom**: how the pieces should look (they are placeholders; the shape contract is §5e), costs, animal numbers.
+  Next ideas: structural strength, animals avoiding trees and buildings, tanning hides, stone and plank pieces. Open from Tom (dump 221438): the torch lights the ground fog evenly far
   into the night — trees far away stand dark against an orange haze; light sources should shape the fog, but less
   uniformly (look at the torch's `LightVolumetricFogEnergy` / range and the fog's density near the ground; atmosphere
   work, after the mechanics).
