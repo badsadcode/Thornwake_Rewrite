@@ -2199,7 +2199,9 @@ passes no time: the same sweep leaves Food 78, Warmth 54, Health 100. A fix, no 
   evening (18:30), *Forest rays* A2, fog quality high, every still at forward scattering 0.75 and 0.3. Sunrise,
   morning and evening: shafts as intended (0.3 adds milky haze). **Noon: the whole air went milky white** — a high sun
   lets far more light through the crowns and A2's ×8–20 boost floods it. A2's boost now eases from a 30° to a 65° sun,
-  down to 35 % (draft, part of A2; captures of it still to take).
+  down to 35 % (draft, part of A2). Rerun (no freeze, run under a watchdog that stops it if its log stalls for 2 min;
+  Tom's settings and saves unchanged, checked by hash): the veil is gone at both values, the shafts through the crowns
+  stay; at 0.3 some haze remains. Morning (40°) keeps ~87 % of the boost. `artifacts/rays/m2-noon-before-after.jpg`.
 * The rerun **froze** (00:20, between two noon stills while turning): 0 % CPU and GPU, nothing in Godot's log, no
   driver reset in Windows' log. Cause unknown; not seen in the earlier runs of the same suite. Killed after Tom saw it.
 * **The benchmark wrote its test profile into Tom's settings file** while running (restored only at its end), so the
