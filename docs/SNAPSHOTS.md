@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 77** (forest rays A2 forward scattering slider, --set not saved D144) | `c44b4bb` | Thornwake-Rewrite-Preview-77 (v0.9.77) | Versions must match to connect; forward scattering 0.75 = build 76; build 76 = `653ddfc` |
 | **Build 76** (forest rays A2 draft, volumetric fog quality levels D143) | `653ddfc` | Thornwake-Rewrite-Preview-76 (v0.9.76) | Versions must match to connect; Forest rays and Volumetric fog quality default to build 75; build 75 = `b983a4f` |
 | **Build 75** (caustics by the sun, shorter scan wave with glowing items, crouching bends the waist D141) | `b983a4f` | Thornwake-Rewrite-Preview-75 (v0.9.75) | Versions must match to connect; Caustics → build 74 gives build 74's water; build 74 = `2323405` |
 | **Build 74** (smoke from Tom's own texture for torches and campfires D140; Torch in mist draft, halo at the flame D139; dumps carry mist drift and wetness) | `2323405` | Thornwake-Rewrite-Preview-74 (v0.9.74) | Versions must match to connect; Smoke → build 72 and Torch in mist → build 72 give build 73's look; build 73 = `13d6865` |
