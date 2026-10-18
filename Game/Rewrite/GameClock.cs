@@ -28,12 +28,16 @@ public sealed class GameClock
     public void Follow(int day, double phase, double realSeconds, bool snap)
     {
         double error = (day - Day) + (phase - _phase);
-        if (snap || Math.Abs(error) > .02) { Day = Math.Max(1, day); _phase = phase; return; }
+        if (snap || Math.Abs(error) > .02) { Day = Math.Max(1, day); _phase = phase; Jumps++; return; }
         _phase += error * Math.Min(1, realSeconds * .5);
         while (_phase >= 1) { _phase -= 1; Day++; }
         while (_phase < 0) { _phase += 1; Day = Math.Max(1, Day - 1); }
     }
     public int Day { get; private set; } = 1;
+    /// <summary>Counts the clock being set rather than running (the time slider, --hour, a loaded save, a snap to the
+    /// host's clock): no time passes for the body, fires or animals across a jump (Tom, build 77: dragging the slider
+    /// through a winter day froze him to death and he woke at the start).</summary>
+    public int Jumps { get; private set; }
     public double Hour { get; private set; } = 10.5;
 
     /// <summary>Season → solar declination (degrees).</summary>
@@ -68,6 +72,7 @@ public sealed class GameClock
         double sinceRise = ((hour - sunrise) % 24 + 24) % 24;
         _phase = sinceRise < hours ? sinceRise / hours * share : share + (sinceRise - hours) / (24 - hours) * (1 - share);
         Hour = hour;
+        Jumps++;
     }
 
     /// <summary>Advance by real seconds (paused when the setting says so) and compute the sky at a latitude.</summary>

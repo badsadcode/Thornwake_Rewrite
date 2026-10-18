@@ -33,6 +33,7 @@ public partial class WorldLab : IWorldQuery
     private readonly List<byte[]> _pendingObjects = new();
     private bool _axeHeld;
     private double _gameplayHours = double.NaN;
+    private int _gameplayJumps;
     private Label _needsLabel = null!;
     private PanelContainer _pack = null!;
     private ItemList _packItems = null!, _packRecipes = null!;
@@ -215,15 +216,31 @@ public partial class WorldLab : IWorldQuery
         else _status = "Not in the world yet.";
     }
 
+    private double _sweepHour = OS.GetCmdlineUserArgs().Contains("--clock-sweep-test") ? 6 : double.NaN;
+    private int _sweepFrames;
+
+    /// <summary><c>--clock-sweep-test</c> (headless): drag the clock from 06:00 to 18:00 like the time slider, a little each
+    /// frame, then print the needs and quit: setting the clock must not age the body (D145).</summary>
+    private void ClockSweepTest()
+    {
+        if (double.IsNaN(_sweepHour) || _rules == null || ++_sweepFrames < 30) return;
+        if (_sweepFrames == 30) GD.Print($"SWEEP before {_needs.Describe()}");
+        if (_sweepHour <= 18) { _pendingHour = _sweepHour; _sweepHour += .05; return; }
+        GD.Print($"SWEEP after {_needs.Describe()} (clock {_clock.Describe()})");
+        GetTree().Quit(0);
+    }
+
     /// <summary>Per frame: the local server part, time for the rules and the body, chopping, the views, the needs line.</summary>
     private void UpdateGameplay(double delta)
     {
         if (_sampler == null || _generation != null) { _needsLabel.Text = ""; return; }
+        ClockSweepTest();
         _localServer?.Tick(delta, ((IClientGame)this).LocalState());
         _localClient?.Tick(delta);
         double hours = _clock.Day * 24 + _clock.Hour;
-        double dh = double.IsNaN(_gameplayHours) || hours < _gameplayHours || hours - _gameplayHours > 2 ? 0 : hours - _gameplayHours;
-        _gameplayHours = hours;
+        double dh = double.IsNaN(_gameplayHours) || hours < _gameplayHours || hours - _gameplayHours > 2 || _clock.Jumps != _gameplayJumps
+            ? 0 : hours - _gameplayHours;
+        _gameplayHours = hours; _gameplayJumps = _clock.Jumps;
         if (_rules != null && !IsNetClient)
         {
             _rules.Step(dh * 60);

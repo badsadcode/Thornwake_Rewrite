@@ -106,7 +106,7 @@ public partial class WorldLab
 
     private void UpdateAutosave(double delta)
     {
-        if (!CanSave(out _)) return;
+        if (!CanSave(out _) || _shotPath != null || _smokeDirectory != null || _bench != null) return; // (test runs never write over the player's autosave)
         if ((_autosaveTimer -= delta) > 0) return;
         _autosaveTimer = 600;
         SaveWorld("autosave");

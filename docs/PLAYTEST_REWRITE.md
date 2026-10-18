@@ -78,6 +78,13 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 78 — the time slider no longer ages you
+**Host and everyone joining need build 78** (versions must match to connect).
+* **Fixed: dragging the time slider counted as time lived** — food, warmth and health ran down as if the hours had
+  passed, so testing the light in winter froze you to death and you started a new life at the world's start (the
+  "teleport back to spawn"). Setting the clock now passes no time for you, fires or animals.
+* Your autosave from the evening of the 18th was written by my test runs, not by you; your own saves are untouched.
+
 ## New in build 77 — rays seen from the side
 **Host and everyone joining need build 77** (versions must match to connect).
 * New slider: Settings → Lighting and effects → **Forest rays A2: forward scattering** (0.75 = build 76).

@@ -2183,6 +2183,17 @@ shaft lights up only within a few tens of degrees of the sun. Reproduced from hi
   resized there); test runs open on the saved monitor too. Settings → Display → Monitor picks it. No change.
 * Capture: `artifacts/rays/m2-dump232214-scatter-0.75-vs-0.3.jpg`.
 
+## D145 — Setting the clock passes no time for the body; test runs never autosave (2026-10-19)
+Tom on build 77: "why am I getting teleported back to the spawn location?" — while dragging the time slider to test
+the rays in winter (Warmth 26 in his dumps). The needs (and fires, animals) took the clock's change each frame as time
+lived, ignoring only jumps over 2 h; a slider dragged a little each frame passed them all. `--clock-sweep-test`
+(headless: 06:00 → 18:00 in 0.05 h steps, winter, needs on): before, Food 78 → 54, Warmth 54 → 34, Health 100 → 89
+per sweep — a few sweeps and he froze to death, and dying starts a new life at the world's start (D115). Now
+`GameClock.Jumps` counts every set (slider, --hour, a loaded save, a snap to the host's clock) and a frame with a jump
+passes no time: the same sweep leaves Food 78, Warmth 54, Health 100. A fix, no switch.
+* My capture runs on Tom's PC (23:29, 23:48) had written `autosave.twsave` into his saves (the autosave ran in test
+  runs too). Autosave is now off in shots, smoke runs and benchmarks.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
