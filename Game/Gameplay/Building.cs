@@ -168,7 +168,7 @@ public static class Building
                         var off = centre - aim;
                         double side = normal is { } nv ? off.X * nv.X + off.Y * nv.Y + off.Z * nv.Z : 0;
                         double below = .8 * Math.Max(0, -side) + .25 * Math.Max(0, -off.Y);
-                        candidates.Add((toAim - .7 * (joints - 1) + .35 * body + turnWeight * turn + below, pose, joints));
+                        candidates.Add((toAim - .7 * (Math.Min(joints, 5) - 1) + .35 * body + turnWeight * turn + below, pose, joints)); // (joints count up to a line's five: more is a piece wedged between two)
                     }
                 }
             }

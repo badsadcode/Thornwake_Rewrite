@@ -556,6 +556,19 @@ internal static class GameplayTests
         Put("log_roof_outer_steep", 4.2, 8.3, 4.2, -Math.PI * 3 / 4);
         var tops = r2.Objects.All.Where(o => o.Kind == "log_roof_outer_steep").Select(o => Building.ToWorld(new Pose(o.X, o.Y, o.Z, o.Yaw), new V3(1.5, 3, 1.5))).ToList();
         T.Check(tops.Count == 4 && tops.All(p => p.DistanceTo(new V3(1.5, 11.3, 1.5)) < .01), $"a hip roof: the corners meet at the top ({string.Join("; ", tops)})");
+        // Tom (build 67, dump 154613): a second storey — a wall aimed at the upper floor went under it, between the
+        // storeys (its top on the floor's grid, its bottom on the foundation's: twice the joints).
+        var s2 = new GameRules(c, new World()) { Testing = true };
+        s2.Place(me, "log_foundation", 0, 5.3, 0, 0, 0, 0, -4);
+        s2.Place(me, "log_wall", 1.5, 5.3, 0, Math.PI / 2, 0, 0, -4);
+        s2.Place(me, "log_floor", 0, 8.3, 0, 0, 0, 0, -4);
+        var near2s = s2.PiecesNear(0, 0, 12).ToList();
+        foreach (var (ax, az) in new[] { (.2, .3), (1.3, .2), (-1.2, 1.1), (.5, -1.3) })
+            foreach (double facing in new[] { 0, Math.PI / 2 })
+            {
+                var up2 = Building.Snap(wall, new V3(ax, 8.3, az), facing, near2s, new V3(0, 1, 0));
+                T.Check(up2 is { } u && Math.Abs(u.Pose.Y - 8.3) < 1e-6, $"a wall aimed at the upper floor ({ax}, {az}) stands on it ({up2})");
+            }
         // Testing tools (D128): off, no kits; on, kits and pieces built at once without materials.
         var t3 = new GameRules(c, new World());
         T.Check(!t3.Give(me, "materials").Ok, "no free kits unless the testing tools are on");
