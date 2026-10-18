@@ -78,6 +78,15 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 79 — forest rays A2 at noon
+**Host and everyone joining need build 79** (versions must match to connect).
+* **A2 at noon**: with a high sun the forest air went milky white (much more light comes through the crowns). A2's
+  sunlight into the air now eases as the sun climbs past 30°, down to about a third at 65°; low sun (sunrise, evening)
+  is unchanged, morning (40°) nearly so. Tell me if noon now looks too plain or still too hazy.
+* Behind the scenes: benchmarks no longer write their test settings into your settings file while they run (a run
+  that froze last night had left them there; I restored yours from your 23:22 dump, and *Forest rays A2: forward
+  scattering* is back at 0.75 — set your value again if you had changed it).
+
 ## New in build 78 — the time slider no longer ages you
 **Host and everyone joining need build 78** (versions must match to connect).
 * **Fixed: dragging the time slider counted as time lived** — food, warmth and health ran down as if the hours had
