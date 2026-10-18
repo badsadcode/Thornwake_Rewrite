@@ -78,6 +78,13 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 62 — bare patches where grass was pulled, a progress bar, longer fish runs
+* **Pulled grass** leaves a bare patch (about 3 × 3 m, for everyone; it grows back in three game days). Nothing left
+  there to pull: move to fresh grass.
+* **Progress bar over Alden's head** while something takes time — making, gathering, felling (the hits so far),
+  cutting up a trunk, charging a cast — with a short text (Settings → Interface → Action text turns the text off).
+* **Fish run farther**: each run its own length, short tugs and long dashes, up to ~7 m to either side.
+
 ## New in build 61 — fishing as you asked; the lean-to fixed
 * **Fishing:** walk about while the bobber is out — it stays, the line follows (go too far and it drags the bobber after
   you; out of the water, it is reeled in). Click to reel in and cast again. With a fish on, A/D turn the rod against it

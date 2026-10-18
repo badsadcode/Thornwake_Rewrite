@@ -145,6 +145,13 @@ current makes a fish pull harder downstream; a fishing book teaches it (§5). St
 this minigame (cast, strike, A/D, one bait, two or three fish), so it grows into the final one rather than being
 replaced. The rod needs plant fibre: E-gathering (grass, berries, loose stones; Tom) comes first.
 
+## 5c. Ideas for later (Tom)
+
+* **Physical stones** (2026-10-18): loose stones that can be kicked and roll down slopes. Options noted: solid only
+  (they block, never move); physical when moved (a dropped or thrown stone rolls and bounces — few at a time, cheap);
+  every loose stone near a player physical (most alive, costliest: synced like felled trunks). For now picked-up stones
+  simply disappear (D113).
+
 ## 6. Survival, the world's memory, crafting quality
 
 * **Needs** as in §2; survival feeds everything else: hungry, cold, wet or exhausted means less stamina and slower
