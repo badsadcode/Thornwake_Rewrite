@@ -78,6 +78,18 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 64 — after your first try of hunting and building
+* **Walls go on the foundation**, not under it (the ghost now keeps to the side of the surface you aim at).
+* **Foundation height**: placed on a slope, a foundation stands level above the highest ground under it. **Page Up /
+  Page Down** raise or lower it (Shift: 1 m steps), **Alt + wheel** in small steps, **Home** resets. New shape
+  **On stilts** (V in Foundation): a deck on 6 m braced posts for swamps and steep ground.
+* **Build menu with pictures** of every piece: tabs for the categories, a card per shape (V still cycles; press Tab to
+  free the cursor and click), Logs / Thatch, the cost against what you carry, and why a piece cannot go somewhere.
+* **Aiming the bow**: hold the **right mouse** — the camera moves in close over the shoulder and the view zooms a little;
+  draw and shoot with the left mouse as before.
+* **Animals**: build 63's tests had switched your *Animals* setting to *none* — sorry; it is back to *normal*. Animals
+  are also more common now, deer live in swamps and marshes too, and the HUD says where the nearest one is.
+
 ## New in build 63 — hunting and building
 **In multiplayer everyone needs build 63** (build 62 and 63 do not connect). Saves from builds 60–62 load.
 * **Animals**: deer, stags and foxes in temperate woods and meadows, wolves in forests and the cold north (none in

@@ -1084,11 +1084,14 @@ public partial class WorldLab : Node3D
         {
             // Over the right shoulder while aiming the bow or building (D120): the screen's centre is not Alden's head.
             bool aiming = GameSettings.ShoulderAim.On && (_me.Weapon == "bow" || _building);
-            _shoulder = Mathf.Lerp(_shoulder, aiming ? .7f : 0, .15f);
+            _shoulder = Mathf.Lerp(_shoulder, aiming ? .7f + .35f * _aimFocus : 0, .15f);
             var right = new Vector3(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));
             _pivot.Position = _player.Position + Vector3.Up * 1.55f + right * _shoulder;
-            _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, _zoom, .2f);
+            // Aiming (right mouse with the bow): in close behind the shoulder.
+            _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, Mathf.Lerp(_zoom, Mathf.Min(_zoom, 2.2f), _aimFocus), .2f);
         }
+        // Aiming narrows the view by up to a third (a gentle zoom); otherwise the setting's.
+        _camera.Fov = GameSettings.Fov.F * (1 - .32f * _aimFocus);
         // First person: the body is only a shadow; the torch goes from the hand to the view.
         _me.SetFirstPerson(FirstPerson ? _fpHold : null);
     }
@@ -1128,6 +1131,7 @@ public partial class WorldLab : Node3D
             $"{mode}   FPS {Engine.GetFramesPerSecond():0}   tiles {_streamer.Resident} (+{_streamer.Missing} queued)   " +
             $"terrain triangles {_streamer.Triangles / 1000}k   tile build {_streamer.LastBuildMs:0.0} ms, commit {_streamer.LastCommitMs:0.0} ms";
         _hud.Text += "\n" + (_axeHeld || _me.RodHeld || _me.Weapon != null || _building ? GameplayHud() : _tools.Hud()) + NetHud();
+        _hud.Text += "\n" + AnimalsHud();
         if (_water.Sim is { Added: > 0 } sim)
             _hud.Text += $"\nWater simulation: {sim.Volume():0.0} m³ on the land, {sim.Absorbed:0.0} m³ joined rivers/lakes{(_rain ? ", raining" : "")}" +
                 $"{(sim.Sources.Count > 0 ? $", {sim.Sources.Count} spring(s)" : "")}";
@@ -1144,8 +1148,9 @@ public partial class WorldLab : Node3D
         }
         if (e is InputEventMouseMotion motion && Input.MouseMode == Input.MouseModeEnum.Captured)
         {
-            _yaw -= motion.Relative.X * .0035f;
-            _pitch = Mathf.Clamp(_pitch - motion.Relative.Y * .0035f, -1.45f, .9f);
+            float look = .0035f * (1 - .45f * _aimFocus); // (steadier while aiming the bow)
+            _yaw -= motion.Relative.X * look;
+            _pitch = Mathf.Clamp(_pitch - motion.Relative.Y * look, -1.45f, .9f);
         }
         if (e is InputEventMouseButton built && Input.MouseMode == Input.MouseModeEnum.Captured && BuildingWheel(built)) return; // (building: the wheel turns the piece)
         if (e is InputEventMouseButton button && button.Pressed)

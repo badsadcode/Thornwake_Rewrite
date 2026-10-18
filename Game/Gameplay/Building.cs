@@ -121,7 +121,7 @@ public static class Building
     /// along a foundation's edge, a roof's eave along a wall's top) and closest to the wanted heading — and not
     /// overlapping its group. Null when nothing nearby fits (then it goes freely where you aim).
     /// </summary>
-    public static (Pose Pose, int Joints)? Snap(PieceDef ghost, V3 aim, double desiredYaw, IReadOnlyList<Placed> nearby)
+    public static (Pose Pose, int Joints)? Snap(PieceDef ghost, V3 aim, double desiredYaw, IReadOnlyList<Placed> nearby, V3? normal = null)
     {
         var joinable = nearby.Where(p => ghost.JoinsTo(p.Def)).ToList();
         if (ghost.Snap.Count == 0 || joinable.Count == 0) return null;
@@ -151,8 +151,14 @@ public static class Building
                             if (cells.Contains(((long)Math.Floor(m.X / .1), (long)Math.Floor(m.Y / .1), (long)Math.Floor(m.Z / .1)))) joints++;
                         // Near the aim first; more meeting points; the piece's body toward where you aim (a roof corner
                         // in the corner you point at, not half a cell along the wall); then the heading the player wants.
-                        double body = ToWorld(pose, ghost.BoxCenter).DistanceTo(aim);
-                        candidates.Add((toAim - .7 * (joints - 1) + .35 * body + .45 * turn, pose, joints));
+                        var centre = ToWorld(pose, ghost.BoxCenter);
+                        double body = centre.DistanceTo(aim);
+                        // On the side of the surface you aim at (a wall on a deck, not hanging under its edge: as many
+                        // joints either way, Tom's build 63), and rather up than down.
+                        var off = centre - aim;
+                        double side = normal is { } nv ? off.X * nv.X + off.Y * nv.Y + off.Z * nv.Z : 0;
+                        double below = .8 * Math.Max(0, -side) + .25 * Math.Max(0, -off.Y);
+                        candidates.Add((toAim - .7 * (joints - 1) + .35 * body + .45 * turn + below, pose, joints));
                     }
                 }
             }
@@ -168,7 +174,24 @@ public static class Building
 
     /// <summary>The pose of a piece put down where nothing snaps: at the aim (lifted by the piece's lift and the player's
     /// raise), facing the wanted heading.</summary>
-    public static Pose Free(PieceDef def, V3 aim, double desiredYaw, double raise) => new(aim.X, aim.Y + def.Lift + raise, aim.Z, desiredYaw);
+    public static Pose Free(PieceDef def, V3 aim, double desiredYaw, double raise, Func<double, double, double>? ground = null)
+    {
+        double y = aim.Y;
+        // A piece on legs (a foundation) stands level above the highest ground under its corners (Tom: on a slope it
+        // should not sink into the hill); its legs reach down to the rest.
+        if (ground != null && def.Ground && def.Legs > 1)
+        {
+            var pose = new Pose(aim.X, 0, aim.Z, desiredYaw);
+            y = ground(aim.X, aim.Z);
+            foreach (double sx in new[] { -1.0, 1 })
+                foreach (double sz in new[] { -1.0, 1 })
+                {
+                    var c = ToWorld(pose, new V3(def.BoxCenter.X + sx * def.BoxHalf.X, 0, def.BoxCenter.Z + sz * def.BoxHalf.Z));
+                    y = Math.Max(y, ground(c.X, c.Z));
+                }
+        }
+        return new(aim.X, y + def.Lift + raise, aim.Z, desiredYaw);
+    }
 
     /// <summary>Is the point (world) inside the piece's box, grown by <paramref name="grow"/> (the player under a roof).</summary>
     public static bool Inside(PieceDef def, Pose pose, V3 point, double grow = 0)

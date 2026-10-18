@@ -95,8 +95,15 @@ public partial class WorldLab : IWorldQuery
         return "";
     }
     (double X, double Z) IWorldQuery.GatherSpot(int layer, long cx, long cz) => GroundCover.GatherPosition(layer, cx, cz, GroundCover.CoverSeed(_sampler!));
-    IReadOnlySet<string> IWorldQuery.BiomeTags(double x, double z) =>
-        _sampler == null ? new HashSet<string>() : Vegetation.BiomeOf(_sampler, x, z).A.Def.Tags.ToHashSet();
+    IReadOnlySet<string> IWorldQuery.BiomeTags(double x, double z)
+    {
+        if (_sampler == null) return new HashSet<string>();
+        // Where two biomes blend (a swamp's edge into forest), animals of either may live.
+        var (a, b, share) = Vegetation.BiomeOf(_sampler, x, z);
+        var tags = a.Def.Tags.ToHashSet();
+        if (share < .8) tags.UnionWith(b.Def.Tags);
+        return tags;
+    }
     bool IWorldQuery.IsWater(double x, double z) =>
         _sampler == null || _sampler.Sample(x, z) is var t && (t.Water != WaterKind.None || t.Height < _sampler.Plan.Profile.SeaLevel + .2);
     ObjectRemovals? IWorldHost.Removals => _generation == null ? _sampler?.Removals : null;
@@ -125,6 +132,8 @@ public partial class WorldLab : IWorldQuery
     }
 
     private bool _dying;
+    /// <summary>Animal numbers set by a test (never the player's saved setting).</summary>
+    private double? _animalsOverride;
 
     /// <summary>After dying (D115): a new character at the world's start, fed, warm and whole; the old one's pack lies
     /// where they fell.</summary>
@@ -159,7 +168,7 @@ public partial class WorldLab : IWorldQuery
         if (_rules != null && !IsNetClient)
         {
             _rules.Step(dh * 60);
-            _rules.Wildlife.Density = GameSettings.Animals.Index switch { 0 => 0, 1 => .5, 2 => 1, _ => 2 };
+            _rules.Wildlife.Density = _animalsOverride ?? GameSettings.Animals.Index switch { 0 => 0, 1 => .5, 2 => 1, _ => 2 };
         }
         _seenObjects.Step(dh * 60); _seenObjects.TakeChanged(); // (the copy burns down too, for the fires drawn here)
 

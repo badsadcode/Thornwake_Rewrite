@@ -458,6 +458,19 @@ internal static class GameplayTests
             T.Check(w is { } wp && Math.Abs(wp.Pose.X - 1.5) < 1e-6 && Math.Abs(wp.Pose.Z) < 1e-6 && Math.Abs(Math.Cos(wp.Pose.Yaw)) < 1e-6 && wp.Joints == 3,
                 $"facing {facing:0.0}: the wall stands along the edge ({w})");
         }
+        // Tom (build 63): a wall aimed at a foundation's top went under it (hanging from the edge: as many joints as on
+        // top). Aimed anywhere along the edges, from any heading, it stands on the deck.
+        var up = new V3(0, 1, 0);
+        int under = 0, tried = 0;
+        // (on the deck near its edges, and on the ground just outside them: the aim slipping past the edge)
+        foreach (var (ax, ay, az) in new[] { (1.4, 5.3, .3), (1.3, 5.3, -1.2), (-1.35, 5.3, .9), (.2, 5.3, 1.4), (-.7, 5.3, -1.4), (1.45, 5.3, 1.45), (1.1, 5.3, 0.0),
+                     (1.7, 5.0, .3), (1.8, 5.0, -1.0), (-1.7, 5.0, .4), (.3, 5.0, 1.75), (-1.0, 5.0, -1.8), (1.75, 5.0, 1.75) })
+            foreach (double facing in new[] { 0, .8, 1.6, 2.4, 3.2, 4.0, 4.8, 5.6 })
+            {
+                tried++;
+                if (Building.Snap(wall, new V3(ax, ay, az), facing, pieces, up) is not { } s || Math.Abs(s.Pose.Y - 5.3) > 1e-6) under++;
+            }
+        T.Check(under == 0, $"a wall aimed at a foundation's top stands on it ({under} of {tried} went elsewhere)");
         var wpose = Building.Snap(wall, new V3(1.4, 5.3, .3), 1.2, pieces)!.Value.Pose;
         var wallPlaced = rules.Place(me, "log_wall", wpose.X, wpose.Y, wpose.Z, wpose.Yaw, 0, 0, -4);
         T.Check(wallPlaced.Ok, "the wall's blueprint: " + wallPlaced.Message);

@@ -168,7 +168,7 @@ sounds, animals that avoid trees and buildings, hunting skill.
 **Blueprint first, then materials**: place the piece you want (it costs nothing yet), then bring what it needs (E) — alone
 or with friends. **Categories with shapes, Soulmask style**: B opens building; the number keys choose a category (camp,
 foundation, floor, wall, door, stairs, roof), **V** cycles its shapes (wall → window → doorway → half → gables and peaks),
-**X** its materials (roofs: logs or thatch); aiming at the middle of a placed piece of the same category swaps it for the
+**X** its materials (roofs: logs or thatch) — shown as a menu with a picture of each piece (D124); aiming at the middle of a placed piece of the same category swaps it for the
 chosen shape (its materials go into the new one). **Versatile placement**: pieces snap by their points to the pieces
 around (edges to edges, eaves to wall tops), turned in quarter turns of what they join and the way you face; R and the
 wheel turn freely, Page Up/Down raise, Ctrl places freely without snapping. Roofs come in five shapes (slope, ridge,
@@ -181,8 +181,8 @@ export glTF with +Y up; the piece faces Blender's −Y = the game's +Z): keep ea
 * **grid 3 m**; walls 3 m wide (X −1.5 … +1.5) and 3 m high from their origin at the bottom centre, about 0.3 m thick;
   half wall 1.5 m; gables are right triangles rising to +X (steep 3 m, low 1.5 m), peaks isosceles (1.5 m, 0.75 m);
   window opening 1.1 × 0.9 m from 1.2 m up; doorway 1.24 × 2.1 m;
-* **foundation** top at the origin (Y 0), 3 × 3 m, legs down to −2.6 m; **floors** top at Y 0, 0.15 m thick (half floor
-  3 × 1.5 m);
+* **foundation** top at the origin (Y 0), 3 × 3 m, legs down to −2.6 m (on stilts: −6.2 m); **floors** top at Y 0,
+  0.15 m thick (half floor 3 × 1.5 m);
 * **roofs**: origin at the centre of the 3 × 3 m square at eave height; the underside rises 1 m per metre (steep) or 0.5 m
   (low) from the eave at Z −1.5 (slope); ridge eaves at Z ±1.5; outer corner `Y = t·min(X+1.5, Z+1.5)`, inner corner
   `Y = t·max(X+1.5, Z+1.5)`, peak `Y = t·(1.5 − max(|X|, |Z|))`;

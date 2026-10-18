@@ -1785,6 +1785,44 @@ With the bow in hand (or building) the camera's centre — the aim — was Alden
 camera now slides 0.7 m over his right shoulder while the bow is held or building is open (*Interface → Over-the-shoulder
 aim*, on; off = as before), and a small cross marks the screen's centre.
 
+## D123 — Building after Tom's first try: walls on the deck, foundation height, stilts (2026-10-18)
+Tom (build 63, swamp, dumps 130414 and 130944): after placing a foundation, the wall's ghost went **under** it; only
+once a wall blueprint stood there did the next one go on the deck. Cause: the aim often slips past the deck's edge onto
+the ground 0.3 m lower, and a wall hanging from the edge (its top points on the deck's edge points) has as many joints
+as one standing on it and is *closer* to that aim. The snap now **prefers the side of the surface you aim at** (the hit's
+normal) **and up over down**: a body behind the aimed surface costs 0.8 per metre, one below the aim 0.25 per metre.
+Headless: a wall aimed at 13 points on and just outside a foundation's edges from 8 headings — the old scoring put 48
+of 104 under the deck, now none; in the game (`--build-test`) a wall aimed at the ground just past the deck stands on it.
+**Foundation height** (Tom: "change the height so it is not only sticking to the ground"): placed freely, a foundation
+now stands **level above the highest ground under its corners** (no corner sinks into a slope); **Page Up / Page Down**
+raise or lower it by 0.25 m (Shift: 1 m), **Alt + wheel** by 0.1 m, **Home** resets — the menu shows the raise. A new shape,
+**Foundation on stilts** (6 logs, legs to 6.2 m, braced, deck 1.5 m up by default): for swamps, shores and steep ground.
+
+## D124 — A build menu with pictures (2026-10-18)
+Tom: "a nice interface with previews of the elements I'm building". The text bar is replaced by a menu along the bottom
+(`WorldLab.BuildMenu.cs`): the categories as tabs, the current category's shapes as **cards with a picture of each piece**,
+the materials (Logs / Thatch), the chosen piece's cost against what you carry (red when short), and what the ghost is
+doing (snapped / free and raised / why it cannot go there), plus the keys. The pictures are rendered in the game from
+each piece's own model (`PieceIcons.cs`: a small off-screen viewport with its own world and light, one piece every two
+frames, kept), so they always match what is built — the campfire and lean-to too. With the cursor free (Tab) the tabs,
+cards and materials can be clicked. The key help (F1) hides while building. Return point for the text bar: build 63.
+
+## D125 — Aiming the bow with the right mouse (2026-10-18)
+Tom: "when I hold the right mouse button, a kind of focus — an aiming mode." With the bow in hand, holding the **right
+mouse** eases the camera in close behind the shoulder over 0.45 s (to 2.2 m, a little farther right), narrows the view by
+up to a third (a gentle zoom) and slows the mouse by 45 % for a steadier aim; Alden faces where you look. Draw and loose
+with the left mouse as before. (Tom wrote "zooms out": taken as moving into an aiming view — a one-line change if he
+meant pulling back.)
+
+## D126 — Finding animals (2026-10-18)
+Tom found no animals. Main cause, mine: the in-game tests set *Simulation → Animals* to none and the game saved it into
+Tom's settings (they ran with his user folder). His setting is set back to *normal*; tests now use an override that is
+never saved. Also: where two biomes blend (a swamp's edge into forest), animals of either may live (both biomes' tags);
+**deer** also live in wet lowlands (swamps, marshes, fens), **stags** in lowlands; groups appear 70–150 m away (was 90–170)
+and up to 12 per player's surroundings (was 9). At Tom's swamp spot: 13 animals within 230 m after 45 s (8 deer, 5
+wolves; `--census=45`). A HUD line tells how many animals are within 230 m and where the nearest is ("nearest deer 78 m
+W"), or that they are switched off. Hot biomes (desert, savanna, jungle) still have none: the pack has no animals for them.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

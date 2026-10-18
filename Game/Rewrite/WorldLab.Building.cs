@@ -27,26 +27,11 @@ public partial class WorldLab
     private Node3D? _ghost;
     private string _ghostPiece = "";
     private Pose? _ghostPose;
-    private bool _ghostOk, _buildLmbWas, _buildMmbWas;
+    private bool _ghostOk, _buildLmbWas, _buildMmbWas, _ghostFree;
     private long _ghostReplace;
     private string _ghostWhy = "";
-    private PanelContainer? _buildBar;
-    private Label? _buildLabel;
     private readonly Dictionary<long, (Node3D Model, StaticBody3D? Body, Node3D? Leaf)> _pieceParts = new();
     private long _aimedPiece;
-
-    private void InitBuilding(CanvasLayer layer)
-    {
-        _buildBar = new PanelContainer { Visible = false, AnchorLeft = .5f, AnchorRight = .5f, AnchorTop = 1, AnchorBottom = 1,
-            OffsetLeft = -470, OffsetRight = 470, OffsetTop = -250, OffsetBottom = -150, MouseFilter = Control.MouseFilterEnum.Ignore };
-        var style = new StyleBoxFlat { BgColor = new Color(0, 0, 0, .5f), ContentMarginLeft = 10, ContentMarginRight = 10, ContentMarginTop = 6, ContentMarginBottom = 6 };
-        style.SetCornerRadiusAll(6);
-        _buildBar.AddThemeStyleboxOverride("panel", style);
-        _buildLabel = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, MouseFilter = Control.MouseFilterEnum.Ignore };
-        _buildLabel.AddThemeFontSizeOverride("font_size", 14);
-        _buildBar.AddChild(_buildLabel);
-        layer.AddChild(_buildBar);
-    }
 
     private void SetBuilding(bool on)
     {
@@ -61,7 +46,7 @@ public partial class WorldLab
             _status = "Building: choose with the number keys and V; the left mouse places a blueprint, E brings the materials.";
         }
         else { _ghost?.QueueFree(); _ghost = null; _ghostPiece = ""; _ghostPose = null; _status = "Building closed."; }
-        if (_buildBar != null) _buildBar.Visible = on;
+        ShowBuildMenu(on);
     }
 
     // ---- the chosen piece: category → shape (V) and material (X)
@@ -101,8 +86,8 @@ public partial class WorldLab
             case Key.V: CycleShape(key.ShiftPressed ? -1 : 1); return true;
             case Key.X: CycleMaterial(); return true;
             case Key.R: _buildTurn += (key.ShiftPressed ? -1 : 1) * Math.PI / 4; return true;
-            case Key.Pageup: _buildRaise += .1; return true;
-            case Key.Pagedown: _buildRaise -= .1; return true;
+            case Key.Pageup: _buildRaise += key.ShiftPressed ? 1 : .25; return true;
+            case Key.Pagedown: _buildRaise -= key.ShiftPressed ? 1 : .25; return true;
             case Key.Home: _buildRaise = 0; _buildTurn = 0; return true;
             case Key.Backspace or Key.Delete: Dismantle(); return true;
             case Key.Key0: return true; // (no tenth category: not the sword while building)
@@ -114,6 +99,11 @@ public partial class WorldLab
     private bool BuildingWheel(InputEventMouseButton button)
     {
         if (!_building || !button.Pressed) return false;
+        if (Input.IsKeyPressed(Key.Alt) && button.ButtonIndex is MouseButton.WheelUp or MouseButton.WheelDown)
+        {
+            _buildRaise += button.ButtonIndex == MouseButton.WheelUp ? .1 : -.1; // (Alt + wheel: up and down)
+            return true;
+        }
         double step = (Input.IsKeyPressed(Key.Shift) ? 5 : 15) * Math.PI / 180;
         if (button.ButtonIndex == MouseButton.WheelUp) { _buildTurn += step; return true; }
         if (button.ButtonIndex == MouseButton.WheelDown) { _buildTurn -= step; return true; }
@@ -122,7 +112,7 @@ public partial class WorldLab
     }
 
     /// <summary>The camera's aim: what the ray from the screen's centre hits (terrain, pieces, blueprints) within reach.</summary>
-    private (Vector3 Point, long Piece)? BuildAim(float reachFromPlayer)
+    private (Vector3 Point, long Piece, Vector3 Normal)? BuildAim(float reachFromPlayer)
     {
         var from = _camera.GlobalPosition;
         var look = -_camera.GlobalTransform.Basis.Z;
@@ -133,7 +123,7 @@ public partial class WorldLab
         var p = hit["position"].AsVector3();
         if (p.DistanceTo(_player.Position) > reachFromPlayer + 1) return null;
         long piece = hit["collider"].AsGodotObject() is Node n && n.HasMeta("object") ? n.GetMeta("object").AsInt64() : 0;
-        return (p, piece);
+        return (p, piece, hit["normal"].AsVector3());
     }
 
     /// <summary>Per frame: the ghost where the piece would go, its colour, the bar's text; placing and taking down.</summary>
@@ -154,7 +144,7 @@ public partial class WorldLab
         }
         var def = Piece;
         if (_ghostPiece != def.Id) MakeGhost(def);
-        _ghostPose = null; _ghostReplace = 0; _ghostWhy = "";
+        _ghostPose = null; _ghostReplace = 0; _ghostWhy = ""; _ghostFree = false;
         if (aim is { } a)
         {
             var point = new V3(a.Point.X + _originX, a.Point.Y, a.Point.Z + _originZ);
@@ -170,10 +160,12 @@ public partial class WorldLab
                 _ghostReplace = target.Id;
                 if (target.Def.Id == def.Id && flip == 0) _ghostWhy = "it is that already (R turns it)";
             }
-            else if (snap && Building.Snap(def, point, desired, nearby) is { } s) _ghostPose = s.Pose;
+            else if (snap && Building.Snap(def, point, desired, nearby, new V3(a.Normal.X, a.Normal.Y, a.Normal.Z)) is { } s) _ghostPose = s.Pose;
             else
             {
-                var free = Building.Free(def, point, desired, _buildRaise);
+                // Freely: a foundation stands level above the highest ground under it, raised or lowered by the player.
+                var free = Building.Free(def, point, desired, _buildRaise, (x, z) => _sampler!.Height(x, z));
+                _ghostFree = true;
                 _ghostPose = free;
                 if (Building.Blocked(def, free, nearby)) _ghostWhy = "something is in the way";
                 else if (!Building.Supported(def, free, (x, z) => _sampler!.Height(x, z), nearby))
@@ -199,7 +191,7 @@ public partial class WorldLab
             else _status = $"Cannot build there: {_ghostWhy}.";
         }
         if (take) Dismantle();
-        UpdateBuildBar(def);
+        UpdateBuildMenu(def);
     }
 
     /// <summary>The hit point is within the middle of a piece (its thin side counts whole): a swap, not a snap beside it.</summary>
@@ -222,19 +214,6 @@ public partial class WorldLab
         GameplayModels.HideCollisionMeshes(_ghost);
         AddChild(_ghost);
         _ghostPiece = def.Id;
-    }
-
-    private void UpdateBuildBar(PieceDef def)
-    {
-        if (_buildLabel == null) return;
-        var cats = string.Join("   ", _catalog.Categories.Select((c, i) => i == _buildCategory ? $"[{i + 1} {c}]" : $"{i + 1} {c}"));
-        var shapes = string.Join("  ·  ", Shapes.Select(s => s == Shape ? $"[{s}]" : s));
-        string mats = Materials.Count > 1 ? $"   X: {string.Join(" / ", Materials.Select(m => m == Material ? $"[{m}]" : m))}" : "";
-        string cost = string.Join(", ", def.Cost.Select(c => $"{c.Count} {_catalog.Item(c.Item!).Name.ToLowerInvariant()} ({_myInv.Count(c.Item!)})"));
-        string state = _ghostReplace != 0 ? (_ghostWhy.Length > 0 ? _ghostWhy : "swap for this shape (its materials come back)")
-            : _ghostWhy.Length > 0 ? _ghostWhy : "LMB: place the blueprint";
-        _buildLabel.Text = $"{cats}\nV: {shapes}{mats}\n{def.Name} — needs {cost} — {state}\n" +
-            "R / wheel turn (Shift finer) · PgUp/PgDn raise · Home reset · Ctrl: no snapping · E bring materials · MMB / Backspace take down · B / RMB close";
     }
 
     private string NeedsHere(PieceDef def, PlacedObject o)

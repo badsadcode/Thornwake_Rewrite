@@ -20,6 +20,8 @@ public partial class WorldLab
     private readonly Dictionary<int, AnimalView> _animalViews = new();
     private bool _huntLmbWas, _strikeHooked;
     private float _draw, _shoulder;
+    /// <summary>Aiming with the right mouse (bow): 0 … 1, eased in and out (Tom, build 63; D124).</summary>
+    private float _aimFocus;
     private Label? _crosshair;
 
     private sealed class Flight
@@ -79,6 +81,10 @@ public partial class WorldLab
         if (weapon != null && _myInv.Count(weapon) == 0) { _me.Weapon = null; weapon = null; } // (lost it: dropped on death, …)
         if (_crosshair != null) _crosshair.Visible = (weapon == "bow" || _building) && captured;
         var lookYaw = _yaw + Mathf.Pi; // (the way the camera looks, as a facing)
+        // The right mouse with the bow: aim — the camera eases in close over the shoulder, the view narrows, the mouse slows.
+        bool focus = weapon == "bow" && (captured && Input.IsMouseButtonPressed(MouseButton.Right) || _testAim);
+        _aimFocus = Mathf.MoveToward(_aimFocus, focus ? 1 : 0, (float)delta / .45f);
+        if (focus) _me.Facing = lookYaw;
         switch (weapon)
         {
             case "spear" or "stone_sword":
@@ -253,9 +259,23 @@ public partial class WorldLab
         return root;
     }
 
+    /// <summary>The HUD's animal line (Tom could not find any): how many are near and where the nearest is.</summary>
+    private string AnimalsHud()
+    {
+        if (GameSettings.Animals.Index == 0 && _animalsOverride == null) return "Animals: off (Settings → Simulation → Animals)";
+        var alive = _animalViews.Values.Where(v => v.State != AnimalState.Dead).ToList();
+        if (alive.Count == 0) return "Animals: none near (they live in woods, meadows, wetlands and the cold north)";
+        var near = alive.OrderBy(v => (v.X - PlayerX) * (v.X - PlayerX) + (v.Z - PlayerZ) * (v.Z - PlayerZ)).First();
+        double dx = near.X - PlayerX, dz = near.Z - PlayerZ;
+        string[] compass = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
+        // (north is −Z, east +X, as the map and the wind)
+        string dir = compass[((int)Math.Round(Math.Atan2(dx, -dz) / (Math.PI / 4)) % 8 + 8) % 8];
+        return $"Animals: {alive.Count} within 230 m · nearest {near.Def.Name.ToLowerInvariant()} {Math.Sqrt(dx * dx + dz * dz):0} m {dir}";
+    }
+
     private string HuntingHud() => _me.Weapon switch
     {
-        "bow" => $"Holding: bow ({_myInv.CountTag("arrow")} arrows) — hold LMB to draw, release to shoot · 9 puts it away",
+        "bow" => $"Holding: bow ({_myInv.CountTag("arrow")} arrows) — hold RMB to aim, hold LMB to draw, release to shoot · 9 puts it away",
         "spear" => "Holding: hunting spear — LMB thrusts at what is in front of you · 8 puts it away",
         "stone_sword" => "Holding: stone-edged sword — LMB cuts at what is in front of you · 0 puts it away",
         _ => "",

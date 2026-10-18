@@ -22,6 +22,16 @@ public partial class WorldLab
     private int _htTarget;
     private long _btFoundation, _btEastWall;
     private Pose _btBase;
+    private V3 _btAimAt;
+
+    /// <summary>Turn the camera so the screen's centre is on a world point (a few calls: the camera orbits as it turns).</summary>
+    private void AimAt(V3 world)
+    {
+        var target = new Vector3((float)(world.X - _originX), (float)world.Y, (float)(world.Z - _originZ));
+        var d = (target - _camera.GlobalPosition).Normalized();
+        _yaw = Mathf.Atan2(-d.X, -d.Z);
+        _pitch = Mathf.Asin(d.Y);
+    }
     private double _htHealth;
 
     private void HuntTest(double delta)
@@ -34,7 +44,7 @@ public partial class WorldLab
         {
             case 0:
                 if (_shotAt is { } start && !_htMoved) { _htMoved = true; Teleport(start.X, start.Z); _htTimer = 5; return; }
-                _rules.Wildlife.Density = 0; GameSettings.Animals.Value = 0; // (only the test's animals)
+                _animalsOverride = 0; // (only the test's animals; not the saved setting)
                 _rules.Wildlife.Clear();
                 inv.Add("spear"); inv.Add("bow"); inv.Add("arrow", 20); inv.Add("stone_knife");
                 _rules.InventoryChanged((int)NetServer.HostPeer);
@@ -111,6 +121,7 @@ public partial class WorldLab
                 double dx = s.X - PlayerX, dz = s.Z - PlayerZ, dist = Math.Sqrt(dx * dx + dz * dz);
                 _yaw = Mathf.Atan2(-(float)dx, -(float)dz);
                 _zoom = 3;
+                _testAim = true; // (the right mouse held: aiming)
                 _pitch = (float)Math.Atan2(s.Y + s.Def.Height * .55 - (_player.Position.Y + 1.6), dist) + .02f;
                 _me.Facing = _yaw + Mathf.Pi;
                 Go(11, .6); break;
@@ -122,6 +133,7 @@ public partial class WorldLab
                 Go(12, .12); break;
             case 12:
                 Shot("-arrow");
+                _testAim = false;
                 Go(13, 1.5); break;
             case 13:
             {
@@ -164,7 +176,8 @@ public partial class WorldLab
         void Shot(string suffix) => TestShot(suffix);
     }
 
-    private bool _spawned;
+    private bool _spawned, _testAim;
+    private double _censusTimer = double.NaN;
     private double _guestTimer = double.NaN;
     private int _guestStage;
 
@@ -188,6 +201,26 @@ public partial class WorldLab
                     _rules.Wildlife.Spawn(def, PlayerX + Math.Cos(a) * d, PlayerZ + Math.Sin(a) * d);
                 }
             GD.Print($"SPAWN {spawn[8..]}");
+        }
+        // --census=seconds: after that long, the animals around (as the HUD says), a picture, and quit.
+        if (_sampler != null && _generation == null && ((IClientGame)this).LocalState() != null && args.FirstOrDefault(a => a.StartsWith("--census=")) is { } census)
+        {
+            if (double.IsNaN(_censusTimer))
+            {
+                _censusTimer = double.Parse(census[9..], System.Globalization.CultureInfo.InvariantCulture);
+                if (_shotAt is { } at) Teleport(at.X, at.Z);
+            }
+            if ((_censusTimer -= delta) <= 0 && _censusTimer > -1e8)
+            {
+                _censusTimer = -1e9;
+                var tags = ((IWorldQuery)this).BiomeTags(PlayerX, PlayerZ);
+                GD.Print($"CENSUS biome tags here: {string.Join(", ", tags)}");
+                GD.Print($"CENSUS {AnimalsHud()}");
+                GD.Print($"CENSUS kinds: {string.Join(", ", _animalViews.Values.GroupBy(v => v.Def.Id).Select(g => $"{g.Key} {g.Count()}"))}" +
+                    (_rules != null ? $"; on the host {_rules.Wildlife.All.Count}" : ""));
+                TestShot("-census");
+                GetTree().CreateTimer(1).Timeout += () => GetTree().Quit();
+            }
         }
         if (!IsNetClient || _sampler == null || _generation != null || ((IClientGame)this).LocalState() == null) return;
         if (double.IsNaN(_guestTimer))
@@ -233,7 +266,7 @@ public partial class WorldLab
                 if (_shotAt is { } start && !_btMoved) { _btMoved = true; Teleport(start.X, start.Z); _btTimer = 5; return; }
                 inv.Add("log", 200); inv.Add("plant_fibre", 80); inv.Add("branch", 40);
                 _rules.InventoryChanged((int)NetServer.HostPeer);
-                if (!OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--spawn="))) GameSettings.Animals.Value = 0;
+                if (!OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--spawn="))) _animalsOverride = 0;
                 SetBuilding(true);
                 _buildCategory = _catalog.Categories.ToList().IndexOf("Foundation");
                 _pitch = -.55f; _zoom = 5;
@@ -259,6 +292,34 @@ public partial class WorldLab
                 Go(4, 2); break;
             case 4:
                 Check(_seenObjects.Get(_btFoundation) is { Blueprint: false }, $"E brought the logs: built ({_status})");
+                // Tom's case (build 63): a wall aimed just past the deck's edge, at the ground — it must stand on the deck.
+                SetBuilding(true);
+                _buildCategory = _catalog.Categories.ToList().IndexOf("Wall");
+                _btAimAt = Building.ToWorld(_btBase, new V3(1.8, 0, .4));
+                _btAimAt = _btAimAt with { Y = _sampler.Height(_btAimAt.X, _btAimAt.Z) };
+                Teleport(Building.ToWorld(_btBase, new V3(6, 0, 1)).X, Building.ToWorld(_btBase, new V3(6, 0, 1)).Z);
+                Go(41, 2); break;
+            case 41: case 42: case 43:
+                AimAt(_btAimAt);
+                Go(_btStage + 1, .25); break;
+            case 44:
+                Check(_ghostPose is { } wg && Math.Abs(wg.Y - _btBase.Y) < .01 && !_ghostFree,
+                    $"a wall aimed at the ground just past the deck stands on the deck (ghost at {_ghostPose?.Y:0.00}, deck {_btBase.Y:0.00}; {_ghostWhy})");
+                Shot("-wallghost");
+                _buildCategory = _catalog.Categories.ToList().IndexOf("Roof");
+                Go(441, 2.5); break;
+            case 441:
+                Shot("-menu-roof");
+                _buildCategory = _catalog.Categories.ToList().IndexOf("Foundation");
+                _buildShape["Foundation"] = "On stilts";
+                AimAt(Building.ToWorld(_btBase, new V3(6, 0, -5)) is var g ? g with { Y = _sampler.Height(g.X, g.Z) } : default);
+                Go(442, 2); break;
+            case 442:
+                Check(_ghostPiece == "log_foundation_stilts" && _ghostFree, $"the stilts foundation's ghost stands freely ({_ghostWhy})");
+                Shot("-stilts");
+                SetBuilding(false);
+                Go(45, .3); break;
+            case 45:
                 // The walls: snapped onto the foundation's four edges, as the ghost would.
                 Snapped("log_wall", 1.4, 0, 0);
                 Snapped("log_wall", -1.4, 0, 0);

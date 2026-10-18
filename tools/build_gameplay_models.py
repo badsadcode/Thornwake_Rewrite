@@ -246,6 +246,23 @@ def piece_foundation():
     m.build()
 
 
+def piece_foundation_stilts():
+    """The foundation's deck on long posts (swamps, steep ground): posts to -6.2 m, braced."""
+    m = Mesh("Foundation")
+    for i in range(10):
+        z = -1.35 + i * 0.3
+        log(m, (-1.5, 0, z), (1.5, 0, z), 0.15, half=True, flat=(0, 1, 0), wobble=0.02)
+    for x in (-1.32, 0, 1.32):
+        log(m, (x, -0.42, -1.5), (x, -0.42, 1.5), 0.15)
+    for x in (-1.32, 1.32):
+        for z in (-1.32, 1.32):
+            log(m, (x, -0.3, z), (x, -6.2, z), 0.16, taper=0.9)
+    for y in (-2.2, -4.2):  # braces between the posts, on all four sides
+        for (a, b) in (((-1.32, -1.32), (1.32, -1.32)), ((-1.32, 1.32), (1.32, 1.32)), ((-1.32, -1.32), (-1.32, 1.32)), ((1.32, -1.32), (1.32, 1.32))):
+            log(m, (a[0], y + 0.9, a[1]), (b[0], y - 0.9, b[1]), 0.08)
+    m.build()
+
+
 def piece_floor(half=False):
     m = Mesh("Floor")
     n = 5 if half else 10
@@ -456,7 +473,7 @@ def main():
     for kind in ("wall", "window", "doorway", "half", "gable_steep", "gable_low", "peak_steep", "peak_low"):
         name = {"wall": "log_wall", "window": "log_wall_window", "doorway": "log_wall_doorway", "half": "log_wall_half"}.get(kind, "log_" + kind)
         jobs.append((name, OUT_BUILD, lambda k=kind: piece_wall(k)))
-    jobs += [("log_foundation", OUT_BUILD, piece_foundation), ("log_floor", OUT_BUILD, piece_floor),
+    jobs += [("log_foundation", OUT_BUILD, piece_foundation), ("log_foundation_stilts", OUT_BUILD, piece_foundation_stilts), ("log_floor", OUT_BUILD, piece_floor),
              ("log_floor_half", OUT_BUILD, lambda: piece_floor(True)), ("log_door", OUT_BUILD, piece_door),
              ("log_stairs", OUT_BUILD, lambda: piece_stairs(3.0, 4.0, 12)), ("log_steps", OUT_BUILD, lambda: piece_stairs(1.5, 2.0, 6))]
     for mat in ("log", "thatch"):

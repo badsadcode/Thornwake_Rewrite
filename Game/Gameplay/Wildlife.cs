@@ -53,7 +53,7 @@ public readonly record struct Hunter(int Id, double X, double Y, double Z, doubl
 /// </summary>
 public sealed class Wildlife
 {
-    public const double StepSeconds = .1, SpawnMin = 90, SpawnMax = 170, KeepRadius = 280, AreaRadius = 200;
+    public const double StepSeconds = .1, SpawnMin = 70, SpawnMax = 150, KeepRadius = 280, AreaRadius = 200;
     private readonly IReadOnlyList<AnimalDef> _defs;
     private readonly IWorldQuery _world;
     private readonly Dictionary<int, Animal> _all = new();
@@ -64,7 +64,7 @@ public sealed class Wildlife
     /// <summary>How many animals (sandbox: 0 none … 1 normal … 2 many).</summary>
     public double Density { get; set; } = 1;
     /// <summary>Animals per player's surroundings at density 1.</summary>
-    public const int PerArea = 9;
+    public const int PerArea = 12;
 
     public Wildlife(IReadOnlyList<AnimalDef> defs, IWorldQuery world, int seed = 1) { _defs = defs; _world = world; _rng = new Random(seed); }
 
