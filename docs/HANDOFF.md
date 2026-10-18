@@ -28,6 +28,11 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   volumetric fog history of the old view — a beige veil; in the rays A/B, only still 00 per scene was affected).
 
 ## Next
+* **The agreed order from build 69** (Tom, 2026-10-18; `docs/GAMEPLAY_DESIGN.md` §14.a): finish the multiplayer proof of
+  concept (diagonal walls and triangle pieces; animals steering around trees, rocks and buildings) → the real multiplayer
+  test with 4–12 players → Atmosphere 2.0 (M2–M4) and shader fixes → world generation tidied up and modular (Tom's
+  brainstorm summary to come; plan the settlement and road stages and their terrain revision into it) → settlements and
+  roads as placeholders.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done

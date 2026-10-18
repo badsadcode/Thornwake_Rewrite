@@ -319,6 +319,21 @@ Atmosphere 2.0 continues alongside (rendering; it blocks none of these steps and
 | **3. Settlements and roads** — placeholders | Village, town and castle sites, then roads between them (`GAMEPLAY_PLAN.md`) | Roads need the sites first. |
 | **4. Living world** | Village economy, caravans (hand carts, then animals), bandits, events (§12) | Needs villages and roads. |
 
+### 14.a The road from here (agreed with Tom, 2026-10-18)
+
+The step-1 mechanics are a **proof of concept for multiplayer**, simple on purpose, not the final game's. From build 69:
+1. **Finish the proof of concept**: only what a multiplayer test needs — diagonal walls and triangle pieces (D134),
+   animals that do not walk through trees, rocks and buildings. Skills, leather, structural strength wait for the real
+   systems.
+2. **The real multiplayer test** (step 2 above): 4–12 players with hunting and building — the first mechanics that load
+   the host (simulated animals, many pieces sent to everyone).
+3. **Atmosphere 2.0 and shader fixes**: M2–M4 (`docs/HANDOFF.md`), the torch lighting the ground fog (dump 221438).
+4. **World generation tidied up and made modular** (Tom's brainstorm in another session; a summary will come). Plan the
+   **settlement and road stages into the modular pipeline from the start** (even empty), and how they will change the
+   ground (flattened sites, road cuts): that is a new terrain revision with the old ones frozen (`CLAUDE.md`, D89, D91).
+5. **Settlements and roads, as placeholders** (step 3 above): sites first, then roads between them; then the living world
+   (§12, step 4).
+
 ### 14.0 Step 0 in detail — the multiplayer spike (agreed with Tom, 2026-10-13)
 
 * **Hosting**: one player hosts, others join (as in Valheim). Inside, the code keeps the *server part* (the true state:
