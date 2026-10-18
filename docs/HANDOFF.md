@@ -57,7 +57,7 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   foundations level on slopes, raise keys, stilts (D123), a build menu with rendered pictures (D124), right-mouse bow
   aiming (D125), animals more common and in swamps, a HUD line for the nearest (D126; build 63's tests had saved
   *Animals: none* into Tom's settings — reset). `--census=s` counts animals where `--at` puts you.
-  **Build 65** (2026-10-18): Tab picks pieces with the mouse, right-click on a placed piece changes / turns / takes it
+  **Build 65** (`edbd7c9`, `dist/Preview-65`, 2026-10-18): Tab picks pieces with the mouse, right-click on a placed piece changes / turns / takes it
   down, campfire and lean-to can be aimed at, ground pieces stand on decks, arrows found again with an E prompt (D127). Open from Tom (dump 221438): the torch lights the ground fog evenly far
   into the night — trees far away stand dark against an orange haze; light sources should shape the fog, but less
   uniformly (look at the torch's `LightVolumetricFogEnergy` / range and the fog's density near the ground; atmosphere
