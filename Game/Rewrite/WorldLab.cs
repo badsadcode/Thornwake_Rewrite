@@ -770,6 +770,7 @@ public partial class WorldLab : Node3D
         UpdateMaking(delta);
         UpdateGathering(delta);
         UpdateFishing(delta);
+        UpdateActionBar(); // (after everything that may be busy this frame)
         GameplayTest(delta);
         GatherTest(delta);
         FishTest(delta);

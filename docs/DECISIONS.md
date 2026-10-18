@@ -1669,6 +1669,16 @@ the fish should run left and right with the rod turned against it and bending, a
   lakes' waves): rivers and calm lakes have no waves to ride, which is why it stood still for Tom.
 * Checked: headless (tension unanswered > 0.9, answered < 0.7) and `--fish-test` (pictures of the lean-to and a fight).
 
+## D118 — Longer fish runs; a progress bar over the head (2026-10-14)
+Tom: the fish should run farther left and right, at random; timed actions should show a small progress bar over the
+player's head, with optional text.
+* **Fish runs**: each run has its own length (×0.5 … ×3.5, mostly short, sometimes a long dash) and a fish that ran far
+  one way tends to turn back; the bobber goes up to 7 m to either side (in the water).
+* **Action bar** (`WorldLab.ActionBar.cs`): a small bar over Alden's head (in front of the view in first person) while
+  he makes something, gathers, fells a tree (its hits so far), cuts up a trunk, charges a cast; the text ("Felling a
+  birch", "Picking berries") can be switched off: *Interface → Action text*. Own player only for now (others' busy bars
+  would need their action in the state flags).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

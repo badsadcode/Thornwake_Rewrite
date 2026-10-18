@@ -30,7 +30,8 @@ public partial class WorldLab
         public double X, Y, Z, Height, Scale;
         public float Shake, Angle, Speed, MaxAngle, Lean, LeanTarget;
         public Vector3 Axis, NotchDir;
-        public int Bounces, Hits;
+        public int Bounces, Hits, Total;
+        public string Species = "";
         public bool Falling, Landed, Hurt, Creaked;
         public MeshInstance3D? Notch, BackCut;
     }
@@ -100,6 +101,11 @@ public partial class WorldLab
         }
         if (_chopTarget == null && _chopTrunk < 0) { _me.Chopping = false; _status = "Nothing to chop within reach in front of you."; return; }
         _me.Chopping = true;
+        // The bar over the head: the hits so far (a tree: of those it takes; a trunk: of its cuts).
+        if (_chopTarget is { } shown && _fallingTrees.TryGetValue((shown.Cx, shown.Cz), out var ft))
+            ShowAction($"Felling a {ft.Species}", ft.Total > 0 ? (double)ft.Hits / ft.Total : 0);
+        else if (_chopTrunk >= 0 && _seenObjects.Get(_chopTrunk) is { } lying)
+            ShowAction("Cutting up the trunk", (double)lying.Hits / GameRules.TrunkHits(lying.Size));
         if (_chopTarget is { } target)
         {
             _me.Facing = Mathf.Atan2((float)(target.X - PlayerX), (float)(target.Z - PlayerZ));
@@ -133,7 +139,8 @@ public partial class WorldLab
         var model = _streamer.Field.Proxy(t.Species, t.Scale, t.Yaw);
         pivot.AddChild(model);
         AddChild(pivot);
-        var f = new FallingTree { Pivot = pivot, Model = model, Cx = t.Cx, Cz = t.Cz, X = t.X, Y = t.Y, Z = t.Z, Scale = t.Scale, Height = GameRules.TreeHeight(t.Scale) };
+        var f = new FallingTree { Pivot = pivot, Model = model, Cx = t.Cx, Cz = t.Cz, X = t.X, Y = t.Y, Z = t.Z, Scale = t.Scale, Height = GameRules.TreeHeight(t.Scale),
+            Species = Vegetation.Species[t.Species].Split('_')[0].ToLowerInvariant() };
         _fallingTrees[(t.Cx, t.Cz)] = f;
         _sampler!.Hidden.Remove(ObjectRemovals.Trees, t.Cx, t.Cz, 0);
         _streamer.Invalidate(t.X - 8, t.Z - 8, t.X + 8, t.Z + 8);
@@ -148,6 +155,7 @@ public partial class WorldLab
         var f = StandAlone(t);
         f.Shake = 1;
         f.Hits++;
+        f.Total = e.Total;
         var dir = new Vector3((float)e.DirX, 0, (float)e.DirZ).Normalized();
         if (!e.Felled)
         {

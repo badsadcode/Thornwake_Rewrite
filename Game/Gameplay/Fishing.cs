@@ -68,7 +68,7 @@ public sealed class FishFight
     public bool Over => Landed || Lost;
     private readonly double _strength, _endurance;
     private readonly Random _rng;
-    private double _timer = .6, _sinceSwitch;
+    private double _timer = .6, _sinceSwitch, _run = 1;
     /// <summary>Seconds after the fish switches in which the old answer does not wear the line yet.</summary>
     public const double ReactionWindow = .2;
 
@@ -85,13 +85,20 @@ public sealed class FishFight
         if (_timer <= 0)
         {
             if (Pull != 0) { Pull = 0; _timer = .4 + .5 * _rng.NextDouble(); }
-            else { Pull = _rng.NextDouble() < .5 ? -1 : 1; _timer = 1 + 1.5 * _rng.NextDouble(); }
+            else
+            {
+                // Each run its own: a short tug or a long dash (Tom: random, bigger distances); a fish that just ran far
+                // one way tends to turn back.
+                Pull = _rng.NextDouble() < .5 + .35 * Side ? -1 : 1;
+                _run = .5 + 1.5 * _rng.NextDouble() * _rng.NextDouble() * 2; // (mostly short, sometimes long: up to ×3.5)
+                _timer = (.8 + 1.4 * _rng.NextDouble()) * Math.Sqrt(_run);
+            }
             _sinceSwitch = 0;
         }
         _sinceSwitch += dt;
         bool reacting = _sinceSwitch < ReactionWindow; // (a fair moment to see the switch and answer it)
         // Where it runs: fast unanswered, slowly held; drifting back while it rests.
-        Side = Math.Clamp(Side + (Pull != 0 ? Pull * dt * (input == -Pull ? .12 : .45) : -Side * dt * .4), -1, 1);
+        Side = Math.Clamp(Side + (Pull != 0 ? Pull * dt * _run * (input == -Pull ? .1 : .35) : -Side * dt * .25), -1, 1);
         double target = Pull == 0 ? (input != 0 ? .35 : .12) : input == -Pull ? .45 : reacting ? .6 : 1;
         Tension += (target - Tension) * Math.Min(1, dt * 6);
         if (Pull != 0)

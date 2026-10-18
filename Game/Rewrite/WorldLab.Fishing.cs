@@ -69,7 +69,8 @@ public partial class WorldLab
                 break;
             case FishStage.Charging:
                 _castCharge = Math.Min(1, _castCharge + delta / 1.2);
-                _status = $"Casting… {new string('|', (int)(_castCharge * 20)),-20} (release to cast)";
+                _status = "Casting… (release to cast)";
+                ShowAction("Casting", _castCharge);
                 if (released) Cast();
                 break;
             case FishStage.Flying:
@@ -120,7 +121,7 @@ public partial class WorldLab
                 // against it (A/D) and the rod bends toward the pull, more the higher the tension.
                 var toBobber = new Vector3((float)(_bobberWorldX - PlayerX), 0, (float)(_bobberWorldZ - PlayerZ));
                 var across = Vector3.Up.Cross(toBobber.Normalized()); // (to the player's left as they face the bobber)
-                double wantX = _castX + across.X * _fight.Side * -3, wantZ = _castZ + across.Z * _fight.Side * -3;
+                double wantX = _castX + across.X * _fight.Side * -7, wantZ = _castZ + across.Z * _fight.Side * -7; // (up to 7 m)
                 double mx = _bobberWorldX + (wantX - _bobberWorldX) * Math.Min(1, delta * 3), mz = _bobberWorldZ + (wantZ - _bobberWorldZ) * Math.Min(1, delta * 3);
                 if (_sampler!.Sample(mx, mz).Water != WaterKind.None) { _bobberWorldX = mx; _bobberWorldZ = mz; }
                 PlaceBobber(BobberRest(-.08f + .04f * Mathf.Sin((float)_flickerFell * 9)));

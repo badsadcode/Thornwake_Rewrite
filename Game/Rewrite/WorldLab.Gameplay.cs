@@ -224,7 +224,8 @@ public partial class WorldLab : IWorldQuery
         if (_gathering is not { } g) return;
         if (new Vector2(_player.Velocity.X, _player.Velocity.Z).Length() > 1.5f) { _gathering = null; _status = "Stopped (you moved)."; return; }
         double left = g.Left - delta;
-        _status = $"{g.Label}… {Math.Clamp(1 - left / g.Seconds, 0, 1) * 100:0} %";
+        _status = g.Label + "…";
+        ShowAction(g.Label, 1 - left / g.Seconds);
         if (left > 0) { _gathering = g with { Left = left }; return; }
         _gathering = null;
         Act(new ActionRequest(ActionKind.Forage, g.Cx, g.Cz, g.What, g.X, 0, g.Z, 0));
@@ -426,7 +427,8 @@ public partial class WorldLab : IWorldQuery
         if (_making is not { } r) return;
         if (new Vector2(_player.Velocity.X, _player.Velocity.Z).Length() > 1.5f) { _making = null; _status = "Stopped making it (you moved)."; return; }
         _makeTimer -= delta;
-        _status = $"Making: {r.Name}… {Math.Clamp(1 - _makeTimer / r.Seconds, 0, 1) * 100:0} %";
+        _status = $"Making: {r.Name}…";
+        ShowAction("Making: " + r.Name.ToLowerInvariant(), 1 - _makeTimer / r.Seconds);
         if (_makeTimer > 0) return;
         _making = null;
         // A placed object goes 1.8 m in front of you, on the ground, facing you.

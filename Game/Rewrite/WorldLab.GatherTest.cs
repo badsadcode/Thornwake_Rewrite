@@ -32,6 +32,7 @@ public partial class WorldLab
                 Go(1, 3); break;
             case 1:
                 Interact(); // E
+                if (OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--gather-shot=")) is { } shot) GetTree().CreateTimer(.45).Timeout += () => Screenshot(shot[14..]);
                 _gsBefore = _myInv.Count("stone");
                 Go(2, 2); break;
             case 2:
