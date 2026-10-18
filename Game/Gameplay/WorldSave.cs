@@ -26,7 +26,9 @@ public sealed class PlayerSave
 /// </summary>
 public sealed class WorldSave
 {
-    public const int Version = 1;
+    /// <summary>2: placed objects carry blueprints, states and refs (D121); version 1 saves still load.</summary>
+    public const int Version = 2;
+    private int _read = Version;
     private static readonly byte[] Magic = Encoding.ASCII.GetBytes("TWSAVE");
 
     public string WorldArgs = "";
@@ -64,7 +66,8 @@ public sealed class WorldSave
         foreach (var (layer, x, z, at) in Removals) removals.Set(layer, x, z, at);
         objects.Clear(); objects.TakeChanged();
         using var r = new BinaryReader(new MemoryStream(Objects), Encoding.UTF8);
-        for (int n = Objects.Length > 0 ? r.ReadInt32() : 0; n > 0; n--) objects.Read(r);
+        int format = _read >= 2 ? PlacedObjects.Format : 1;
+        for (int n = Objects.Length > 0 ? r.ReadInt32() : 0; n > 0; n--) objects.Read(r, format);
     }
 
     public void Write(Stream stream)
@@ -94,8 +97,8 @@ public sealed class WorldSave
         using var r = new BinaryReader(stream, Encoding.UTF8, true);
         if (!r.ReadBytes(Magic.Length).SequenceEqual(Magic)) throw new InvalidDataException("not a Thornwake save");
         int version = r.ReadInt32();
-        if (version != Version) throw new InvalidDataException($"save version {version}, this game reads {Version}");
-        var s = new WorldSave { Label = r.ReadString(), Saved = DateTime.FromBinary(r.ReadInt64()), WorldArgs = r.ReadString() };
+        if (version is < 1 or > Version) throw new InvalidDataException($"save version {version}, this game reads 1 to {Version}");
+        var s = new WorldSave { Label = r.ReadString(), Saved = DateTime.FromBinary(r.ReadInt64()), WorldArgs = r.ReadString(), _read = version };
         string type = r.ReadString(); s.WorldTypeJson = type.Length > 0 ? type : null;
         for (int n = r.ReadInt32(); n > 0; n--) s.Settings.Add((r.ReadString(), r.ReadDouble()));
         s.Day = r.ReadInt32(); s.Phase = r.ReadDouble();

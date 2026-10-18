@@ -30,8 +30,16 @@ public sealed class PlacedObject
     /// <summary>Minutes of fuel left (fires).</summary>
     public double Fuel { get; set; }
     public bool Lit => Fuel > 0;
-    /// <summary>Items lying in it to pick up (a log pile left by a felled tree).</summary>
+    /// <summary>Items lying in it to pick up (a log pile left by a felled tree; what butchering a carcass gives).</summary>
     public List<(string Item, int Count)> Contents { get; } = new();
+    /// <summary>A building piece not yet finished (D121): its materials brought so far are in <see cref="Supplied"/>.</summary>
+    public bool Blueprint { get; set; }
+    /// <summary>Materials brought to a blueprint (or that went into a finished piece).</summary>
+    public List<(string Item, int Count)> Supplied { get; } = new();
+    /// <summary>A small state: a door open (1) or shut (0).</summary>
+    public int State { get; set; }
+    /// <summary>What it came from: a carcass's animal kind (D120).</summary>
+    public string Ref { get; set; } = "";
 }
 
 /// <summary>
@@ -102,12 +110,18 @@ public sealed class PlacedObjects
             w.Write(o.Qx); w.Write(o.Qy); w.Write(o.Qz); w.Write(o.Qw); w.Write(o.Size); w.Write(o.Owner); w.Write(o.Hits); w.Write(o.Variant);
             w.Write((byte)o.Contents.Count);
             foreach (var (item, count) in o.Contents) { w.Write(item); w.Write(count); }
+            w.Write(o.Blueprint); w.Write(o.State); w.Write(o.Ref);
+            w.Write((byte)o.Supplied.Count);
+            foreach (var (item, count) in o.Supplied) { w.Write(item); w.Write(count); }
         }
         else w.Write("");
     }
 
+    /// <summary>The format <see cref="Write"/> writes (saves of format 1 lack blueprints, states and refs).</summary>
+    public const int Format = 2;
+
     /// <summary>Apply one written by the host (not counted as a change): its id, and the object or null if removed.</summary>
-    public (long Id, PlacedObject? Object) Read(BinaryReader r)
+    public (long Id, PlacedObject? Object) Read(BinaryReader r, int format = Format)
     {
         long id = r.ReadInt64();
         string kind = r.ReadString();
@@ -117,6 +131,11 @@ public sealed class PlacedObjects
         o.Qx = r.ReadSingle(); o.Qy = r.ReadSingle(); o.Qz = r.ReadSingle(); o.Qw = r.ReadSingle(); o.Size = r.ReadSingle();
         o.Owner = r.ReadInt32(); o.Hits = r.ReadInt32(); o.Variant = r.ReadInt32();
         for (int n = r.ReadByte(); n > 0; n--) o.Contents.Add((r.ReadString(), r.ReadInt32()));
+        if (format >= 2)
+        {
+            o.Blueprint = r.ReadBoolean(); o.State = r.ReadInt32(); o.Ref = r.ReadString();
+            for (int n = r.ReadByte(); n > 0; n--) o.Supplied.Add((r.ReadString(), r.ReadInt32()));
+        }
         _all[id] = o;
         _next = Math.Max(_next, id + 1);
         return (id, o);

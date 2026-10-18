@@ -718,7 +718,7 @@ public partial class WorldLab : Node3D
         // Static caches of Godot resources (tree, rock and prop meshes, materials) must be freed while the engine is
         // still alive; left to the .NET finalizers at process exit they intermittently crashed on quit (as the valley
         // game already handles in Main).
-        RockMeshes.Release(); ObjectCollision.Release(); RockTextureArray.Release(); GroundTextures.Release(); Flora.Release(); WoodlandAssets.Release(); Visuals.ReleaseMaterials();
+        RockMeshes.Release(); ObjectCollision.Release(); GameplayModels.Release(); RockTextureArray.Release(); GroundTextures.Release(); Flora.Release(); WoodlandAssets.Release(); Visuals.ReleaseMaterials();
         // Tens of thousands of wrappers (tiles' MultiMeshes, collision shapes) are still referenced from C#: finalised
         // after Godot's C# layer shut down they aborted the quit (FATAL in _instance_binding_free_callback, 1-2 in 10
         // collision test runs). Collect them now, while the engine is alive.
@@ -773,6 +773,8 @@ public partial class WorldLab : Node3D
         UpdateActionBar(); // (after everything that may be busy this frame)
         GameplayTest(delta);
         GatherTest(delta);
+        HuntTest(delta);
+        BuildTest(delta);
         FishTest(delta);
         SaveTest(delta);
         UpdateAutosave(delta);
@@ -942,6 +944,7 @@ public partial class WorldLab : Node3D
         }
         _player.Velocity = velocity;
         _player.MoveAndSlide();
+        if (!_fly && !_swimming) StepUp(move, sprint ? 11 : 5, dt);
         PushObjects(delta); // (walking into a fallen trunk pushes it)
         _physicsHitch.Mark("move");
         UpdateWakes(dt, level);
@@ -1078,7 +1081,11 @@ public partial class WorldLab : Node3D
         }
         else
         {
-            _pivot.Position = _player.Position + Vector3.Up * 1.55f;
+            // Over the right shoulder while aiming the bow or building (D120): the screen's centre is not Alden's head.
+            bool aiming = GameSettings.ShoulderAim.On && (_me.Weapon == "bow" || _building);
+            _shoulder = Mathf.Lerp(_shoulder, aiming ? .7f : 0, .15f);
+            var right = new Vector3(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));
+            _pivot.Position = _player.Position + Vector3.Up * 1.55f + right * _shoulder;
             _arm.SpringLength = Mathf.Lerp(_arm.SpringLength, _zoom, .2f);
         }
         // First person: the body is only a shadow; the torch goes from the hand to the view.
@@ -1119,7 +1126,7 @@ public partial class WorldLab : Node3D
             $"Position {PlayerX:0} , {PlayerZ:0}   ground {t.Height:0.0} m   {where}\n" +
             $"{mode}   FPS {Engine.GetFramesPerSecond():0}   tiles {_streamer.Resident} (+{_streamer.Missing} queued)   " +
             $"terrain triangles {_streamer.Triangles / 1000}k   tile build {_streamer.LastBuildMs:0.0} ms, commit {_streamer.LastCommitMs:0.0} ms";
-        _hud.Text += "\n" + (_axeHeld || _me.RodHeld ? GameplayHud() : _tools.Hud()) + NetHud();
+        _hud.Text += "\n" + (_axeHeld || _me.RodHeld || _me.Weapon != null || _building ? GameplayHud() : _tools.Hud()) + NetHud();
         if (_water.Sim is { Added: > 0 } sim)
             _hud.Text += $"\nWater simulation: {sim.Volume():0.0} m³ on the land, {sim.Absorbed:0.0} m³ joined rivers/lakes{(_rain ? ", raining" : "")}" +
                 $"{(sim.Sources.Count > 0 ? $", {sim.Sources.Count} spring(s)" : "")}";
@@ -1139,6 +1146,7 @@ public partial class WorldLab : Node3D
             _yaw -= motion.Relative.X * .0035f;
             _pitch = Mathf.Clamp(_pitch - motion.Relative.Y * .0035f, -1.45f, .9f);
         }
+        if (e is InputEventMouseButton built && Input.MouseMode == Input.MouseModeEnum.Captured && BuildingWheel(built)) return; // (building: the wheel turns the piece)
         if (e is InputEventMouseButton button && button.Pressed)
         {
             // (one step in from the closest zoom: first person; one step out of it: the closest zoom again)
@@ -1147,7 +1155,7 @@ public partial class WorldLab : Node3D
             if (button.ButtonIndex == MouseButton.Left && !_menu.Visible) Input.MouseMode = Input.MouseModeEnum.Captured;
         }
         if (e is not InputEventKey { Pressed: true, Echo: false } key) return;
-        if (GameplayKey(key.Keycode)) return;
+        if (GameplayKey(key)) return;
         switch (key.Keycode)
         {
             case Key.Escape when _map.Visible: _map.Visible = false; Input.MouseMode = Input.MouseModeEnum.Captured; _hud.Visible = _showHud; _help.Visible = true; break;
@@ -1326,8 +1334,9 @@ public partial class WorldLab : Node3D
                    "F fly (Space/C up/down, Shift faster, Ctrl ×6) · N noclip · Esc menu: teleport, new world, time of day\n" +
                    "Water: hold G pour where you look · J spring · , . water size · H rain · K clear\n" +
                    "Tools: 1 hands · 2 shovel · 3 pickaxe · 4 hoe · 5 terraform (dev) — left/right mouse use\n" +
+                   "6 axe · 7 rod · 8 spear · 9 bow · 0 sword · E gather, use, butcher, build · I pack and crafting · B build\n" +
                    "M world map (right-click teleports) · F1 hide help · F2 hide HUD · F3 tile grid · F4 biome colours · F9 debug dump · F12 screenshot",
-            AnchorTop = 1, AnchorBottom = 1, OffsetTop = -122, OffsetLeft = 14, OffsetRight = 900,
+            AnchorTop = 1, AnchorBottom = 1, OffsetTop = -142, OffsetLeft = 14, OffsetRight = 900,
         };
         _help.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .8f));
         layer.AddChild(_help);

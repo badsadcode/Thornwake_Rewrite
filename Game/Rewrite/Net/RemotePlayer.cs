@@ -15,6 +15,7 @@ public sealed partial class RemotePlayer : Node3D
     private readonly Character _character;
     private readonly Label3D _label;
     private readonly List<(double Time, PlayerState State)> _states = new();
+    private bool _wasAttacking;
 
     public int Id { get; }
     public Color Tunic { get; }
@@ -61,7 +62,7 @@ public sealed partial class RemotePlayer : Node3D
             var (t1, b) = _states[after];
             double k = t1 > t0 ? (t - t0) / (t1 - t0) : 1;
             s = new PlayerState(a.X + (b.X - a.X) * k, a.Y + (b.Y - a.Y) * k, a.Z + (b.Z - a.Z) * k,
-                Mathf.LerpAngle(a.Facing, b.Facing, (float)k), b.Vx, b.Vy, b.Vz, b.Flags);
+                Mathf.LerpAngle(a.Facing, b.Facing, (float)k), b.Vx, b.Vy, b.Vz, b.Flags, b.Held);
         }
         else if (after == 0) s = _states[0].State;
         else
@@ -79,6 +80,12 @@ public sealed partial class RemotePlayer : Node3D
         _character.Chopping = (s.Flags & PlayerFlags.Chopping) != 0;
         _character.RodHeld = (s.Flags & PlayerFlags.Rod) != 0;
         _character.Fishing = (s.Flags & PlayerFlags.Fishing) != 0;
+        // The weapon in hand (D120) and its swing or draw.
+        _character.Weapon = s.Held switch { 1 => "spear", 2 => "stone_sword", 3 => "bow", _ => null };
+        bool attacking = (s.Flags & PlayerFlags.Attacking) != 0;
+        if (s.Held == 3) _character.Draw = attacking ? 1 : 0;
+        else if (attacking && !_wasAttacking) _character.Strike();
+        _wasAttacking = attacking;
         _character.Animate(dt, new Vector3(s.Vx, s.Vy, s.Vz), (s.Flags & PlayerFlags.Flying) != 0, holdFacing: true);
         return guessed;
     }

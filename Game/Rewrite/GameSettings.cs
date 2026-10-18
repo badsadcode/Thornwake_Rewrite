@@ -321,8 +321,14 @@ public static class GameSettings
         "Simulated water around the player (G pour, J spring, H rain, K clear). Runs in a 128 m area that follows you.", rebuild: true));
     public static readonly Setting ActionText = Add(new("ui.action_text", "Interface", "Action text", 0, 1, 1, 1,
         "The bar over Alden's head while something takes time (making, gathering, felling, casting) also says what it is."));
+    public static readonly Setting ShoulderAim = Add(new("ui.shoulder_aim", "Interface", "Over-the-shoulder aim", 0, 1, 1, 1,
+        "With the bow in hand or while building, the camera moves over Alden's right shoulder so the aim (the screen's centre) " +
+        "is not hidden behind him. Off: the camera stays straight behind (as before build 63)."));
     public static readonly Setting NeedsOn = Add(new("sim.needs", "Simulation", "Hunger and cold", 0, 1, 1, 1,
         "Step 1 placeholder needs (D110): food, body warmth, wetness and health. Off: none of them change (testing the world)."));
+    public static readonly Setting Animals = Add(new("sim.animals", "Simulation", "Animals", 0, 3, 1, 2,
+        "How many animals live around the players (D120): deer, stags, foxes and wolves, by biome. A sandbox rule (in " +
+        "multiplayer the host's applies to everyone).", options: new[] { "none", "few", "normal", "many" }));
     public static readonly Setting NightDarkness = Add(new("sim.night_darkness", "Simulation", "Night darkness", 0, 4, 1, 1,
         "How dark nights are on the land, as a sandbox rule (in multiplayer the host's applies to everyone): the light the " +
         "sky and the moon give the ground. The sky, moon, stars and clouds look the same. Normal = build 56.",

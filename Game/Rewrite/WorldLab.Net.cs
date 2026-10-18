@@ -345,7 +345,8 @@ public partial class WorldLab : IWorldHost, IClientGame
         var v = _player.Velocity;
         var flags = (_fly ? PlayerFlags.Flying : 0) | (_me.Torch.Lit ? PlayerFlags.Torch : 0) | (_swimming ? PlayerFlags.Swimming : 0)
             | (_axeHeld ? PlayerFlags.Axe : 0) | (_me.Chopping ? PlayerFlags.Chopping : 0)
-            | (_me.RodHeld ? PlayerFlags.Rod : 0) | (_me.Fishing ? PlayerFlags.Fishing : 0);
-        return new PlayerState(PlayerX, _player.Position.Y, PlayerZ, _me.Facing, v.X, v.Y, v.Z, flags);
+            | (_me.RodHeld ? PlayerFlags.Rod : 0) | (_me.Fishing ? PlayerFlags.Fishing : 0) | (_me.Attacking ? PlayerFlags.Attacking : 0);
+        byte held = _me.Weapon switch { "spear" => 1, "stone_sword" => 2, "bow" => 3, _ => 0 };
+        return new PlayerState(PlayerX, _player.Position.Y, PlayerZ, _me.Facing, v.X, v.Y, v.Z, flags, held);
     }
 }

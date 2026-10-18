@@ -44,13 +44,17 @@ public partial class WorldLab : IWorldQuery
     private void InitGameplay(CanvasLayer layer)
     {
         _catalog = new Catalog(Godot.FileAccess.GetFileAsString("res://Content/gameplay_items.json"),
-            Godot.FileAccess.GetFileAsString("res://Content/gameplay_recipes.json"));
+            Godot.FileAccess.GetFileAsString("res://Content/gameplay_recipes.json"),
+            Godot.FileAccess.GetFileAsString("res://Content/gameplay_animals.json"),
+            Godot.FileAccess.GetFileAsString("res://Content/gameplay_pieces.json"));
         _myInv = new Inventory(_catalog);
         _needsLabel = new Label { AnchorLeft = 1, AnchorRight = 1, AnchorTop = 1, AnchorBottom = 1, OffsetLeft = -420, OffsetRight = -14, OffsetTop = -40,
             HorizontalAlignment = HorizontalAlignment.Right };
         _needsLabel.AddThemeColorOverride("font_shadow_color", new Color(0, 0, 0, .8f));
         layer.AddChild(_needsLabel);
         BuildPack(layer);
+        InitHunting(layer);
+        InitBuilding(layer);
     }
 
     /// <summary>After StartNetwork: the rules on a host or alone; alone, the local server and client parts.</summary>
@@ -91,6 +95,10 @@ public partial class WorldLab : IWorldQuery
         return "";
     }
     (double X, double Z) IWorldQuery.GatherSpot(int layer, long cx, long cz) => GroundCover.GatherPosition(layer, cx, cz, GroundCover.CoverSeed(_sampler!));
+    IReadOnlySet<string> IWorldQuery.BiomeTags(double x, double z) =>
+        _sampler == null ? new HashSet<string>() : Vegetation.BiomeOf(_sampler, x, z).A.Def.Tags.ToHashSet();
+    bool IWorldQuery.IsWater(double x, double z) =>
+        _sampler == null || _sampler.Sample(x, z) is var t && (t.Water != WaterKind.None || t.Height < _sampler.Plan.Profile.SeaLevel + .2);
     ObjectRemovals? IWorldHost.Removals => _generation == null ? _sampler?.Removals : null;
     GameRules? IWorldHost.Rules => _rules;
 
@@ -102,7 +110,9 @@ public partial class WorldLab : IWorldQuery
         foreach (var s in _stumps.Values) s.Node.QueueFree();
         _stumps.Clear();
         FellingWorldReady();
-        if (_rules != null && !IsNetClient) { _rules.Objects.Clear(); _seenObjects.Clear(); _seenObjects.TakeChanged(); }
+        HuntingWorldReady();
+        BuildingWorldReady();
+        if (_rules != null && !IsNetClient) { _rules.Objects.Clear(); _rules.Wildlife.Clear(); _seenObjects.Clear(); _seenObjects.TakeChanged(); }
         if (IsNetClient) _seenObjects.Clear();
         _gameplayHours = double.NaN;
         if (_pendingRemovals.Count > 0) { var p = _pendingRemovals.ToList(); _pendingRemovals.Clear(); ((IClientGame)this).ApplyRemovals(p); }
@@ -124,6 +134,8 @@ public partial class WorldLab : IWorldQuery
         _needs.Food = 80; _needs.Warmth = 72; _needs.Wet = 0; _needs.Health = 100;
         if (_axeHeld) ToggleAxe();
         if (_me.RodHeld) ToggleRod();
+        _me.Weapon = null;
+        if (_building) SetBuilding(false);
         if (_landmarks.Count > 0) Teleport(_landmarks[0].X, _landmarks[0].Z);
         _status = message + " A new life begins at the start.";
         _camShake = 1;
@@ -144,11 +156,18 @@ public partial class WorldLab : IWorldQuery
         double hours = _clock.Day * 24 + _clock.Hour;
         double dh = double.IsNaN(_gameplayHours) || hours < _gameplayHours || hours - _gameplayHours > 2 ? 0 : hours - _gameplayHours;
         _gameplayHours = hours;
-        if (_rules != null && !IsNetClient) _rules.Step(dh * 60);
+        if (_rules != null && !IsNetClient)
+        {
+            _rules.Step(dh * 60);
+            _rules.Wildlife.Density = GameSettings.Animals.Index switch { 0 => 0, 1 => .5, 2 => 1, _ => 2 };
+        }
         _seenObjects.Step(dh * 60); _seenObjects.TakeChanged(); // (the copy burns down too, for the fires drawn here)
 
         bool captured = Input.MouseMode == Input.MouseModeEnum.Captured && !_menu.Visible && !_pack.Visible && !_map.Visible;
-        UpdateChopping(delta, captured && _axeHeld && !_me.RodHeld && Input.IsMouseButtonPressed(MouseButton.Left));
+        UpdateChopping(delta, captured && _axeHeld && !_me.RodHeld && !_building && Input.IsMouseButtonPressed(MouseButton.Left));
+        UpdateHunting(delta, captured && !_building);
+        UpdateBuilding(delta, captured);
+        UpdatePieces(delta);
         if (NeedsOn)
         {
             var t = _sampler.Sample(PlayerX, PlayerZ);
@@ -157,7 +176,7 @@ public partial class WorldLab : IWorldQuery
             double precip = _rain ? .7 : _atmosphere.Precipitation;
             double air = Thornwake.Gameplay.Needs.AirTemperature(mean, _sampler.Plan.Climate.Latitude(PlayerZ), GameSettings.Season.Index, _clock.Hour, precip);
             bool sprint = Input.IsKeyPressed(Key.Shift) && new Vector2(_player.Velocity.X, _player.Velocity.Z).Length() > 6;
-            bool sheltered = GameRules.Sheltered(_catalog, _seenObjects, PlayerX, PlayerZ);
+            bool sheltered = GameRules.Sheltered(_catalog, _seenObjects, PlayerX, PlayerZ, _player.Position.Y);
             var body = new BodyInput(air, _atmosphere.Wind.Speed * (sheltered ? .3 : 1),
                 sheltered ? 0 : precip * (1 - .7 * Math.Clamp(_atmosphere.Canopy, 0, 1)) * (_atmosphere.Snowing ? .4 : 1),
                 _swimming, GameRules.FireWarmth(_catalog, _seenObjects, PlayerX, PlayerZ), _me.Chopping ? 1 : sprint ? .6 : 0);
@@ -186,7 +205,16 @@ public partial class WorldLab : IWorldQuery
     private void Interact()
     {
         if (_gathering != null) return;
+        if (InteractPiece()) return; // (the aimed blueprint or door)
         var near = _seenObjects.Near(PlayerX, PlayerZ, GameRules.UseReach + 1.5).Where(o => o.Contents.Count > 0 || o.Kind == "campfire").OrderBy(o => (o.X - PlayerX) * (o.X - PlayerX) + (o.Z - PlayerZ) * (o.Z - PlayerZ)).FirstOrDefault();
+        if (near is { Kind: "carcass" } carcass)
+        {
+            if (!_myInv.HasTag("cutting")) { _status = "You need something sharp to butcher it (a knife, an axe)."; return; }
+            string name = _catalog.Animals.TryGetValue(carcass.Ref, out var def) ? def.Name.ToLowerInvariant() : "animal";
+            StartTimed(new ActionRequest(ActionKind.Butcher, carcass.Id, 0, "", 0, 0, 0, 0), carcass.X, carcass.Z,
+                GameRules.ButcherSeconds(_catalog, _myInv, carcass.Ref), $"Butchering the {name}");
+            return;
+        }
         if (near != null) { Act(new ActionRequest(near.Contents.Count > 0 ? ActionKind.Gather : ActionKind.Fuel, near.Id, 0, "", 0, 0, 0, 0)); return; }
         var spot = _streamer.GatherablesNear(PlayerX, PlayerZ, GameRules.UseReach - .5).FirstOrDefault();
         if (spot.Layer != 0 || spot.X != 0 || spot.Z != 0)
@@ -212,11 +240,16 @@ public partial class WorldLab : IWorldQuery
         return grass > .3 && slope < .9 && !_sampler.Removals.Contains(ObjectRemovals.Grass, gx, gz);
     }
 
-    private (string What, long Cx, long Cz, double X, double Z, double Seconds, double Left, string Label)? _gathering;
+    private (ActionRequest Request, double Seconds, double Left, string Label)? _gathering;
 
-    private void StartGathering(string what, long cx, long cz, double x, double z, double seconds, string label)
+    private void StartGathering(string what, long cx, long cz, double x, double z, double seconds, string label) =>
+        StartTimed(new ActionRequest(ActionKind.Forage, cx, cz, what, x, 0, z, 0), x, z, seconds, label);
+
+    /// <summary>Something that takes a moment (gathering, butchering, building): the bar fills, then the host is asked;
+    /// moving away stops it.</summary>
+    private void StartTimed(ActionRequest request, double x, double z, double seconds, string label)
     {
-        _gathering = (what, cx, cz, x, z, seconds, seconds, label);
+        _gathering = (request, seconds, seconds, label);
         if (x != PlayerX || z != PlayerZ) _me.Facing = Mathf.Atan2((float)(x - PlayerX), (float)(z - PlayerZ));
     }
 
@@ -230,7 +263,7 @@ public partial class WorldLab : IWorldQuery
         ShowAction(g.Label, 1 - left / g.Seconds);
         if (left > 0) { _gathering = g with { Left = left }; return; }
         _gathering = null;
-        Act(new ActionRequest(ActionKind.Forage, g.Cx, g.Cz, g.What, g.X, 0, g.Z, 0));
+        Act(g.Request);
     }
 
     // ---- what the host sends back
@@ -259,11 +292,12 @@ public partial class WorldLab : IWorldQuery
         for (int n = r.ReadInt32(); n > 0; n--)
         {
             var (id, o) = _seenObjects.Read(r);
-            if (o == null) { ObjectGone(id); if (_objectViews.Remove(id, out var gone)) gone.QueueFree(); continue; }
+            if (o == null) { ObjectGone(id); PieceGone(id); if (_objectViews.Remove(id, out var gone)) gone.QueueFree(); continue; }
             if (o.Kind == "trunk") { TrunkChanged(o); continue; } // (drawn and moved by the felling part)
-            if (!_objectViews.ContainsKey(id))
+            if (_objectViews.ContainsKey(id)) { if (_catalog.Piece(o.Kind) is { } changed) RefreshPiece(o, changed); continue; }
             {
-                var view = o.Kind switch { "campfire" => Visuals.Campfire(), "log_pile" => LogPile(o), "branch_pile" => BranchPile(o), "pack" => Pack(), "lean_to" => LeanTo(), _ => new Node3D() };
+                var view = _catalog.Piece(o.Kind) is { } piece ? PieceView(o, piece)
+                    : o.Kind switch { "log_pile" => LogPile(o), "branch_pile" => BranchPile(o), "pack" => Pack(), "carcass" => CarcassView(o), "arrow" => StuckArrow(), _ => new Node3D() };
                 view.Rotation = new Vector3(0, o.Yaw, 0);
                 AddChild(view);
                 _objectViews[id] = view;
@@ -447,14 +481,20 @@ public partial class WorldLab : IWorldQuery
     }
 
     /// <summary>Keys of the gameplay part; true when used.</summary>
-    private bool GameplayKey(Key key)
+    private bool GameplayKey(InputEventKey e)
     {
+        if (!_menu.Visible && !_pack.Visible && !_map.Visible && BuildingKey(e)) return true;
+        var key = e.Keycode;
         switch (key)
         {
+            case Key.B when !_menu.Visible && !_pack.Visible && !_map.Visible: SetBuilding(!_building); return true;
+            case Key.Key8 when !_menu.Visible && !_pack.Visible: ToggleWeapon("spear"); return true;
+            case Key.Key9 when !_menu.Visible && !_pack.Visible: ToggleWeapon("bow"); return true;
+            case Key.Key0 when !_menu.Visible && !_pack.Visible: ToggleWeapon("stone_sword"); return true;
             case Key.I when !_menu.Visible && !_map.Visible: TogglePack(!_pack.Visible); return true;
             case Key.Escape when _pack.Visible: TogglePack(false); return true;
-            case Key.Key6 when !_menu.Visible && !_pack.Visible: if (_me.RodHeld) ToggleRod(); ToggleAxe(); return true;
-            case Key.Key7 when !_menu.Visible && !_pack.Visible: ToggleRod(); return true;
+            case Key.Key6 when !_menu.Visible && !_pack.Visible: if (_me.RodHeld) ToggleRod(); _me.Weapon = null; if (_building) SetBuilding(false); ToggleAxe(); return true;
+            case Key.Key7 when !_menu.Visible && !_pack.Visible: _me.Weapon = null; if (_building) SetBuilding(false); ToggleRod(); return true;
             case Key.E when !_menu.Visible && !_pack.Visible: Interact(); return true;
         }
         return false;
@@ -517,5 +557,5 @@ public partial class WorldLab : IWorldQuery
         return root;
     }
 
-    private string GameplayHud() => _me.RodHeld ? "Holding: fishing rod — hold and release LMB to cast · click when it bites · then A / D against the fish · 7 puts it away" : _axeHeld ? "Holding: stone axe — hold LMB on a tree or a trunk in front of you to chop · E: gather, pick up, feed a fire · I: pack" : "";
+    private string GameplayHud() => _building ? BuildingHud() : _me.Weapon != null ? HuntingHud() : _me.RodHeld ? "Holding: fishing rod — hold and release LMB to cast · click when it bites · then A / D against the fish · 7 puts it away" : _axeHeld ? "Holding: stone axe — hold LMB on a tree or a trunk in front of you to chop · E: gather, pick up, feed a fire · I: pack" : "";
 }

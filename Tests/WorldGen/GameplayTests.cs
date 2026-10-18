@@ -14,16 +14,22 @@ internal static class GameplayTests
         T.Run("Gameplay: fishing — which fish where and when, the tug-of-war, landing one (D114)", FishingWorks, filter);
         T.Run("Gameplay: death — the pack drops where you fell, a new character starts with the kit (D115)", Death, filter);
         T.Run("Gameplay: saving — a world's changes and players by name, written and read back (D116)", Saving, filter);
+        T.Run("Gameplay: hunting — animals graze, notice, flee, hunt; weapons, arrows, carcasses, butchering (D120)", Hunting, filter);
+        T.Run("Gameplay: building — blueprints, materials, snapping, swapping shapes, overlaps, roofs shelter (D121)", BuildingWorks, filter);
     }
 
     private static Catalog Load() => new(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Content/gameplay_items.json")),
-        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Content/gameplay_recipes.json")));
+        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Content/gameplay_recipes.json")),
+        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Content/gameplay_animals.json")),
+        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Content/gameplay_pieces.json")));
 
     private static void ContentLoads()
     {
         var c = Load();
         T.Check(c.Items.ContainsKey("stone_axe") && c.Item("stone_axe").Has("chopping"), "the axe chops");
-        T.Check(c.Recipes["campfire"].Places == "campfire" && c.Objects["campfire"].Tags.Contains("fire"), "a campfire is a fire");
+        T.Check(c.Pieces["campfire"].Category == "Camp" && c.Objects["campfire"].Tags.Contains("fire"), "a campfire is a fire, built as a piece");
+        T.Check(c.Animals.Count >= 4 && c.Animals["deer"].Yield.Any(y => y.Item == "raw_meat"), "animals load, deer give meat");
+        T.Check(c.Categories.Contains("Wall") && c.Pieces.Values.Count(p => p.Category == "Roof") >= 10, "building categories and roof shapes");
         T.Check(c.Start.Count > 0, "a start kit");
         bool threw = false;
         try { _ = new Catalog("{\"items\":[]}", "{\"recipes\":[{\"id\":\"x\",\"inputs\":[{\"item\":\"nothing\"}]}]}"); } catch (FormatException) { threw = true; }
@@ -62,6 +68,8 @@ internal static class GameplayTests
         public double Ground(double x, double z) => 5;
         public (double X, double Z) GatherSpot(int layer, long cx, long cz) => (cx * 3.5 + 1, cz * 3.5 + 1);
         public string WaterNear(double x, double z, double radius) => x > 1000 ? "river" : "";
+        public IReadOnlySet<string> BiomeTags(double x, double z) => new HashSet<string> { "temperate", "forest" };
+        public bool IsWater(double x, double z) => x > 1000;
     }
 
     private static void Slice()
@@ -127,10 +135,13 @@ internal static class GameplayTests
         T.Check(windFall.Felled && windFall.DirX > .3 && windFall.DirZ < -.5, $"in the wind it falls partly downwind: {windFall.DirX:0.00}, {windFall.DirZ:0.00}");
 
         T.Check(!rules.Make(me, "cook_fish", 21, 28, 0, 0, 0, 0).Ok, "no fish, no fire: cannot cook");
-        T.Check(!rules.Make(me, "campfire", 21, 28, 40, 0, 40, 0).Ok, "cannot build it out of reach");
-        var fire = rules.Make(me, "campfire", 21, 28, 22, 5, 29.5, 0);
-        T.Check(fire.Ok && rules.Objects.All.Count == 1, "campfire built: " + fire.Message);
+        T.Check(!rules.Place(me, "campfire", 40, 5, 40, 0, 0, 21, 28).Ok, "cannot build it out of reach");
+        var blueprint = rules.Place(me, "campfire", 22, 5, 29.5, 0, 0, 21, 28);
+        T.Check(blueprint.Ok && rules.Objects.All.Count == 1 && rules.Objects.All.First().Blueprint, "a campfire blueprint: " + blueprint.Message);
         var o = rules.Objects.All.First();
+        T.Check(!o.Lit, "not burning yet");
+        var fire = rules.Fuel(me, o.Id, 21, 28); // (E on a blueprint brings the materials)
+        T.Check(fire.Ok && !o.Blueprint, "campfire built: " + fire.Message);
         T.Check(o.Lit && o.Fuel == c.Objects["campfire"].Fuel, "and lit");
         T.Check(inv.Count("log") >= 0 && rules.Objects.TakeChanged().Contains(o.Id), "sent to everyone");
         T.Check(GameRules.FireWarmth(c, rules.Objects, 22, 29.5) > 10 && GameRules.FireWarmth(c, rules.Objects, 40, 40) == 0, "warm beside it, not far away");
@@ -256,8 +267,9 @@ internal static class GameplayTests
         T.Check(rules.Gather(9, pack.Id, 40, 42).Ok && rules.Inventory(9).Count("log") == 3, "anyone can pick it up (a corpse run — or a thief)");
         // A lean-to for a cold, rainy night.
         inv.Add("log", 3); inv.Add("branch", 8); inv.Add("plant_fibre", 4);
-        var built = rules.Make(7, "lean_to", 0, 0, 2, 5, 0, 0);
-        T.Check(built.Ok && GameRules.Sheltered(c, rules.Objects, 2.5, .5) && !GameRules.Sheltered(c, rules.Objects, 8, 0), "a lean-to: sheltered under it, not beside it");
+        T.Check(rules.Place(7, "lean_to", 2, 5, 0, 0, 0, 0, 0).Ok && !GameRules.Sheltered(c, rules.Objects, 2.5, .5), "a lean-to blueprint shelters nobody");
+        var built = rules.Supply(7, rules.Objects.All.Single(o => o.Kind == "lean_to").Id, 0, 0);
+        T.Check(built.Ok && GameRules.Sheltered(c, rules.Objects, 2.5, .5) && !GameRules.Sheltered(c, rules.Objects, 8, 0), "a lean-to: sheltered under it, not beside it — " + built.Message);
         var rainyNight = new BodyInput(Air: 2, Wind: 7, Rain: .9, Swimming: false, Fire: 0, Effort: 0);
         var under = rainyNight with { Rain = 0, Wind = 7 * .3, Fire = 9 };
         Needs open = new() { Warmth = 70 }, snug = new() { Warmth = 70 };
@@ -274,6 +286,12 @@ internal static class GameplayTests
         rules.Inventory(1).Add("log", 4); rules.Inventory(9).Add("stone", 2);
         for (int i = 0; i < GameRules.TreeHits(1.1); i++) rules.Chop(1, 3, 4, 21, 28);   // a felled tree, a trunk and branches
         rules.Forage(1, "stone", 10, 10, 0, 0, 36, 36);
+        // A blueprint half supplied and an open door (D121): what they hold and their state are saved.
+        int had = rules.Inventory(1).Count("log");
+        rules.Inventory(1).Take("log", had); rules.Inventory(1).Add("log", 2);
+        rules.Place(1, "log_foundation", 30, 5.3, 30, 0, 0, 28, 28);
+        rules.Supply(1, rules.Objects.All.Single(o => o.Kind == "log_foundation").Id, 28, 28);
+        rules.Inventory(1).Add("log", had);
         var edits = new TerrainEdits();
         edits.Apply(5, 5, 3, -1.5);
         var save = new WorldSave { WorldArgs = "--preset=mountainous --seed=42", Settings = { ("time.day_length", 90) }, Day = 3, Phase = .41, CloudDrift = new[] { 1.5, -2.0 }, Label = "test" };
@@ -294,6 +312,7 @@ internal static class GameplayTests
         T.Check(world2.Removals.Contains(ObjectRemovals.Trees, 3, 4) && world2.Removals.Contains(ObjectRemovals.Stones, 10, 10), "the felled tree and the picked stone");
         T.Check(rules2.Objects.All.Count == rules.Objects.All.Count && rules2.Objects.All.Any(o => o.Kind == "trunk" && o.Variant == 5), "the trunk and the branches");
         T.Check(rules2.Objects.TakeChanged().Count == 0, "restored, not changed (nothing to send)");
+        T.Check(rules2.Objects.All.Single(o => o.Kind == "log_foundation") is { Blueprint: true } bp2 && bp2.Supplied.Single() == ("log", 2), "the blueprint with its two logs");
         rules2.RestoreInventories(back.Players.ToDictionary(p => p.Key, p => p.Value.Inventory));
         rules2.Name(1, GameRules.HostName);
         T.Check(rules2.Inventory(1).Count("log") == 4, "the host's pack");
@@ -304,6 +323,208 @@ internal static class GameplayTests
         bool threw = false;
         try { WorldSave.Read(new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 })); } catch (InvalidDataException) { threw = true; }
         T.Check(threw, "not a save: refused");
+    }
+
+    private static void Hunting()
+    {
+        var c = Load();
+        var world = new World { Hours = 12 };
+        var rules = new GameRules(c, world);
+        rules.Wildlife.Density = 0; // (only the animals put down here)
+        const int me = 7;
+        var deer = c.Animals["deer"];
+        var a = rules.Wildlife.Spawn(deer, 100, 100);
+        var far = new[] { new Hunter(me, 100, 5, 250, 0, false) };
+        for (int i = 0; i < 50; i++) rules.StepWildlife(.1, far);
+        T.Check(a.State is AnimalState.Graze or AnimalState.Idle or AnimalState.Walk && Math.Sqrt((a.X - 100) * (a.X - 100) + (a.Z - 100) * (a.Z - 100)) < 25, $"alone it grazes and wanders ({a.State})");
+        // A hunter walking up slowly is seen at 25 m: it looks up, then runs.
+        var near = new[] { new Hunter(me, a.X, 5, a.Z + 25, 1, false) };
+        rules.StepWildlife(.25, near);
+        T.Check(a.State == AnimalState.Alert, $"it looks up ({a.State})");
+        for (int i = 0; i < 25; i++) rules.StepWildlife(.1, near);
+        T.Check(a.State == AnimalState.Flee && a.Z < near[0].Z - 30, $"and flees ({a.State}, {near[0].Z - a.Z:0} m away)");
+        // Heard: a sprinter is noticed from 30 m in the dark, a still hunter not.
+        var b = rules.Wildlife.Spawn(deer, 300, 300);
+        world.Hours = 23;
+        rules.StepWildlife(.2, new[] { new Hunter(me, 300, 5, 330, 0, false) });
+        T.Check(b.State != AnimalState.Alert && b.State != AnimalState.Flee, "a still hunter at night, 30 m away: unnoticed");
+        rules.StepWildlife(.2, new[] { new Hunter(me, 300, 5, 330, 9, false) });
+        T.Check(b.State is AnimalState.Alert or AnimalState.Flee, "a sprinting one: heard");
+        world.Hours = 12;
+        // A herd runs together.
+        rules.Wildlife.Clear();
+        var d1 = rules.Wildlife.Spawn(deer, 0, 0, group: 50); var d2 = rules.Wildlife.Spawn(deer, 5, 0, group: 50);
+        var close = new[] { new Hunter(me, 0, 5, 8, 1, false) };
+        for (int i = 0; i < 20; i++) rules.StepWildlife(.1, close);
+        T.Check(d1.State == AnimalState.Flee && d2.State == AnimalState.Flee, "one is startled: the herd runs");
+        // Weapons: reach and pace; two spear thrusts kill a deer; it becomes a carcass.
+        rules.Wildlife.Clear();
+        var inv = rules.Inventory(me);
+        T.Check(!rules.Attack(me, 1, "spear", 0, 0).Ok, "no spear in the pack");
+        inv.Add("spear");
+        var target = rules.Wildlife.Spawn(deer, 50, 50);
+        T.Check(!rules.Attack(me, target.Id, "spear", 50, 60).Ok, "out of reach");
+        var hit = rules.Attack(me, target.Id, "spear", 50, 52.5);
+        T.Check(hit.Ok && target.Health == deer.Health - c.Item("spear").Prop("damage") && target.State == AnimalState.Flee, "a thrust: wounded, it flees — " + hit.Message);
+        T.Check(!rules.Attack(me, target.Id, "spear", target.X, target.Z - 2).Ok, "not again at once");
+        rules.StepWildlife(1.1, far);
+        var kill = rules.Attack(me, target.Id, "spear", target.X, target.Z - 2);
+        T.Check(kill.Ok && target.State == AnimalState.Dead, "the second kills it: " + kill.Message);
+        for (int i = 0; i < 30; i++) rules.StepWildlife(.1, far);
+        var carcass = rules.Objects.All.Single(o => o.Kind == "carcass");
+        T.Check(carcass.Ref == "deer" && carcass.Contents.Contains(("raw_meat", 4)) && rules.Wildlife.Get(target.Id) == null, "a deer's carcass, with its meat");
+        T.Check(!rules.Gather(me, carcass.Id, carcass.X, carcass.Z).Ok, "not picked up whole: butchered");
+        T.Check(!rules.Butcher(me, carcass.Id, carcass.X + 30, carcass.Z).Ok, "not from afar");
+        var butcher = rules.Butcher(me, carcass.Id, carcass.X, carcass.Z + 1);
+        T.Check(butcher.Ok && inv.Count("raw_meat") == 4 && inv.Count("hide") == 1 && inv.Count("bone") == 2 && rules.Objects.Get(carcass.Id) == null, butcher.Message);
+        T.Check(GameRules.ButcherSeconds(c, inv, "deer") == deer.ButcherSeconds, "with the axe it takes the deer's time");
+        inv.Add("stone_knife");
+        T.Check(GameRules.ButcherSeconds(c, inv, "deer") < deer.ButcherSeconds, "a knife is quicker");
+        // The bow: an arrow from the pack each shot; a full draw does the bow's damage; a miss may leave the arrow.
+        T.Check(!rules.Shoot(me, 0, 1, 0, 5, 0, 0, 0).Ok, "no bow");
+        inv.Add("bow"); inv.Add("arrow", 10);
+        var stag = rules.Wildlife.Spawn(c.Animals["stag"], 0, 40);
+        var shot = rules.Shoot(me, stag.Id, 1, 0, 6, 40, 0, 0);
+        T.Check(shot.Ok && Math.Abs(stag.Health - (c.Animals["stag"].Health - c.Item("bow").Prop("damage"))) < 1e-9 && inv.Count("arrow") == 9, "a full draw: the bow's damage — " + shot.Message);
+        T.Check(!rules.Shoot(me, stag.Id, 1, 0, 6, 40, 0, 0).Ok, "an arrow at a time");
+        for (int i = 0; i < 8; i++) { rules.StepWildlife(.5, far); rules.Shoot(me, 0, .5, 10 + i, 5, 30, 0, 0); }
+        int stuck = rules.Objects.All.Count(o => o.Kind == "arrow");
+        T.Check(inv.Count("arrow") == 1 && stuck is > 0 and < 8, $"8 misses: {stuck} arrows lie where they fell");
+        T.Check(!rules.Gather(me, rules.Objects.All.First(o => o.Kind == "arrow").Id, 100, 100).Ok, "not from afar");
+        // Wolves hunt at night: a pack chases a hunter close by and bites.
+        rules.Wildlife.Clear();
+        world.Hours = 23;
+        var wolf = rules.Wildlife.Spawn(c.Animals["wolf"], 0, -15, group: 9);
+        var hunter = new[] { new Hunter(me, 0, 5, 0, 0, false) };
+        var bites = new List<Hurt>();
+        for (int i = 0; i < 60; i++) { rules.StepWildlife(.1, hunter); bites.AddRange(rules.TakeHurts()); }
+        T.Check(bites.Count > 0 && bites.All(h => h.Player == me && h.Damage == c.Animals["wolf"].Damage), $"the wolf bites ({bites.Count} bites in 6 s)");
+        // Hurt badly, it runs.
+        wolf.Health = c.Animals["wolf"].Health * .2;
+        for (int i = 0; i < 5; i++) rules.StepWildlife(.1, hunter);
+        T.Check(wolf.State == AnimalState.Flee, $"a badly hurt wolf runs ({wolf.State})");
+        // Animals appear out of sight around a hunter (in a forest), and none when the sandbox says none.
+        world.Hours = 12;
+        var wild = new GameRules(c, world);
+        for (int i = 0; i < 300; i++) wild.StepWildlife(.1, hunter);
+        T.Check(wild.Wildlife.All.Count is > 0 and <= Wildlife.PerArea + 4, $"{wild.Wildlife.All.Count} animals around");
+        T.Check(wild.Wildlife.All.All(x => Math.Sqrt(x.X * x.X + x.Z * x.Z) > 50), "none appeared close by");
+        var none = new GameRules(c, world);
+        none.Wildlife.Density = 0;
+        for (int i = 0; i < 300; i++) none.StepWildlife(.1, hunter);
+        T.Check(none.Wildlife.All.Count == 0, "animals off: none");
+        // Gone when nobody is near.
+        for (int i = 0; i < 30; i++) wild.StepWildlife(.1, new[] { new Hunter(me, 5000, 5, 5000, 0, true) });
+        T.Check(wild.Wildlife.All.All(x => Math.Sqrt((x.X - 5000) * (x.X - 5000) + (x.Z - 5000) * (x.Z - 5000)) < Wildlife.KeepRadius), "the animals left behind are gone");
+        // What a player's PC is sent.
+        var ms = new MemoryStream();
+        using (var w = new BinaryWriter(ms, System.Text.Encoding.UTF8, true)) rules.Wildlife.Write(w, 0, 0, 200);
+        ms.Position = 0;
+        var copy = Wildlife.Read(new BinaryReader(ms), c.Animals);
+        T.Check(copy.Count == 1 && copy[0].Def.Id == "wolf" && Math.Abs(copy[0].X - wolf.X) < 1e-9 && copy[0].State == wolf.State, "animals over the network");
+    }
+
+    private static void BuildingWorks()
+    {
+        var c = Load();
+        var world = new World();
+        var rules = new GameRules(c, world);
+        const int me = 7;
+        var inv = rules.Inventory(me);
+        var foundation = c.Pieces["log_foundation"];
+        // A blueprint first, then the materials.
+        var placed = rules.Place(me, "log_foundation", 0, 5.3, 0, 0, 0, 0, -4);
+        var f = rules.Objects.All.Single();
+        T.Check(placed.Ok && f.Blueprint && inv.Count("log") == 0, "a foundation blueprint costs nothing yet: " + placed.Message);
+        T.Check(!rules.Supply(me, f.Id, 0, -4).Ok, "no logs in the pack: " + rules.Supply(me, f.Id, 0, -4).Message);
+        inv.Add("log", 2);
+        var part = rules.Supply(me, f.Id, 0, -4);
+        T.Check(part.Ok && f.Blueprint && f.Supplied.Single() == ("log", 2), "two logs brought: " + part.Message);
+        inv.Add("log", 20);
+        var done = rules.Supply(me, f.Id, 0, -4);
+        T.Check(done.Ok && !f.Blueprint && inv.Count("log") == 18 && f.Supplied.Single() == ("log", 4), "finished with two more: " + done.Message);
+        T.Check(!rules.Place(me, "log_foundation", 50, 5.3, 50, 0, 0, 0, -4).Ok, "out of reach");
+        T.Check(!rules.Place(me, "log_foundation", 1, 5.3, 0, 0, 0, 0, -4).Ok, "overlapping the first: in the way");
+        T.Check(!rules.Place(me, "log_foundation", 6, 30, 0, 0, 0, 0, -4).Ok, "hanging in the air: no ground");
+        // Snapping: a foundation beside it, aimed a little off, goes edge to edge.
+        var pieces = rules.PiecesNear(0, 0, 12).ToList();
+        var next = Building.Snap(foundation, new V3(3.3, 5.3, .4), .2, pieces);
+        T.Check(next is { } n && Math.Abs(n.Pose.X - 3) < 1e-6 && Math.Abs(n.Pose.Z) < 1e-6 && Math.Abs(n.Pose.Y - 5.3) < 1e-6 && n.Joints == 3, $"a foundation snaps beside it: {next}");
+        // A wall on its east edge: along the edge (both ends on the corners), whichever way you face.
+        var wall = c.Pieces["log_wall"];
+        foreach (double facing in new[] { 0, 1.2, 3.0 })
+        {
+            var w = Building.Snap(wall, new V3(1.4, 5.3, .3), facing, pieces);
+            T.Check(w is { } wp && Math.Abs(wp.Pose.X - 1.5) < 1e-6 && Math.Abs(wp.Pose.Z) < 1e-6 && Math.Abs(Math.Cos(wp.Pose.Yaw)) < 1e-6 && wp.Joints == 3,
+                $"facing {facing:0.0}: the wall stands along the edge ({w})");
+        }
+        var wpose = Building.Snap(wall, new V3(1.4, 5.3, .3), 1.2, pieces)!.Value.Pose;
+        var wallPlaced = rules.Place(me, "log_wall", wpose.X, wpose.Y, wpose.Z, wpose.Yaw, 0, 0, -4);
+        T.Check(wallPlaced.Ok, "the wall's blueprint: " + wallPlaced.Message);
+        T.Check(!rules.Place(me, "log_wall", wpose.X, wpose.Y, wpose.Z, wpose.Yaw + Math.PI, 0, 0, -4).Ok, "a second wall in the same place: in the way");
+        var wallObj = rules.Objects.All.Single(o => o.Kind == "log_wall");
+        T.Check(rules.Supply(me, wallObj.Id, 0, -4).Ok && !wallObj.Blueprint && inv.Count("log") == 15, "the wall built");
+        // A roof slope on its top, going up inward (toward −X) as the player faces it from outside.
+        pieces = rules.PiecesNear(0, 0, 12).ToList();
+        var roof = c.Pieces["log_roof_slope_steep"];
+        T.Check(!rules.Place(me, roof.Id, 20, 9, 0, 0, 0, 15, 0).Ok, "a roof on nothing: refused");
+        var rs = Building.Snap(roof, new V3(1.5, 8.3, .2), -Math.PI / 2, pieces);
+        T.Check(rs is { } r && Math.Abs(r.Pose.X) < 1e-6 && Math.Abs(r.Pose.Y - 8.3) < 1e-6 && Math.Abs(r.Pose.Z) < 1e-6 && r.Joints == 3, $"the roof's eave sits along the wall top: {rs}");
+        var rp = rs!.Value.Pose;
+        T.Check(rules.Place(me, roof.Id, rp.X, rp.Y, rp.Z, rp.Yaw, 0, 0, -4).Ok, "the roof's blueprint");
+        var roofObj = rules.Objects.All.Single(o => o.Kind == roof.Id);
+        T.Check(!GameRules.Sheltered(c, rules.Objects, 0, 0, 5.3), "an unfinished roof keeps no rain off");
+        rules.Supply(me, roofObj.Id, 0, -4);
+        T.Check(GameRules.Sheltered(c, rules.Objects, 0, 0, 5.3) && !GameRules.Sheltered(c, rules.Objects, 0, 4, 5.3) && !GameRules.Sheltered(c, rules.Objects, 0, 0, 12), "under the finished roof: sheltered (not beside it, not above it)");
+        // Another shape of the same category in its place (Tom: build a wall, then decide it needs a window): the
+        // wall's logs come back and go into the window wall.
+        var swap = rules.Place(me, "log_wall_window", 0, 0, 0, wallObj.Yaw, wallObj.Id, 0, -4);
+        var window = rules.Objects.All.SingleOrDefault(o => o.Kind == "log_wall_window");
+        T.Check(swap.Ok && rules.Objects.Get(wallObj.Id) == null && window != null && !window.Blueprint && Math.Abs(window.X - wallObj.X) < 1e-9 && inv.Count("log") == 12, "swapped for a window wall: " + swap.Message);
+        T.Check(!rules.Place(me, "log_door", 0, 0, 0, 0, window!.Id, 0, -4).Ok, "a door is not a wall");
+        // A doorway and a door in it; E opens it.
+        var doorway = rules.Place(me, "log_wall_doorway", 0, 0, 0, window.Yaw, window.Id, 0, -4);
+        var dw = rules.Objects.All.Single(o => o.Kind == "log_wall_doorway");
+        T.Check(doorway.Ok && !dw.Blueprint && inv.Count("log") == 13, "a doorway (one log fewer): " + doorway.Message);
+        pieces = rules.PiecesNear(0, 0, 12).ToList();
+        var ds = Building.Snap(c.Pieces["log_door"], new V3(1.5, 6.3, .1), 0, pieces);
+        T.Check(ds is { } dp && Math.Abs(dp.Pose.X - 1.5) < 1e-6 && Math.Abs(dp.Pose.Y - 5.3) < 1e-6 && dp.Joints == 2, $"the door snaps into the doorway: {ds}");
+        inv.Add("plant_fibre", 4);
+        rules.Place(me, "log_door", ds!.Value.Pose.X, ds.Value.Pose.Y, ds.Value.Pose.Z, ds.Value.Pose.Yaw, 0, 0, -4);
+        var door = rules.Objects.All.Single(o => o.Kind == "log_door");
+        rules.Supply(me, door.Id, 0, -4);
+        T.Check(!door.Blueprint && rules.Use(me, door.Id, 1, 0).Ok && door.State == 1 && rules.Use(me, door.Id, 1, 0).Ok && door.State == 0, "it opens and shuts");
+        // Turning a piece where it stands.
+        T.Check(rules.Place(me, "log_door", 0, 0, 0, door.Yaw + Math.PI, door.Id, 0, -4).Message == "Turned.", "turned the other way round");
+        // Taking it down gives everything back.
+        int logs = inv.Count("log");
+        var down = rules.Dismantle(me, f.Id, 0, -4);
+        T.Check(down.Ok && rules.Objects.Get(f.Id) == null && inv.Count("log") == logs + 4, "the foundation taken down: " + down.Message);
+        // A 6 × 6 m house with a hip roof: four outer corners, each aimed at near its house corner, meet at the top.
+        var w2 = new World();
+        var r2 = new GameRules(c, w2);
+        r2.Inventory(me).Add("log", 200);
+        void Put(string piece, double ax, double ay, double az, double facing)
+        {
+            var near2 = r2.PiecesNear(ax, az, 12).ToList();
+            var s = Building.Snap(c.Pieces[piece], new V3(ax, ay, az), facing, near2);
+            T.Check(s != null, $"{piece} at {ax}, {az} snaps");
+            if (s is { } sp) T.Check(r2.Place(me, piece, sp.Pose.X, sp.Pose.Y, sp.Pose.Z, sp.Pose.Yaw, 0, 1.5, 1.5).Ok, $"{piece} placed at {sp.Pose}");
+        }
+        r2.Place(me, "log_foundation", 0, 5.3, 0, 0, 0, 0, 0);
+        Put("log_foundation", 3.2, 5.3, .2, 0); Put("log_foundation", .2, 5.3, 3.2, 0); Put("log_foundation", 3.2, 5.3, 3.2, 0);
+        foreach (var (lx, lz) in new[] { (-1.4, 0.0), (-1.4, 3.0), (4.4, 0.0), (4.4, 3.0), (0.0, -1.4), (3.0, -1.4), (0.0, 4.4), (3.0, 4.4) }) Put("log_wall", lx, 5.3, lz, 0);
+        foreach (var o in r2.Objects.All.ToList()) r2.Supply(me, o.Id, 1.5, 1.5);
+        Put("log_roof_outer_steep", -1.2, 8.3, -1.2, Math.PI / 4);
+        Put("log_roof_outer_steep", 4.2, 8.3, -1.2, -Math.PI / 4);
+        Put("log_roof_outer_steep", -1.2, 8.3, 4.2, Math.PI * 3 / 4);
+        Put("log_roof_outer_steep", 4.2, 8.3, 4.2, -Math.PI * 3 / 4);
+        var tops = r2.Objects.All.Where(o => o.Kind == "log_roof_outer_steep").Select(o => Building.ToWorld(new Pose(o.X, o.Y, o.Z, o.Yaw), new V3(1.5, 3, 1.5))).ToList();
+        T.Check(tops.Count == 4 && tops.All(p => p.DistanceTo(new V3(1.5, 11.3, 1.5)) < .01), $"a hip roof: the corners meet at the top ({string.Join("; ", tops)})");
+        // Overlap geometry: turned boxes.
+        var pa = new Pose(0, 0, 0, 0); var pb = new Pose(2.9, 0, 0, Math.PI / 4);
+        T.Check(Building.Overlaps(foundation, pa, foundation, pb) && !Building.Overlaps(foundation, pa, foundation, new Pose(3, 0, 0, 0)) && !Building.Overlaps(foundation, pa, foundation, new Pose(4.6, 0, 0, Math.PI / 4)),
+            "boxes: a turned one overlapping, edge to edge not, far enough not");
     }
 
     private static void NeedsWork()

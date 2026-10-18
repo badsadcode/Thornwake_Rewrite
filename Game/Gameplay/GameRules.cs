@@ -22,6 +22,10 @@ public interface IWorldQuery
     string WaterNear(double x, double z, double radius);
     /// <summary>Where the gatherable of a layer's lattice cell stands (a loose stone, a berry bush), whether or not one grows there.</summary>
     (double X, double Z) GatherSpot(int layer, long cx, long cz);
+    /// <summary>The biome's tags at a point ("forest", "cold"…: where animals live; D120).</summary>
+    IReadOnlySet<string> BiomeTags(double x, double z);
+    /// <summary>Water at a point (animals keep out of it).</summary>
+    bool IsWater(double x, double z);
 }
 
 /// <summary>A tree was hit (shake it) or felled (it falls toward Dir); everyone draws it.</summary>
@@ -41,7 +45,7 @@ public readonly record struct ActionResult(bool Ok, string Message, double Food 
 /// PC asks; this checks (distance, tools, materials) and applies; the host then sends what changed. Engine-free and
 /// tested headless; the player's position comes from the caller (the host knows where everyone is).
 /// </summary>
-public sealed class GameRules
+public sealed partial class GameRules
 {
     public const double ChopReach = 4.5, UseReach = 3.5, PlaceReach = 6;
 
@@ -310,6 +314,7 @@ public sealed class GameRules
     public ActionResult Gather(int player, long objectId, double px, double pz)
     {
         if (Objects.Get(objectId) is not { Contents.Count: > 0 } o) return ActionResult.Fail("Nothing to pick up there.");
+        if (o.Kind == "carcass") return ActionResult.Fail("Butcher it first (E with a knife, an axe or a sword in the pack).");
         if (Dist(px, pz, o.X, o.Z) > UseReach + 1.5) return ActionResult.Fail("Too far away.");
         var inv = Inventory(player);
         foreach (var (item, count) in o.Contents) inv.Add(item, count);
@@ -358,6 +363,7 @@ public sealed class GameRules
     /// <summary>Put fuel on a fire (the item with the most fuel in the pack, or the one named): it relights if out.</summary>
     public ActionResult Fuel(int player, long objectId, double px, double pz, string? item = null)
     {
+        if (Objects.Get(objectId) is { Blueprint: true }) return Supply(player, objectId, px, pz);
         if (Objects.Get(objectId) is not { } o || !Catalog.Objects.TryGetValue(o.Kind, out var def) || def.MaxFuel <= 0)
             return ActionResult.Fail("Nothing to put fuel on.");
         if (Dist(px, pz, o.X, o.Z) > UseReach) return ActionResult.Fail("Too far from the fire.");
@@ -397,9 +403,13 @@ public sealed class GameRules
                 _world.Removals.Restore(layer, x, z);
     }
 
-    /// <summary>Under a shelter (a lean-to's reach): the rain stays off, most of the wind (D115).</summary>
-    public static bool Sheltered(Catalog catalog, PlacedObjects objects, double x, double z) =>
-        objects.Near(x, z, 6).Any(o => catalog.Objects.TryGetValue(o.Kind, out var d) && d.Tags.Contains("shelter") && Dist(x, z, o.X, o.Z) <= d.Reach);
+    /// <summary>Under a shelter (D115): within a finished lean-to's reach, or under a finished roof (D121; at height
+    /// <paramref name="y"/>, the feet) — the rain stays off, most of the wind.</summary>
+    public static bool Sheltered(Catalog catalog, PlacedObjects objects, double x, double z, double y = double.NaN) =>
+        objects.Near(x, z, 6).Any(o => !o.Blueprint && catalog.Objects.TryGetValue(o.Kind, out var d) && d.Tags.Contains("shelter") && Dist(x, z, o.X, o.Z) <= d.Reach)
+        || !double.IsNaN(y) && objects.Near(x, z, 4).Any(o => !o.Blueprint && catalog.Piece(o.Kind) is { } p && p.Has("roof")
+            && Building.ToWorld(new Pose(o.X, o.Y, o.Z, o.Yaw), p.BoxCenter).Y is var cy && cy > y + 1 && cy < y + 14
+            && Building.Inside(p, new Pose(o.X, o.Y, o.Z, o.Yaw), new V3(x, cy, z)));
 
     /// <summary>Warmth (°C) the lit fires give at a point: full at the fire, nothing at the edge of its reach × 2.</summary>
     public static double FireWarmth(Catalog catalog, PlacedObjects objects, double x, double z) =>

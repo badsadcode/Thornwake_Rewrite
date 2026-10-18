@@ -41,8 +41,14 @@ public sealed class Catalog
     public IReadOnlyList<Ingredient> Start { get; }
     /// <summary>The fish (D114).</summary>
     public IReadOnlyList<FishDef> Fish { get; }
+    /// <summary>The animals (D120), by id.</summary>
+    public IReadOnlyDictionary<string, AnimalDef> Animals { get; }
+    /// <summary>The building pieces (D121), by id, in the content file's order.</summary>
+    public IReadOnlyDictionary<string, PieceDef> Pieces { get; }
+    /// <summary>The building categories in the order they first appear (B's bar).</summary>
+    public IReadOnlyList<string> Categories { get; }
 
-    public Catalog(string itemsJson, string recipesJson)
+    public Catalog(string itemsJson, string recipesJson, string? animalsJson = null, string? piecesJson = null)
     {
         using var items = JsonDocument.Parse(itemsJson);
         var list = new Dictionary<string, ItemDef>();
@@ -94,7 +100,52 @@ public sealed class Catalog
             if (r.Outputs.Any(x => x.Item == null)) throw new FormatException($"recipe {r.Id}: outputs must name items");
         }
         foreach (var s in Start) Check(s);
+
+        var animals = new Dictionary<string, AnimalDef>();
+        if (animalsJson != null)
+        {
+            using var doc = JsonDocument.Parse(animalsJson);
+            foreach (var e in doc.RootElement.GetProperty("animals").EnumerateArray())
+            {
+                var group = e.TryGetProperty("group", out var g) ? g.EnumerateArray().Select(x => x.GetInt32()).ToArray() : new[] { 1, 1 };
+                var a = new AnimalDef(Str(e, "id")!, Str(e, "name") ?? Str(e, "id")!, Str(e, "model") ?? "", Num(e, "height", 1), Num(e, "length", 1.5),
+                    Num(e, "radius", .4), Num(e, "health", 50), Num(e, "walk", 1.5), Num(e, "run", 8), Num(e, "sight", 25), Num(e, "hearing", 12),
+                    Str(e, "temper") ?? "shy", group[0], group[^1], Strings(e, "biomes"), Strings(e, "avoid"), Num(e, "weight", 1),
+                    Num(e, "damage"), Num(e, "attack_range", 1.5), Num(e, "attack_seconds", 1.5),
+                    e.TryGetProperty("yield", out var y) ? y.EnumerateArray().Select(Parse).ToList() : new List<Ingredient>(), Num(e, "butcher", 5));
+                foreach (var x in a.Yield) Check(x);
+                animals.Add(a.Id, a);
+            }
+        }
+        Animals = animals;
+
+        var pieces = new Dictionary<string, PieceDef>();
+        var categories = new List<string>();
+        if (piecesJson != null)
+        {
+            using var doc = JsonDocument.Parse(piecesJson);
+            foreach (var e in doc.RootElement.GetProperty("pieces").EnumerateArray())
+            {
+                var box = e.TryGetProperty("box", out var b) ? b.EnumerateArray().Select(x => x.GetDouble()).ToArray() : new double[] { 0, .5, 0, .5, .5, .5 };
+                var snap = e.TryGetProperty("snap", out var sp) ? sp.EnumerateArray().Select(p => { var v = p.EnumerateArray().Select(x => x.GetDouble()).ToArray(); return new V3(v[0], v[1], v[2]); }).ToList() : new List<V3>();
+                string category = Str(e, "category") ?? "Other";
+                var piece = new PieceDef(Str(e, "id")!, Str(e, "name") ?? Str(e, "id")!, category, Str(e, "shape") ?? Str(e, "name") ?? "", Str(e, "material") ?? "",
+                    Str(e, "model") ?? "", e.TryGetProperty("cost", out var c) ? c.EnumerateArray().Select(Parse).ToList() : new List<Ingredient>(),
+                    new V3(box[0], box[1], box[2]), new V3(box[3], box[4], box[5]), snap, e.TryGetProperty("ground", out var gr) && gr.ValueKind == JsonValueKind.True,
+                    Num(e, "lift"), Num(e, "legs", .5), Tags(e), Str(e, "group") ?? category.ToLowerInvariant(),
+                    e.TryGetProperty("attach", out _) ? Strings(e, "attach") : null);
+                foreach (var x in piece.Cost) Check(x);
+                if (piece.Cost.Any(x => x.Item == null)) throw new FormatException($"piece {piece.Id}: costs must name items");
+                pieces.Add(piece.Id, piece);
+                if (!categories.Contains(category)) categories.Add(category);
+            }
+        }
+        Pieces = pieces;
+        Categories = categories;
     }
+
+    /// <summary>The piece of a placed object's kind, or null (a log pile, a trunk…).</summary>
+    public PieceDef? Piece(string kind) => Pieces.GetValueOrDefault(kind);
 
     private void Check(Ingredient x)
     {
@@ -108,6 +159,8 @@ public sealed class Catalog
     private static Ingredient Parse(JsonElement e) => new(Str(e, "item"), Str(e, "tag"), (int)Num(e, "count", 1));
     private static string? Str(JsonElement e, string name) => e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
     private static double Num(JsonElement e, string name, double fallback = 0) => e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number ? v.GetDouble() : fallback;
+    private static IReadOnlySet<string> Strings(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var t) ? t.EnumerateArray().Select(x => x.GetString()!).ToHashSet() : new HashSet<string>();
     private static IReadOnlySet<string> Tags(JsonElement e) =>
         e.TryGetProperty("tags", out var t) ? t.EnumerateArray().Select(x => x.GetString()!).ToHashSet() : new HashSet<string>();
 }

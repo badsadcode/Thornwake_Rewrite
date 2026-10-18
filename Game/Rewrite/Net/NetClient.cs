@@ -32,6 +32,12 @@ public interface IClientGame
     void ObjectMoved(long id, double x, double y, double z, float qx, float qy, float qz, float qw);
     /// <summary>This player's state now (null while there is none yet: the world is still loading).</summary>
     PlayerState? LocalState();
+    /// <summary>The animals near this player (Wildlife.Write's format; D120).</summary>
+    void ApplyAnimals(BinaryReader r);
+    /// <summary>An animal hurt this player.</summary>
+    void Hurt(double damage, double fromX, double fromZ, string who);
+    /// <summary>Another player loosed an arrow: draw its flight.</summary>
+    void ArrowShot(int player, double x, double y, double z, float vx, float vy, float vz);
 }
 
 /// <summary>
@@ -70,6 +76,10 @@ public sealed class NetClient
     /// <summary>Where an object this PC moves is now (unreliable).</summary>
     public void SendMove(long id, double x, double y, double z, float qx, float qy, float qz, float qw) =>
         _send(NetMessages.Build(Msg.Move, w => { w.Write(id); w.Write(x); w.Write(y); w.Write(z); w.Write(qx); w.Write(qy); w.Write(qz); w.Write(qw); }), false);
+
+    /// <summary>An arrow loosed here (the others draw it; unreliable).</summary>
+    public void SendShot(double x, double y, double z, float vx, float vy, float vz) =>
+        _send(NetMessages.Build(Msg.Shot, w => { w.Write(x); w.Write(y); w.Write(z); w.Write(vx); w.Write(vy); w.Write(vz); }), false);
 
     public void SendAction(in ActionRequest action)
     {
@@ -135,6 +145,14 @@ public sealed class NetClient
                 for (int n = r.ReadInt32(); n > 0; n--)
                     _game.TreeHit(new Thornwake.Gameplay.TreeEvent(r.ReadInt64(), r.ReadInt64(), r.ReadInt16(), r.ReadInt16(), r.ReadBoolean(), r.ReadSingle(), r.ReadSingle()));
                 break;
+            case Msg.Animals: _game.ApplyAnimals(r); break;
+            case Msg.Hurt: _game.Hurt(r.ReadDouble(), r.ReadDouble(), r.ReadDouble(), r.ReadString()); break;
+            case Msg.Shots:
+            {
+                int who = r.ReadInt32();
+                if (who != Id) _game.ArrowShot(who, r.ReadDouble(), r.ReadDouble(), r.ReadDouble(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
+                break;
+            }
             case Msg.Moves:
                 for (int n = r.ReadInt32(); n > 0; n--)
                     _game.ObjectMoved(r.ReadInt64(), r.ReadDouble(), r.ReadDouble(), r.ReadDouble(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle());

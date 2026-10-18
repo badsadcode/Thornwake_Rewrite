@@ -17,6 +17,7 @@ public enum Msg : byte
     Dig = 3,        // please change the ground (the server applies it and sends the changed chunks to everyone)
     Action = 4,     // please do this (chop, make, fuel, eat: step 1's actions, checked by the host's GameRules)
     Move = 5,       // where an object my PC moves is now (a rolling trunk; unreliable, ~10 a second while it moves)
+    Shot = 6,       // I loosed an arrow (from, velocity): the others draw its flight
     Welcome = 10,   // your id, the world, its settings, the clock, the players, the place to start
     Players = 11,   // everyone's state (unreliable, ~20 a second)
     Joined = 12,    // a player came in (id, name)
@@ -33,16 +34,26 @@ public enum Msg : byte
     Removals = 23,  // generated objects taken out or put back (felled trees); all of them for a player joining late
     TreeHits = 24,  // trees hit (shake, the notch grows) or felled (fall, and which way)
     Moves = 25,     // where moving objects are now (unreliable; from their owners' PCs)
+    Animals = 26,   // the animals near you (unreliable, ten a second; D120)
+    Hurt = 27,      // an animal hurt you (damage, from where, what)
+    Shots = 28,     // another player loosed an arrow (from, velocity)
 }
 
 /// <summary>One player's movement as others need it to draw them (world coordinates, not the floating origin).</summary>
-public readonly record struct PlayerState(double X, double Y, double Z, float Facing, float Vx, float Vy, float Vz, PlayerFlags Flags);
+public readonly record struct PlayerState(double X, double Y, double Z, float Facing, float Vx, float Vy, float Vz, PlayerFlags Flags, byte Held = 0);
 
 [Flags]
-public enum PlayerFlags : byte { None = 0, Flying = 1, Torch = 2, Swimming = 4, Axe = 8, Chopping = 16, Rod = 32, Fishing = 64 }
+public enum PlayerFlags : byte { None = 0, Flying = 1, Torch = 2, Swimming = 4, Axe = 8, Chopping = 16, Rod = 32, Fishing = 64, Attacking = 128 }
 
 /// <summary>Step 1's actions (D110): what a player asks the host to do.</summary>
-public enum ActionKind : byte { Chop = 1, Make = 2, Fuel = 3, Eat = 4, Gather = 5, ChopTrunk = 6, Claim = 7, Forage = 8, Catch = 9, Die = 10 }
+public enum ActionKind : byte
+{
+    Chop = 1, Make = 2, Fuel = 3, Eat = 4, Gather = 5, ChopTrunk = 6, Claim = 7, Forage = 8, Catch = 9, Die = 10,
+    // hunting (D120): strike animal A with item Id; an arrow (drawn Yaw) struck animal A or fell at X, Y, Z; butcher object A
+    Attack = 11, Shoot = 12, Butcher = 13,
+    // building (D121): a blueprint of piece Id at X, Y, Z turned Yaw (in place of object A); bring materials to, take down, use object A
+    Place = 14, Supply = 15, Dismantle = 16, Use = 17,
+}
 
 /// <summary>An action request: hit the tree of lattice cell (A, B); make recipe Id (placing at X, Y, Z facing Yaw);
 /// fuel object A; eat item Id; gather what lies in object A.</summary>
@@ -62,7 +73,7 @@ public readonly record struct DigRequest(BrushMode Mode, BrushShape Shape, doubl
 public static class NetMessages
 {
     /// <summary>Changes whenever the messages change: a client and host with different versions do not connect.</summary>
-    public const int Protocol = 9;
+    public const int Protocol = 10;
 
     public static byte[] Build(Msg kind, Action<BinaryWriter> body)
     {
@@ -84,11 +95,11 @@ public static class NetMessages
     public static void Write(this BinaryWriter w, in PlayerState s)
     {
         w.Write(s.X); w.Write(s.Y); w.Write(s.Z); w.Write(s.Facing);
-        w.Write(s.Vx); w.Write(s.Vy); w.Write(s.Vz); w.Write((byte)s.Flags);
+        w.Write(s.Vx); w.Write(s.Vy); w.Write(s.Vz); w.Write((byte)s.Flags); w.Write(s.Held);
     }
 
     public static PlayerState ReadState(this BinaryReader r) =>
-        new(r.ReadDouble(), r.ReadDouble(), r.ReadDouble(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), (PlayerFlags)r.ReadByte());
+        new(r.ReadDouble(), r.ReadDouble(), r.ReadDouble(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), (PlayerFlags)r.ReadByte(), r.ReadByte());
 
     public static void Write(this BinaryWriter w, in ClockState c)
     {

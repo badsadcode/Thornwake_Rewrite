@@ -117,6 +117,13 @@ public sealed class NetServer
                 if (double.IsFinite(x + y + z)) moving.Objects.Move((int)peer, id, x, y, z, qx, qy, qz, qw);
                 break;
             }
+            case Msg.Shot when player.Welcomed:
+            {
+                // (passed on as it came: the others only draw the arrow's flight)
+                var bytes = data.Skip(1).ToArray();
+                Broadcast(NetMessages.Build(Msg.Shots, w => { w.Write((int)peer); w.Write(bytes); }), false, except: peer);
+                break;
+            }
             case Msg.Action when player.Welcomed && _world.Rules is { } rules && _world.Removals != null:
             {
                 var a = r.ReadAction();
@@ -138,6 +145,13 @@ public sealed class NetServer
                         ActionKind.Forage => rules.Forage(id, a.Id, a.A, a.B, a.X, a.Z, at.X, at.Z),
                         ActionKind.Catch => rules.Catch(id, a.Id, a.X, at.X, at.Z),
                         ActionKind.Die => rules.Die(id, at.X, at.Z),
+                        ActionKind.Attack => rules.Attack(id, (int)a.A, a.Id, at.X, at.Z),
+                        ActionKind.Shoot => rules.Shoot(id, (int)a.A, a.Yaw, a.X, a.Y, a.Z, at.X, at.Z),
+                        ActionKind.Butcher => rules.Butcher(id, a.A, at.X, at.Z),
+                        ActionKind.Place => rules.Place(id, a.Id, a.X, a.Y, a.Z, a.Yaw, a.A, at.X, at.Z),
+                        ActionKind.Supply => rules.Supply(id, a.A, at.X, at.Z),
+                        ActionKind.Dismantle => rules.Dismantle(id, a.A, at.X, at.Z),
+                        ActionKind.Use => rules.Use(id, a.A, at.X, at.Z),
                         _ => ActionResult.Fail("Unknown action."),
                     };
                 }
@@ -170,7 +184,29 @@ public sealed class NetServer
                 }), false);
         }
         if ((_clockTimer -= dt) <= 0) { _clockTimer = 1; Broadcast(NetMessages.Build(Msg.Clock, w => w.Write(_world.Clock())), false, except: HostPeer); }
+        StepAnimals(dt);
         if ((_settingsTimer -= dt) <= 0) { _settingsTimer = 5; SettingsChanged(); }
+    }
+
+    private double _animalTimer;
+
+    /// <summary>The animals (D120): they sense every player who is in the world; each player is told about those near
+    /// them ten times a second, and hurt players are told at once.</summary>
+    private void StepAnimals(double dt)
+    {
+        if (_world.Rules is not { } rules || _world.Removals == null) return;
+        var hunters = _players.Where(p => p.Value.Welcomed && p.Value.HasState)
+            .Select(p => new Hunter((int)p.Key, p.Value.State.X, p.Value.State.Y, p.Value.State.Z,
+                Math.Sqrt(p.Value.State.Vx * p.Value.State.Vx + p.Value.State.Vz * p.Value.State.Vz), (p.Value.State.Flags & PlayerFlags.Flying) != 0)).ToList();
+        if (hunters.Count == 0) return;
+        rules.StepWildlife(dt, hunters);
+        foreach (var hurt in rules.TakeHurts())
+            if (_players.TryGetValue(hurt.Player, out var p) && p.Welcomed)
+                _send(hurt.Player, NetMessages.Build(Msg.Hurt, w => { w.Write(hurt.Damage); w.Write(hurt.FromX); w.Write(hurt.FromZ); w.Write(hurt.Who); }), true);
+        if ((_animalTimer -= dt) > 0) return;
+        _animalTimer = Math.Max(_animalTimer + Wildlife.StepSeconds, 0);
+        foreach (var h in hunters)
+            _send(h.Id, NetMessages.Build(Msg.Animals, w => rules.Wildlife.Write(w, h.X, h.Z, 230)), false);
     }
 
     /// <summary>The host changed a world-affecting setting: everyone takes it.</summary>

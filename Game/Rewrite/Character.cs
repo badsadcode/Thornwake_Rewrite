@@ -44,7 +44,8 @@ public sealed partial class Character : Node3D
         if (tunic == _tunic) return;
         _tunic = tunic;
         bool axe = AxeHeld, rod = RodHeld;
-        AxeHeld = false; RodHeld = false; // (they hang on the old body)
+        string? weapon = Weapon;
+        AxeHeld = false; RodHeld = false; Weapon = null; // (they hang on the old body)
         float facing = Facing;
         bool hidden = _bodyHidden;
         var hold = hidden ? Torch.GetParent<Node3D>() : null;
@@ -59,6 +60,7 @@ public sealed partial class Character : Node3D
         if (hold != null) SetFirstPerson(hold);
         AxeHeld = axe;
         RodHeld = rod;
+        Weapon = weapon;
     }
 
     /// <summary>Facing (radians about +Y, 0 = +Z) — the direction the body looks.</summary>
@@ -100,6 +102,91 @@ public sealed partial class Character : Node3D
             Limb(AxeHand, angle);
         }
         else _chopPhase = 0;
+        AnimateWeapon(dt, swing);
+    }
+
+    // ---- weapons (D120): a spear or a sword in the right hand, a bow in the left (the torch goes out)
+    private Node3D? _weapon, _nocked;
+    private string? _weaponId;
+    private float _attackPhase = -1;
+    private const float SpearSeconds = .55f, SwordSeconds = .5f;
+
+    /// <summary>The weapon in hand: "spear", "stone_sword", "bow" (item ids), or null.</summary>
+    public string? Weapon
+    {
+        get => _weaponId;
+        set
+        {
+            if (value == _weaponId) return;
+            _weapon?.QueueFree(); _weapon = null; _nocked = null;
+            _weaponId = value;
+            _attackPhase = -1;
+            Draw = 0;
+            Torch.Visible = value != "bow";
+            if (value == null) return;
+            if (AxeHeld) AxeHeld = false;
+            if (RodHeld) RodHeld = false;
+            if (value == "bow") Torch.Lit = false;
+            _weapon = GameplayModels.Weapon(value);
+            var hold = new Node3D { Name = "Weapon", Position = new Vector3(0, -.49f, 0) };
+            hold.AddChild(_weapon);
+            Body.GetNode<Node3D>(value == "bow" ? TorchHand : AxeHand).AddChild(hold);
+            _weapon = hold;
+            if (value == "bow")
+            {
+                _nocked = GameplayModels.Weapon("arrow");
+                _nocked.Position = new Vector3(0, .12f, .3f);
+                _nocked.Visible = false;
+                hold.AddChild(_nocked);
+            }
+        }
+    }
+
+    /// <summary>The bow drawn: 0 (resting) … 1 (full draw); an arrow shows on the string while above 0.</summary>
+    public float Draw { get; set; }
+    /// <summary>A swing or thrust in progress (others see it: a flag in the player's state).</summary>
+    public bool Attacking => _attackPhase >= 0 || Draw > 0;
+    /// <summary>The moment a swing or thrust lands (once per attack).</summary>
+    public event Action? AttackHit;
+
+    /// <summary>Start a swing (sword) or a thrust (spear); ignored while one is going.</summary>
+    public void Strike() { if (_weaponId is "spear" or "stone_sword" && _attackPhase < 0) _attackPhase = 0; }
+
+    private void AnimateWeapon(float dt, float swing)
+    {
+        if (_weaponId == null || _weapon == null) return;
+        if (_weaponId == "bow")
+        {
+            // The bow arm held out toward the target, the string hand drawn back to the chin.
+            float d = Mathf.Clamp(Draw, 0, 1);
+            Limb(TorchHand, d > 0 ? -1.5f : swing * .8f);
+            if (d > 0) Limb(AxeHand, -1.35f - .15f * d);
+            if (_nocked != null) { _nocked.Visible = d > 0; _nocked.Position = new Vector3(0, .12f, .3f - .35f * d); }
+            return;
+        }
+        if (_attackPhase < 0) { Limb(AxeHand, -swing * .8f - .25f); _weapon.Position = new Vector3(0, -.49f, 0); return; }
+        float before = _attackPhase;
+        _attackPhase += dt / (_weaponId == "spear" ? SpearSeconds : SwordSeconds);
+        float k = Mathf.Min(_attackPhase, 1);
+        if (_weaponId == "spear")
+        {
+            // Drawn back at shoulder height, then a straight thrust (the spear slides forward in the hand), then back.
+            if (before < .45f && k >= .45f) AttackHit?.Invoke();
+            float arm = k < .3f ? Mathf.Lerp(-.3f, -1.45f, k / .3f) : -1.45f;
+            float reach = k < .3f ? Mathf.Lerp(0, -.35f, k / .3f) : k < .45f ? Mathf.Lerp(-.35f, .55f, (k - .3f) / .15f) : Mathf.Lerp(.55f, 0, (k - .45f) / .55f);
+            if (k > .75f) arm = Mathf.Lerp(-1.45f, -.3f, (k - .75f) / .25f);
+            Limb(AxeHand, arm);
+            _weapon.Position = new Vector3(0, -.49f, reach);
+        }
+        else
+        {
+            // Raised over the shoulder, a fast cut down and across.
+            if (before < .5f && k >= .5f) AttackHit?.Invoke();
+            float angle = k < .35f ? Mathf.Lerp(-.3f, -2.5f, Mathf.SmoothStep(0, 1, k / .35f))
+                : k < .55f ? Mathf.Lerp(-2.5f, -.2f, (k - .35f) / .2f) : Mathf.Lerp(-.2f, -.3f, (k - .55f) / .45f);
+            Limb(AxeHand, angle);
+        }
+        if (_attackPhase >= 1) _attackPhase = -1;
     }
 
     /// <summary>Swinging the axe (the arm animation; each stroke's impact raises <see cref="ChopHit"/>).</summary>
@@ -126,6 +213,7 @@ public sealed partial class Character : Node3D
             if (value)
             {
                 if (AxeHeld) AxeHeld = false;
+                Weapon = null;
                 // A chain of joints (thick at the hand, thin at the tip) so it can bend toward the fish.
                 _rod = new Node3D { Name = "Rod", Rotation = new Vector3(1.15f, 0, 0), Position = new Vector3(0, -.5f, .02f) };
                 var wood = new StandardMaterial3D { AlbedoColor = new Color("7a5a36"), Roughness = .8f };
@@ -171,7 +259,7 @@ public sealed partial class Character : Node3D
         {
             if (value == (_axe != null)) return;
             var right = Body.GetNode<Node3D>(AxeHand);
-            if (value) { if (RodHeld) RodHeld = false; _axe = Thornwake.World.Visuals.Tool(0); right.AddChild(_axe); }
+            if (value) { if (RodHeld) RodHeld = false; Weapon = null; _axe = Thornwake.World.Visuals.Tool(0); right.AddChild(_axe); }
             else { _axe.QueueFree(); _axe = null; Chopping = false; }
         }
     }
