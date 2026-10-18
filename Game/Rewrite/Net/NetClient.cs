@@ -125,12 +125,8 @@ public sealed class NetClient
             case Msg.Joined: { int id = r.ReadInt32(); string name = r.ReadString(); Names[id] = name; _game.PlayerJoined(id, name); break; }
             case Msg.Left: { int id = r.ReadInt32(); Names.Remove(id); _game.PlayerLeft(id); break; }
             case Msg.Players:
-                for (int i = r.ReadInt32(); i > 0; i--)
-                {
-                    int id = r.ReadInt32();
-                    var state = r.ReadState();
+                foreach (var (id, state) in r.ReadPlayers())
                     if (id != Id) _game.PlayerMoved(id, state);
-                }
                 break;
             case Msg.Chunks when !_isHost: _game.ApplyChunks(r.ReadChunks()); break;
             case Msg.Clock when !_isHost: _game.ApplyClock(r.ReadClock(), snap: false); break;

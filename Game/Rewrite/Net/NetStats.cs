@@ -31,6 +31,17 @@ public sealed class NetStats
     /// <summary>Frames a remote player was drawn guessed ahead (a position came late), this second.</summary>
     public int Extrapolated { get; set; }
     public int ChunksIn { get; set; }
+    /// <summary>More for the line (the host: its load — animals, pieces, the server part's time; D138).</summary>
+    public Func<string>? Load { get; set; }
+    private double _frameMax, _frameSum, _serverMs, _serverMax;
+    private int _frames;
+
+    /// <summary>A frame went by (<paramref name="dt"/> s), of which the server part took <paramref name="serverMs"/>.</summary>
+    public void Frame(double dt, double serverMs)
+    {
+        _frames++; _frameSum += dt; _frameMax = Math.Max(_frameMax, dt);
+        _serverMs += serverMs; _serverMax = Math.Max(_serverMax, serverMs);
+    }
     public string? LogPath => _path;
 
     private double Now => (Time.GetTicksMsec() - _start) / 1000.0;
@@ -82,6 +93,13 @@ public sealed class NetStats
             sb.Append(c, $" | positions of #{id} every {a.SumGap / a.Count * 1000:0} ms (max {a.MaxGap * 1000:0})");
         if (Extrapolated > 0) sb.Append(c, $" | guessed ahead {Extrapolated} frames");
         if (ChunksIn > 0) sb.Append(c, $" | chunks in {ChunksIn}");
+        if (_frames > 0)
+        {
+            sb.Append(c, $" | {_frames} frames, {_frameSum / _frames * 1000:0.0} ms (max {_frameMax * 1000:0})");
+            if (_serverMs > 0) sb.Append(c, $", server part {_serverMs:0.0} ms (max {_serverMax:0.0} a frame)");
+        }
+        if (Load?.Invoke() is { Length: > 0 } load) sb.Append(" | " + load);
+        _frames = 0; _frameSum = _frameMax = _serverMs = _serverMax = 0;
         Write(sb.ToString());
         _second.Clear();
         foreach (var id in _arrivals.Keys.ToList()) _arrivals[id] = (_arrivals[id].Last, 0, 0, 0);

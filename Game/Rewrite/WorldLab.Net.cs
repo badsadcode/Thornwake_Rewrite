@@ -65,6 +65,7 @@ public partial class WorldLab : IWorldHost, IClientGame
             }
             _net = new NetSession { Name = "Net" };
             AddChild(_net);
+            _joinTarget = (target, port, name, version);
             _net.Join(target, port, this, name, version);
             _hitch.Report = _physicsHitch.Report = _net.Stats.Event;
             _tools.Remote = dig => _net.Client.SendDig(dig);
@@ -95,6 +96,73 @@ public partial class WorldLab : IWorldHost, IClientGame
 
     private double _testTime;
     private bool _mapShotDone;
+    private (string Address, int Port, string Name, string Version)? _joinTarget;
+    private NetBots? _bots;
+    private double _netRun = double.NaN, _botReport = 10;
+
+    /// <summary>
+    /// The real multiplayer test (D138). <c>--bots=N[--bot-spread=m]</c> on a joined game: N bot players more from this
+    /// PC (NetBots). <c>--net-run=seconds</c>: after that long the network summary goes into the log and the game
+    /// quits; on the host it also turns on the testing tools and normal animal numbers for the run (never saved).
+    /// </summary>
+    private void NetLoadTest(double delta)
+    {
+        if (_net == null || _sampler == null || _generation != null) return;
+        var args = OS.GetCmdlineUserArgs();
+        if (double.IsNaN(_netRun))
+        {
+            _netRun = args.FirstOrDefault(a => a.StartsWith("--net-run=")) is { } run ? double.Parse(run[10..], CultureInfo.InvariantCulture) : double.PositiveInfinity;
+            // (many animals: the heaviest case; Tom plays with many)
+            if (_net.IsHost && !double.IsInfinity(_netRun)) { _testingOverride = true; _animalsOverride ??= 2; if (_shotAt is { } at) Teleport(at.X, at.Z); }
+            // Where each frame's time goes (main thread steps, GPU), every second into the network log.
+            _hitch.Totals = new();
+            RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
+            _net.Stats.Load = () =>
+            {
+                var c = CultureInfo.InvariantCulture;
+                var steps = _hitch.Totals!.OrderByDescending(t => t.Value).Take(5).Select(t => string.Format(c, "{0} {1:0}", t.Key, t.Value)).ToList();
+                _hitch.Totals.Clear();
+                var vp = GetViewport().GetViewportRid();
+                string frame = string.Format(c, "main thread ms/s: {0} | GPU {1:0.0} ms a frame, {2} draw calls, {3:0} k triangles", string.Join(", ", steps),
+                    RenderingServer.ViewportGetMeasuredRenderTimeGpu(vp), Performance.GetMonitor(Performance.Monitor.RenderTotalDrawCallsInFrame),
+                    Performance.GetMonitor(Performance.Monitor.RenderTotalPrimitivesInFrame) / 1000);
+                string drawn = string.Format(c, "drawn: {0} players, {1} animals, {2} objects", _remotes.Count, _animalViews.Count, _objectViews.Count);
+                if (!_net.IsHost) return drawn + " | " + frame;
+                var (wild, animalMsgs) = _net.Server!.TakeTimes();
+                return _rules == null ? frame : string.Format(c,
+                    "players {0}, animals {1}, objects {2} (pieces {3}) | animals' thinking {4:0.0} ms/s, their messages {5:0.0} ms/s | memory {6:0} MB | {7} | {8}",
+                    _net.Server.PlayerCount, _rules.Wildlife.All.Count, _rules.Objects.All.Count, _rules.Objects.All.Count(o => _catalog.Piece(o.Kind) != null),
+                    wild, animalMsgs, OS.GetStaticMemoryUsage() / 1048576.0, drawn, frame);
+            };
+        }
+        if ((_netRun -= delta) <= 0 && _netRun > -1e8)
+        {
+            _netRun = -1e9;
+            if (_bots != null) _net.Stats.Event(_bots.Report(Math.Max(1, 10 - _botReport), _seenObjects.All.Count));
+            _net.Stats.Event("NETRUN summary:" + System.Environment.NewLine + _net.Stats.Summary(_net.Peers()));
+            GD.Print("NETRUN_DONE " + (_net.Stats.LogPath != null ? ProjectSettings.GlobalizePath(_net.Stats.LogPath) : ""));
+            _bots?.Close();
+            GetTree().CreateTimer(1).Timeout += () => GetTree().Quit();
+            return;
+        }
+        if (_bots == null && IsNetClient && _joinTarget is { } jt && _net.Client.Welcomed && _sampler != null && _generation == null
+            && ((IClientGame)this).LocalState() != null && args.FirstOrDefault(a => a.StartsWith("--bots=")) is { } bots)
+        {
+            double spread = args.FirstOrDefault(a => a.StartsWith("--bot-spread=")) is { } sp ? double.Parse(sp[13..], CultureInfo.InvariantCulture) : 0;
+            var sampler = _sampler;
+            _bots = new NetBots(int.Parse(bots[7..], CultureInfo.InvariantCulture), spread, jt.Address, jt.Port, jt.Name, jt.Version, _catalog,
+                (x, z) => sampler.Height(x, z), (x, z) => ((Thornwake.Gameplay.IWorldQuery)this).IsWater(x, z), _net.Stats.Event);
+        }
+        if (_bots == null) return;
+        _bots.Tick(delta);
+        if ((_botReport -= delta) > 0) return;
+        _botReport = 10;
+        // How far from where a bot really is this PC draws it (interpolated 100 ms back, plus the trip through the host).
+        var errors = _bots.Bots.Where(b => b.Welcomed).Select(b => _remotes.Values.FirstOrDefault(r => r.PlayerName == b.Name) is { Visible: true } r
+            ? Math.Sqrt(Math.Pow(r.Position.X + _originX - b.X, 2) + Math.Pow(r.Position.Z + _originZ - b.Z, 2)) : double.NaN).Where(e => !double.IsNaN(e)).ToList();
+        _net.Stats.Event(_bots.Report(10, _seenObjects.All.Count) + (errors.Count > 0
+            ? string.Format(CultureInfo.InvariantCulture, " | drawn here {0:0.00} m from where they are (max {1:0.00}, {2} bots)", errors.Average(), errors.Max(), errors.Count) : ""));
+    }
 
     private void NetTests(double delta)
     {
@@ -148,6 +216,7 @@ public partial class WorldLab : IWorldHost, IClientGame
     private void StepRemotes(double delta)
     {
         NetTests(delta);
+        NetLoadTest(delta);
         if (_remotes.Count == 0) return;
         double now = Time.GetTicksMsec() / 1000.0;
         foreach (var r in _remotes.Values) if (r.Step(now, (float)delta, _originX, _originZ) && _net != null) _net.Stats.Extrapolated++;

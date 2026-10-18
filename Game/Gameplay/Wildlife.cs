@@ -308,28 +308,49 @@ public sealed class Wildlife
 
     private static double Dist(double ax, double az, double bx, double bz) => Math.Sqrt((ax - bx) * (ax - bx) + (az - bz) * (az - bz));
 
-    // ---- network: the animals near one player (unreliable, ten a second): id, kind, place, heading, state, speed, health
+    // ---- network: the animals near one player (unreliable, ten a second). Compact (D138, the real multiplayer test: the
+    // animals were half of what twelve players were sent): the place they are measured from, then per animal its id, kind
+    // (an index into the kinds sorted by id), place in centimetres from there (±327 m), height, heading, state, speed and
+    // health — 18 bytes an animal instead of ~40.
+    public const double MessageRadius = 320;
+
     public void Write(BinaryWriter w, double x, double z, double radius)
     {
+        radius = Math.Min(radius, MessageRadius);
+        var kinds = Kinds(_defs.Select(d => d.Id));
         var near = _all.Values.Where(a => Dist(a.X, a.Z, x, z) < radius).ToList();
+        double rx = Math.Round(x), rz = Math.Round(z);
+        w.Write(rx); w.Write(rz);
         w.Write((ushort)near.Count);
         foreach (var a in near)
         {
-            w.Write(a.Id); w.Write(a.Def.Id); w.Write(a.X); w.Write((float)a.Y); w.Write(a.Z);
-            w.Write((float)a.Yaw); w.Write((byte)a.State); w.Write((float)a.Speed); w.Write((byte)Math.Clamp(Math.Round(a.Health / a.Def.Health * 255), 0, 255));
+            w.Write(a.Id); w.Write((byte)Math.Max(0, kinds.IndexOf(a.Def.Id)));
+            w.Write((short)Math.Clamp(Math.Round((a.X - rx) * 100), short.MinValue, short.MaxValue));
+            w.Write((short)Math.Clamp(Math.Round((a.Z - rz) * 100), short.MinValue, short.MaxValue));
+            w.Write((float)a.Y);
+            w.Write((ushort)Math.Round((a.Yaw / Math.Tau - Math.Floor(a.Yaw / Math.Tau)) * 65535));
+            w.Write((byte)a.State);
+            w.Write((byte)Math.Clamp(Math.Round(a.Speed * 10), 0, 255));
+            w.Write((byte)Math.Clamp(Math.Round(a.Health / a.Def.Health * 255), 0, 255));
         }
     }
+
+    /// <summary>The kinds in the order the message numbers them (both ends load the same catalogue).</summary>
+    private static List<string> Kinds(IEnumerable<string> ids) => ids.OrderBy(k => k, StringComparer.Ordinal).ToList();
 
     /// <summary>A client's copy: the animals in the message (kinds it does not know are skipped).</summary>
     public static List<Animal> Read(BinaryReader r, IReadOnlyDictionary<string, AnimalDef> defs)
     {
+        var kinds = Kinds(defs.Keys);
         var list = new List<Animal>();
+        double rx = r.ReadDouble(), rz = r.ReadDouble();
         for (int n = r.ReadUInt16(); n > 0; n--)
         {
-            int id = r.ReadInt32(); string kind = r.ReadString();
-            double x = r.ReadDouble(); float y = r.ReadSingle(); double z = r.ReadDouble();
-            float yaw = r.ReadSingle(); var state = (AnimalState)r.ReadByte(); float speed = r.ReadSingle(); byte health = r.ReadByte();
-            if (!defs.TryGetValue(kind, out var def)) continue;
+            int id = r.ReadInt32(); int kind = r.ReadByte();
+            double x = rx + r.ReadInt16() / 100.0, z = rz + r.ReadInt16() / 100.0; float y = r.ReadSingle();
+            double yaw = r.ReadUInt16() / 65535.0 * Math.Tau; var state = (AnimalState)r.ReadByte();
+            double speed = r.ReadByte() / 10.0; byte health = r.ReadByte();
+            if (kind >= kinds.Count || !defs.TryGetValue(kinds[kind], out var def)) continue;
             list.Add(new Animal { Id = id, Def = def, X = x, Y = y, Z = z, Yaw = yaw, State = state, Speed = speed, Health = health / 255.0 * def.Health });
         }
         return list;

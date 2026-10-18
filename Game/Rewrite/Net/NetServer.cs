@@ -60,6 +60,12 @@ public sealed class NetServer
     public Action<string>? Log { get; set; }
 
     public int PlayerCount => _players.Count(p => p.Value.Welcomed);
+
+    /// <summary>Time spent (ms, since the last <see cref="TakeTimes"/>) on the animals' thinking and on writing what
+    /// each player is told about them (D138: the host's load in the real multiplayer test).</summary>
+    public (double Wildlife, double AnimalMessages) TakeTimes() { var t = (_wildlifeMs, _animalSendMs); _wildlifeMs = _animalSendMs = 0; return t; }
+    private double _wildlifeMs, _animalSendMs;
+    private readonly System.Diagnostics.Stopwatch _watch = new();
     public IEnumerable<string> PlayerNames => _players.Values.Where(p => p.Welcomed).Select(p => p.Name);
 
     public void Connected(long peer) => _players[peer] = new Player();
@@ -176,13 +182,17 @@ public sealed class NetServer
         if ((_stateTimer -= dt) <= 0)
         {
             _stateTimer = Math.Max(_stateTimer + .05, 0); // (20 a second on average, at most one a frame)
+            _farTick = (_farTick + 1) % 5;
             var moving = _players.Where(p => p.Value.Welcomed && p.Value.HasState).ToList();
+            // To each player the others (not themselves): those within NearPlayers m every time (20 a second), those farther
+            // every fifth (4 a second; D138).
             if (moving.Count > 1)
-                Broadcast(NetMessages.Build(Msg.Players, w =>
+                foreach (var (to, rp) in _players.Where(p => p.Value.Welcomed))
                 {
-                    w.Write(moving.Count);
-                    foreach (var (id, p) in moving) { w.Write((int)id); w.Write(p.State); }
-                }), false);
+                    var list = moving.Where(m => m.Key != to && (_farTick == 0 || !rp.HasState || Near(rp.State, m.Value.State)))
+                        .Select(m => ((int)m.Key, m.Value.State)).ToList();
+                    if (list.Count > 0) _send(to, NetMessages.Build(Msg.Players, w => w.WritePlayers(list)), false);
+                }
         }
         if ((_clockTimer -= dt) <= 0) { _clockTimer = 1; Broadcast(NetMessages.Build(Msg.Clock, w => w.Write(_world.Clock())), false, except: HostPeer); }
         StepAnimals(dt);
@@ -190,6 +200,13 @@ public sealed class NetServer
     }
 
     private double _animalTimer;
+    private int _farTick;
+
+    /// <summary>Players farther apart than this (m) are told each other's positions 4 times a second, not 20 (D138).</summary>
+    public const double NearPlayers = 400;
+
+    private static bool Near(in PlayerState a, in PlayerState b) =>
+        (a.X - b.X) * (a.X - b.X) + (a.Z - b.Z) * (a.Z - b.Z) < NearPlayers * NearPlayers;
 
     /// <summary>The animals (D120): they sense every player who is in the world; each player is told about those near
     /// them ten times a second, and hurt players are told at once.</summary>
@@ -201,14 +218,18 @@ public sealed class NetServer
                 Math.Sqrt(p.Value.State.Vx * p.Value.State.Vx + p.Value.State.Vz * p.Value.State.Vz), (p.Value.State.Flags & PlayerFlags.Flying) != 0,
                 (p.Value.State.Held & 0x80) != 0)).ToList();
         if (hunters.Count == 0) return;
+        _watch.Restart();
         rules.StepWildlife(dt, hunters);
+        _wildlifeMs += _watch.Elapsed.TotalMilliseconds;
         foreach (var hurt in rules.TakeHurts())
             if (_players.TryGetValue(hurt.Player, out var p) && p.Welcomed)
                 _send(hurt.Player, NetMessages.Build(Msg.Hurt, w => { w.Write(hurt.Damage); w.Write(hurt.FromX); w.Write(hurt.FromZ); w.Write(hurt.Who); }), true);
         if ((_animalTimer -= dt) > 0) return;
         _animalTimer = Math.Max(_animalTimer + Wildlife.StepSeconds, 0);
+        _watch.Restart();
         foreach (var h in hunters)
             _send(h.Id, NetMessages.Build(Msg.Animals, w => rules.Wildlife.Write(w, h.X, h.Z, 230)), false);
+        _animalSendMs += _watch.Elapsed.TotalMilliseconds;
     }
 
     /// <summary>The host changed a world-affecting setting: everyone takes it.</summary>

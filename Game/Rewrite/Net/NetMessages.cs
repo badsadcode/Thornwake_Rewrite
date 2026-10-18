@@ -75,7 +75,7 @@ public readonly record struct DigRequest(BrushMode Mode, BrushShape Shape, doubl
 public static class NetMessages
 {
     /// <summary>Changes whenever the messages change: a client and host with different versions do not connect.</summary>
-    public const int Protocol = 10;
+    public const int Protocol = 11;
 
     public static byte[] Build(Msg kind, Action<BinaryWriter> body)
     {
@@ -102,6 +102,41 @@ public static class NetMessages
 
     public static PlayerState ReadState(this BinaryReader r) =>
         new(r.ReadDouble(), r.ReadDouble(), r.ReadDouble(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), (PlayerFlags)r.ReadByte(), r.ReadByte());
+
+    /// <summary>
+    /// Everyone's movement as a player is sent it (Msg.Players; D138, compact since the real multiplayer test: twelve
+    /// players' positions were 11 KB/s for each of them): the place they are measured from, then per player id, place
+    /// (4-byte offsets: millimetres within 100 km), facing (1/65536 of a turn), velocity (half floats), flags — 26 bytes.
+    /// </summary>
+    public static void WritePlayers(this BinaryWriter w, IReadOnlyList<(int Id, PlayerState State)> players)
+    {
+        double rx = players.Count > 0 ? Math.Round(players[0].State.X) : 0, rz = players.Count > 0 ? Math.Round(players[0].State.Z) : 0;
+        w.Write(rx); w.Write(rz);
+        w.Write((ushort)players.Count);
+        foreach (var (id, s) in players)
+        {
+            w.Write(id);
+            w.Write((float)(s.X - rx)); w.Write((float)s.Y); w.Write((float)(s.Z - rz));
+            w.Write((ushort)Math.Round((s.Facing / Math.Tau - Math.Floor(s.Facing / Math.Tau)) * 65535));
+            w.Write((Half)s.Vx); w.Write((Half)s.Vy); w.Write((Half)s.Vz);
+            w.Write((byte)s.Flags); w.Write(s.Held);
+        }
+    }
+
+    public static List<(int Id, PlayerState State)> ReadPlayers(this BinaryReader r)
+    {
+        double rx = r.ReadDouble(), rz = r.ReadDouble();
+        var list = new List<(int, PlayerState)>();
+        for (int n = r.ReadUInt16(); n > 0; n--)
+        {
+            int id = r.ReadInt32();
+            double x = rx + r.ReadSingle(), y = r.ReadSingle(), z = rz + r.ReadSingle();
+            float facing = (float)(r.ReadUInt16() / 65535.0 * Math.Tau);
+            float vx = (float)r.ReadHalf(), vy = (float)r.ReadHalf(), vz = (float)r.ReadHalf();
+            list.Add((id, new PlayerState(x, y, z, facing, vx, vy, vz, (PlayerFlags)r.ReadByte(), r.ReadByte())));
+        }
+        return list;
+    }
 
     public static void Write(this BinaryWriter w, in ClockState c)
     {

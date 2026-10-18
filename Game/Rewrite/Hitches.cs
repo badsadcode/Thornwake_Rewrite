@@ -25,8 +25,12 @@ public sealed class Hitches
     {
         double now = _clock.Elapsed.TotalMilliseconds;
         _steps.Add((step, now - _last));
+        if (Totals != null) Totals[step] = Totals.GetValueOrDefault(step) + now - _last;
         _last = now;
     }
+
+    /// <summary>When set, each step's time adds up here (the network log's per-second breakdown; D138).</summary>
+    public Dictionary<string, double>? Totals { get; set; }
 
     public void End(string context)
     {

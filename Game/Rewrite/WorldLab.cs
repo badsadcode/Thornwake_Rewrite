@@ -765,8 +765,11 @@ public partial class WorldLab : Node3D
         }
         if (_overlay.Visible && _generation == null && _streamer.Missing < 20) _overlay.Visible = false;
         UpdateCamera();
+        _hitch.Mark("camera");
         StepRemotes(delta);
+        _hitch.Mark("other players, network tests");
         UpdateGameplay(delta);
+        _hitch.Mark("gameplay");
         UpdateMaking(delta);
         UpdateGathering(delta);
         UpdateFishing(delta);
@@ -779,6 +782,7 @@ public partial class WorldLab : Node3D
         FishTest(delta);
         SaveTest(delta);
         UpdateAutosave(delta);
+        _hitch.Mark("making, gathering, fishing, tests");
         var cam = _camera.GlobalPosition;
         RenderingServer.GlobalShaderParameterSet("tree_camera", new Vector4(cam.X, cam.Y, cam.Z, 0)); // tree hand-overs (TreeFade)
         double latitude = _sampler.Plan.Climate.Latitude(PlayerZ);

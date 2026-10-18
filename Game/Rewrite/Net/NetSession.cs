@@ -23,6 +23,7 @@ public sealed partial class NetSession : Node
     private SceneMultiplayer _mp = null!;
     private Func<PlayerState?> _hostState = () => null;
     private string _name = "", _version = "";
+    private readonly System.Diagnostics.Stopwatch _watch = new();
 
     /// <summary>Host on <paramref name="port"/>: the server part plus this player's client part.</summary>
     public Error Host(int port, IWorldHost world, IClientGame game, string name, string version)
@@ -115,7 +116,9 @@ public sealed partial class NetSession : Node
     public override void _Process(double delta)
     {
         if (_peer == null) return;
+        _watch.Restart();
         Server?.Tick(delta, _hostState());
+        Stats.Frame(delta, Server != null ? _watch.Elapsed.TotalMilliseconds : 0);
         Client.Tick(delta);
         Stats.Tick(delta, Peers());
     }

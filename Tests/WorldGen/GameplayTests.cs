@@ -16,6 +16,51 @@ internal static class GameplayTests
         T.Run("Gameplay: saving — a world's changes and players by name, written and read back (D116)", Saving, filter);
         T.Run("Gameplay: hunting — animals graze, notice, flee, hunt; weapons, arrows, carcasses, butchering (D120)", Hunting, filter);
         T.Run("Gameplay: building — blueprints, materials, snapping, swapping shapes, overlaps, roofs shelter (D121)", BuildingWorks, filter);
+        T.Run("Gameplay: placed objects found by a grid — the same as a walk over all, through moves, removals, copies (D138)", ObjectGrid, filter);
+    }
+
+    private static void ObjectGrid()
+    {
+        var rng = new Random(5);
+        var host = new PlacedObjects();
+        var copy = new PlacedObjects();
+        void Same(PlacedObjects objects, string what)
+        {
+            int bad = 0;
+            for (int q = 0; q < 300; q++)
+            {
+                double x = rng.NextDouble() * 400 - 200, z = rng.NextDouble() * 400 - 200, reach = rng.NextDouble() * 60;
+                var fast = objects.Near(x, z, reach).Select(o => o.Id).ToList();
+                var slow = objects.All.Where(o => (o.X - x) * (o.X - x) + (o.Z - z) * (o.Z - z) <= reach * reach).Select(o => o.Id).ToList();
+                if (!fast.SequenceEqual(slow)) bad++;
+            }
+            T.Check(bad == 0, $"{what}: the grid finds what a walk over all finds, in the same order ({bad} of 300 differ)");
+        }
+        for (int i = 0; i < 2000; i++) host.Add(i % 3 == 0 ? "trunk" : "log_wall", rng.NextDouble() * 400 - 200, 0, rng.NextDouble() * 400 - 200, 0, 0);
+        Same(host, "2000 objects");
+        foreach (var o in host.All.Where(o => o.Kind == "trunk").ToList()) { o.Owner = 3; host.Move(3, o.Id, o.X + rng.NextDouble() * 50 - 25, 0, o.Z + rng.NextDouble() * 50 - 25, 0, 0, 0, 1); }
+        foreach (var o in host.All.Take(50).ToList()) { o.X += 33; o.Z -= 17; } // (set directly, as the felling code does)
+        Same(host, "after moves");
+        foreach (var o in host.All.Where(o => o.Id % 7 == 0).ToList()) host.Remove(o.Id);
+        Same(host, "after removals");
+        // A client's copy, sent everything and then the changes (a removal, a move written again).
+        var ms = new MemoryStream();
+        using (var w = new BinaryWriter(ms, System.Text.Encoding.UTF8, true)) foreach (var o in host.All) host.Write(w, o.Id);
+        ms.Position = 0;
+        using (var r = new BinaryReader(ms)) for (int i = host.All.Count; i > 0; i--) copy.Read(r);
+        Same(copy, "a client's copy");
+        long gone = host.All.First().Id, moved = host.All.Last().Id;
+        host.Remove(gone);
+        host.Get(moved)!.X += 100;
+        ms = new MemoryStream();
+        using (var w = new BinaryWriter(ms, System.Text.Encoding.UTF8, true)) { host.Write(w, gone); host.Write(w, moved); }
+        ms.Position = 0;
+        using (var r = new BinaryReader(ms)) { copy.Read(r); copy.Read(r); }
+        T.Check(copy.Get(gone) == null && copy.All.Count == host.All.Count && copy.Near(host.Get(moved)!.X, host.Get(moved)!.Z, .1).Any(o => o.Id == moved),
+            "a removal and a move reach the copy's grid");
+        Same(copy, "the copy after changes");
+        copy.Clear();
+        T.Check(!copy.Near(0, 0, 300).Any(), "cleared: nothing near");
     }
 
     private static Catalog Load() => new(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Content/gameplay_items.json")),
@@ -462,7 +507,11 @@ internal static class GameplayTests
         using (var w = new BinaryWriter(ms, System.Text.Encoding.UTF8, true)) rules.Wildlife.Write(w, 0, 0, 200);
         ms.Position = 0;
         var copy = Wildlife.Read(new BinaryReader(ms), c.Animals);
-        T.Check(copy.Count == 1 && copy[0].Def.Id == "wolf" && Math.Abs(copy[0].X - wolf.X) < 1e-9 && copy[0].State == wolf.State, "animals over the network");
+        T.Check(copy.Count == 1 && copy[0].Def.Id == "wolf" && Math.Abs(copy[0].X - wolf.X) < .006 && Math.Abs(copy[0].Z - wolf.Z) < .006
+            && Math.Abs(copy[0].Y - wolf.Y) < .01 && Math.Abs(Math.IEEERemainder(copy[0].Yaw - wolf.Yaw, Math.Tau)) < 1e-3
+            && Math.Abs(copy[0].Speed - wolf.Speed) <= .05 && copy[0].State == wolf.State, $"animals over the network ({copy.Count}, {(copy.Count > 0 ? copy[0].X - wolf.X : 0):0.0000} m)");
+        // (compact: 18 bytes an animal; D138)
+        T.Check(ms.Length == 8 + 8 + 2 + 18, $"an animal takes 18 bytes ({ms.Length - 18})");
     }
 
     private static void BuildingWorks()

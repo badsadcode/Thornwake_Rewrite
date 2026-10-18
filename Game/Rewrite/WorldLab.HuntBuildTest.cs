@@ -241,6 +241,7 @@ public partial class WorldLab
     private double _censusTimer = double.NaN, _scanTestTimer = double.NaN;
     private double _guestTimer = double.NaN;
     private int _guestStage;
+    private System.Collections.Generic.HashSet<long> _guestFires = new();
 
     /// <summary>
     /// --spawn=kind,kind…: animals put down around the player once the world is ready (host; a debug aid).
@@ -312,11 +313,13 @@ public partial class WorldLab
                 TestShot("-guest");
                 var dir = new Vector2(-Mathf.Sin(_yaw), -Mathf.Cos(_yaw));
                 double x = PlayerX + dir.X * 3, z = PlayerZ + dir.Y * 3;
+                _guestFires = _seenObjects.All.Select(o => o.Id).ToHashSet();
                 Act(new ActionRequest(ActionKind.Place, 0, 0, "campfire", x, _sampler.Height(x, z), z, 0));
                 _guestStage = 1; _guestTimer = 2; break;
             case 1:
-                bool ok = _seenObjects.All.Any(o => o.Kind == "campfire" && o.Blueprint && Math.Abs(o.X - PlayerX) < 6 && Math.Abs(o.Z - PlayerZ) < 6);
-                GD.Print((ok ? "GUEST ok: " : "GUEST_FAIL: ") + $"my campfire blueprint, placed through the host ({_status})");
+                // (a new one: a blueprint, or built at once when the host has the testing tools on)
+                bool ok = _seenObjects.All.Any(o => o.Kind == "campfire" && !_guestFires.Contains(o.Id) && Math.Abs(o.X - PlayerX) < 6 && Math.Abs(o.Z - PlayerZ) < 6);
+                GD.Print((ok ? "GUEST ok: " : "GUEST_FAIL: ") + $"my campfire, placed through the host ({_status})");
                 GD.Print("GUEST_DONE");
                 _guestStage = 2;
                 GetTree().CreateTimer(1).Timeout += () => GetTree().Quit();

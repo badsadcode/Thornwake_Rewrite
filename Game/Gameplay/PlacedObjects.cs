@@ -10,9 +10,14 @@ public sealed class PlacedObject
 {
     public long Id { get; init; }
     public required string Kind { get; init; }
-    public double X { get; set; }
+    private double _x, _z;
+    /// <summary>The collection that holds it (it keeps its grid of where things are up to date when it moves).</summary>
+    internal PlacedObjects? Home;
+    /// <summary>When it came into its collection (Near lists in that order, as before the grid).</summary>
+    internal long Sequence;
+    public double X { get => _x; set { if (Home == null || value == _x) { _x = value; return; } Home.Unindex(this); _x = value; Home.Index(this); } }
     public double Y { get; set; }
-    public double Z { get; set; }
+    public double Z { get => _z; set { if (Home == null || value == _z) { _z = value; return; } Home.Unindex(this); _z = value; Home.Index(this); } }
     public float Yaw { get; init; }
     /// <summary>Full orientation (a quaternion) for objects that move (a trunk rolls); identity otherwise.</summary>
     public float Qx { get; set; }
@@ -50,7 +55,43 @@ public sealed class PlacedObjects
 {
     private readonly Dictionary<long, PlacedObject> _all = new();
     private readonly HashSet<long> _changed = new();
-    private long _next = 1;
+    private long _next = 1, _sequence;
+    // Where things are, in 16 m cells (D138: animals ask what is near them ten times a second, and with a few thousand
+    // pieces built by twelve players a walk over all of them was most of the host's time).
+    private const double Cell = 16;
+    private readonly Dictionary<(long, long), List<PlacedObject>> _grid = new();
+
+    private static (long, long) CellOf(double x, double z) => ((long)Math.Floor(x / Cell), (long)Math.Floor(z / Cell));
+
+    internal void Index(PlacedObject o)
+    {
+        var key = CellOf(o.X, o.Z);
+        if (!_grid.TryGetValue(key, out var list)) _grid[key] = list = new List<PlacedObject>();
+        list.Add(o);
+    }
+
+    internal void Unindex(PlacedObject o)
+    {
+        var key = CellOf(o.X, o.Z);
+        if (_grid.TryGetValue(key, out var list) && list.Remove(o) && list.Count == 0) _grid.Remove(key);
+    }
+
+    private void Put(PlacedObject o)
+    {
+        if (_all.Remove(o.Id, out var old)) { Unindex(old); old.Home = null; o.Sequence = old.Sequence; }
+        else o.Sequence = ++_sequence;
+        _all[o.Id] = o;
+        Index(o);
+        o.Home = this;
+    }
+
+    private bool Take(long id)
+    {
+        if (!_all.Remove(id, out var o)) return false;
+        Unindex(o);
+        o.Home = null;
+        return true;
+    }
 
     public IReadOnlyCollection<PlacedObject> All => _all.Values;
     public PlacedObject? Get(long id) => _all.GetValueOrDefault(id);
@@ -58,17 +99,30 @@ public sealed class PlacedObjects
     public PlacedObject Add(string kind, double x, double y, double z, float yaw, double fuel)
     {
         var o = new PlacedObject { Id = _next++, Kind = kind, X = x, Y = y, Z = z, Yaw = yaw, Fuel = fuel };
-        _all[o.Id] = o;
+        Put(o);
         _changed.Add(o.Id);
         return o;
     }
 
-    public void Remove(long id) { if (_all.Remove(id)) _changed.Add(id); }
+    public void Remove(long id) { if (Take(id)) _changed.Add(id); }
     public void Touch(long id) => _changed.Add(id);
 
     /// <summary>The objects within <paramref name="reach"/> m (horizontally) of a point.</summary>
-    public IEnumerable<PlacedObject> Near(double x, double z, double reach) =>
-        _all.Values.Where(o => (o.X - x) * (o.X - x) + (o.Z - z) * (o.Z - z) <= reach * reach);
+    public IEnumerable<PlacedObject> Near(double x, double z, double reach)
+    {
+        if (reach > 40 * Cell || !double.IsFinite(x + z + reach))
+            return _all.Values.Where(o => (o.X - x) * (o.X - x) + (o.Z - z) * (o.Z - z) <= reach * reach);
+        var (x0, z0) = CellOf(x - reach, z - reach);
+        var (x1, z1) = CellOf(x + reach, z + reach);
+        var found = new List<PlacedObject>();
+        for (long cz = z0; cz <= z1; cz++)
+            for (long cx = x0; cx <= x1; cx++)
+                if (_grid.TryGetValue((cx, cz), out var list))
+                    foreach (var o in list)
+                        if ((o.X - x) * (o.X - x) + (o.Z - z) * (o.Z - z) <= reach * reach) found.Add(o);
+        if (found.Count > 1) found.Sort((a, b) => a.Sequence.CompareTo(b.Sequence));
+        return found;
+    }
 
     /// <summary>Fires burn their fuel (game minutes). A fire going out counts as a change (everyone sees it die).</summary>
     public void Step(double minutes)
@@ -98,7 +152,11 @@ public sealed class PlacedObjects
 
     public List<long> TakeMoved() { var l = _moved.ToList(); _moved.Clear(); return l; }
 
-    public void Clear() { foreach (var id in _all.Keys) _changed.Add(id); _all.Clear(); }
+    public void Clear()
+    {
+        foreach (var (id, o) in _all) { _changed.Add(id); o.Home = null; }
+        _all.Clear(); _grid.Clear();
+    }
 
     // ---- network: an object's full state, or its id with no kind for a removed one.
     public void Write(BinaryWriter w, long id)
@@ -125,7 +183,7 @@ public sealed class PlacedObjects
     {
         long id = r.ReadInt64();
         string kind = r.ReadString();
-        if (kind.Length == 0) { _all.Remove(id); return (id, null); }
+        if (kind.Length == 0) { Take(id); return (id, null); }
         var o = new PlacedObject { Id = id, Kind = kind, X = r.ReadDouble(), Y = r.ReadDouble(), Z = r.ReadDouble(), Yaw = r.ReadSingle() };
         o.Fuel = r.ReadDouble();
         o.Qx = r.ReadSingle(); o.Qy = r.ReadSingle(); o.Qz = r.ReadSingle(); o.Qw = r.ReadSingle(); o.Size = r.ReadSingle();
@@ -136,7 +194,7 @@ public sealed class PlacedObjects
             o.Blueprint = r.ReadBoolean(); o.State = r.ReadInt32(); o.Ref = r.ReadString();
             for (int n = r.ReadByte(); n > 0; n--) o.Supplied.Add((r.ReadString(), r.ReadInt32()));
         }
-        _all[id] = o;
+        Put(o);
         _next = Math.Max(_next, id + 1);
         return (id, o);
     }
