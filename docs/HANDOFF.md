@@ -119,6 +119,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
    near the camera, more sun energy into the forest air, stronger forward scattering; benchmark the cost (`docs/BENCHMARK.md`);
    (3) if that cannot reach it: our own ray pass (a CompositorEffect marching each pixel's view ray through the sun's
    shadow map), the feasibility review's second option. Every new quality level is a **player setting** (D142).
+   **Progress (D143, 2026-10-18)**: (1) done — suite `rays2` (sunrise, first person), captures in `artifacts/rays/`;
+   (2) done as a draft — *Forest rays → A2* and *Volumetric fog quality* (off … very high). **Waiting for Tom**: his
+   HDRP screenshots in `docs/references/` and a look at A vs A2; then either tune A2 further or start step 3.
 4. Make captures smaller for Tom (downscaled JPGs, one side-by-side image per A/B) — promised.
 5. Later milestones: M1 pause point 3 (warm sun glow, moon halo), M3 single-pass cloud model (acceptance shots: dumps
    115949 / 120402), M4 haze and distance, biome light profile tuning (`Content/light_profiles.json`).

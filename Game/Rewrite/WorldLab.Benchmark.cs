@@ -40,6 +40,8 @@ public partial class WorldLab
         /// <summary>Turn the camera at the start of the measurement: "sun" (toward the sun's azimuth, for glare and sun
         /// shafts) or "sea" (toward the most open water within 2 km, for the horizon); the view's pitch is kept.</summary>
         public string? Face { get; init; }
+        /// <summary>Mist forced for this scene, [amount] or [amount, 1] (a bank everywhere), as <c>--mist</c> (M2 rays).</summary>
+        public double[]? Mist { get; init; }
     }
 
     private sealed record BenchJob(BenchScenario Scene, Dictionary<string, double> Variant, string Label);
@@ -137,7 +139,7 @@ public partial class WorldLab
         }
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), true);
         _menu.Visible = false;
-        if (_bench.Capture) { _bench.HudWas = _showHud; _showHud = false; _hud.Visible = false; _help.Visible = false; Directory.CreateDirectory(Path.Combine(outDir, "captures")); }
+        if (_bench.Capture) { _bench.HudWas = _showHud; _showHud = false; _hud.Visible = false; _help.Visible = false; _needsLabel.GetParent<CanvasLayer>().Visible = false; Directory.CreateDirectory(Path.Combine(outDir, "captures")); }
         Input.MouseMode = Input.MouseModeEnum.Captured;
         _benchLabel.Visible = true;
         GD.Print($"BENCH start suite={suite} profile={profile} jobs={jobs.Count} out={outDir}");
@@ -156,6 +158,7 @@ public partial class WorldLab
         {
             Move = o["move"]?.GetValue<string>(),
             Face = o["face"]?.GetValue<string>(),
+            Mist = D("mist"),
             Settings = o["settings"]?.AsObject().ToDictionary(p => p.Key, p => p.Value!.GetValue<double>()) ?? new(),
             World = o["world"] is { } w ? config["worlds"]?[w.GetValue<string>()]?.AsObject() ?? throw new ArgumentException($"no benchmark world '{w}'") : null,
         };
@@ -237,6 +240,7 @@ public partial class WorldLab
                 else if (scene.View is { Length: 3 } v) { _yaw = v[0]; _pitch = v[1]; _zoom = v[2]; }
                 _arm.SpringLength = _zoom;
                 _pendingHour = scene.Hour;
+                BenchMist(scene);
                 run.Distance = 0;
                 Next(BenchStage.Settle);
                 break;
@@ -340,6 +344,25 @@ public partial class WorldLab
         }
 
         void Next(BenchStage stage) { run.Stage = stage; run.StageTime = 0; run.StableTime = 0; }
+    }
+
+    private (float? Amount, bool Bank)? _benchMistWas;
+
+    /// <summary>A scene's forced mist (null: back to what it was before the first scene that forced one, e.g. --mist).</summary>
+    private void BenchMist(BenchScenario? scene)
+    {
+        if (scene?.Mist is { Length: > 0 } m)
+        {
+            _benchMistWas ??= (_atmosphere.MistOverride, _atmosphere.MistBankEverywhere);
+            _atmosphere.MistOverride = (float)m[0];
+            _atmosphere.MistBankEverywhere = m.Length > 1 && m[1] > 0;
+        }
+        else if (_benchMistWas is var (amount, bank))
+        {
+            _atmosphere.MistOverride = amount;
+            _atmosphere.MistBankEverywhere = bank;
+            _benchMistWas = null;
+        }
     }
 
     /// <summary>A scene's "face": the yaw toward the sun or the open sea (camera forward at yaw θ is (−sin θ, −cos θ)).</summary>
@@ -701,9 +724,10 @@ public partial class WorldLab
         foreach (var (k, v) in _benchAblationRestore) if (GameSettings.All.FirstOrDefault(s => s.Key == k) is { } s) s.Value = v;
         _benchAblationRestore.Clear();
         foreach (var s in GameSettings.All) if (run.Saved.TryGetValue(s.Key, out double v)) s.Value = v;
+        BenchMist(null);
         RenderingServer.ViewportSetMeasureRenderTime(GetViewport().GetViewportRid(), false);
         _benchLabel.Visible = false;
-        if (run.Capture) { _showHud = run.HudWas; _hud.Visible = _showHud; _help.Visible = true; }
+        if (run.Capture) { _showHud = run.HudWas; _hud.Visible = _showHud; _help.Visible = true; _needsLabel.GetParent<CanvasLayer>().Visible = true; }
         var fps = run.Results.Select(r => r!["fps_avg"]!.GetValue<double>()).Where(f => f > 0).ToList();
         var json = new JsonObject
         {

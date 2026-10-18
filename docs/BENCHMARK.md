@@ -94,6 +94,12 @@ dawn, beside the lake, coast at dusk, and a flight over a mountain ridge through
   option `"face": "sun"` / `"sea"` turns the camera toward the sun or the most open water when the shot starts.
 * **Forest rays (suite `rays`, M2)**: forest shafts facing the sun, forest walk and forest noon, every still with
   *Forest rays* build 47 / A / B (`…-forest_rays-0.jpg`, `-1`, `-2`).
+* **Forest rays at sunrise (suite `rays2`, M2, D143)**: first person facing the sun and turning, 05:24 with light mist
+  (target: Unity HDRP's rays). Compare with `--bench-compare=fx.forest_rays=1,3` (A / A2). Scene option
+  `"mist": [amount]` or `[amount, 1]` forces mist as `--mist` does. `--ray-dev=size=160,depth=128,length=80,...`
+  (developer tool) overrides the fog grid and the forest air's tuning (keys in `Atmosphere.RayDev`).
+* `--ray-spot=x,z,azimuth[,elevation[,radius]]` (developer tool): dense level forest with the land toward a low sun
+  below it (so the sun shines between the trunks, not from behind a hill).
 * `--clear-spot=x,z` (developer tool): the nearest small clearing in dense forest (no tree within 9.5 m), so a capture
   camera circling behind the player stays out of the crowns.
 * Sites were found with `--find-sites` (developer tool: nearest dense forest, swamp, taiga, desert, plains, ridge and

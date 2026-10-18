@@ -97,6 +97,46 @@ public partial class WorldLab
         GetTree().Quit();
     }
 
+    private bool _raySpotPending = OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--ray-spot="));
+
+    /// <summary><c>--ray-spot=x,z,azimuth[,elevation[,radius]]</c> (M2 rays): places within the radius (default 1500 m)
+    /// in dense temperate forest on near-level ground, where the land toward the sun's azimuth (degrees from north,
+    /// clockwise) stays below the sun's elevation (default 10°) for 1.5 km, so a low sun shines in through the trunks
+    /// rather than from behind a hill; the best few printed, then quit.</summary>
+    private void RaySpot()
+    {
+        var s = _sampler!;
+        var v = OS.GetCmdlineUserArgs().First(a => a.StartsWith("--ray-spot="))[11..].Split(',').Select(t => double.Parse(t, CultureInfo.InvariantCulture)).ToArray();
+        double cx = v[0], cz = v[1], az = Mathf.DegToRad(v[2]), el = v.Length > 3 ? v[3] : 10, r = v.Length > 4 ? v[4] : 1500;
+        double sx = Math.Sin(az), sz = -Math.Cos(az), horizon = Math.Tan(Mathf.DegToRad(el - 4));
+        var config = DetailConfig.For(s);
+        var found = new List<(double Score, double X, double Z, string Note)>();
+        for (double z = cz - r; z <= cz + r; z += 50)
+            for (double x = cx - r; x <= cx + r; x += 50)
+            {
+                var t = s.Sample(x, z);
+                if (t.Water != WaterKind.None) continue;
+                var (ba, _, share) = s.Plan.Biomes.Sample(x, z);
+                if (share < .8 || s.Plan.Biomes.Pool[ba].Def.Id != "temperate-forest") continue;
+                double forest = Vegetation.ForestDensity(s, x, z, t, config.ForestCover);
+                if (forest < .7) continue;
+                double rise = 0;
+                foreach (var (ox, oz) in new[] { (30.0, 0.0), (-30.0, 0.0), (0.0, 30.0), (0.0, -30.0) })
+                    rise = Math.Max(rise, Math.Abs(s.Sample(x + ox, z + oz).Height - t.Height) / 30);
+                if (rise > .12) continue;
+                double block = -1;
+                for (double d = 60; d <= 1500; d += 30)
+                    block = Math.Max(block, (s.Sample(x + sx * d, z + sz * d).Height - t.Height) / d);
+                if (block > horizon) continue;
+                double score = forest - rise * 2 - Math.Max(0, block) * 3;
+                found.Add((score, x, z, string.Create(CultureInfo.InvariantCulture, $"forest {forest:0.00}, slope {rise:0.00}, land toward the sun {Mathf.RadToDeg(Math.Atan(block)):0.0}°")));
+            }
+        foreach (var f in found.OrderByDescending(f => f.Score).Take(8))
+            GD.Print(string.Create(CultureInfo.InvariantCulture, $"RAY_SPOT [{f.X:0.0}, {f.Z:0.0}] {f.Note}"));
+        GD.Print($"RAY_SPOT_DONE ({found.Count} places)");
+        GetTree().Quit(0);
+    }
+
     private void FindSites()
     {
         var s = _sampler!;

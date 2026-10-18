@@ -133,6 +133,12 @@
       "at": [-4641.8, 4412.6], "view": [0, 0.32, 6], "height": 0, "hour": 9, "seconds": 6 },
     { "id": "art-sky-seams", "name": "Artefact: sky seams (looking up, broken cloud, turning)", "world": "patch32", "move": "turn",
       "at": [-4001.0, 5631.3], "view": [0, 0.55, 6], "height": 0, "hour": 12, "seconds": 20, "settings": { "sky.clouds": 0.6 } },
+    { "id": "rays-sunrise", "name": "M2 rays: temperate forest at sunrise (05:24, sun ~10° up, light mist), facing the sun (first person)", "world": "patch32",
+      "face": "sun", "at": [-3141.8, 2362.6], "view": [0, 0.12, 0.3], "height": 0, "hour": 5.4, "seconds": 6, "mist": [0.35],
+      "settings": { "fx.forest_rays": 1, "fx.light_model": 1, "fx.volumetric_fog": 1, "fx.ground_fog": 2 } },
+    { "id": "rays-sunrise-turn", "name": "M2 rays: temperate forest at sunrise (05:24, light mist), turning", "world": "patch32",
+      "move": "turn", "at": [-3141.8, 2362.6], "view": [0, 0.08, 0.3], "height": 0, "hour": 5.4, "seconds": 20, "mist": [0.35],
+      "settings": { "fx.forest_rays": 1, "fx.light_model": 1, "fx.volumetric_fog": 1, "fx.ground_fog": 2 } },
     {
       "id": "atmo-ridge-clouds", "name": "Mountain ridge, flying through the cloud deck (10:00)", "world": "patch32", "move": "fly",
       "path": [[-6952.0, -786.4], [-3952.0, -786.4]], "altitude": 260, "speed": 40, "hour": 10, "pitch": -0.08, "zoom": 8,
@@ -173,6 +179,11 @@
       "name": "Atmosphere 2.0 M2: forest rays shoot-out — every still with build 47, A (volumetric forest air) and B (screen-space shafts)",
       "scenarios": ["art-forest-shafts", "atmo-forest-walk", "atmo-forest-noon"],
       "ablate": false, "capture": true, "stills": 4, "compare": "fx.forest_rays=0,1,2"
+    },
+    "rays2": {
+      "name": "Atmosphere 2.0 M2: forest rays at sunrise (target: Unity HDRP's volumetric lighting, D142)",
+      "scenarios": ["rays-sunrise", "rays-sunrise-turn"],
+      "ablate": false, "capture": true, "stills": 4
     }
   }
 }

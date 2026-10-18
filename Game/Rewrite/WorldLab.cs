@@ -166,6 +166,12 @@ public partial class WorldLab : Node3D
             // --front=km,strength: an approaching rain front at this distance (bearing from --storm-at, else upwind)
             if (arg.StartsWith("--front=")) { var v = arg[8..].Split(','); _atmosphere.ForceFront = new Vector2(float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture)); }
             if (arg == "--shot-live") _atmosphere.LiveFog = true;
+            if (arg.StartsWith("--ray-dev="))
+                foreach (var kv in arg[10..].Split(',').Select(t => t.Split('=')).Where(t => t.Length == 2))
+                {
+                    _atmosphere.RayDev[kv[0]] = float.Parse(kv[1], CultureInfo.InvariantCulture);
+                    _atmosphere.ApplyFogQuality();
+                }
             if (arg.StartsWith("--mist-drift=") && arg[13..].Split(',') is [var mx, var mz])
                 _atmosphere.MistDrift = (double.Parse(mx, CultureInfo.InvariantCulture), double.Parse(mz, CultureInfo.InvariantCulture));
             if (arg.StartsWith("--mist=") && arg[7..].Split(',') is { } mv)
@@ -826,6 +832,7 @@ public partial class WorldLab : Node3D
         _hitch.End($"at {PlayerX:0}, {PlayerZ:0}");
         if (_findSitesPending && _sampler != null && _generation == null && !_holding) { _findSitesPending = false; FindSites(); }
         if (_clearSpotPending && _sampler != null && _generation == null && !_holding) { _clearSpotPending = false; ClearSpot(); }
+        if (_raySpotPending && _sampler != null && _generation == null && !_holding) { _raySpotPending = false; RaySpot(); }
         if (_probeWaterPending && _sampler != null && _generation == null) { _probeWaterPending = false; ProbeWater(); }
         if (_collisionTestPending && _streamer.Settled && _streamer.PendingCollision == 0 && !_holding && _generation == null)
         {

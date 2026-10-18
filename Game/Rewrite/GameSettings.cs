@@ -217,11 +217,12 @@ public static class GameSettings
         "against an orange haze). Halo: the mist glows around the flame and fades within a few metres, the ground is lit as " +
         "before, and the smoke takes the light of the night instead of glowing white. Build 72: as before.",
         options: new[] { "build 72 (even glow)", "halo at the flame" }));
-    public static readonly Setting ForestRays = Add(new("fx.forest_rays", "Lighting and effects", "Forest rays", 0, 2, 1, 0,
+    public static readonly Setting ForestRays = Add(new("fx.forest_rays", "Lighting and effects", "Forest rays", 0, 3, 1, 0,
         "Atmosphere 2.0 M2, two candidates to compare: A = a thin volumetric haze under the canopy, lit through the gaps in " +
         "the crowns (real shafts, needs volumetric fog's cost); B = the screen-space sun shafts, stronger inside forests. " +
-        "Build 47 = as until now.",
-        options: new[] { "build 47", "A: volumetric forest air", "B: screen-space shafts" }));
+        "A2 (M2 draft, aiming at Unity HDRP's rays): A with more sunlight into the air, less sky light in the shadows and " +
+        "the fog's cells close to the camera, so each trunk's shadow shows in the air. Build 47 = as until now.",
+        options: new[] { "build 47", "A: volumetric forest air", "B: screen-space shafts", "A2: sharp rays (M2 draft)" }));
     public static readonly Setting LightModel = Add(new("fx.light_model", "Lighting and effects", "Light model", 0, 1, 1, 0,
         "Atmosphere 2.0 (experimental, M1): sunlight by phase of the day — golden hour, a softer morning and afternoon, " +
         "a stronger white noon — with the sky light following. Build 47 = the light until now.",
@@ -407,6 +408,12 @@ public static class GameSettings
     public static readonly Setting FogSmoothing = Add(new("perf.fog_smoothing", "Camera and performance", "Fog smoothing over time", .5, .95, .05, .9,
         "How much the volumetric fog blends with past frames: high = smooth but may trail behind moving things, low = " +
         "no trails but grainier fog. 0.9 = build 34.", "×"));
+    // D142 (Tom): heavy effects stay player settings with an off, also in the finished game.
+    public static readonly Setting FogQuality = Add(new("perf.fog_quality", "Camera and performance", "Volumetric fog quality", 0, 4, 1, 2,
+        "How finely the volumetric fog (forest rays, mist patches, the torch's glow in mist) is computed: a grid of cells " +
+        "across the view and into the distance. Finer = sharper rays and edges, more GPU time (RTX 3080, forest at " +
+        "sunrise: high +0.8 ms, very high +3 ms). Off: no volumetric fog at all, for weak GPUs. Build 75 = 96 × 96 × 96.",
+        options: new[] { "off", "low (64 × 64 × 64)", "build 75 (96 × 96 × 96)", "high (160 × 160 × 128)", "very high (256 × 256 × 160)" }));
     public static readonly Setting RenderScale = Add(new("perf.scale", "Display", "Render scale", .5, 1, .05, 1,
         "Render the 3D view at a lower resolution and upscale (AMD FSR) for more frames per second.", "×"));
     public static readonly Setting VSync = Add(new("perf.vsync", "Display", "V-Sync", 0, 1, 1, 1, "Synchronise to the monitor (no tearing)."));

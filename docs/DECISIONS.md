@@ -2140,6 +2140,31 @@ game**, so players choose: the volumetric fog's resolution and the rays' quality
 effect's own page) as levels with an *off*, and presets (M6) only set them. This adds to CLAUDE.md's rule that visual
 changes stay switchable: switches made for comparing looks may go once Tom picks; performance and quality levels stay.
 
+## D143 — M2 rays at sunrise: tuning Godot's own volumetric fog; A2 draft, fog quality levels (2026-10-18)
+Step 1–2 of M2 (D142). Tom's HDRP screenshots are not in `docs/references/` yet: captures made without them.
+* **Scene**: suite `rays2` — `rays-sunrise` (first person, facing the sun) and `rays-sunrise-turn`, 05:24 (sun ~10° up,
+  summer, latitude 45), mist forced at 0.35 (new scene option `"mist": [amount(, 1)]`), Forest rays A, light model 1,
+  `patch32` at [-3141.8, 2362.6]. The old `art-forest-shafts` place faces a hillside at sunrise (the sun behind it):
+  the new spot came from **`--ray-spot=x,z,azimuth[,elevation[,radius]]`** (developer tool: dense temperate forest on
+  level ground whose land toward the sun stays below it for 1.5 km). Dense there: no 9.5 m clearing for the
+  third-person camera, so the shots are first person. Captures hide the gameplay HUD too (needs line, prompts).
+* **Rays A as in build 75**: an even faint haze; no shafts visible at sunrise.
+* **Tuning** (`--ray-dev=key=value,...` developer tool; RTX 3080, profile high, 1920×1080, GPU ms against 25.4):
+  froxel grid 160 × 160 × 128 +0.8 ms, 256 × 256 × 160 +3.2 ms (visibly smoother shafts); the grid, the filter and a
+  shorter fog (80 m, spread 3) alone change almost nothing visible — the rays appear only with **more sun into the
+  forest air (×8 instead of ×2.8), less sky light injected into the fog (0.15 instead of 1: it filled the shadow lanes)
+  and stronger forward scattering (0.75)**: shafts from the sun through the crowns and short horizontal shafts between
+  the trunks at ground level. Lower anisotropy (0.45–0.6) with denser air softens the glare round the sun but blurs the
+  shafts; views across or away from the sun stay dark in every variant (shadowed air, little side scatter).
+* **Not reached with Godot's fog**: HDRP's many crisp lanes across the whole frame. Remaining options: denser/brighter
+  air near the ground only, or step 3 (our own ray pass through the shadow map) — after Tom compares with his screenshots.
+* **Switchable** (defaults unchanged): *Forest rays* gains **A2: sharp rays (M2 draft)** (density 0.03, sun ×8,
+  anisotropy 0.75, ambient 0.15, fog length 80 m and spread 3 — blended in with the forest, back to build 75 values
+  outside it). New **Camera and performance → Volumetric fog quality** (`perf.fog_quality`, D142 rule): *off* (no
+  volumetric fog at all: rays A/A2, mist patches, the torch's glow) / low 64³ / **build 75 96³ (default)** / high
+  160 × 160 × 128 / very high 256 × 256 × 160.
+* Captures (local, `artifacts/rays/`): `m2-sunrise-A-vs-A2.jpg` (A vs A2, same frames, grid 160), `m2-sunrise-tuning-variants.jpg`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -328,7 +328,8 @@ public partial class Atmosphere : Node3D
         e.SsrEnabled = GameSettings.Ssr.On;
         e.GlowEnabled = GameSettings.Glow.Value > 0;
         e.GlowIntensity = GameSettings.Glow.F;
-        e.VolumetricFogEnabled = GameSettings.VolumetricFog.On;
+        e.VolumetricFogEnabled = GameSettings.VolumetricFog.On && FogAllowed;
+        ApplyFogQuality();
         e.FogDensity = .00009f * GameSettings.Haze.F;
         e.FogAerialPerspective = Math.Clamp(.35f * GameSettings.Haze.F, 0, 1);
         e.FogEnabled = GameSettings.Haze.Value > 0;
@@ -401,7 +402,7 @@ public partial class Atmosphere : Node3D
         // out (build 32 at 0: Godot's energy 1 and anisotropy .65).
         // (round 29: 1 + 2c and .65 + .2c lit the haze around a low sun into a glare half the screen wide — Tom's "blob")
         Sun.LightVolumetricFogEnergy = FogSunEnergy(1);
-        Environment.VolumetricFogAnisotropy = .65f + .1f * GameSettings.GodRayContrast.F;
+        Environment.VolumetricFogAnisotropy = .65f + .1f * GameSettings.GodRayContrast.F; // (and every frame: UpdateForestRays)
         if (_shaftQuad != null) _shaftQuad.Visible = GameSettings.SunShafts.Value > 0;
         _beams?.SetShaderParameter("intensity", GameSettings.LightBeams.F);
         if (_beamQuad != null) _beamQuad.Visible = GameSettings.LightBeams.Value > 0 && GameSettings.Clouds.Value > 0;
@@ -1106,7 +1107,7 @@ public partial class Atmosphere : Node3D
                 _mistMaterial.SetShaderParameter("origin", new Vector2((float)(originX % 8192), (float)(originZ % 8192)));
                 _mistMaterial.SetShaderParameter("drift", new Vector2((float)_mistDriftX, (float)_mistDriftZ));
             }
-            e.VolumetricFogEnabled = GameSettings.VolumetricFog.On || patches;
+            e.VolumetricFogEnabled = (GameSettings.VolumetricFog.On || patches) && FogAllowed;
             e.VolumetricFogTemporalReprojectionEnabled = !StillShot || LiveFog;
             e.VolumetricFogTemporalReprojectionAmount = GameSettings.FogSmoothing.F;
             e.VolumetricFogDensity = GameSettings.VolumetricFog.On ? (Natural ? .002f : .0035f) : 0;
@@ -1120,9 +1121,30 @@ public partial class Atmosphere : Node3D
     private bool _forestAirOn;
     private Vector3 _forestDrift;
 
+    /// <summary>M2 tuning (developer tool, <c>--ray-dev=key=value,...</c>), over A and A2: size, depth (cells across and
+    /// into the view), filter (0/1), length, spread, boost (sun energy into the forest air), aniso, density, ambient
+    /// (ambient inject), gdens (global density).</summary>
+    public System.Collections.Generic.Dictionary<string, float> RayDev { get; } = new();
+    private float Dev(string key, float value) => RayDev.TryGetValue(key, out float v) ? v : value;
+
+    /// <summary>Volumetric fog allowed by <c>perf.fog_quality</c> (D142: "off" for weak GPUs drops all of it).</summary>
+    private static bool FogAllowed => GameSettings.FogQuality.Index > 0;
+
+    /// <summary>The volumetric fog's cell grid from <c>perf.fog_quality</c> (build 75: project.godot's 96 × 96 × 96).</summary>
+    public void ApplyFogQuality()
+    {
+        var (size, depth) = GameSettings.FogQuality.Index switch { 1 => (64, 64), 3 => (160, 128), 4 => (256, 160), _ => (96, 96) };
+        RenderingServer.EnvironmentSetVolumetricFogVolumeSize((int)Dev("size", size), (int)Dev("depth", depth));
+        RenderingServer.EnvironmentSetVolumetricFogFilterActive(Dev("filter", 1) > 0);
+    }
+
+    // A2 (M2 draft, D143): the forest air of A, tuned toward Unity HDRP's rays.
+    private const float A2Density = .03f, A2Boost = 8, A2Aniso = .75f, A2Ambient = .15f, A2Length = 80, A2Spread = 3;
+
     private void UpdateForestRays(double delta)
     {
         int mode = GameSettings.ForestRays.Index;
+        bool a2 = mode == 3;
         // How much "forest by day" there is: the canopy around the player (0 when flying), the sun up, no storm.
         float target = mode == 0 ? 0 : Mathf.Clamp(Canopy, 0, 1) * Mathf.SmoothStep(-1, 8, _sunElevation) * (1 - _storm);
         _forest = StillShot || SnapExposure ? target : Mathf.MoveToward(_forest, target, (float)delta / 3);
@@ -1133,12 +1155,21 @@ public partial class Atmosphere : Node3D
             _shafts.SetShaderParameter("intensity", baseShafts * (1 + 1.5f * _forest));
             _shaftQuad.Visible = baseShafts > 0;
         }
-        bool air = mode == 1 && _forest > .01f && !float.IsNaN(_mistGround);
+        bool air = mode is 1 or 3 && _forest > .01f && !float.IsNaN(_mistGround) && FogAllowed;
+        // A2 changes the whole volumetric fog (its length, spread, scattering, sky light), so it fades in and out with the
+        // forest; outside it (and with A) these are as in build 75. Set every frame: leaving the forest brings them back.
+        float w = air && a2 ? _forest : 0;
+        var e = Environment;
+        e.VolumetricFogLength = Dev("length", Mathf.Lerp(180, A2Length, w));
+        e.VolumetricFogDetailSpread = Dev("spread", Mathf.Lerp(2, A2Spread, w));
+        e.VolumetricFogAnisotropy = Dev("aniso", Mathf.Lerp(.65f + .1f * GameSettings.GodRayContrast.F, A2Aniso, w));
+        e.VolumetricFogAmbientInject = Dev("ambient", Mathf.Lerp(1, A2Ambient, w));
+        if (air && RayDev.TryGetValue("gdens", out float g)) e.VolumetricFogDensity = g;
         if (!air) Sun.LightVolumetricFogEnergy = FogSunEnergy(1); // (every frame: the cloud cover changes)
         if (!air && _forestAirOn)
         {
             // Back to what the settings say (ApplyAll only runs when a setting changes).
-            Environment.VolumetricFogEnabled = GameSettings.VolumetricFog.On || (_mistVolume?.Visible ?? false);
+            e.VolumetricFogEnabled = (GameSettings.VolumetricFog.On || (_mistVolume?.Visible ?? false)) && FogAllowed;
         }
         _forestAirOn = air;
         if (air && _forestAir == null)
@@ -1156,12 +1187,12 @@ public partial class Atmosphere : Node3D
         var cam = GetViewport()?.GetCamera3D();
         if (cam != null) _forestAir.GlobalPosition = new Vector3(cam.GlobalPosition.X, _mistGround + 25, cam.GlobalPosition.Z);
         _forestDrift += new Vector3(Wind.Direction.X, 0, Wind.Direction.Y) * (float)(delta * Wind.Speed * .05);
-        _forestAirMaterial.SetShaderParameter("density", .014f * _forest);
+        _forestAirMaterial.SetShaderParameter("density", Dev("density", a2 ? A2Density : .014f) * _forest);
         _forestAirMaterial.SetShaderParameter("ground", _mistGround);
         _forestAirMaterial.SetShaderParameter("drift", _forestDrift);
         _forestAirMaterial.SetShaderParameter("albedo", new Color("ece6da").Lerp(Sun.LightColor, .25f));
-        Environment.VolumetricFogEnabled = true;
-        Sun.LightVolumetricFogEnergy = FogSunEnergy(1 + 1.8f * _forest);
+        e.VolumetricFogEnabled = true;
+        Sun.LightVolumetricFogEnergy = FogSunEnergy(1 + Dev("boost", a2 ? A2Boost : 1.8f) * _forest);
     }
 
     /// <summary>
