@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 72** (vertical half and quarter walls, fences, stairs on floors, floors over rooms, an edge crash fixed D137) | `4b0c9c6` | Thornwake-Rewrite-Preview-72 (v0.9.72) | Versions must match to connect; build 71 = `6717ae6` |
 | **Build 71** (walls and stairs attach to edges, the edge picking the size; diagonal window and doorway; stairs onto triangles D136) | `6717ae6` | Thornwake-Rewrite-Preview-71 (v0.9.71) | Versions must match to connect; point-only snapping for walls = build 70 `24c41c9` (Ctrl places freely) |
 | **Build 70** (diagonal walls, triangle foundations and floors, animals go round trees and buildings D135: the multiplayer proof of concept complete) | `24c41c9` | Thornwake-Rewrite-Preview-70 (v0.9.70) | Versions must match to connect; build 69 = `5cde63f` |
 | **Build 69** (blockers named and flashed, blueprint shadows, no bites through floors, gathering on your level, sonar scan and animal glow D134) | `5cde63f` | Thornwake-Rewrite-Preview-69 (v0.9.69) | Versions must match to connect; Scan look → ring gives build 68's scan; build 68 = `1485e52` |

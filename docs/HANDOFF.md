@@ -36,7 +36,7 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   buildings (D135) — the proof of concept's last items; next is the real multiplayer test. For the world-generation step:
   Tom's `docs/TERRAIN_LANDFORMS_PLAN.md` (from a cloud brainstorm, written without knowing the latest work: a guide to
   check against the code, not a spec). **Build 71** (`6717ae6`, `dist/Preview-71`, 2026-10-18): walls and stairs attach to edges, the edge picking the size (straight,
-  narrow, diagonal); diagonal window and doorway; stairs onto triangles' long sides (D136). **Build 72**: vertical half and quarter walls, fences, stairs
+  narrow, diagonal); diagonal window and doorway; stairs onto triangles' long sides (D136). **Build 72** (`4b0c9c6`, `dist/Preview-72`): vertical half and quarter walls, fences, stairs
   on floors, floors over rooms, an edge crash fixed (D137).
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
