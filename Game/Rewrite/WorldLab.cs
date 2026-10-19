@@ -83,6 +83,10 @@ public partial class WorldLab : Node3D
     // Headless screenshot mode: --world-smoke=<dir> [--preset=id] [--seed=n]
     private string? _smokeDirectory, _shotPath;
     private (double X, double Z)? _shotAt;
+    private bool _playAt = !OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--world-shot") || a.StartsWith("--world-smoke") || a.StartsWith("--bench")
+        || a.Contains("-test") || a.StartsWith("--join") || a.StartsWith("--ray-") || a.StartsWith("--air-") || a.StartsWith("--sun-block")
+        || a.StartsWith("--clear-spot") || a.StartsWith("--find-sites") || a.StartsWith("--probe-") || a.StartsWith("--census"));
+    private bool _playHeightPending, _playAtReport;
     private (float Yaw, float Pitch, float Zoom)? _shotView;
     private bool _faceSun; // debug: turn the camera toward the sun before the screenshot
     // --extra-yaws=a,b,…: after the shot, more shots turned by these yaw offsets (<name>-1.png …), same world and tiles.
@@ -370,6 +374,16 @@ public partial class WorldLab : Node3D
         _water.Configure(_sampler, _streamer.WaterMaterial, _originX, _originZ);
         _rain = _shotRain && _shotPath == null; // a dump's Reproduce line carries --rain (H); shots start it later
         Teleport(start.X, start.Z);
+        // Playing from a dump's Reproduce line (or a "Go to" launcher, D155): start at its place and view, not the world's
+        // start (until now only screenshot and test runs went there). Once, for the first world.
+        if (_playAt && _shotAt is { } at)
+        {
+            _playAt = false;
+            Teleport(at.X, at.Z);
+            if (_shotView is { } v) { _yaw = v.Yaw; _pitch = v.Pitch; _zoom = v.Zoom; _arm.SpringLength = v.Zoom; }
+            _playHeightPending = _shotHeight > 0;
+            _playAtReport = true;
+        }
         var plan = _sampler.Plan;
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--dump-tile="))
@@ -837,6 +851,12 @@ public partial class WorldLab : Node3D
         if (_findSitesPending && _sampler != null && _generation == null && !_holding) { _findSitesPending = false; FindSites(); }
         if (_clearSpotPending && _sampler != null && _generation == null && !_holding) { _clearSpotPending = false; ClearSpot(); }
         if (_raySpotPending && _sampler != null && _generation == null && !_holding) { _raySpotPending = false; RaySpot(); }
+        if (_playHeightPending && _sampler != null && _generation == null && !_holding) { _playHeightPending = false; SetFly(true); _player.Position += Vector3.Up * _shotHeight; }
+        if (_playAtReport && !_playHeightPending && _sampler != null && _generation == null && !_holding)
+        {
+            _playAtReport = false;
+            GD.Print(string.Create(CultureInfo.InvariantCulture, $"PLAY_AT {PlayerX:0.0},{PlayerZ:0.0} y {_player.Position.Y:0.0} view {_yaw:0.000},{_pitch:0.000} {_clock.Describe()}"));
+        }
         if (_sunBlockPending && _sampler != null && _generation == null && !_holding) { _sunBlockPending = false; SunBlock(); }
         if (_probeWaterPending && _sampler != null && _generation == null) { _probeWaterPending = false; ProbeWater(); }
         if (_collisionTestPending && _streamer.Settled && _streamer.PendingCollision == 0 && !_holding && _generation == null)

@@ -2361,6 +2361,16 @@ darker neighbours; **no global contrast** — from the relation of scattering, s
   the camera) and his R (lit a torch). Screenshot runs now ignore input and their window never takes focus
   (`WindowFlags.NoFocus`). His game also rewrote his settings (dropping keys it does not know): not the tests.
 
+## D155 — Play from a dump's place; "Go to" launchers for the test spots (2026-10-19)
+Tom could not find the places of his screenshots again to compare. The game's teleport only knows landmarks and map
+clicks, and `--at`/`--view`/`--fly-height` were used only by screenshot and test runs: a play session from a dump's
+Reproduce line started at the world's start. Now a play session (no screenshot, test or benchmark arguments) starts once
+at `--at` with `--view` and `--fly-height` (log `PLAY_AT`; checked: dump 100445's place, 3,062 m, view and 12:12).
+Each build folder gets **"Go to - … .cmd"** launchers beside `JOIN.cmd`: the test spots' world, place, view, time and
+weather (`time.*`, `sky.clouds`, `sky.cloud_speed`, `sky.sea_state`, `--wet`, `--hour`), not Tom's graphics settings,
+which stay his (and `--set` is never saved): his mountain dump 100445, the same at a low sun, his rock pillar 034332,
+and the cliff lake in the test world.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

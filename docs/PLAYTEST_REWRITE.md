@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 84 — "Go to" launchers for the test spots
+**Host and everyone joining need build 84** (versions must match to connect).
+* Next to `JOIN.cmd` there are **"Go to - … .cmd"** files: each starts the game at one of the test spots — the same
+  place, view, time and weather as the captures — with your own graphics settings. Then switch *Light and shadow in
+  the haze*, *Rays and haze* or *Rays strength* there and compare. (Run `JOIN.cmd` first.)
+  * mountain ridges after rain (your dump at 10:04), the same ridges with a low sun (08:48), your rock pillar in the
+    badlands (03:43), and the cliff lake at sunrise after rain (in the test world).
+* A dump's Reproduce line now also works for playing: the game starts at the dump's place instead of the world's start.
+* Otherwise the same as build 83.
+
 ## New in build 83 — Noor's notes: light and shadow in the haze (draft); stronger after rain
 **Host and everyone joining need build 83** (versions must match to connect).
 * New setting: Settings → Lighting and effects → **Light and shadow in the haze** — *build 82* (default) or
