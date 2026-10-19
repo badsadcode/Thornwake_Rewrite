@@ -231,8 +231,8 @@ public static class GameSettings
         "Shafts of sunlight anywhere outdoors, kilometres long: past mountain peaks and ridges and through gaps in the " +
         "clouds, in the haze over valleys, lakes and plains (the forest rays only reach a few hundred metres). Replaces the " +
         "light beams under clouds while on. Low / medium / high: how finely each view ray is followed (GPU time). Off = as " +
-        "build 79.",
-        options: new[] { "off", "low", "medium", "high" }));
+        "build 79. While on, the terrain casts shadows farther (mountains up to ~3 km away shade the ground near you).",
+        options: new[] { "off", "low", "medium", "high" }, rebuild: true));
     public static readonly Setting LightModel = Add(new("fx.light_model", "Lighting and effects", "Light model", 0, 1, 1, 0,
         "Atmosphere 2.0 (experimental, M1): sunlight by phase of the day — golden hour, a softer morning and afternoon, " +
         "a stronger white noon — with the sky light following. Build 47 = the light until now.",

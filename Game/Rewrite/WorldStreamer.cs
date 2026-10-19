@@ -411,7 +411,8 @@ public partial class WorldStreamer : Node3D
             root.AddChild(new MeshInstance3D
             {
                 Mesh = mesh, MaterialOverride = _terrain,
-                CastShadow = key.Level <= 1 ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
+                // (rays in open air, D149: mountains up to ~3 km away shade the ground and the near air too)
+                CastShadow = key.Level <= (GameSettings.AirRays.Index > 0 ? 3 : 1) ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
             });
         }
         if (data.Water is { } water && water.Indices.Length > 0)

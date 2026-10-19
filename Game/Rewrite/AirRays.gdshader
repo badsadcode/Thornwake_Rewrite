@@ -28,6 +28,7 @@ uniform float density = 0.0001;    // haze at the camera's height, per metre (Go
 uniform float sun_scatter = 0.0;   // extra glow toward the sun in sunlit haze (Godot's fog already has one)
 uniform float side_scatter = 0.5;  // sunlit haze seen from the side: rays across the view
 uniform float shade = 0.6;         // how much of the haze's light a mountain's or cloud's shadow takes away
+uniform float sky_affect = 0.25;   // the sky's own veil of haze (Godot's fog sky affect): the glow round the sun there
 uniform float gain = 1.0;          // sunlight in the haze (developer tuning)
 uniform int steps = 40;
 uniform float max_distance = 60000.0;
@@ -108,6 +109,12 @@ void fragment() {
 		shadowed += (1.0 - sun) * seen;
 		transmit *= step_t;
 		lit += sun * sigma * dt; all_haze += sigma * dt;
+	}
+	// The sky: Godot's fog veils it whatever the distance (sky affect) and that veil carried the glow round the sun,
+	// which this pass took over: it comes back by how much of the air toward that point of the sky is sunlit, so a
+	// peak's shadow runs through the glow as a darker ray (Tom's reference 2).
+	if (depth < 1e-6) {
+		light += light_color * sun_scatter * pow(max(mu, 0.0), 8.0) * gain * sun_up * sky_affect * (lit / max(all_haze, 1e-6));
 	}
 	// scene × (1 − a) + light: the shadowed haze's share darkened, the sunlit haze's light added.
 	float alpha = clamp(shade * shadowed, 1e-3, 1.0);

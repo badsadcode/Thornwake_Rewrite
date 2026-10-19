@@ -15,7 +15,7 @@ namespace Thornwake.Rewrite;
 /// </summary>
 public partial class WorldLab
 {
-    private const int AirN = 256;
+    private const int AirN = 512; // (39 m cells: 256 gave one broad shadow per mountain, D148)
     private const float AirSize = 20000;
     private Task<(Image Map, double X, double Z, float[] Heights, string Log)>? _airJob;
     private double _airX = double.NaN, _airZ;
@@ -80,11 +80,14 @@ public partial class WorldLab
         GetTree().Quit(0);
     }
 
-    private readonly bool _airVantage = OS.GetCmdlineUserArgs().Contains("--ray-vantage");
+    private readonly bool _airVantage = OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--ray-vantage"));
+    // --ray-vantage=edge: only places where the land toward the sun stands within 1.5° of the sun (it peeks over a ridge)
+    private readonly bool _airVantageEdge = OS.GetCmdlineUserArgs().Contains("--ray-vantage=edge");
 
-    /// <summary><c>--ray-vantage</c> (developer tool, headless, with --at/--hour and --set=fx.air_rays=1): sunlit viewpoints
-    /// within 6 km that stand above their surroundings, scored by how often the air 2–9 km toward the sun (±35°, at
-    /// eye height and 150 m below) changes between sunlit and a mountain's shadow — where shafts can show; then quits.</summary>
+    /// <summary><c>--ray-vantage</c> (developer tool, headless, with --at/--hour and --set=fx.air_rays=1): viewpoints within
+    /// 6 km scored by how often the air in front of them toward the sun (±35°, 0.8–9 km, 50–700 m above the eye) changes
+    /// between sunlit and a mountain's shadow — where shafts can show (Tom's reference 2: low, the sun behind peaks);
+    /// then quits.</summary>
     private void AirVantage(Image map, double mx, double mz)
     {
         double cell = AirSize / AirN;
@@ -100,25 +103,35 @@ public partial class WorldLab
         for (double z = mz - 6000; z <= mz + 6000; z += 250)
             for (double x = mx - 6000; x <= mx + 6000; x += 250)
             {
-                float g = Read(x, z, 0), sh = Read(x, z, 1);
-                if (float.IsNaN(g) || sh > g + 3) continue; // (in a shadow itself)
+                float g = Read(x, z, 0);
+                if (float.IsNaN(g) || _sampler!.Sample(x, z).Water != WaterKind.None) continue;
                 double around = 0; int n = 0;
                 for (int k = 0; k < 8; k++) { float h = Read(x + Math.Cos(k * .785) * 2500, z + Math.Sin(k * .785) * 2500, 0); if (!float.IsNaN(h)) { around += h; n++; } }
                 double rise = g - around / Math.Max(n, 1);
-                if (rise < 120) continue;
+                if (_airVantageEdge)
+                {
+                    double horizon = -90, sx = Math.Sin(az), sz = -Math.Cos(az);
+                    for (double d = 300; d <= 9500; d += 100)
+                    {
+                        float hh = Read(x + sx * d, z + sz * d, 0);
+                        if (float.IsNaN(hh)) break;
+                        horizon = Math.Max(horizon, Mathf.RadToDeg(Math.Atan2(hh - g - 2, d)));
+                    }
+                    if (Math.Abs(horizon - Mathf.RadToDeg(Mathf.Asin(sun.Y))) > 1.5) continue;
+                }
                 int score = 0;
                 for (double a = -35; a <= 35; a += 5)
                 {
                     double dirx = Math.Sin(az + a * Math.PI / 180), dirz = -Math.Cos(az + a * Math.PI / 180);
-                    foreach (double dy in new[] { 0.0, -150 })
+                    foreach (double dy in new[] { 50.0, 200, 400, 700 })
                     {
                         bool? last = null;
-                        for (double d = 2000; d <= 9000; d += 150)
+                        for (double d = 800; d <= 9000; d += 100)
                         {
                             float gg = Read(x + dirx * d, z + dirz * d, 0), ss = Read(x + dirx * d, z + dirz * d, 1);
                             if (float.IsNaN(gg)) break;
                             double y = g + 2 + dy;
-                            if (y < gg) break; // (the view is blocked)
+                            if (y < gg) { last = null; continue; } // (inside a mountain: no air)
                             bool lit = y > ss;
                             if (last != null && last != lit) score++;
                             last = lit;
@@ -134,9 +147,24 @@ public partial class WorldLab
         GetTree().Quit(0);
     }
 
+    private Image? _airMap;
+    private double _airMapX, _airMapZ;
+
     private void UpdateAirMap()
     {
+        _atmosphere.TerrainSunAtCamera = 1;
         if (GameSettings.AirRays.Index == 0 || _sampler == null || _generation != null) return;
+        if (_airMap != null)
+        {
+            // Is the camera in a mountain's shadow? (the near volumetric fog only knows the 450 m shadow map)
+            var c = _camera.GlobalPosition;
+            double u = (c.X + _originX - _airMapX) / (AirSize / AirN) + AirN / 2.0 - .5, v = (c.Z + _originZ - _airMapZ) / (AirSize / AirN) + AirN / 2.0 - .5;
+            if (u >= 0 && v >= 0 && u <= AirN - 1 && v <= AirN - 1)
+            {
+                float shadow = _airMap.GetPixel((int)Math.Round(u), (int)Math.Round(v)).G;
+                _atmosphere.TerrainSunAtCamera = Mathf.SmoothStep(shadow - 25, shadow + 25, c.Y);
+            }
+        }
         if (_airJob != null)
         {
             if (!_airJob.IsCompleted) return;
@@ -146,6 +174,7 @@ public partial class WorldLab
             if (_airSampler != _sampler) { _airX = double.NaN; return; } // (a new world meanwhile)
             _airHeights = r.Heights;
             _atmosphere.SetAirMap(r.Map, r.X, r.Z, AirSize);
+            _airMap = r.Map; _airMapX = r.X; _airMapZ = r.Z;
             GD.Print(r.Log);
             if (_airPreview != null && _shotAt is { } at && Math.Abs(PlayerX - at.X) + Math.Abs(PlayerZ - at.Z) < 2
                 && Math.Abs(r.X - at.X) + Math.Abs(r.Z - at.Z) < 2) AirPreview(r.Map, r.X, r.Z);
@@ -173,7 +202,11 @@ public partial class WorldLab
             Parallel.For(0, N, j =>
             {
                 for (int i = 0; i < N; i++)
-                    heights[j * N + i] = (float)s.Sample(cx + (i + .5 - N / 2.0) * cell, cz + (j + .5 - N / 2.0) * cell).Height;
+                {
+                    // (the water's surface where there is water: the haze lies on it, and a sea floor's ridges are no land)
+                    var t = s.Sample(cx + (i + .5 - N / 2.0) * cell, cz + (j + .5 - N / 2.0) * cell);
+                    heights[j * N + i] = (float)(double.IsNaN(t.WaterLevel) ? t.Height : Math.Max(t.Height, t.WaterLevel));
+                }
             });
         }
         double heightMs = watch.Elapsed.TotalMilliseconds;

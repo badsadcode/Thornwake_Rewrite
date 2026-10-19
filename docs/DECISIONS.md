@@ -2256,6 +2256,30 @@ a game screenshot): shafts from a gap in the clouds over a fjord, shafts past mo
   after the jump to `--at` (dump 005618: 10:59 instead of 10:40, sun 22.9° instead of 17.9°).
 * Next: a finer map (more, narrower shafts), strength, a clear-weather test scene against the references, the cost.
 
+## D149 — Air rays: the mountain blocks the sun; a finer map; a scene like the references; the cost (2026-10-19)
+Tom: "keep going: finer map, strength, a clear-weather scene against my references, the cost". On the way, Tom: "it
+still looks like the light is going through the mountain".
+* **Light through the mountain**, three causes, all handled while *Rays in open air* is on: (1) Godot's distance fog
+  glows toward the sun on every pixel — its sun scatter moves into the pass, where only sunlit air gets it, and the
+  sky's glow returns by the sunlit share of the air toward that point of the sky (a peak's shadow runs through it);
+  (2) the screen-space sun shafts smear the bright sky across the silhouette — off while air rays are on; (3) near
+  air and ground knew nothing of a mountain more than ~600 m away — the near volumetric fog is dimmed by the
+  sun-shadow map while the camera stands in a mountain's shadow, and terrain tiles cast shadows to level 3 (~3 km;
+  the setting re-lays the tiles). Valley at 09:12 with the sun behind the mountain: before, glowing through it; now the
+  valley, its air and the ground are in the mountain's shadow (`artifacts/rays/m2-air-rays-mountain-blocks-the-sun.jpg`).
+* **Map 512² over 20 km** (39 m cells; heights ~0.5 s, shadows ~0.1 s on a worker thread). Water surfaces count as
+  the ground (a sea floor's ridges were taken for land).
+* **Scenes**: Tom's mountain world puts the cloud deck (~1,500 m above the sea) at valley height or below his
+  1,900–3,800 m terrain, so most views there look through or over cloud. `--ray-vantage` (and `=edge`: the sun at a
+  ridge line) found, in `patch32`, a lake below a cliff at sunrise (05:24, sun ~10°, 35 % cloud): benchmark scene
+  **`air-cliff`**. There the pass shows a lit haze shaft past the cliff's edge with the cliff's shadow beside it
+  instead of the glow smeared over the rock (`artifacts/rays/m2-air-rays-cliff-vs-reference.jpg`, beside Tom's
+  reference 2). Still one soft shaft rather than many sharp ones.
+* **Cost** (suite `airrays`, RTX 3080, high, 1920×1080, air-cliff): GPU 10.86 ms off; low 11.18 (+0.3), medium
+  11.57 (+0.7), high 12.13 (+1.3), the farther terrain shadows included.
+* The pass draws after the clouds in front of the land (they had covered it). Developer: `--ray-dev=airsun,
+  airskyglow` added.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

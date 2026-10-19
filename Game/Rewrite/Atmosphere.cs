@@ -984,6 +984,10 @@ public partial class Atmosphere : Node3D
     private double _airX, _airZ;
     private float _airSize;
 
+    /// <summary>1 = the camera sees the sun over the terrain, 0 = it stands in a mountain's shadow (WorldLab, from the
+    /// sun-shadow map; 1 without it).</summary>
+    public float TerrainSunAtCamera { get; set; } = 1;
+
     /// <summary>Toward the sun (world directions), for the sun-shadow height map.</summary>
     public Vector3 SunDirection => Sun.GlobalTransform.Basis.Z.Normalized();
 
@@ -1010,7 +1014,16 @@ public partial class Atmosphere : Node3D
         // The pass works on Godot's distance haze as it is this frame (its density: how much of each view is haze).
         var e = Environment;
         _air.SetShaderParameter("density", e.FogEnabled ? e.FogDensity * Dev("airdens", 1) : 0);
-        _air.SetShaderParameter("sun_scatter", Dev("airsun", 0));
+        // Godot's fog glows toward the sun on every pixel, a mountain in front of the sun too (Tom: "the light is going
+        // through the mountain"): that glow moves into the pass, where only sunlit air gets it.
+        _air.SetShaderParameter("sun_scatter", e.FogSunScatter * Dev("airsun", 1));
+        _air.SetShaderParameter("sky_affect", e.FogSkyAffect * Dev("airskyglow", 1));
+        e.FogSunScatter = 0;
+        // The screen-space shafts smear the bright sky round the sun across whatever stands before it: off (the pass
+        // draws the rays now). The near volumetric fog only knows the shadow map (450 m): dimmed while the camera stands
+        // in a mountain's shadow by the sun-shadow map.
+        if (_shaftQuad != null) _shaftQuad.Visible = false;
+        Sun.LightVolumetricFogEnergy *= TerrainSunAtCamera;
         _air.SetShaderParameter("shade", Dev("airshade", .6f));
         _air.SetShaderParameter("cloud_base", SeaLevel + 1500);
         _air.SetShaderParameter("cloud_shade", Dev("aircloud", _shadow.Visible ? _shadowStrength : .62f));
