@@ -49,7 +49,7 @@ void fragment() {
 	// Water writes no depth, and beyond the farthest seabed the far sea's pixels read as sky: the sky's clouds were drawn
 	// behind it and the sea over them — a stepped strip of clear sea along the horizon inside clouds (Tom, dump 220450).
 	bool below = cloud_look == 1 && dir.y < 0.0;
-	if (((sky && !test && !below) || quality != 3) && !probe) discard; // sky pixels: the sky draws them
+	if (((sky && !test && !below && !clouds_one_pass()) || quality != 3) && !probe) discard; // sky pixels: the sky draws them
 	float scene = 1e9;
 	if (!sky) {
 		vec4 view = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, depth, 1.0);

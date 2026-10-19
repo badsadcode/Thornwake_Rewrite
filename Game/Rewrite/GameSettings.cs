@@ -362,6 +362,16 @@ public static class GameSettings
         "Volumetric v2 (M3 draft). On: a mountain between a cloud and the sun takes its direct light, so at sunrise and sunset " +
         "ranges cast long shadows and lanes of light across the clouds (seen best from above a cloud sea). Off: build 88.",
         options: new[] { "off (build 88)", "on (draft)" }));
+    public static readonly Setting CloudBody = Add(new("sky.cloud_body", "Sky", "Cloud body", 0, 1, 1, 0,
+        "Volumetric v2 (M3 draft). Denser, crisper: thin cloud becomes clear air and the rest is dense, so you see distinct " +
+        "clouds with clear gaps between them instead of an even, see-through veil (most noticeable in the mountains, in or " +
+        "near the cloud layer). Build 91: as before.",
+        options: new[] { "build 91", "denser, crisper (draft)" }));
+    public static readonly Setting CloudOnePass = Add(new("sky.cloud_one_pass", "Sky", "Clouds around you", 0, 1, 1, 0,
+        "Volumetric v2 (M3 draft). One pass: while you are in or near the cloud layer (mountains), all clouds are drawn by " +
+        "one pass, so a cloud in front of you hides the mountains behind it instead of showing their outlines (the clouds " +
+        "looked see-through). Costs more GPU time, only then. Build 91: two passes always.",
+        options: new[] { "build 91", "one pass in the layer (draft)" }));
     public static readonly Setting CloudSea = Add(new("sky.cloud_sea", "Sky", "Cloud sea", 0, 2, 1, 0,
         "Volumetric v2 (M3 draft, with Cloud base above the land). Under the high ridges: in high country the clouds form a " +
         "lower, thinner layer, below the ridges and summits, so from up high you look down onto a cloud sea (lit tops, " +

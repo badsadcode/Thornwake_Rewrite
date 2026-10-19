@@ -42,7 +42,7 @@ void sky() {
 		COLOR = vec3(0.0); ALPHA = 0.0;
 		if (quality == 2) { vec4 v = volumetric(dir, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
 		// v2: the same volume from any height; nearer than the scene it is drawn by CloudsNear.gdshader.
-		if (quality == 3) { vec4 v = volumetric_v2(dir, 1e9, cloud_jitter(FRAGCOORD.xy, cloud_more.z), 150, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
+		if (quality == 3 && !clouds_one_pass()) { vec4 v = volumetric_v2(dir, 1e9, cloud_jitter(FRAGCOORD.xy, cloud_more.z), 150, sun_dir, sun_col, day, mu, coverage, storm); COLOR = v.rgb; ALPHA = v.a; }
 		if (cloud_look == 1 && !AT_CUBEMAP_PASS) COLOR *= FOG_UNDO_K;
 	} else if (AT_QUARTER_RES_PASS) {
 		// The fog's own transmittance A, measured (cloud look reference; see FOG_UNDO_K).
@@ -121,6 +121,7 @@ void sky() {
 				if (cloud_look == 1) v.rgb /= max(QUARTER_RES_COLOR.rgb, vec3(1.0)); // fogged once, not twice (FOG_UNDO_K)
 				if (cloud_look == 1 && up < 0.0) v = vec4(0.0); // (below the horizon CloudsNear draws them, over the far sea too)
 				if (split_test >= 1 && quality == 3 && (split_test == 4 || SCREEN_UV.x < 0.5)) v = vec4(0.0); // (4: CloudsNear draws all clouds)
+				if (clouds_one_pass()) v = vec4(0.0); // (D176: in the layer CloudsNear draws them all)
 				col = col * (1.0 - v.a) + v.rgb;
 				disc *= 1.0 - v.a;
 				clear *= 1.0 - v.a;

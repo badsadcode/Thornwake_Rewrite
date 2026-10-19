@@ -432,6 +432,11 @@ vec3 vweather(vec2 xz, float coverage, float dist, out float land) {
 	return vec3(mass, tall + (VBOTTOM - base), base);
 }
 
+// Cloud body (setting, D176; Tom: "sometimes the clouds are uniformly transparent … especially in the mountains"):
+// 0 = build 91; 1 = denser, crisper: thin cloud (the even veil around mountains) becomes clear air, what is left rises
+// steeply to full density — distinct bodies with clear gaps — and the march makes it ~1.6× more opaque per metre.
+uniform int cloud_body = 0;
+float body_k(float d) { return cloud_body == 1 ? smoothstep(0.1, 0.45, d) : d; }
 // Density at p (camera-relative x/z offset by the cloud drift, y above the camera). detail: the fine erosion (off for
 // light rays and far away).
 float vdens(vec3 p, bool detail) {
@@ -514,7 +519,7 @@ float vdens(vec3 p, bool detail) {
 			d *= mix(1.0, 0.2 + 1.6 * eddy, k);
 		}
 	}
-	if (d <= 0.0 || !detail) return d;
+	if (d <= 0.0 || !detail) return body_k(d);
 	// Fine detail: billowy on top, wispy underneath; in wind stretched along it (smudged streaks).
 	float windy = cloud_windy();
 	vec2 wd = normalize(vec2(wind.x, wind.z) + vec2(1e-4));
@@ -530,7 +535,7 @@ float vdens(vec3 p, bool detail) {
 	// (reference: billowy almost to the base, which stays flat, and cut deeper: cauliflower edges)
 	df = cloud_look == 1 ? mix(1.0 - df, df, smoothstep(0.0, 0.1, h)) : mix(1.0 - df, df, smoothstep(0.1, 0.45, h));
 	// (rounded: the finer octave above gives the sharper billows; the erosion itself stays, it took the mass away)
-	return clamp(vremap(d, df * mix(cloud_look == 1 || cloud_shape == 1 ? 0.52 : 0.42, 0.25, windy), 1.0, 0.0, 1.0), 0.0, 1.0);
+	return body_k(clamp(vremap(d, df * mix(cloud_look == 1 || cloud_shape == 1 ? 0.52 : 0.42, 0.25, windy), 1.0, 0.0, 1.0), 0.0, 1.0));
 }
 
 // Distance along dir to an approaching front (a vertical curtain cloud_front.z metres away; 1e9 if none or behind).
@@ -617,7 +622,7 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 	vec3 hdir = normalize(vec3(dir.x, max(dir.y, 0.0), dir.z));
 	vec3 haze = sky_colour(hdir, sun_dir, sun_col, day, dot(hdir, sun_dir));
 	float calm = 1.0 - cloud_windy();
-	float sigma_k = mix(0.011, 0.019, calm) * (1.0 + storm) * (cloud_look == 1 ? 1.25 : 1.0); // (reference: denser, crisper) // calm cumulus: denser, crisper edges; real cloud is opaque within ~100 m
+	float sigma_k = mix(0.011, 0.019, calm) * (1.0 + storm) * (cloud_look == 1 ? 1.25 : 1.0) * (cloud_body == 1 ? 1.6 : 1.0); // (reference: denser, crisper) // calm cumulus: denser, crisper edges; real cloud is opaque within ~100 m
 	float trans = 1.0;
 	vec3 light = vec3(0.0);
 	float phase_f = mix(vhg(lmu, 0.6), vhg(lmu, -0.25), 0.4);
@@ -710,6 +715,22 @@ vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float
 	vec4 r = cloud_march(dir, t0, t1, jitter, 150, 40.0, sun_dir, sun_col, day, mu, storm);
 	float fade = smoothstep(0.005, 0.04, dir.y);
 	return r * fade;
+}
+
+// One pass in the layer (setting, D176; Tom: "the clouds are uniformly transparent … especially in the mountains"): the
+// clouds over the land (CloudsNear, marched to the scene) and over the sky (Sky.gdshader, half resolution) are lit and
+// veiled a little differently; standing in or near the layer that seam drew the mountains' outlines into an opaque
+// cloud, so the cloud looked see-through. 1 = while the camera is at or above the cloud base (up to ~300 m over the
+// layer's top), CloudsNear draws the sky's
+// pixels too (one pass, full resolution: costlier, only then); 0 = build 91.
+uniform int cloud_one_pass = 0;
+bool clouds_one_pass() {
+	if (cloud_one_pass == 0 || quality != 3 || cloud_blend != 1 || cloud_state.z < 0.001) return false; // (build 52's blend has its own pass)
+	float vtop = VBOTTOM + ((350.0 + 950.0 + cloud_types.x * 5200.0 + cloud_state.w * 700.0) * SHAPE_TALL + 900.0) * SEA_TALL + SHAPE_TOP_EXTRA;
+	// (at or above the base, a little margin below it; under the broken cloud sea the clouds keep clear of you and the
+	// seam does not show: the first try drew the valley's whole sky at full resolution for nothing, 38 → 26 FPS)
+	float margin = sea_broken == 1 && SEA_K > 0.0 ? 0.0 : 150.0;
+	return cloud_more.w < margin && vtop > -300.0;
 }
 
 // Cloud renderer v2: the cloud volume seen from anywhere — below the deck, inside it or above it — out to t_far (the

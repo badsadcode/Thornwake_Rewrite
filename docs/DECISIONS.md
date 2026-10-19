@@ -2681,6 +2681,26 @@ instead of 6 (and once the ray was half / three-quarters covered), steps growing
   clearance and holes) times the clouds drawn in front of the land at full resolution (D174: 7–17 ms in the
   mountains). The lever left is cut 4, those clouds at half resolution.
 
+## D176 — See-through clouds in the mountains: the two cloud passes' seam; one pass in the layer (draft) (2026-10-19)
+Tom: "sometimes it feels like the clouds are uniformly transparent … especially visible in the mountains" (D174), "let's
+try" denser clouds. Two drafts, both off by default (`artifacts/clouds-see-through.jpg`):
+* **Cloud body → denser, crisper** (`sky.cloud_body`): thin cloud (density < 0.1) becomes clear air, the rest rises
+  steeply to full (smoothstep 0.1–0.45), ~1.6× more opaque per metre. Seen: clouds a little whiter and crisper in the
+  valley and from the ridge, the summit view unchanged — and cheaper where thin cloud fills the view (summit 49 → 58 FPS
+  on the HUD). It did not fix what Tom saw, because that was not thin cloud:
+* **The cause**: at the summit (camera in the layer) the clouds in front of the land are nearly opaque everywhere
+  (`--cloud-split-test=3`), yet the far range's outline showed in them. The clouds over the land (CloudsNear, marched to
+  the scene) and over the sky (Sky.gdshader, half resolution, its own step budget and veil) differ a little in light
+  and haze: their seam draws every mountain's skyline into a cloud that hides the mountain — it reads as see-through.
+  With one pass for all clouds (`--cloud-split-test=4`) the outlines vanish; Tom's ridge view is unchanged either way.
+* **Clouds around you → one pass in the layer** (`sky.cloud_one_pass`): while the camera is at or above the cloud
+  base (150 m margin below it; none under the broken cloud sea, whose clouds keep clear of you) and below ~300 m over
+  the layer's top, CloudsNear draws the sky's pixels too and the sky pass skips its volume. Cost only then: summit
+  49 → 41 FPS (HUD). First trigger (within 300 m of the layer) also caught the valley under the cloud sea: 38 → 26 FPS
+  for no visible change — narrowed. Known: a switch between the two ways when crossing the base (a small pop).
+* Tom also asked about **cloud layers** (low / middle / high) and clouds that look "like shaving foam" in some light —
+  answered in chat, not changed.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
