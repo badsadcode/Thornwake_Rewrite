@@ -64,6 +64,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   **Build 81** (`c41f3c7`, `dist/Preview-81`, 2026-10-19): *Forest rays: sun glare* softened (D151). Godot sometimes
   does not quit after an export (the pack is complete: check the log ends with "DONE savepack"). Tom asked for more
   detailed, more varied cloud noise over the mountains (M3, a look decision: draft as an option, captures first).
+  **Build 82** (`2196de3`, `dist/Preview-82`, 2026-10-19): *Rays and haze: by the weather* (D152) — an air load
+  (moisture, dust) drives every ray effect; default *always*. Open: forest haze tied to places rather than the player
+  (proposed to Tom), Tom's pillar casting no shaft, his pick of defaults after trying.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
