@@ -2521,6 +2521,14 @@ cover 0.7, Clear look = air rays off) the whole view is an even blue-grey.
   ground, not above the sea (global `cloud_region`): in a high country every cell over 2,200 m was a cloud bank.
   From the ridge this made the sea of cloud a little greyer, not open (the cover itself is the main thing there).
 
+## D166 — Clouds hide the air rays (2026-10-19)
+Tom: "make it correct: draw the air rays before the clouds so clouds hide what is behind them. Keep the old way as an
+option." New setting **Rays and clouds** (`fx.rays_clouds`): *clouds hide the rays* (default, render priority 98, before
+the clouds in front of the land at 99) or *rays over clouds (build 87)* (101). Captures (`artifacts/rays-and-clouds.jpg`,
+Natural look): the cliff lake in clear air is unchanged; Tom's ridge at 08:48 and his 10:04 view now show the cloud sea
+below him instead of the land painted over it. **Next M3 problem shown by it**: from above, the cloud sea is a flat,
+even blue-grey — no billowed tops, no sunlit sides, no texture.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

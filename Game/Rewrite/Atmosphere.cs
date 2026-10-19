@@ -1038,6 +1038,10 @@ public partial class Atmosphere : Node3D
             ? new Vector4((float)(_airX - originX), (float)(_airZ - originZ), _airSize, Dev("farshadow", .7f)) : Vector4.Zero);
         int q = GameSettings.AirRays.Index;
         bool on = q > 0 && _airSize > 0 && toSun.Y > -.01f;
+        // (D166, Tom: "draw the air rays before the clouds so clouds hide what is behind them"; 101 = after the clouds in
+        // front of the land (99), build 87, which painted the hidden land's haze over a cloud sea)
+        int priority = GameSettings.RaysBehindClouds.Index == 1 ? 98 : 101;
+        if (_air.RenderPriority != priority) _air.RenderPriority = priority;
         _airQuad.Visible = on;
         // (the light beams under clouds are part of the air rays while they are on)
         if (_beamQuad != null) _beamQuad.Visible = !on && GameSettings.LightBeams.Value > 0 && GameSettings.Clouds.Value > 0;

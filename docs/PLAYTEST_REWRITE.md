@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 88 — clouds hide the rays
+**Host and everyone joining need build 88** (versions must match to connect).
+* The "blue wall" high on your ridge is the real cloud sea below you (70 % cover, the deck between ~1.5 and 3 km).
+  The rays in open air used to paint the hidden land's haze and shafts over those clouds — that was most of your
+  10:04 ridge view. New setting **Rays and clouds**: *clouds hide the rays* (default, correct) or *rays over clouds
+  (build 87)* for the old look.
+* Known (next): from above, that cloud sea is flat and even — no billowed tops yet.
+* With *Cloud base → above the land*, mountains now catch cloud by how high they rise above their region, so a
+  whole high country is no longer one cloud bank.
+
 ## New in build 87 — look presets, wind waves slider
 **Host and everyone joining need build 87** (versions must match to connect).
 * **Look presets** in the Settings tab's preset list: *Look: Clear*, *Natural*, *Atmospheric*, *Dramatic*. Each sets only

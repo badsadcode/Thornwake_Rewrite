@@ -243,6 +243,11 @@ public static class GameSettings
         "its sunlight, so shaded slopes stay darker and sunlight falls in distinct shafts; valleys hold more haze and " +
         "ridge tops less, so the mountain layers separate. Build 82: as before.",
         options: new[] { "build 82", "environment contrast (draft)" }));
+    public static readonly Setting RaysBehindClouds = Add(new("fx.rays_clouds", "Lighting and effects", "Rays and clouds", 0, 1, 1, 1,
+        "Clouds hide the rays: rays in open air are drawn before the clouds in front of the land, so a cloud between you " +
+        "and a valley hides the haze and shafts behind it (correct). Rays over clouds (build 87): the rays' haze is " +
+        "painted over those clouds, showing the hidden land through a cloud sea.",
+        options: new[] { "rays over clouds (build 87)", "clouds hide the rays" }));
     public static readonly Setting RayStrength = Add(new("fx.ray_strength", "Lighting and effects", "Rays strength", .5, 2.5, .05, 1,
         "How bright the shafts are, for the forest rays (A, A2) and the rays in open air. 1 = build 82.", "×"));
     public static readonly Setting ForestSunGlare = Add(new("fx.forest_sun_glare", "Lighting and effects", "Forest rays: sun glare", 0, 1, 1, 1,
