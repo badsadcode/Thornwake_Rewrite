@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 82 — rays by the weather (draft)
+**Host and everyone joining need build 82** (versions must match to connect).
+New setting: Settings → Lighting and effects → **Rays and haze** — *always (build 81)* (default) or **by the weather
+(draft)**. With *by the weather*, shafts show only when the air holds something to catch the light:
+* **Moisture**: morning haze after sunrise, burning off toward midday (a little again before sunset); wet ground after
+  rain; more near water, in misty biomes and in forests; little in dry climates. Calm air keeps it, wind clears it.
+* **Dust**: dry country (badlands, deserts) when the wind blows.
+* So a dry, windy noon is crisp and clear, even in the forest; a calm wet dawn fills with shafts. It works on all ray
+  effects at once (forest rays, rays in open air, the near fog round rocks and single trees).
+* Try: the same place at dawn and at noon; after rain (H, then stop it); a desert with *Wind strength* up. Your debug
+  dumps (F9) now show the **Air load** (moisture, dust), so I can see what the air was doing.
+* Known: your rock pillar still casts no clear shaft of its own (its shadow is thin and the noon sun is high).
+
 ## New in build 81 — the sun under the trees no longer blinds
 **Host and everyone joining need build 81** (versions must match to connect).
 * With *Forest rays* A or A2, looking at the sun from under the trees blew the sun and the crowns round it out to
