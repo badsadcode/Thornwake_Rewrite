@@ -103,6 +103,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   (needs finer detail noise; ask for dumps), cloud layers (low/mid/high), half-res CloudsNear as an option.
   **Build 93** (`b3862f7`, `dist/Preview-93`): grain on near things in thin cloud fixed — the cloud march's last step
   ends at the scene (D178).
+  **Build 94** (`2c512d5`, `dist/Preview-94`): one pass faded over height (no jump at the base), cloud-sea holes wander
+  with height (no curtains) (D179). Open: grain in the sky pass's clouds with SMAA (TAA hides it), faint horizon line
+  where the passes blend, cloud layers.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done

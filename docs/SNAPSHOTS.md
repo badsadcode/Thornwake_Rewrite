@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 94** (no jump at the cloud base, wavy cloud-sea holes D179) | `2c512d5` | Thornwake-Rewrite-Preview-94 (v0.9.94) | Versions must match to connect; fixes inside drafts (one pass, broken sea); build 93 = `b3862f7` |
 | **Build 93** (no grain on near things in thin cloud D178) | `b3862f7` | Thornwake-Rewrite-Preview-93 (v0.9.93) | Versions must match to connect; the fix is not switchable: build 92 = `344ebfe` |
 | **Build 92** (one pass in the cloud layer, denser cloud body — drafts D176) | `344ebfe` | Thornwake-Rewrite-Preview-92 (v0.9.92) | Versions must match to connect; both drafts off = build 91; build 91 = `b0a7f34` |
 | **Build 91** (cloud sea broken from below D172, light through its gaps D173) | `b0a7f34` | Thornwake-Rewrite-Preview-91 (v0.9.91) | Versions must match to connect; Cloud sea → under the high ridges = build 89/90; build 90 = `787dddc` |
