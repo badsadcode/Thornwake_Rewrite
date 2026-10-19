@@ -85,6 +85,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   **Build 87** (`604f125`, `dist/Preview-87`): look presets Clear / Natural / Atmospheric / Dramatic
   (`Content/look_presets.json`, D164), *Wind waves on grass* (D163). **Next in M3**: the v2 blue wall on Tom's ridge
   (3,062 m, dump 100445 at 08:48) with air rays off (D164, `artifacts/v2-blue-wall-ridge.jpg`).
+  **Build 88** (`ff0dc7d`, `dist/Preview-88`): the "blue wall" is the cloud sea; clouds now hide the air rays (D165,
+  D166). **Next in M3**: the cloud sea seen from above is flat and even (no billowed, sunlit tops).
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done

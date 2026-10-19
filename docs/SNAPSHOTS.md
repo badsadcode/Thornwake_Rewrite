@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 88** (clouds hide the air rays D166, mountain clouds by region D165) | `ff0dc7d` | Thornwake-Rewrite-Preview-88 (v0.9.88) | Versions must match to connect; Rays and clouds → rays over clouds = build 87; build 87 = `604f125` |
 | **Build 87** (look presets D164, wind waves on grass D163) | `604f125` | Thornwake-Rewrite-Preview-87 (v0.9.87) | Versions must match to connect; Wind waves on grass 1 = build 86; build 86 = `aba92e5` |
 | **Build 86** (presets keep the look, ray dither still without TAA D162) | `aba92e5` | Thornwake-Rewrite-Preview-86 (v0.9.86) | Versions must match to connect; build 85 = `7d880a9` |
 | **Build 85** (cloud shape and cloud base drafts D160–D161, settings presets D157) | `7d880a9` | Thornwake-Rewrite-Preview-85 (v0.9.85) | Versions must match to connect; Cloud shape / Cloud base at their build-84 options give build 84's sky; build 84 = `15f0ce2` |
