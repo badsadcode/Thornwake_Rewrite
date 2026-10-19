@@ -101,6 +101,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   cloudcost, D174: 3–19 ms, mostly CloudsNear in the mountains); cheaper march and crisper billows tried and dropped
   (D175, D177). Tom's rule: today's cloud look always stays selectable (no blocky clouds). Open: "shaving foam"
   (needs finer detail noise; ask for dumps), cloud layers (low/mid/high), half-res CloudsNear as an option.
+  **Build 93** (`b3862f7`, `dist/Preview-93`): grain on near things in thin cloud fixed — the cloud march's last step
+  ends at the scene (D178).
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
