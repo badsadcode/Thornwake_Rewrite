@@ -414,6 +414,7 @@ public partial class Atmosphere : Node3D
         // (2: a temporal anti-aliasing averages the clouds' moving ray offsets — TAA, FSR 2)
         bool temporal = GameSettings.AntiAliasing.Index is 2 or 4;
         RenderingServer.GlobalShaderParameterSet("cloud_v2", v2 ? (temporal ? 2f : 1f) : 0f);
+        RenderingServer.GlobalShaderParameterSet("ray_temporal", temporal ? 1f : 0f); // (the ray passes' moving dither, D162)
         if (_cloudsNearQuad != null) _cloudsNearQuad.Visible = v2;
         int pixels = 256 << GameSettings.CloudResolution.Index;
         if (pixels != _cloudPixels)

@@ -53,6 +53,9 @@ uniform vec2 world_origin = vec2(0.0); // the scene origin's world position (the
 global uniform vec4 cloud_state;
 global uniform sampler2D weather_map : filter_linear, repeat_disable;
 global uniform vec4 weather_frame;
+// (2: a temporal anti-aliasing is on and averages a ray offset that moves every frame; otherwise the offset stays still:
+// without TAA a moving one crawled through the light as fast bands — Tom, build 85, SMAA, D162)
+global uniform float ray_temporal;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -115,7 +118,7 @@ void fragment() {
 	float ground_here = textureLod(air_map, clamp(mc, 0.0, 1.0), 0.0).r;
 	float scale = density / max(haze_shape(cam.y, ground_here), 1e-4);
 
-	float jitter = fract(52.9829189 * fract(dot(FRAGCOORD.xy + float(int(TIME * 60.0) % 16) * 5.588, vec2(0.06711056, 0.00583715))));
+	float jitter = fract(52.9829189 * fract(dot(FRAGCOORD.xy + (ray_temporal > 0.5 ? float(int(TIME * 60.0) % 16) * 5.588 : 0.0), vec2(0.06711056, 0.00583715))));
 	float transmit = 1.0, prev = 0.0, lit = 0.0, all_haze = 0.0, shadowed = 0.0;
 	vec3 light = vec3(0.0);
 	for (int i = 0; i < steps; i++) {

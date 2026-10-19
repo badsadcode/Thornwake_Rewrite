@@ -56,15 +56,26 @@ public static class SettingPresets
             foreach (var (id, node) in profiles) yield return (id, node);
     }
 
-    /// <summary>Set every covered setting from the preset. Returns a line for the status bar.</summary>
+    /// <summary>
+    /// Look settings the benchmark profiles also carry (Ultra was Tom's dense-forest test: haze 1.95, glow 1.5, sun shafts
+    /// 3…) that a built-in quality preset must not change (D162, Tom: "everything is so light, blown out everywhere"
+    /// after loading Ultra). The player's own presets keep everything they saved.
+    /// </summary>
+    private static readonly HashSet<string> LookKeys = new() { "fx.haze", "fx.glow", "fx.sun_shafts", "fx.god_ray_contrast", "fx.light_beams", "view.fov", "fx.exposure", "fx.saturation" };
+
+    /// <summary>Set the preset's settings. Built-in: the quality and performance settings the profiles name (each from
+    /// this profile, or its default when the profile leaves it out); the look stays as the player has it. Own: every
+    /// covered setting it saved. Returns a line for the status bar.</summary>
     public static string Apply(Preset preset)
     {
         if (preset.BuiltIn)
         {
             var profile = Profiles().FirstOrDefault(p => p.Id == preset.Id).Node?["settings"] as JsonObject;
             var values = profile?.ToDictionary(p => p.Key, p => p.Value!.GetValue<double>()) ?? new();
-            foreach (var s in Covered) s.Value = values.TryGetValue(s.Key, out double v) ? v : s.Default;
-            return $"Preset {preset.Name} loaded.";
+            var quality = Profiles().SelectMany(p => (p.Node?["settings"] as JsonObject)?.Select(kv => kv.Key) ?? Enumerable.Empty<string>())
+                .Where(k => !LookKeys.Contains(k)).ToHashSet();
+            foreach (var s in Covered.Where(s => quality.Contains(s.Key))) s.Value = values.TryGetValue(s.Key, out double v) ? v : s.Default;
+            return $"Preset {preset.Name} loaded (quality and performance; your look settings are unchanged).";
         }
         var cfg = new ConfigFile();
         if (cfg.Load(preset.Id) != Error.Ok) return $"Could not read the preset {preset.Name}.";

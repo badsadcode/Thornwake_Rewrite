@@ -37,6 +37,11 @@ public partial class WorldLab
             var low = SettingPresets.All().First(p => p.BuiltIn && p.Name == "Low");
             SettingPresets.Apply(low);
             Check(Math.Abs(grass.Value - .5) < 1e-6, $"Low sets grass 0.5 ({grass.Value})");
+            var haze = GameSettings.All.First(s => s.Key == "fx.haze");
+            haze.Value = 1.3;
+            SettingPresets.Apply(SettingPresets.All().First(p => p.BuiltIn && p.Name == "Ultra"));
+            Check(Math.Abs(haze.Value - 1.3) < 1e-6, $"Ultra leaves the look alone (haze {haze.Value})");
+            SettingPresets.Apply(low);
             var ssr = GameSettings.All.First(s => s.Key == "fx.ssr");
             Check(ssr.Value == 0, "Low turns reflections off");
             Check(season.Index == 2, "season untouched (a world setting)");

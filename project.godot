@@ -142,6 +142,10 @@ air_frame={
 "type": "vec4",
 "value": Vector4(0, 0, 0, 0)
 }
+ray_temporal={
+"type": "float",
+"value": 0.0
+}
 lightning={
 "type": "vec4",
 "value": Vector4(0, 0, 0, 0)

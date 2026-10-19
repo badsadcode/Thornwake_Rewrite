@@ -2459,6 +2459,23 @@ and the horizon artifacts."
   rounded shape the pattern fades to its average three times sooner (`ct_mackerel_f`).
 * Dumps show `cloud base … m above the sea, region … m`. New capture scene `cloud-valley-peaks`.
 
+## D162 — "Everything so light, blown out": the Ultra preset's look values; fast bands in the fog (2026-10-19)
+Tom on build 85 (dump 171745, badlands at 10:46): "everything is so light, it is blown out everywhere"; and "in the
+fog, bands in the light … like gusts of wind moving really fast".
+* Rebuilt from his dump with one thing changed at a time (`artifacts/blown-out-dump-171745.jpg`): two causes. (1) He
+  had loaded the built-in **Ultra** preset (D157); the built-ins are the benchmark's profiles, and Ultra was Tom's old
+  dense-forest test with look values (Distance haze 1.95, Glow 1.5, Sun shafts 3, God ray contrast 0.9, Light beams
+  4, field of view 50). (2) *Rays strength* 2.5: a bright haze toward the sun. Either back to normal clears most of
+  it, both together the view is clear (the rest is the badlands' dusty biome mood).
+* **Fix**: built-in presets set only quality and performance settings — the keys the profiles name minus a look list
+  (haze, glow, sun shafts, god ray contrast, light beams, field of view, exposure, saturation) — each from the chosen
+  profile or its default; nothing else is reset. The player's own presets still restore all they saved.
+  `--presets-test` checks that Ultra leaves the haze alone. The benchmark keeps using the full profiles.
+* **Fast bands**: the air rays and light beams passes moved their dither every frame (for TAA to average). Tom plays
+  with SMAA, so the pattern crawled through the lit haze. Now it only moves with TAA or FSR 2 (global `ray_temporal`),
+  as the clouds already did. (By reading the code; Tom to confirm in play.)
+* Tom's own settings still hold Ultra's look values and Rays strength 2.5: he resets them (Lighting and effects).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

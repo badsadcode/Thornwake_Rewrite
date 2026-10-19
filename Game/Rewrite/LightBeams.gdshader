@@ -22,6 +22,9 @@ uniform float contrast = 0.0;
 global uniform vec4 cloud_state;
 global uniform sampler2D weather_map : filter_linear, repeat_disable;
 global uniform vec4 weather_frame;
+// (2: a temporal anti-aliasing is on and averages a ray offset that moves every frame; otherwise the offset stays still:
+// without TAA a moving one crawled through the light as fast bands — Tom, build 85, SMAA, D162)
+global uniform float ray_temporal;
 
 const int STEPS = 40;
 
@@ -69,7 +72,7 @@ void fragment() {
 	float phase = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * mu, 1.5) * 0.08 + 0.025;
 
 	// Interleaved gradient noise: an even, fine dither (no visible grain with or without TAA).
-	float jitter = fract(52.9829189 * fract(dot(FRAGCOORD.xy + float(int(TIME * 60.0) % 16) * 5.588, vec2(0.06711056, 0.00583715))));
+	float jitter = fract(52.9829189 * fract(dot(FRAGCOORD.xy + (ray_temporal > 0.5 ? float(int(TIME * 60.0) % 16) * 5.588 : 0.0), vec2(0.06711056, 0.00583715))));
 	float lit = 0.0, total = 0.0, prev = 0.0;
 	for (int i = 0; i < STEPS; i++) {
 		float u = (float(i) + jitter) / float(STEPS);
