@@ -253,6 +253,10 @@ public static class GameSettings
         "and a valley hides the haze and shafts behind it (correct). Rays over clouds (build 87): the rays' haze is " +
         "painted over those clouds, showing the hidden land through a cloud sea.",
         options: new[] { "rays over clouds (build 87)", "clouds hide the rays" }));
+    public static readonly Setting RayLanes = Add(new("fx.ray_lanes", "Lighting and effects", "Ray lanes", 0, 1, 1, 1,
+        "The fine lanes in the rays in open air. Steady: they turn slowly with the sun around where you are. Build 89: " +
+        "they turned about the world's centre, so far from it the moving sun swept them through the haze in fast waves.",
+        options: new[] { "build 89 (fast waves)", "steady" }));
     public static readonly Setting RayStrength = Add(new("fx.ray_strength", "Lighting and effects", "Rays strength", .5, 2.5, .05, 1,
         "How bright the shafts are, for the forest rays (A, A2) and the rays in open air. 1 = build 82.", "×"));
     public static readonly Setting ForestSunGlare = Add(new("fx.forest_sun_glare", "Lighting and effects", "Forest rays: sun glare", 0, 1, 1, 1,

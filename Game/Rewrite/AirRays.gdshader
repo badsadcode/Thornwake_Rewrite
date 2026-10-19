@@ -50,6 +50,13 @@ uniform float ray_size = 70.0;     // the lanes' width (m, across the sun's dire
 uniform float shadow_edge = 8.0;   // the shadow edge's softness (m)
 uniform float shaft_glow = 0.6;    // a broad glow of sunlit haze toward the sun (the shafts' brightness looking at them)
 uniform vec2 world_origin = vec2(0.0); // the scene origin's world position (the lanes stay put when the origin moves)
+// The lanes turn with the sun about a point near the player (scene xz), not the world's centre (D170: hundreds of
+// kilometres out, the sun's slow turn swept the whole comb through the haze at a few lane widths a second — Tom's "fast
+// fog waves"); lane_offset (m) keeps them in place when that point moves (Atmosphere.UpdateLanePivot). lane_mode 0 =
+// build 89 (about the world's centre; setting Ray lanes).
+uniform vec2 lane_pivot = vec2(0.0);
+uniform vec2 lane_offset = vec2(0.0);
+uniform int lane_mode = 1;
 global uniform vec4 cloud_state;
 global uniform sampler2D weather_map : filter_linear, repeat_disable;
 global uniform vec4 weather_frame;
@@ -130,8 +137,8 @@ void fragment() {
 		bool inside = m.x > 0.0 && m.y > 0.0 && m.x < 1.0 && m.y < 1.0;
 		vec2 hs = inside ? textureLod(air_map, m, 0.0).rg : vec2(sea_level, sea_level);
 		// Terrain: lit above the sun-shadow height, its edge roughened into lanes (the map's cells are tens of metres).
-		vec3 pw = p + origin3;
-		vec2 lane = vec2(dot(pw, across_a), dot(pw, across_b)) / ray_size;
+		vec3 pw = lane_mode == 1 ? p - vec3(lane_pivot.x, 0.0, lane_pivot.y) : p + origin3;
+		vec2 lane = (vec2(dot(pw, across_a), dot(pw, across_b)) + (lane_mode == 1 ? lane_offset : vec2(0.0))) / ray_size;
 		float rough = (value_noise(lane) * 0.65 + value_noise(lane * 2.7 + 17.0) * 0.35 - 0.5) * 2.0 * ray_noise;
 		float sun = smoothstep(hs.g + rough - shadow_edge, hs.g + rough + shadow_edge, p.y);
 		// Clouds: the deck above this point toward the sun (none once the point is above the deck).

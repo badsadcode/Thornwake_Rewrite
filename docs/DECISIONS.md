@@ -2570,6 +2570,24 @@ the sky alone, a saturated sky blue; now grey, as cloud lit by the sunlit cloud 
 `artifacts/ridge-cloud-sea.jpg`. Cost: looking down onto the sea ~44–53 FPS where build 88 showed 53–60 (capped) on Tom's
 PC: rays now cross a broken layer instead of stopping in an opaque one.
 
+## D170 — The fast fog waves: the air rays' lanes turned about the world's centre (2026-10-19)
+Tom on build 89 (dumps 194609, swamp at 11:15, and 194902, sunrise 3°, wind 0): "these weird fog waves … so fast … not
+waves on grass, it's something in the air"; then "I think these are the rays from the sun … the sun is moving". He was
+right. The rays in open air roughen each shadow edge into lanes ~70 m wide (D150), placed by the noise of
+(world position · two directions across the sun). The world position there is ~230 km from the world's centre, so a
+tiny turn of the sun (the clock runs: a 160-minute day) moved the noise by 230 km × the angle: the whole comb swept
+through the haze at ~1–3 lane widths a second, faster at sunrise and the farther from the centre. Captures never
+showed it: the clock stands still in a capture.
+* **Fix**: the lanes turn about a point near the player (the air map's centre, which moves after ~2.5 km); when it
+  moves an offset takes up the difference, so the lanes stay where they are (`Atmosphere.UpdateLanePivot`). Far haze
+  10 km away now turns at a few metres a second, as real shafts follow the sun. Setting **Ray lanes**
+  (`fx.ray_lanes`): *steady* (default) or *build 89 (fast waves)*.
+* Test: `--shot-clock` lets the clock run in a capture; with `--extra-yaws=0,0,… --extra-every=0.25` a burst of the
+  same view. At his sunrise dump the haze changed ~3× more frame to frame with build 89's lanes than with steady ones,
+  which change no more than with the clock stopped (`artifacts/fast-fog-waves.jpg`).
+* (D162's dither fix and D163's grass slider were other causes of moving bands; *Wind waves on grass* at 1.9 in his
+  settings still brightens the grass in gusts, not the air.)
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -91,6 +91,10 @@ public partial class WorldLab : Node3D
     private bool _faceSun; // debug: turn the camera toward the sun before the screenshot
     // --extra-yaws=a,b,…: after the shot, more shots turned by these yaw offsets (<name>-1.png …), same world and tiles.
     private readonly List<float> _extraYaws = new();
+    // --extra-every=s: seconds between those extra shots (default 3); with yaw offsets 0 a short burst of the same view,
+    // to see what moves (Tom's fast fog waves, D170).
+    private float _extraEvery = 3;
+    private readonly bool _shotClock = OS.GetCmdlineUserArgs().Contains("--shot-clock");
     private int _extraShot;
     /// <summary>Screenshot aid: a row of every placeholder plant in front of the camera (--gallery).</summary>
     private bool _gallery, _openMap;
@@ -145,6 +149,7 @@ public partial class WorldLab : Node3D
             // Single screenshot: --world-shot=<png> --at=x,z [--view=yaw,pitch,zoom] [--msaa=0|2|4] [--fly-height=m] [--hour=h] [--menu=tab]
             if (arg.StartsWith("--world-shot=")) { _shotPath = arg[13..]; _smokeDirectory = Path.GetDirectoryName(_shotPath) ?? "."; _atmosphere.StillShot = true; }
             if (arg.StartsWith("--at=")) { var v = arg[5..].Split(','); _shotAt = (double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture)); }
+            if (arg.StartsWith("--extra-every=")) _extraEvery = float.Parse(arg[14..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--extra-yaws=")) foreach (var y in arg[13..].Split(',')) _extraYaws.Add(float.Parse(y, CultureInfo.InvariantCulture));
             if (arg.StartsWith("--view=")) { var v = arg[7..].Split(','); _shotView = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture), float.Parse(v[2], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--msaa=")) GetViewport().Msaa3D = arg[7..] switch { "0" => Viewport.Msaa.Disabled, "4" => Viewport.Msaa.Msaa4X, _ => Viewport.Msaa.Msaa2X };
@@ -838,7 +843,8 @@ public partial class WorldLab : Node3D
         // of daylight differs and the clock reads another hour after the jump — dump 005618: 10:59 instead of 10:40)
         double hourLatitude = _shotAt is { } goingTo && Math.Abs(PlayerZ - goingTo.Z) > 2 ? _sampler.Plan.Climate.Latitude(goingTo.Z) : latitude;
         if (_pendingHour is { } setHour) { _clock.SetHour(setHour, hourLatitude); _pendingHour = null; }
-        var sky = _clock.Advance(delta, latitude, run: _shotPath == null);
+        // (--shot-clock: the clock runs in a capture too, at the game's speed — to see what the moving sun does, D170)
+        var sky = _clock.Advance(delta, latitude, run: _shotPath == null || _shotClock);
         _hitch.Mark("ground snap, camera, others");
         UpdateWeather(delta, sky);
         _hitch.Mark("weather");
@@ -1698,7 +1704,7 @@ public partial class WorldLab : Node3D
                 if (_extraYaws.Count == 0) GetTree().Quit(0);
                 else { _smokeStage = 3; _smokeTimer = 0; _yaw += _extraYaws[0]; }
             }
-            else if (_smokeStage == 3 && _smokeTimer > 3 && settled)
+            else if (_smokeStage == 3 && _smokeTimer > _extraEvery && settled)
             {
                 _extraShot++;
                 Screenshot(Path.Combine(Path.GetDirectoryName(_shotPath) ?? ".", $"{Path.GetFileNameWithoutExtension(_shotPath)}-{_extraShot}.png"));

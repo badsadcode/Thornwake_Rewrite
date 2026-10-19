@@ -1107,6 +1107,7 @@ public partial class Atmosphere : Node3D
         _air.SetShaderParameter("shadow_edge", Dev("airedge", 8));
         _air.SetShaderParameter("shaft_glow", Dev("airglow", .6f));
         _air.SetShaderParameter("world_origin", new Vector2((float)originX, (float)originZ));
+        UpdateLanePivot(toSun, cameraWorldX, cameraWorldZ, originX, originZ);
         _air.SetShaderParameter("cloud_base", SeaLevel + CloudBaseAboveSea);
         _air.SetShaderParameter("cloud_shade", Dev("aircloud", _shadow.Visible ? _shadowStrength : .62f));
         _air.SetShaderParameter("sea_level", SeaLevel);
@@ -1118,6 +1119,29 @@ public partial class Atmosphere : Node3D
         _air.SetShaderParameter("side_scatter", Dev("airside", .8f));
         _air.SetShaderParameter("haze_height", Dev("airhaze", contrast ? 1150 : 1400));
         _air.SetShaderParameter("debug", (int)Dev("airdebug", 0));
+    }
+
+    // The air rays' lanes turn about a point near the player (D170): the air map's centre (moves after ~2.5 km), or the
+    // camera before the first map. When it moves, the offset takes up the difference so the lanes stay where they are.
+    private double _lanePivotX = double.NaN, _lanePivotZ;
+    private Vector2 _laneOffset;
+
+    private void UpdateLanePivot(Vector3 toSun, double cameraWorldX, double cameraWorldZ, double originX, double originZ)
+    {
+        double px = _airSize > 0 ? _airX : cameraWorldX, pz = _airSize > 0 ? _airZ : cameraWorldZ;
+        var l = toSun.Normalized();
+        var a = (Mathf.Abs(l.Y) > .99f ? Vector3.Right : l.Cross(Vector3.Up)).Normalized(); // (as AirRays.gdshader)
+        var b = a.Cross(l);
+        if (double.IsNaN(_lanePivotX)) { _lanePivotX = px; _lanePivotZ = pz; }
+        else if (px != _lanePivotX || pz != _lanePivotZ)
+        {
+            var d = new Vector3((float)(px - _lanePivotX), 0, (float)(pz - _lanePivotZ));
+            _laneOffset += new Vector2(d.Dot(a), d.Dot(b)); // (grows with the distance travelled: 1,000 km is 14,000 lanes, fine in float)
+            _lanePivotX = px; _lanePivotZ = pz;
+        }
+        _air.SetShaderParameter("lane_mode", GameSettings.RayLanes.Index);
+        _air.SetShaderParameter("lane_pivot", new Vector2((float)(_lanePivotX - originX), (float)(_lanePivotZ - originZ)));
+        _air.SetShaderParameter("lane_offset", _laneOffset);
     }
 
     /// <summary>Screenshots with forced storms: light one far cell.</summary>
