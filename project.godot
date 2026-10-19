@@ -154,6 +154,10 @@ cloud_region={
 "type": "float",
 "value": 0.0
 }
+cloud_sea={
+"type": "float",
+"value": 0.0
+}
 cloud_air={
 "type": "vec4",
 "value": Vector4(0, 0, 0, 0)

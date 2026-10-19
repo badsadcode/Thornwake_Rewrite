@@ -325,6 +325,11 @@ global uniform vec4 lightning; // round 27: horizontal direction to the strike (
 // by how far they rise above their region, not above the sea (a whole high country was one cloud bank, painting an even
 // blue over the view from Tom's 3,060 m ridge).
 global uniform float cloud_region;
+// Cloud sea (D169, draft): 0 = off; toward 1 in high country the layer is thin (a few hundred metres, no towers) and sits
+// low (Atmosphere.CloudBaseAboveSea), under the ridges. Storms keep their thick deck.
+global uniform float cloud_sea;
+#define SEA_K (cloud_sea * (1.0 - smoothstep(0.3, 0.7, cloud_state.w)))
+#define SEA_TALL (1.0 - 0.45 * SEA_K)
 // Mountains shade the clouds (D167): the air map's sun-shadow heights (WorldLab.AirRays, 20 km around the player). xy: the
 // camera's offset from the map's centre (m), z: the map's size (0 = off), w: the camera's scene height (m).
 global uniform sampler2D air_map : filter_linear, repeat_disable;
@@ -404,7 +409,8 @@ vec3 vweather(vec2 xz, float coverage, float dist, out float land) {
 	float n = cloud_map(uv, lod, 0) * 0.8 + cloud_map(uv * 4.0 + vec2(0.31, 0.17), lod < 0.0 ? lod : lod + 2.0, 1) * 0.2;
 	float edge = 1.0 - coverage;
 	// (graded, not saturated: the denser the map, the more and higher the cloud)
-	float mass = clamp((n - edge + 0.1) / 0.35, 0.0, 1.0) * step(0.001, coverage);
+	// (cloud sea: the map's edge itself, not widened: clear gaps onto the valleys)
+	float mass = clamp((n - edge + 0.1 * (1.0 - SEA_K)) / 0.35, 0.0, 1.0) * step(0.001, coverage);
 	float core = smoothstep(edge + 0.05, edge + 0.4, n);
 	float tower = cloud_types.x > 0.001 ? cloud_types.x * core * (0.35 + 0.65 * cloud_map(uv * 0.5 + vec2(0.7, 0.2), lod < 0.0 ? lod : max(lod - 1.0, 0.0), 1)) : 0.0;
 	vec3 extra = land_and_front(xz - cloud_state.xy);
@@ -414,7 +420,10 @@ vec3 vweather(vec2 xz, float coverage, float dist, out float land) {
 	mass = max(mass, extra.x * (0.75 + 0.5 * n));
 	float cb = smoothstep(0.1, 0.7, wm.b) * weather_frame.w;
 	mass = max(mass, cb * smoothstep(0.25, 0.6, n + cb * 0.3));
-	return vec3(mass, 350.0 + 950.0 * sqrt(mass) + max(tower, cb * (0.6 + 0.4 * n)) * 5200.0 + wm.g * 700.0 + extra.y + (VBOTTOM - base), base);
+	float tall = 350.0 + 950.0 * sqrt(mass) + max(tower, cb * (0.6 + 0.4 * n)) * 5200.0 + wm.g * 700.0 + extra.y;
+	// (cloud sea: a flat-topped layer of stratocumulus; the caps the land holds still rise a little above it)
+	tall = mix(tall, 200.0 + 500.0 * sqrt(mass) + max(tower, cb) * 1200.0 + wm.g * 300.0 + extra.y * 0.4, SEA_K);
+	return vec3(mass, tall + (VBOTTOM - base), base);
 }
 
 // Density at p (camera-relative x/z offset by the cloud drift, y above the camera). detail: the fine erosion (off for
@@ -448,6 +457,13 @@ float vdens(vec3 p, bool detail) {
 	// (the map never quite fills: the 3D noise carves lumps and gaps inside clouds too, not only at their edges)
 	float dome = mix(0.62, 0.84, smoothstep(1800.0, 4500.0, wx.y)); // towers keep their width and round off only at the top
 	float hs = clamp(h + (n.r - 0.5) * 0.14 * shape_k, 0.0, 1.0); // (rounded: a billowed top)
+	if (SEA_K > 0.0) {
+		// Cloud sea: the thin layer's top in lumps ~1 km across (cells of stratocumulus) and swells over kilometres,
+		// not one smooth surface (first render: a snowfield).
+		// (two scales: one alone left the lumps faceted, like crumpled paper)
+		float c = texture(cloud_noise, p / 1100.0 + vec3(0.21, 0.63, 0.47)).r * 0.6 + texture(cloud_noise, p / 420.0 + vec3(0.71, 0.13, 0.37)).g * 0.4;
+		hs = clamp(hs + ((c - 0.5) * 0.5 + (n.r - 0.5) * 0.25) * SEA_K, 0.0, 1.0);
+	}
 	// (rounded: the threshold passes 1 before the ceiling, so even the densest cloud closes its dome)
 	float cov = clamp(vremap(wx.x, smoothstep(dome, 1.0, hs) * mix(0.95, 1.03, shape_k), 1.0, 0.0, 1.0), 0.0, 1.0)
 		* smoothstep(0.0, mix(0.06, 0.1, shape_k), h) * mix(wx.x, 1.0, 0.25) * mix(0.8, 0.95, shape_k);
@@ -621,6 +637,10 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		// Mountains shade the clouds (D167): a peak between this point and the sun takes its direct light, so ranges cast
 		// long shadows and lanes of light across a cloud sea at sunrise; the sky's light stays.
 		float tsun = night > 0.5 ? 1.0 : cloud_terrain_sun(p.xz - cam, p.y);
+		// (D169: in the shadow the sky's light alone made the cloud tops a saturated sky blue; shaded cloud is lit as
+		// much by the sunlit cloud around it, many times scattered: grey, a little cool)
+		float gl_s = dot(amb, vec3(0.2126, 0.7152, 0.0722));
+		amb = mix(amb, gl_s * vec3(0.94, 0.97, 1.04) + light_col * 0.05, (1.0 - tsun) * 0.75);
 		light_col *= tsun;
 		// (test / reference: brighter sunlit tops)
 		vec3 s = light_col * sun_e * powder * 1.3 * (1.0 + (0.35 * cloud_dev.y + (cloud_look == 1 ? 0.25 : 0.0)) * h) + amb;
@@ -650,7 +670,7 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 
 vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float coverage, float storm) {
 	if (dir.y < 0.005 || coverage < 0.001) return vec4(0.0);
-	float vtop = VBOTTOM + (350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0) * SHAPE_TALL + 900.0 + SHAPE_TOP_EXTRA;
+	float vtop = VBOTTOM + ((350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0) * SHAPE_TALL + 900.0) * SEA_TALL + SHAPE_TOP_EXTRA;
 	float vlow = (relief_frame.z > 0.0 ? max(VBOTTOM - 500.0, VLOW_MIN) : VBOTTOM) - SHAPE_LOW_EXTRA;
 	float t0 = vlow / dir.y, t1 = min(min(vtop / dir.y, 50000.0), front_distance(dir)); // nothing beyond a front shows
 	if (t0 > t1) return vec4(0.0);
@@ -665,7 +685,7 @@ vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float
 // scene's depth in front of geometry, unlimited in the sky). Steps start at 20 m so a cloud around the camera is fog.
 vec4 volumetric_v2(vec3 dir, float t_far, float jitter, int max_steps, vec3 sun_dir, vec3 sun_col, float day, float mu, float coverage, float storm) {
 	if (coverage < 0.001) return vec4(0.0);
-	float vtop = VBOTTOM + (350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0) * SHAPE_TALL + 900.0 + SHAPE_TOP_EXTRA;
+	float vtop = VBOTTOM + ((350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0) * SHAPE_TALL + 900.0) * SEA_TALL + SHAPE_TOP_EXTRA;
 	float vlow = (relief_frame.z > 0.0 ? max(VBOTTOM - 500.0, VLOW_MIN) : VBOTTOM) - SHAPE_LOW_EXTRA;
 	float t0, t1;
 	if (abs(dir.y) < 1e-4) {

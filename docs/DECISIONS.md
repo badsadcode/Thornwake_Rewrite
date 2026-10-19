@@ -2554,6 +2554,22 @@ height-aware makes the far ranges slightly crisper; the cliff lake (low down) is
 70 % cover the flat blue-grey is the clouds in front of the land — an even veil about 80 % opaque instead of a broken
 cloud sea with gaps and tops — not the distance fog. Next in M3: the cloud field seen from above (gaps, tops, light).
 
+## D169 — Cloud sea under the high ridges (draft); the ridge stood in the bottom of the layer (2026-10-19)
+Tom: "work on the cloud sea seen from above next: gaps, lit tops and light through it, as a switchable draft". First the
+cause, which corrects D167/D168 again: on his ridge (camera ~3,060 m) the base over the land (D165) was 2,952 m and the
+clouds 1–2 km thick, so the camera stood in the bottom of the layer: every view down crossed the clouds' underside, an
+even blue-grey (the reference look's base colour). The same clouds seen from 2.3 km higher already had lit tops and gaps.
+New setting **Cloud sea** (`sky.cloud_sea`, Sky): *build 88* (default) or *under the high ridges (draft)*, with Cloud base
+above the land and volumetric v2. In high country (region's mean ground 0.8–1.5 km and up, eased in) the base comes down
+to ~350 m over the region's ground (at least 1,500 m above the sea; lowlands unchanged, the cliff lake identical) and the
+layer is thin: 200–700 m of stratocumulus, no towers, land caps 0.4× as tall, its top in lumps ~0.4–1 km across (two
+noise scales: one alone looked like crumpled paper, none like a snowfield), and the map's edge not widened, so gaps
+open onto the valleys. Storms keep their thick deck. Rain curtains and the air pass's cloud shadows follow the lower
+base (shafts under the gaps, not yet checked in a capture). Fix in D167's draft: cloud in a mountain's shadow was lit by
+the sky alone, a saturated sky blue; now grey, as cloud lit by the sunlit cloud around it. Captures:
+`artifacts/ridge-cloud-sea.jpg`. Cost: looking down onto the sea ~44–53 FPS where build 88 showed 53–60 (capped) on Tom's
+PC: rays now cross a broken layer instead of stopping in an opaque one.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

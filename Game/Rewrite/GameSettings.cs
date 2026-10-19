@@ -358,6 +358,12 @@ public static class GameSettings
         "Volumetric v2 (M3 draft). On: a mountain between a cloud and the sun takes its direct light, so at sunrise and sunset " +
         "ranges cast long shadows and lanes of light across the clouds (seen best from above a cloud sea). Off: build 88.",
         options: new[] { "off (build 88)", "on (draft)" }));
+    public static readonly Setting CloudSea = Add(new("sky.cloud_sea", "Sky", "Cloud sea", 0, 1, 1, 0,
+        "Volumetric v2 (M3 draft, with Cloud base above the land). Under the high ridges: in high country the clouds form a " +
+        "lower, thinner layer, below the ridges and summits, so from up high you look down onto a cloud sea (lit tops, " +
+        "gaps onto the valleys); in the valleys the ceiling is lower. Lowlands are unchanged. Build 88: the clouds keep " +
+        "their height and thickness everywhere (on a high ridge you stand in the bottom of the layer).",
+        options: new[] { "build 88", "under the high ridges (draft)" }));
     public static readonly Setting CloudTurbulence = Add(new("sky.cloud_turbulence", "Sky", "Cloud turbulence", 0, 1, 1, 0,
         "Volumetric v2: near you a cloud churns — wisps and eddies drifting by when you walk or fly through cloud.",
         options: new[] { "off", "on" }));

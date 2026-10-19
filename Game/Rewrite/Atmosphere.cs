@@ -77,7 +77,25 @@ public partial class Atmosphere : Node3D
     /// 1,500 m over the region's mean ground — the condensation level rides on the land — eased over ~20 s as the region
     /// changes, so mountains of the region still reach into the deck while its valleys stay below it.
     /// </summary>
-    public float CloudBaseAboveSea => 1500 + (GameSettings.CloudBase.Index == 1 && !float.IsNaN(_regionalGround) ? _regionalGround * 0.9f : 0);
+    public float CloudBaseAboveSea
+    {
+        get
+        {
+            float land = 1500 + (GameSettings.CloudBase.Index == 1 && !float.IsNaN(_regionalGround) ? _regionalGround * 0.9f : 0);
+            float sea = CloudSea; // (0 when the region is unknown)
+            return sea > 0 ? Mathf.Lerp(land, Math.Max(1500, _regionalGround + 350), sea) : land;
+        }
+    }
+
+    /// <summary>
+    /// Cloud sea (D169, draft; Tom: "the cloud sea seen from above: gaps, lit tops and light through it"): 0 = off, 1 = in
+    /// high country (region ≥ ~1.5 km) the layer sits ~350 m over the region's ground and is a few hundred metres thick
+    /// (SkyCommon.gdshaderinc), under the ridges and summits. Build 88's base over the land put it ~1.35 km over the
+    /// region and 1–2 km thick: on Tom's 3,060 m ridge the camera stood in the bottom of the layer, every view down was
+    /// the clouds' blue-grey underside.
+    /// </summary>
+    private float CloudSea => GameSettings.CloudSea.Index == 1 && GameSettings.CloudBase.Index == 1 && GameSettings.CloudQuality.Index == 3
+        && !float.IsNaN(_regionalGround) ? Mathf.SmoothStep(800, 1500, _regionalGround) : 0;
 
     private void UpdateRegionalGround(double delta)
     {
@@ -637,6 +655,7 @@ public partial class Atmosphere : Node3D
         UpdateCloudTypes(delta, sky, cameraWorldX, cameraWorldZ, cameraLocal);
         UpdateRegionalGround(delta);
         RenderingServer.GlobalShaderParameterSet("cloud_region", GameSettings.CloudBase.Index == 1 && !float.IsNaN(_regionalGround) ? _regionalGround : 0f);
+        RenderingServer.GlobalShaderParameterSet("cloud_sea", CloudSea);
         UpdateMist(delta, hour, originX, originZ);
         UpdateAirLoad(delta, hour);
         UpdateForestRays(delta);
@@ -991,7 +1010,7 @@ public partial class Atmosphere : Node3D
             (float.IsNaN(Peak.X) ? "" : $" (peak {F(Peak.X)}, {F(Peak.Y)}, {F(Peak.Z)}, relief {F(PeakRelief)} m)") + "\n" +
             $"Wind: from {Wind.Compass()}, direction ({F(Wind.Direction.X)}, {F(Wind.Direction.Y)}), {F(Wind.Speed)} m/s, gust {F(Wind.Gust)}\n" +
             $"Sun elevation {F(_sunElevation)}°, night {F(_night)}, daylight {F(_daylight)}, ocean time {F(OceanTime)} s\n" +
-            $"Air load {F(_airLoad)} (moisture {F(_airMoisture)}, dust {F(_airDust)}; climate {F(_airRain)} mm/yr; rays {(GameSettings.RayWeather.Index == 1 ? "by the weather" : "always")}; cloud base {F(CloudBaseAboveSea)} m above the sea, region {F(_regionalGround)} m)\n" +
+            $"Air load {F(_airLoad)} (moisture {F(_airMoisture)}, dust {F(_airDust)}; climate {F(_airRain)} mm/yr; rays {(GameSettings.RayWeather.Index == 1 ? "by the weather" : "always")}; cloud base {F(CloudBaseAboveSea)} m above the sea (cloud sea {F(CloudSea)}), region {F(_regionalGround)} m)\n" +
             $"Sea: effective sea state {F(_wavesState)} (setting {F(GameSettings.SeaState.Value)} + storm), wave heading {F(_wavesAngle)} rad, " +
             $"spectrum origin ({F(Spectrum.OriginX)}, {F(Spectrum.OriginZ)})";
     }
