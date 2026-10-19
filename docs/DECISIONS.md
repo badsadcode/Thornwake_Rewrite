@@ -2408,6 +2408,22 @@ and deliver one `ThornwakeUI/` folder laid out like the project (copied in as it
 `reference/ui_mockup_01.png` there; and, being a text model, it may draw the parts with code (SVG or Python/Pillow
 scripts, kept so the parts can be regenerated).
 
+## D159 — M3 starts: the cloud baseline (2026-10-19)
+Tom: "let's continue working on Atmosphere 2.0". M2 is closed for now (HANDOFF item 3); M3, the new cloud model, is
+next (Tom's asks: more detailed, more varied clouds and movement; the deck at valley height in mountain worlds).
+* Suite **`clouds`** (8 scenes, Ultra profile = cloud renderer v2): close cumulus (flying 1,250 m over the plains),
+  a cloud at a summit and the deck from Tom's ridge (his own world `mountains42`: Mountain kingdoms, seed 42, now a
+  benchmark world), the horizon at noon and at sunset, broken cover looking up, a storm deck, a 10 s turn. New scene
+  option `"clouds": [cumulus, storm, mackerel, lens]` forces the cloud types (as `--clouds`). Cameras 25 m up on the
+  plains (grass and a trunk blocked the first takes).
+* **Baseline findings** (`artifacts/m3-clouds-baseline-build84.jpg`): soft, smeared shapes (wind streaking) and a
+  flat featureless base from below; **stacked horizontal slices** at the horizon (turn, sunset); white specks in the
+  noon sky (mackerel); a thin, wispy storm deck; in Tom's world the deck sits 1,500 m above the sea whatever the land,
+  so from a 3,060 m ridge the camera is inside the cumulus towers and from the summit the peaks stand in grey haze
+  with the deck far below. **Cost**: GPU 45.7 ms at the horizon at noon and 45.6 ms under the storm (21 fps on a
+  3080), 31 ms at sunset, 10–22 ms elsewhere — the march toward the horizon is the expensive part.
+* Tom's office-PC dumps 115949 / 120402 (M3's acceptance shots, D87) are not on this PC: asked for.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -17,6 +17,7 @@
     }
   },
   "worlds": {
+    "mountains42": { "name": "Tom's own world: Mountain kingdoms, seed 42 (default generation)", "preset": "mountainous", "seed": 42, "gen": {} },
     "patch32": {
       "name": "Tom's test world with biome patches (every biome near the start), for the atmosphere captures",
       "preset": "vast-world",
@@ -139,6 +140,22 @@
     { "id": "air-cliff", "name": "M2 air rays: lake below a cliff at sunrise (05:24, sun ~10° up, broken cloud), facing the sun", "world": "patch32",
       "at": [-9202, -3036], "view": [-1.172, 0.08, 2.36], "height": 0, "hour": 5.4, "seconds": 12,
       "settings": { "sky.clouds": 0.35, "time.season": 1 } },
+    { "id": "cloud-cumulus-close", "name": "M3 clouds: close cumulus, flying just under the base (14:00)", "world": "patch32",
+      "at": [-4001.0, 5631.3], "view": [0, 0.12, 8], "height": 1250, "hour": 14, "seconds": 6, "clouds": [0.8, 0, 0, 0], "settings": { "sky.clouds": 0.55 } },
+    { "id": "cloud-summit", "name": "M3 clouds: a cloud at a summit (Tom's world, 14:00)", "world": "mountains42",
+      "at": [-226338.0, 83152.4], "view": [-3.23, 0.23, 6.9], "height": 193, "hour": 14, "seconds": 6, "clouds": [0.6, 0, 0, 0], "settings": { "sky.clouds": 0.6 } },
+    { "id": "cloud-horizon-noon", "name": "M3 clouds: the horizon at noon over the plains", "world": "patch32",
+      "at": [-4001.0, 5631.3], "view": [0, 0.04, 8], "height": 0, "hour": 12, "seconds": 6, "clouds": [0.5, 0, 0.3, 0], "settings": { "sky.clouds": 0.45 } },
+    { "id": "cloud-horizon-sunset", "name": "M3 clouds: the horizon at sunset over the plains, facing the sun", "world": "patch32", "face": "sun",
+      "at": [-4001.0, 5631.3], "view": [0, 0.06, 8], "height": 25, "hour": 19.4, "seconds": 6, "clouds": [0.5, 0, 0.5, 0], "settings": { "sky.clouds": 0.45 } },
+    { "id": "cloud-broken-up", "name": "M3 clouds: broken cover, looking up (11:00)", "world": "patch32",
+      "at": [-4001.0, 5631.3], "view": [1.2, 0.55, 6], "height": 25, "hour": 11, "seconds": 6, "clouds": [0.7, 0, 0.2, 0], "settings": { "sky.clouds": 0.6 } },
+    { "id": "cloud-storm", "name": "M3 clouds: a storm deck coming over the plains (15:00)", "world": "patch32",
+      "at": [-4001.0, 5631.3], "view": [0, 0.1, 8], "height": 0, "hour": 15, "seconds": 6, "clouds": [0.3, 0.9, 0, 0], "settings": { "sky.clouds": 0.8 } },
+    { "id": "cloud-mountain-deck", "name": "M3 clouds: the deck seen from Tom's ridge (his dump 100445, 12:12)", "world": "mountains42",
+      "at": [-216238.6, 81823.6], "view": [10.289, -0.3, 0.1], "height": 388, "hour": 12.2, "seconds": 6, "settings": { "sky.clouds": 0.7 } },
+    { "id": "cloud-turn", "name": "M3 clouds: a 10 s turn under broken cloud (ghosting check)", "world": "patch32", "move": "turn",
+      "at": [-4001.0, 5631.3], "view": [0, 0.2, 8], "height": 25, "hour": 13, "seconds": 10, "clouds": [0.6, 0, 0.3, 0], "settings": { "sky.clouds": 0.55 } },
     { "id": "rays-dawn-turn", "name": "M2 rays: temperate forest, sunrise (05:24, sun ~10° up), light mist, turning", "world": "patch32",
       "move": "turn", "at": [-3141.8, 2362.6], "view": [0, 0.08, 0.3], "height": 0, "hour": 5.4, "seconds": 20, "mist": [0.35],
       "settings": { "fx.forest_rays": 3, "fx.light_model": 1, "fx.volumetric_fog": 1, "fx.ground_fog": 2, "perf.fog_quality": 3 } },
@@ -200,6 +217,11 @@
       "scenarios": ["air-cliff"],
       "variants": [ { "fx.air_rays": 0 }, { "fx.air_rays": 1 }, { "fx.air_rays": 2 }, { "fx.air_rays": 3 } ],
       "ablate": false
+    },
+    "clouds": {
+      "name": "Atmosphere 2.0 M3: cloud acceptance captures (close cumulus, summit, horizon noon and sunset, broken, storm, Tom's mountain deck, turn)",
+      "scenarios": ["cloud-cumulus-close", "cloud-summit", "cloud-horizon-noon", "cloud-horizon-sunset", "cloud-broken-up", "cloud-storm", "cloud-mountain-deck", "cloud-turn"],
+      "ablate": false, "capture": true, "stills": 2
     },
     "rays3": {
       "name": "Atmosphere 2.0 M2: forest rays A2 through the day (sunrise, morning, noon, evening), forward scattering 0.75 / 0.3",

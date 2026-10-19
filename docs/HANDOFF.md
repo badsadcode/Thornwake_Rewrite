@@ -150,9 +150,18 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
    **Progress (D143, 2026-10-18)**: (1) done — suite `rays2` (sunrise, first person), captures in `artifacts/rays/`;
    (2) done as a draft — *Forest rays → A2* and *Volumetric fog quality* (off … very high). **Waiting for Tom**: his
    HDRP screenshots in `docs/references/` and a look at A vs A2; then either tune A2 further or start step 3.
-4. Make captures smaller for Tom (downscaled JPGs, one side-by-side image per A/B) — promised.
-5. Later milestones: M1 pause point 3 (warm sun glow, moon halo), M3 single-pass cloud model (acceptance shots: dumps
-   115949 / 120402), M4 haze and distance, biome light profile tuning (`Content/light_profiles.json`).
+   **M2 closed for now (2026-10-19, builds 76–84, D143–D156)**: forest rays A2 with forward scattering, sun glare,
+   volumetric fog quality; rays in open air (terrain sun-shadow map, ridge lanes, mountains block the sun); rays and
+   haze by the weather (air load); Noor's light and shadow in the haze; Rays strength. All player settings (D156).
+   Final strengths and defaults after M3 (the clouds change the light under them and the cloud-gap shafts). Optional
+   leftovers: forest haze tied to the place instead of the player (proposed, Tom to say), the rock pillar's shaft.
+4. Captures for Tom: downscaled JPGs, side by side — done since D143 (`artifacts/rays/`).
+5. **Next: M3, the new cloud model** (started 2026-10-19). Acceptance (feasibility review): six cloud captures (close
+   cumulus, a cloud at a summit, the horizon at noon and at sunset, broken cover, a storm deck) against the current
+   build, a 10 s camera turn without ghosting, the cost reported; Tom's dumps 115949 / 120402; Tom's asks: more
+   detailed and more varied cloud noise and movement, the deck no longer at valley height in mountain worlds; the
+   cloud drafts of D97 (caps, turbulence, lens) to fold in. Then M4 haze and distance, M1 pause point 3 (warm sun
+   glow, moon halo), biome light profiles (`Content/light_profiles.json`).
 
 ## Developer tools added recently
 * `--cloud-split-test[=1|2|3]`: 1 = left half clouds by the near pass, right half by the sky; 2 = also a probe strip with

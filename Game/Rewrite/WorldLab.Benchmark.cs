@@ -42,6 +42,8 @@ public partial class WorldLab
         public string? Face { get; init; }
         /// <summary>Mist forced for this scene, [amount] or [amount, 1] (a bank everywhere), as <c>--mist</c> (M2 rays).</summary>
         public double[]? Mist { get; init; }
+        /// <summary>Cloud types forced for this scene, [cumulus, storm, mackerel, lens] 0..1 each, as <c>--clouds</c> (M3).</summary>
+        public double[]? Clouds { get; init; }
     }
 
     private sealed record BenchJob(BenchScenario Scene, Dictionary<string, double> Variant, string Label);
@@ -160,6 +162,7 @@ public partial class WorldLab
             Move = o["move"]?.GetValue<string>(),
             Face = o["face"]?.GetValue<string>(),
             Mist = D("mist"),
+            Clouds = D("clouds"),
             Settings = o["settings"]?.AsObject().ToDictionary(p => p.Key, p => p.Value!.GetValue<double>()) ?? new(),
             World = o["world"] is { } w ? config["worlds"]?[w.GetValue<string>()]?.AsObject() ?? throw new ArgumentException($"no benchmark world '{w}'") : null,
         };
@@ -350,8 +353,18 @@ public partial class WorldLab
     private (float? Amount, bool Bank)? _benchMistWas;
 
     /// <summary>A scene's forced mist (null: back to what it was before the first scene that forced one, e.g. --mist).</summary>
+    private bool _benchCloudsSet;
+    private Vector4? _benchCloudsWas;
+
     private void BenchMist(BenchScenario? scene)
     {
+        // (the scene's forced cloud types too, put back like the mist)
+        if (scene?.Clouds is { Length: 4 } c)
+        {
+            if (!_benchCloudsSet) { _benchCloudsWas = _atmosphere.ForceClouds; _benchCloudsSet = true; }
+            _atmosphere.ForceClouds = new Vector4((float)c[0], (float)c[1], (float)c[2], (float)c[3]);
+        }
+        else if (_benchCloudsSet) { _atmosphere.ForceClouds = _benchCloudsWas; _benchCloudsSet = false; }
         if (scene?.Mist is { Length: > 0 } m)
         {
             _benchMistWas ??= (_atmosphere.MistOverride, _atmosphere.MistBankEverywhere);
