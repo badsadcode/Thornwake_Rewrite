@@ -57,6 +57,8 @@ uniform vec2 world_origin = vec2(0.0); // the scene origin's world position (the
 uniform vec2 lane_pivot = vec2(0.0);
 uniform vec2 lane_offset = vec2(0.0);
 uniform int lane_mode = 1;
+// Under the broken cloud sea (D172): how much of the sun its clouds take (0 = the usual cloud_shade).
+uniform float sea_shade = 0.0;
 global uniform vec4 cloud_state;
 global uniform sampler2D weather_map : filter_linear, repeat_disable;
 global uniform vec4 weather_frame;
@@ -144,7 +146,7 @@ void fragment() {
 		// Clouds: the deck above this point toward the sun (none once the point is above the deck).
 		if (clouds > 0.0 && p.y < cloud_base) {
 			vec2 xz = cloud_state.xy + (p.xz - cam.xz) + l.xz / lift * (cloud_base - p.y);
-			sun *= 1.0 - cloud_shade * clouds * cloud_density(xz, coverage);
+			sun *= 1.0 - max(cloud_shade, sea_shade) * clouds * cloud_density(xz, coverage);
 		}
 		// (own haze for the near and middle distance only: Godot's fog, which fades into the sky's colour, keeps the far
 		// distance; a far haze of plain fog colour went dark violet along distant ridges)

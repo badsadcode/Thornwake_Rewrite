@@ -94,7 +94,7 @@ public partial class Atmosphere : Node3D
     /// region and 1–2 km thick: on Tom's 3,060 m ridge the camera stood in the bottom of the layer, every view down was
     /// the clouds' blue-grey underside.
     /// </summary>
-    private float CloudSea => GameSettings.CloudSea.Index == 1 && GameSettings.CloudBase.Index == 1 && GameSettings.CloudQuality.Index == 3
+    private float CloudSea => GameSettings.CloudSea.Index >= 1 && GameSettings.CloudBase.Index == 1 && GameSettings.CloudQuality.Index == 3
         && !float.IsNaN(_regionalGround) ? Mathf.SmoothStep(800, 1500, _regionalGround) : 0;
 
     private void UpdateRegionalGround(double delta)
@@ -410,6 +410,9 @@ public partial class Atmosphere : Node3D
         SkyParam("cloud_look", GameSettings.CloudLook.Index);
         SkyParam("cloud_caps", GameSettings.CloudCaps.Index);
         SkyParam("cloud_shape", GameSettings.CloudShape.Index);
+        SkyParam("terrain_shade", GameSettings.CloudTerrainShadow.Index);
+        SkyParam("sea_broken", GameSettings.CloudSea.Index == 2 ? 1 : 0);
+        SkyParam("sea_tune", new Vector4(Dev("seahole", .5f), 0, 0, 0));
         SkyParam("cloud_turbulence", GameSettings.CloudTurbulence.Index);
         SkyParam("lens_style", GameSettings.LensStyle.Index);
         // Tests (cloud look investigation, round 32): --cloud-fog-off draws CloudsNear without Godot's fog (with
@@ -1059,7 +1062,8 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("air_frame", contrast && _airSize > 0
             ? new Vector4((float)(_airX - originX), (float)(_airZ - originZ), _airSize, Dev("farshadow", .7f)) : Vector4.Zero);
         // Mountains shade the clouds (D167): the cloud march reads the same sun-shadow map.
-        bool cloudShadow = GameSettings.CloudTerrainShadow.Index == 1 && GameSettings.CloudQuality.Index == 3 && _airSize > 0;
+        // (D172: the broken cloud sea reads the map's ground heights too, to keep its clouds clear of the valley floors)
+        bool cloudShadow = (GameSettings.CloudTerrainShadow.Index == 1 || GameSettings.CloudSea.Index == 2) && GameSettings.CloudQuality.Index == 3 && _airSize > 0;
         RenderingServer.GlobalShaderParameterSet("cloud_air", cloudShadow
             ? new Vector4((float)(cameraWorldX - _airX), (float)(cameraWorldZ - _airZ), _airSize, _camera3DHeight) : Vector4.Zero);
         int q = GameSettings.AirRays.Index;
@@ -1110,6 +1114,8 @@ public partial class Atmosphere : Node3D
         UpdateLanePivot(toSun, cameraWorldX, cameraWorldZ, originX, originZ);
         _air.SetShaderParameter("cloud_base", SeaLevel + CloudBaseAboveSea);
         _air.SetShaderParameter("cloud_shade", Dev("aircloud", _shadow.Visible ? _shadowStrength : .62f));
+        // (D172: under the broken cloud sea the clouds take nearly all the sun; light comes down through the gaps)
+        _air.SetShaderParameter("sea_shade", GameSettings.CloudSea.Index == 2 ? CloudSea * Dev("airsea", .95f) : 0f);
         _air.SetShaderParameter("sea_level", SeaLevel);
         _air.SetShaderParameter("steps", q switch { 1 => 24, 2 => 40, _ => 64 });
         // (developer tool, --ray-dev: airgain, airside, airsun, airshade, airdens, airhaze (haze height), airvalley, aircloud, airdebug)

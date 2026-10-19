@@ -334,9 +334,15 @@ global uniform float cloud_sea;
 // camera's offset from the map's centre (m), z: the map's size (0 = off), w: the camera's scene height (m).
 global uniform sampler2D air_map : filter_linear, repeat_disable;
 global uniform vec4 cloud_air;
+// The setting Mountains shade the clouds (cloud_air also carries the map for the broken cloud sea, D172).
+uniform int terrain_shade = 0;
+// Cloud sea broken from below (D172, Tom: "light through it"; the first draft filled high valleys with fog): the sea's
+// clouds thin out over the last ~300 m above the ground, so in a valley you stand under the sea and see up through it.
+uniform int sea_broken = 0;
+uniform vec4 sea_tune = vec4(0.5, 0.0, 0.0, 0.0); // x: hole size (Atmosphere, --ray-dev=seahole)
 // 1 = sunlit over the terrain at a cloud point (camera-relative xz, y above the camera), 0 = in a mountain's shadow.
 float cloud_terrain_sun(vec2 rel, float y) {
-	if (cloud_air.z <= 0.0) return 1.0;
+	if (cloud_air.z <= 0.0 || terrain_shade == 0) return 1.0;
 	vec2 m = (rel + cloud_air.xy) / cloud_air.z + 0.5;
 	if (m.x <= 0.0 || m.y <= 0.0 || m.x >= 1.0 || m.y >= 1.0) return 1.0;
 	float shadow = textureLod(air_map, m, 0.0).g;
@@ -439,7 +445,9 @@ float vdens(vec3 p, bool detail) {
 	if (wx.x <= 0.0) return -1.0; // clear sky here at every height: the march may stride
 	// A full deck is not flat paint: thick and thin patches over kilometres, and a lumpy base (rolls of stratocumulus).
 	float full = smoothstep(0.6, 0.9, cloud_state.z) * (1.0 - 0.75 * smoothstep(7000.0, 22000.0, length(p.xz - cloud_state.xy))); // (far away the 3D noise would repeat visibly)
-	wx.x *= mix(1.0, 0.2 + 1.0 * smoothstep(0.3, 0.75, n.r), full);
+	// (broken cloud sea: the thin layer keeps its mass at high cover, so it closes into a grey day; the patches opened
+	// holes in it, D172)
+	wx.x *= mix(1.0, 0.2 + 1.0 * smoothstep(0.3, 0.75, n.r), full * (1.0 - 0.85 * SEA_K * float(sea_broken)));
 	wx.z += full * (n.g - 0.5) * 500.0;
 	// (rounded: only for heaped clouds; a full deck and a storm keep build 84's shape, which opened blue gaps)
 	// (by the cover itself, not `full`, which fades with distance: far storm decks still opened blue streaks)
@@ -453,6 +461,19 @@ float vdens(vec3 p, bool detail) {
 	}
 	float h = (p.y - wx.z) / wx.y;
 	if (h <= 0.0 || h >= 1.0) return 0.0;
+	float clear_k = 1.0;
+	if (sea_broken == 1 && SEA_K > 0.0 && cloud_air.z > 0.0) {
+		vec2 m = (p.xz - cloud_state.xy + cloud_air.xy) / cloud_air.z + 0.5;
+		if (m.x > 0.0 && m.y > 0.0 && m.x < 1.0 && m.y < 1.0) {
+			float above = p.y + cloud_air.w - textureLod(air_map, m, 0.0).r;
+			// (only around you, a few km, and only while you are below the sea's base: from above, the sea still fills the
+			// valleys; climbing a slope into it, the clouds come down around you)
+			float near_k = 1.0 - smoothstep(3000.0, 6000.0, length(p.xz - cloud_state.xy));
+			float below_k = smoothstep(-50.0, 150.0, cloud_more.w);
+			clear_k = mix(1.0, smoothstep(60.0, 320.0, above), SEA_K * near_k * below_k);
+			if (clear_k <= 0.0) return 0.0;
+		}
+	}
 	// Flat base, rounded domes: higher up only the denser parts of the map remain.
 	// (the map never quite fills: the 3D noise carves lumps and gaps inside clouds too, not only at their edges)
 	float dome = mix(0.62, 0.84, smoothstep(1800.0, 4500.0, wx.y)); // towers keep their width and round off only at the top
@@ -472,6 +493,14 @@ float vdens(vec3 p, bool detail) {
 	base = base * base * (3.0 - 2.0 * base); // rounder lumps
 	float d = clamp(vremap(base, 1.0 - cov, 1.0, 0.0, 1.0), 0.0, 1.0) * cov * (1.0 + 0.9 * wx.x); // thick parts denser
 	if (cloud_caps == 1) d *= 1.0 + 2.5 * land; // (dense caps)
+	d *= clear_k;
+	if (sea_broken == 1 && SEA_K > 0.0) {
+		// Broken cloud sea (D172): holes between the cells, ~1–2 km apart and clear through the layer, so from a valley you
+		// see sky through it and sunlight comes down; fewer as the cover rises, none from ~90 % (a closed, grey day).
+		float hole = sea_tune.x * (1.0 - smoothstep(0.72, 0.9, cloud_state.z)) * SEA_K;
+		float cell = texture(cloud_noise, vec3(p.xz / 1700.0, 0.61)).r * 0.7 + texture(cloud_noise, vec3(p.xz / 650.0, 0.23)).g * 0.3;
+		d *= smoothstep(hole, hole + 0.16, cell);
+	}
 	if (cloud_turbulence == 1 && detail && d > 0.0) {
 		float k = 1.0 - smoothstep(150.0, 600.0, length(vec3(p.x - cloud_state.x, p.y, p.z - cloud_state.y)));
 		if (k > 0.0) {

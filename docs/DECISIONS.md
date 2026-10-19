@@ -2601,6 +2601,26 @@ settings, `artifacts/valley-under-cloud-sea.jpg`:
 * Realistic for an inversion day (grey below, sun above), but not Tom's "light through it". How valleys under the sea
   should look is his call (asked).
 
+## D172 — Cloud sea broken from below (draft) (2026-10-19)
+Tom chose (D171) "broken from below, with gaps I can see up through and sunlit shafts", the closed grey day kept for
+high cover. Third option of *Sky → Cloud sea*: **broken from below (draft)** (`sky.cloud_sea` = 2; 1 = build 89).
+* **Clear of the ground near you**: the sea's clouds thin out over the last ~60–320 m above the ground (the air map's
+  heights, 20 km around), but only within ~3–6 km of the camera and only while it is below the sea's base. Everywhere
+  (first try) it emptied every valley the sea filled: from the ridge only scattered clouds were left. So from above the
+  sea still fills the valleys; in a valley you stand under it; climbing a slope into it, the clouds come down around you.
+  (A view that depends on where you stand: two players at different heights see the valley differently.)
+* **Holes between the cells** (~1–2 km, through the layer): from below the deck was an even, ~opaque grey even with
+  build 88's clouds — 70 % *cover* fills most of the sky. Hole size 0.5 of a 2D noise (0.3 cut almost nothing, 0.6 a
+  mostly blue sky; `--ray-dev=seahole=` as the FIRST argument, before the --set ones), fewer from 72 % cover, none from
+  90 %: a closed, grey day. The full deck's thick/thin patches are kept mostly off for the thin layer (at 90 % they had
+  opened one big hole).
+* **Shafts**: under the sea the air pass's cloud shadow takes 95 % of the sun (`sea_shade`), so light in the haze comes
+  through the gaps; in the captures no distinct shafts show yet (dry valley, noon) — next to look at.
+* `terrain_shade`: *Mountains shade the clouds* now has its own switch in the shader (the map is also read for the
+  clearance). Captures `artifacts/cloud-sea-broken.jpg`: valley at noon (build 89 fog vs broken sky), 08:00, after rain,
+  90 % (closed), the ridge from above. Rough cost from the HUD in captures: ~37–40 FPS looking up from the valley where
+  build 89 showed ~45–47 (more cloud detail visible, fewer rays stop early). Known: hole edges stand as vertical curtains.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
