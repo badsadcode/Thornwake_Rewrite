@@ -2280,6 +2280,21 @@ still looks like the light is going through the mountain".
 * The pass draws after the clouds in front of the land (they had covered it). Developer: `--ray-dev=airsun,
   airskyglow` added.
 
+## D150 — Air rays sharper and stronger, closer to Tom's references (2026-10-19)
+Tom: "go for sharper and stronger shafts, closer to my references, even if less physically exact".
+* **Lanes along ridge shadows**: a ridge's real skyline has teeth, trees and notches the 39 m map cannot hold, so the
+  shadow edge is moved up and down (±150 m) by two octaves of value noise that stay constant along the sun's direction
+  (coordinates across the light, in world metres: the lanes stay put when the scene origin moves). Each ridge casts a
+  comb of parallel lanes, ~70 m wide, into the haze near the edge of its shadow. Edge softness 25 → 8 m.
+* **Stronger**: a broad glow of sunlit haze toward the sun (pow 3, 0.6), shadowed haze darkened more (shade 0.6 →
+  0.85), more light from the side (0.5 → 0.8), gain 1 → 2.2. The sky's glow follows the same lit share.
+* Captures at `air-cliff` (sun ~10° behind a cliff over a lake), facing the sun and turned 34° left, off / new
+  default / strong (gain 3.5), beside Tom's two references: `artifacts/rays/m2-air-rays-sharper-vs-references.jpg`.
+  A fan of light lanes from behind the cliff with dark lanes between; the rock itself no longer glows. Still softer and
+  fewer than reference 1's cloud-gap shafts (the cloud shadows get no lanes yet).
+* Developer: `--ray-dev=airnoise,airlane,airedge,airglow`. A shader input named `edge` clashed with a local variable
+  (SHADER ERROR caught in the log; renamed `shadow_edge`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

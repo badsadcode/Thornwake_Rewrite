@@ -648,7 +648,7 @@ public partial class Atmosphere : Node3D
             _beams.SetShaderParameter("light_direction", toSun);
             _beams.SetShaderParameter("light_color", Sun.LightColor * Sun.LightEnergy);
         }
-        UpdateAirRays(toSun, cameraWorldX, cameraWorldZ);
+        UpdateAirRays(toSun, cameraWorldX, cameraWorldZ, originX, originZ);
 
         // Shadow decal: ground point g is shaded by the cloud at g + toSun.xz · H / toSun.y. With the texture laid as
         // 3×3 tiles of period P, the decal centre must be ≡ P/2 − (origin + shift + wind) (mod P), chosen nearest the camera.
@@ -999,7 +999,7 @@ public partial class Atmosphere : Node3D
         _airX = x; _airZ = z; _airSize = size;
     }
 
-    private void UpdateAirRays(Vector3 toSun, double cameraWorldX, double cameraWorldZ)
+    private void UpdateAirRays(Vector3 toSun, double cameraWorldX, double cameraWorldZ, double originX, double originZ)
     {
         if (_airQuad == null) return;
         int q = GameSettings.AirRays.Index;
@@ -1024,7 +1024,13 @@ public partial class Atmosphere : Node3D
         // in a mountain's shadow by the sun-shadow map.
         if (_shaftQuad != null) _shaftQuad.Visible = false;
         Sun.LightVolumetricFogEnergy *= TerrainSunAtCamera;
-        _air.SetShaderParameter("shade", Dev("airshade", .6f));
+        _air.SetShaderParameter("shade", Dev("airshade", .85f));
+        // Sharper, stronger shafts (D150): lanes along ridge shadows, a crisper edge, a broad glow toward the sun.
+        _air.SetShaderParameter("ray_noise", Dev("airnoise", 150));
+        _air.SetShaderParameter("ray_size", Dev("airlane", 70));
+        _air.SetShaderParameter("shadow_edge", Dev("airedge", 8));
+        _air.SetShaderParameter("shaft_glow", Dev("airglow", .6f));
+        _air.SetShaderParameter("world_origin", new Vector2((float)originX, (float)originZ));
         _air.SetShaderParameter("cloud_base", SeaLevel + 1500);
         _air.SetShaderParameter("cloud_shade", Dev("aircloud", _shadow.Visible ? _shadowStrength : .62f));
         _air.SetShaderParameter("sea_level", SeaLevel);
@@ -1032,8 +1038,8 @@ public partial class Atmosphere : Node3D
         // (developer tool, --ray-dev: airgain, airside, airsun, airshade, airdens, airhaze (haze height), airvalley, aircloud, airdebug)
         // (no dimming by the cloud cover as the light beams have: the clouds' shadows in the pass do that, and shafts
         // belong under broken cloud — Tom's reference 1)
-        _air.SetShaderParameter("gain", Dev("airgain", 1) * (1f - .9f * _storm));
-        _air.SetShaderParameter("side_scatter", Dev("airside", .5f));
+        _air.SetShaderParameter("gain", Dev("airgain", 2.2f) * (1f - .9f * _storm));
+        _air.SetShaderParameter("side_scatter", Dev("airside", .8f));
         _air.SetShaderParameter("haze_height", Dev("airhaze", 1400));
         _air.SetShaderParameter("valley_haze", Dev("airvalley", 3));
         _air.SetShaderParameter("debug", (int)Dev("airdebug", 0));

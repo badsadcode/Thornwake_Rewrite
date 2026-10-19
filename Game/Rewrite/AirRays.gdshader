@@ -36,6 +36,14 @@ uniform float sea_level = 0.0;
 uniform float haze_height = 1400.0; // the haze falls to a third over this height
 uniform float valley_haze = 3.0;    // extra haze close above the ground (valleys, lakes, forests)
 uniform int debug = 0;              // 1: the sunlit share of each view ray's haze, grey (developer tool)
+// Sharper, stronger shafts, closer to Tom's references than to physics (D150): a ridge's real skyline has teeth, trees
+// and notches the 39 m map cannot hold, so its shadow edge is roughened by noise that stays the same along the sun's
+// direction — each ridge casts a comb of parallel lanes into the haze near the edge of its shadow.
+uniform float ray_noise = 150.0;   // how far (m) the shadow edge is moved up and down by the noise
+uniform float ray_size = 70.0;     // the lanes' width (m, across the sun's direction)
+uniform float shadow_edge = 8.0;   // the shadow edge's softness (m)
+uniform float shaft_glow = 0.6;    // a broad glow of sunlit haze toward the sun (the shafts' brightness looking at them)
+uniform vec2 world_origin = vec2(0.0); // the scene origin's world position (the lanes stay put when the origin moves)
 global uniform vec4 cloud_state;
 global uniform sampler2D weather_map : filter_linear, repeat_disable;
 global uniform vec4 weather_frame;
@@ -51,6 +59,18 @@ float cloud_density(vec2 xz, float coverage) {
 	float n = textureLod(cloud_tex, uv, 2.0).r * 0.8 + textureLod(cloud_tex, uv * 4.0 + vec2(0.31, 0.17), 2.0).g * 0.2;
 	float edge = 1.0 - coverage;
 	return smoothstep(edge - 0.02, edge + 0.1, n);
+}
+
+float hash12(vec2 p) {
+	vec3 q = fract(vec3(p.xyx) * 0.1031);
+	q += dot(q, q.yzx + 33.33);
+	return fract((q.x + q.y) * q.z);
+}
+
+float value_noise(vec2 p) {
+	vec2 i = floor(p), f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), f.x), mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
 float haze_shape(float y, float ground) {
@@ -77,8 +97,13 @@ void fragment() {
 	float clouds = smoothstep(0.05, 0.2, coverage); // a clear sky casts no cloud shadows
 	float lift = max(l.y, 0.05);
 	float mu = dot(dir, l);
-	// Godot's fog glow toward the sun (pow 8) and a broad part, so sunlit haze also shows from the side.
-	vec3 sun_light = light_color * (sun_scatter * pow(max(mu, 0.0), 8.0) + side_scatter * (0.5 + 0.5 * mu)) * gain * sun_up;
+	// Godot's fog glow toward the sun (pow 8), the shafts' broad glow toward it (pow 3) and a part seen from the side.
+	float toward = max(mu, 0.0);
+	vec3 sun_light = light_color * (sun_scatter * pow(toward, 8.0) + shaft_glow * pow(toward, 3.0) + side_scatter * (0.5 + 0.5 * mu)) * gain * sun_up;
+	// Across the sun's direction: the noise's two coordinates (constant along the light, so the lanes are rays).
+	vec3 across_a = normalize(abs(l.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : cross(l, vec3(0.0, 1.0, 0.0)));
+	vec3 across_b = cross(across_a, l);
+	vec3 origin3 = vec3(world_origin.x, 0.0, world_origin.y);
 	// Haze relative to the camera's height: `density` is what Godot's fog had here.
 	vec2 mc = map_frame.xy / map_frame.z + 0.5;
 	float ground_here = textureLod(air_map, clamp(mc, 0.0, 1.0), 0.0).r;
@@ -95,8 +120,11 @@ void fragment() {
 		vec2 m = (p.xz - cam.xz + map_frame.xy) / map_frame.z + 0.5;
 		bool inside = m.x > 0.0 && m.y > 0.0 && m.x < 1.0 && m.y < 1.0;
 		vec2 hs = inside ? textureLod(air_map, m, 0.0).rg : vec2(sea_level, sea_level);
-		// Terrain: lit above the sun-shadow height (a soft band: the map's cells are tens of metres).
-		float sun = smoothstep(hs.g - 25.0, hs.g + 25.0, p.y);
+		// Terrain: lit above the sun-shadow height, its edge roughened into lanes (the map's cells are tens of metres).
+		vec3 pw = p + origin3;
+		vec2 lane = vec2(dot(pw, across_a), dot(pw, across_b)) / ray_size;
+		float rough = (value_noise(lane) * 0.65 + value_noise(lane * 2.7 + 17.0) * 0.35 - 0.5) * 2.0 * ray_noise;
+		float sun = smoothstep(hs.g + rough - shadow_edge, hs.g + rough + shadow_edge, p.y);
 		// Clouds: the deck above this point toward the sun (none once the point is above the deck).
 		if (clouds > 0.0 && p.y < cloud_base) {
 			vec2 xz = cloud_state.xy + (p.xz - cam.xz) + l.xz / lift * (cloud_base - p.y);
@@ -114,7 +142,7 @@ void fragment() {
 	// which this pass took over: it comes back by how much of the air toward that point of the sky is sunlit, so a
 	// peak's shadow runs through the glow as a darker ray (Tom's reference 2).
 	if (depth < 1e-6) {
-		light += light_color * sun_scatter * pow(max(mu, 0.0), 8.0) * gain * sun_up * sky_affect * (lit / max(all_haze, 1e-6));
+		light += light_color * (sun_scatter * pow(toward, 8.0) + shaft_glow * pow(toward, 3.0)) * gain * sun_up * sky_affect * (lit / max(all_haze, 1e-6));
 	}
 	// scene × (1 − a) + light: the shadowed haze's share darkened, the sunlit haze's light added.
 	float alpha = clamp(shade * shadowed, 1e-3, 1.0);
