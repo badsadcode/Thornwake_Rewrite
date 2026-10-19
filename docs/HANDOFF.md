@@ -67,6 +67,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   **Build 82** (`2196de3`, `dist/Preview-82`, 2026-10-19): *Rays and haze: by the weather* (D152) — an air load
   (moisture, dust) drives every ray effect; default *always*. Open: forest haze tied to places rather than the player
   (proposed to Tom), Tom's pillar casting no shaft, his pick of defaults after trying.
+  **Build 83** (`964aa6f`, `dist/Preview-83`, 2026-10-19): Noor's notes as *Light and shadow in the haze* (D154: far
+  mountain shadows on the terrain through `TerrainAirShadow.gdshader`, height-shaped near haze in the air pass),
+  stronger after-rain haze and *Rays strength* (D153). Capture windows take no input. Waiting for Tom's and Noor's look.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
