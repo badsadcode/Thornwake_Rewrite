@@ -78,6 +78,15 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 90 — no more fast fog waves
+**Host and everyone joining need build 90** (versions must match to connect).
+* The fast waves in the air (your dumps 19:46 and 19:49) were the sun shafts' fine lanes. They turned about the
+  world's centre, about 230 km away there, so the slowly moving sun swept them through the haze a few lane widths a
+  second, worst at sunrise. Now they turn about where you are and stay put; far away they follow the sun slowly, as
+  real shafts do. Your guess that it was the moving sun was right.
+* New setting **Lighting and effects → Ray lanes**: *steady* (default) or *build 89 (fast waves)* to compare.
+* To check: your sunrise dump with the clock running: **Go to - swamp at sunrise, clock running (your dump 19-49)**.
+
 ## New in build 89 — cloud sea under the high ridges (draft)
 **Host and everyone joining need build 89** (versions must match to connect).
 * Why your ridge view was flat: there the clouds' base was ~100 m below you and their tops 1–2 km above, so you were
