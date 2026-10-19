@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 81 — the sun under the trees no longer blinds
+**Host and everyone joining need build 81** (versions must match to connect).
+* With *Forest rays* A or A2, looking at the sun from under the trees blew the sun and the crowns round it out to
+  white (the forest air's extra sunlight piles up toward the sun). New setting: Settings → Lighting and effects →
+  **Forest rays: sun glare** — *softened* (default): that glow eases off the more directly you look at the sun, so the
+  shafts beside and across the view keep their strength; *build 80 (full glare)*: as before.
+* Your two milky-white dumps on the mountainside (02:55–02:56) were the cloud deck at that height, not the forest rays.
+* Your settings now have *Distance haze* 0 and *God ray contrast* 0 — if you didn't mean to set those, put them back
+  (they were 1.85 and 0.55).
+
 ## New in build 80 — rays in open air (draft)
 **Host and everyone joining need build 80** (versions must match to connect).
 New setting: Settings → Lighting and effects → **Rays in open air (M2 draft)** — *off* (default) / low / medium / high.
