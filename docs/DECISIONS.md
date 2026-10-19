@@ -2476,6 +2476,18 @@ fog, bands in the light … like gusts of wind moving really fast".
   as the clouds already did. (By reading the code; Tom to confirm in play.)
 * Tom's own settings still hold Ultra's look values and Rays strength 2.5: he resets them (Lighting and effects).
 
+## D163 — Waves moving like the wind: the gust bands on grass get a slider (2026-10-19)
+Tom on build 86 (dump 174038, open grassland after rain, 16 m up, wind 4 m/s, gusty): "this still kind of comes in
+waves, it's moving like the wind; is it moving the fog?". Four frames ~3 s apart from his dump: what moves is the
+grass (sway) and, on the ground, the gust sheen from round 27 (Tom then: grass should "sway in waves across the
+terrain"): gusts carried downwind at the wind's speed brighten the grass by ~7 % where they pass — lighter bands
+sweeping over a meadow, which from above read like moving fog. The cloud shadows also drift with the wind. The fog
+itself (mist patches) drifts at a tenth of that.
+* New setting **Wind waves on grass** (`fx.wind_waves`, 0–2, 1 = build 86) scales the sheen (global `wind_waves`, the
+  terrain shader); the plants still sway. Not proven to be what Tom saw (the frame differences are dominated by the
+  swaying grass); if it is not, the next suspect is the cloud shadows (*Sky → Cloud shadows*).
+* Tom also: "it's really hard to decide on the settings" — proposed: a few named look presets for the atmosphere.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

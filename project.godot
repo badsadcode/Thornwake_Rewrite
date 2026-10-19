@@ -146,6 +146,10 @@ ray_temporal={
 "type": "float",
 "value": 0.0
 }
+wind_waves={
+"type": "float",
+"value": 1.0
+}
 lightning={
 "type": "vec4",
 "value": Vector4(0, 0, 0, 0)

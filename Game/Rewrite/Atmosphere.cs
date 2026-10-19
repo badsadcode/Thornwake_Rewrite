@@ -415,6 +415,7 @@ public partial class Atmosphere : Node3D
         bool temporal = GameSettings.AntiAliasing.Index is 2 or 4;
         RenderingServer.GlobalShaderParameterSet("cloud_v2", v2 ? (temporal ? 2f : 1f) : 0f);
         RenderingServer.GlobalShaderParameterSet("ray_temporal", temporal ? 1f : 0f); // (the ray passes' moving dither, D162)
+        RenderingServer.GlobalShaderParameterSet("wind_waves", GameSettings.WindWaves.F);
         if (_cloudsNearQuad != null) _cloudsNearQuad.Visible = v2;
         int pixels = 256 << GameSettings.CloudResolution.Index;
         if (pixels != _cloudPixels)

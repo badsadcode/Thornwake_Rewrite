@@ -227,6 +227,9 @@ public static class GameSettings
         "How much the forest air throws the sun's light forward (A2 only). High: bright, crisp shafts when you look toward " +
         "the sun, almost none from the side or with the sun behind you. Low: shafts seen from every side, softer and with " +
         "more glowing haze between the trees. 0.75 = build 76.", "×"));
+    public static readonly Setting WindWaves = Add(new("fx.wind_waves", "Lighting and effects", "Wind waves on grass", 0, 2, .1, 1,
+        "Gusts sweep across meadows as lighter bands moving with the wind (the grass catches the light as it bends). " +
+        "0 = none (the grass still sways), 1 = build 86.", "×"));
     public static readonly Setting RayWeather = Add(new("fx.ray_weather", "Lighting and effects", "Rays and haze", 0, 1, 1, 0,
         "When shafts of light show. Always: as build 81, wherever the effects are on (forest rays in every forest by day). " +
         "By the weather (draft): only when the air holds something to catch the light: morning haze after a cool night, " +
