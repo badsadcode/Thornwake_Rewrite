@@ -82,7 +82,7 @@ void sky() {
 			if (layered && cloud_more.x > 0.001) {
 				float t = 4500.0 / max(up, 0.015);
 				vec2 xz = cloud_state.xy * 0.75 + dir.xz * t;
-				float d = ct_mackerel(xz, t, up) * smoothstep(0.06, 0.3, up) * (1.0 - storm);
+				float d = ct_mackerel_f(xz, t, up, cloud_shape == 1 ? 3.0 : 1.0) * smoothstep(0.06, 0.3, up) * (1.0 - storm);
 				if (d > 0.0) {
 					vec4 c = layer(dir, xz, 4500.0, d, sun_dir, sun_col, day, mu, d * 0.5, 1.04);
 					col = mix(col, c.rgb, d);

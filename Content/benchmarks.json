@@ -154,6 +154,8 @@
       "at": [-4001.0, 5631.3], "view": [0, 0.1, 8], "height": 0, "hour": 15, "seconds": 6, "clouds": [0.3, 0.9, 0, 0], "settings": { "sky.clouds": 0.8 } },
     { "id": "cloud-mountain-deck", "name": "M3 clouds: the deck seen from Tom's ridge (his dump 100445, 12:12)", "world": "mountains42",
       "at": [-216238.6, 81823.6], "view": [10.289, -0.3, 0.1], "height": 388, "hour": 12.2, "seconds": 6, "settings": { "sky.clouds": 0.7 } },
+    { "id": "cloud-valley-peaks", "name": "M3 clouds: from a valley (1,900 m) toward the peaks (Tom's world, 10:40)", "world": "mountains42",
+      "at": [107878.7, -32103.2], "view": [9.666, 0.12, 2.36], "height": 2, "hour": 10.7, "seconds": 6, "clouds": [0.5, 0, 0.1, 0], "settings": { "sky.clouds": 0.55 } },
     { "id": "cloud-turn", "name": "M3 clouds: a 10 s turn under broken cloud (ghosting check)", "world": "patch32", "move": "turn",
       "at": [-4001.0, 5631.3], "view": [0, 0.2, 8], "height": 25, "hour": 13, "seconds": 10, "clouds": [0.6, 0, 0.3, 0], "settings": { "sky.clouds": 0.55 } },
     { "id": "rays-dawn-turn", "name": "M2 rays: temperate forest, sunrise (05:24, sun ~10° up), light mist, turning", "world": "patch32",
@@ -220,7 +222,7 @@
     },
     "clouds": {
       "name": "Atmosphere 2.0 M3: cloud acceptance captures (close cumulus, summit, horizon noon and sunset, broken, storm, Tom's mountain deck, turn)",
-      "scenarios": ["cloud-cumulus-close", "cloud-summit", "cloud-horizon-noon", "cloud-horizon-sunset", "cloud-broken-up", "cloud-storm", "cloud-mountain-deck", "cloud-turn"],
+      "scenarios": ["cloud-cumulus-close", "cloud-summit", "cloud-horizon-noon", "cloud-horizon-sunset", "cloud-broken-up", "cloud-storm", "cloud-mountain-deck", "cloud-turn", "cloud-valley-peaks"],
       "ablate": false, "capture": true, "stills": 2
     },
     "rays3": {

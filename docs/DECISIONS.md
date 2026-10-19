@@ -2439,6 +2439,26 @@ are locked in a box"; he follows the recommended order (shape and deck first, th
   curving up at their edges, no slabs; but less cloud (more blue sky) and softer, puffier shapes. To tune after Tom's
   look: cloud mass, billow sharpness. Same cost (the turn 19.6 ms, the noon horizon 45 ms both ways).
 
+## D161 — Rounded clouds v2; the cloud base above the land; the mackerel dashes (2026-10-19)
+Tom: "the rounded shape is the right direction. Add back some cloud mass and sharper billows, then do the deck height
+and the horizon artifacts."
+* **Rounded v2** (still *Sky → Cloud shape → rounded*): mass ×1.5 and heights ×0.9–1.4 (fewer low clouds), domes close
+  at a threshold of 1.03, sharper billows from a second, finer cauliflower octave within ~4 km. The first try (a
+  harder base curve and a stronger erosion) took away more cloud than it added and opened blue streaks in the storm
+  deck: dropped. The rounding now applies to heaped clouds only (fading out from 60 % to 85 % cover and with a storm),
+  and so does the taller volume — with the same number of steps a taller volume reached less far and the far storm deck
+  came out in streaks. Storm: identical to build 84; noon and the turn: separate rounded cumulus with flat-ish bases;
+  sunset: still less cloud than build 84 (open). `artifacts/m3-cloud-shape-and-base-v2.jpg`.
+* **Sky → Cloud base** (`sky.cloud_base`): *above the sea (build 84)* (default) or *above the land (draft)*: 1.5 km
+  plus 0.9 × the region's mean ground (9 × 9 samples over 20 km, every 2 s, eased over ~20 s); the light beams, the
+  rain curtains and the air rays follow. In Tom's world near his ridge the region averages 1,613 m: base 2,952 m instead
+  of 1,500 m. His two high spots (2,540 and 3,060 m) sit at that base, so they show grey cloud either way; from a valley
+  (1,900 m) the difference is small at 55 % cover. Found on the way: `MacroHeight` returned NaN there (the first try
+  never moved the base); `Sample` is used.
+* **Mackerel dashes**: the sky's half-resolution pass aliased the mackerel cells into rows of white dashes; with the
+  rounded shape the pattern fades to its average three times sooner (`ct_mackerel_f`).
+* Dumps show `cloud base … m above the sea, region … m`. New capture scene `cloud-valley-peaks`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

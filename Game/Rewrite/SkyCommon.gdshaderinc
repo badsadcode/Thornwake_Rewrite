@@ -366,9 +366,12 @@ uniform int cloud_turbulence = 0;
 // close before the layer's ceiling and a top roughened by the billows; bases still near level (the condensation
 // level) but a few hundred metres apart from cloud to cloud, lumpy, with a softer onset.
 uniform int cloud_shape = 0;
-#define SHAPE_TALL (cloud_shape == 1 ? 1.35 : 1.0)
-#define SHAPE_TOP_EXTRA (cloud_shape == 1 ? 200.0 : 0.0)
-#define SHAPE_LOW_EXTRA (cloud_shape == 1 ? 250.0 : 0.0)
+// (the larger volume only for heaped clouds: with the same steps a taller volume reached less far, and the far storm
+// deck came out in blue streaks)
+#define SHAPE_K0 (cloud_shape == 1 ? 1.0 - smoothstep(0.6, 0.85, cloud_state.z) : 0.0)
+#define SHAPE_TALL (1.0 + 0.4 * SHAPE_K0)
+#define SHAPE_TOP_EXTRA (200.0 * SHAPE_K0)
+#define SHAPE_LOW_EXTRA (250.0 * SHAPE_K0)
 float cloud_windy() { return cloud_look == 1 ? smoothstep(1.5, 2.5, wind.y) : smoothstep(0.5, 1.6, wind.y); }
 float cloud_map(vec2 uv, float lod, int ch) {
 	vec4 c = lod >= 0.0 ? textureLod(cloud_tex, uv, lod) : texture(cloud_tex, uv);
@@ -413,21 +416,25 @@ float vdens(vec3 p, bool detail) {
 	float full = smoothstep(0.6, 0.9, cloud_state.z) * (1.0 - 0.75 * smoothstep(7000.0, 22000.0, length(p.xz - cloud_state.xy))); // (far away the 3D noise would repeat visibly)
 	wx.x *= mix(1.0, 0.2 + 1.0 * smoothstep(0.3, 0.75, n.r), full);
 	wx.z += full * (n.g - 0.5) * 500.0;
-	if (cloud_shape == 1) {
+	// (rounded: only for heaped clouds; a full deck and a storm keep build 84's shape, which opened blue gaps)
+	// (by the cover itself, not `full`, which fades with distance: far storm decks still opened blue streaks)
+	float shape_k = cloud_shape == 1 ? (1.0 - smoothstep(0.6, 0.85, cloud_state.z)) * (1.0 - smoothstep(0.3, 0.7, cloud_state.w)) : 0.0;
+	if (shape_k > 0.0) {
 		// (the broad noise moves with the clouds: each cloud keeps its own height and base as it drifts)
 		vec4 big = texture(cloud_noise, vec3(p.xz / 5200.0, 0.37));
-		wx.y *= mix(0.55, 1.35, big.r);
-		wx.z += (big.g - 0.5) * 300.0 + (n.b - 0.5) * 140.0;
+		wx.y *= mix(1.0, mix(0.9, 1.4, big.r), shape_k); // (Tom: right direction, more mass: fewer low clouds)
+		wx.x = min(wx.x * mix(1.0, 1.5, shape_k), 1.0);
+		wx.z += ((big.g - 0.5) * 300.0 + (n.b - 0.5) * 140.0) * shape_k;
 	}
 	float h = (p.y - wx.z) / wx.y;
 	if (h <= 0.0 || h >= 1.0) return 0.0;
 	// Flat base, rounded domes: higher up only the denser parts of the map remain.
 	// (the map never quite fills: the 3D noise carves lumps and gaps inside clouds too, not only at their edges)
 	float dome = mix(0.62, 0.84, smoothstep(1800.0, 4500.0, wx.y)); // towers keep their width and round off only at the top
-	float hs = cloud_shape == 1 ? clamp(h + (n.r - 0.5) * 0.14, 0.0, 1.0) : h; // (rounded: a billowed top)
+	float hs = clamp(h + (n.r - 0.5) * 0.14 * shape_k, 0.0, 1.0); // (rounded: a billowed top)
 	// (rounded: the threshold passes 1 before the ceiling, so even the densest cloud closes its dome)
-	float cov = clamp(vremap(wx.x, smoothstep(dome, 1.0, hs) * (cloud_shape == 1 ? 1.08 : 0.95), 1.0, 0.0, 1.0), 0.0, 1.0)
-		* smoothstep(0.0, cloud_shape == 1 ? 0.1 : 0.06, h) * mix(wx.x, 1.0, 0.25) * 0.8;
+	float cov = clamp(vremap(wx.x, smoothstep(dome, 1.0, hs) * mix(0.95, 1.03, shape_k), 1.0, 0.0, 1.0), 0.0, 1.0)
+		* smoothstep(0.0, mix(0.06, 0.1, shape_k), h) * mix(wx.x, 1.0, 0.25) * mix(0.8, 0.95, shape_k);
 	float wf = n.g * 0.7 + n.b * 0.3;
 	float base = clamp(vremap(n.r, wf - 1.0, 1.0, 0.0, 1.0), 0.0, 1.0);
 	base = base * base * (3.0 - 2.0 * base); // rounder lumps
@@ -452,9 +459,15 @@ float vdens(vec3 p, bool detail) {
 	vec3 dp = vec3(along.x / mix(1.0, 3.5, windy), p.y - cloud_more.z * 2.0, along.y);
 	vec4 m = texture(cloud_noise, dp / 700.0);
 	float df = m.g * 0.75 + m.b * 0.25; // (the finest octave would only sparkle at sky distances)
+	if (cloud_shape == 1 && cloud_state.w < 0.5) {
+		// Sharper billows (Tom): a second, finer octave of cauliflower near enough to show it (within ~4 km).
+		float near = 1.0 - smoothstep(1500.0, 4000.0, length(vec3(p.x - cloud_state.x, p.y, p.z - cloud_state.y)));
+		if (near > 0.0) df = mix(df, texture(cloud_noise, dp / 260.0 + vec3(0.37, 0.11, 0.53)).g, 0.35 * near);
+	}
 	// (reference: billowy almost to the base, which stays flat, and cut deeper: cauliflower edges)
 	df = cloud_look == 1 ? mix(1.0 - df, df, smoothstep(0.0, 0.1, h)) : mix(1.0 - df, df, smoothstep(0.1, 0.45, h));
-	return clamp(vremap(d, df * mix(cloud_look == 1 ? 0.52 : 0.42, 0.25, windy), 1.0, 0.0, 1.0), 0.0, 1.0);
+	// (rounded: the finer octave above gives the sharper billows; the erosion itself stays, it took the mass away)
+	return clamp(vremap(d, df * mix(cloud_look == 1 || cloud_shape == 1 ? 0.52 : 0.42, 0.25, windy), 1.0, 0.0, 1.0), 0.0, 1.0);
 }
 
 // Distance along dir to an approaching front (a vertical curtain cloud_front.z metres away; 1e9 if none or behind).

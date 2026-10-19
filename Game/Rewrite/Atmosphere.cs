@@ -67,6 +67,25 @@ public partial class Atmosphere : Node3D
     /// <summary>The highest peak around the player (world x, height, z; NaN x: none) and how far it rises above the land around (m).</summary>
     public Vector3 Peak { get; set; } = new(float.NaN, 0, 0);
     public float PeakRelief { get; set; }
+    /// <summary>The land's mean height above the sea around the player (m, ~20 km across; WorldLab), for the cloud base.</summary>
+    public float RegionalGround { get; set; }
+    private float _regionalGround = float.NaN;
+
+    /// <summary>
+    /// The cloud base above the sea (m). Build 84: 1,500 m whatever the land, so in mountain worlds the deck sat at valley
+    /// height or below (Tom: from a 3,060 m ridge the camera stood inside the cumulus). Above the land (D161): about
+    /// 1,500 m over the region's mean ground — the condensation level rides on the land — eased over ~20 s as the region
+    /// changes, so mountains of the region still reach into the deck while its valleys stay below it.
+    /// </summary>
+    public float CloudBaseAboveSea => 1500 + (GameSettings.CloudBase.Index == 1 && !float.IsNaN(_regionalGround) ? _regionalGround * 0.9f : 0);
+
+    private void UpdateRegionalGround(double delta)
+    {
+        float target = float.IsFinite(RegionalGround) ? Math.Max(RegionalGround, 0) : 0;
+        _regionalGround = float.IsNaN(_regionalGround) || StillShot || SnapExposure ? target
+            : Mathf.Lerp(_regionalGround, target, 1 - Mathf.Exp(-(float)delta / 20));
+    }
+
     /// <summary>The world's sea level (m): flat cloud bases sit at a fixed height above it.</summary>
     public float SeaLevel { get; set; }
     /// <summary>Screenshots: cloud types forced to (cumulus, distant storm, mackerel, lens); null = from the weather.</summary>
@@ -518,7 +537,7 @@ public partial class Atmosphere : Node3D
         // Rain curtains: lit like the overcast (grey, dimmer at dusk and night), hanging from ~1.5 km above the sea.
         float lit = Mathf.Clamp(_daylight * 1.1f, .06f, 1);
         _curtains.SetShaderParameter("rain_color", new Color(.5f * lit, .53f * lit, .57f * lit));
-        _curtains.SetShaderParameter("cloud_base", SeaLevel + 1500);
+        _curtains.SetShaderParameter("cloud_base", SeaLevel + CloudBaseAboveSea);
         _curtains.SetShaderParameter("strength", GameSettings.DistantRain.F);
         Environment.FogDensity = (Natural ? .00007f : .00009f) * GameSettings.Haze.F * Mathf.Lerp(1, 4, Math.Max(_storm, overcast * .45f));
         Environment.FogEnabled = GameSettings.Haze.Value > 0 || _storm > 0;
@@ -614,6 +633,7 @@ public partial class Atmosphere : Node3D
             (float)WrapTo(cameraWorldX + _lowX, lowPeriod), (float)WrapTo(cameraWorldZ + _lowZ, lowPeriod)));
         UpdateMood(delta);
         UpdateCloudTypes(delta, sky, cameraWorldX, cameraWorldZ, cameraLocal);
+        UpdateRegionalGround(delta);
         UpdateMist(delta, hour, originX, originZ);
         UpdateAirLoad(delta, hour);
         UpdateForestRays(delta);
@@ -907,8 +927,8 @@ public partial class Atmosphere : Node3D
         // a mountain made a low grey ceiling and a wall of cloud on the horizon — Tom, build 25)
         // (cloud renderer v2 draws clouds in front of the scene too: the base stays at its height, also below the camera)
         float baseAbove = GameSettings.CloudQuality.Index == 3
-            ? Mathf.Min(SeaLevel + 1500 - cameraLocal.Y, 2200)
-            : Mathf.Clamp(SeaLevel + 1500 - cameraLocal.Y, 1000, 2200);
+            ? Mathf.Min(SeaLevel + CloudBaseAboveSea - cameraLocal.Y, 2200)
+            : Mathf.Clamp(SeaLevel + CloudBaseAboveSea - cameraLocal.Y, 1000, 2200);
         float windAngle = Mathf.Atan2(Wind.Direction.Y, Wind.Direction.X);
         RenderingServer.GlobalShaderParameterSet("cloud_more", new Vector4(mackerel, windAngle, (float)_cloudTime, baseAbove));
         // The sun as the sky sees it, for the clouds drawn in front of the scene (CloudsNear.gdshader).
@@ -966,7 +986,7 @@ public partial class Atmosphere : Node3D
             (float.IsNaN(Peak.X) ? "" : $" (peak {F(Peak.X)}, {F(Peak.Y)}, {F(Peak.Z)}, relief {F(PeakRelief)} m)") + "\n" +
             $"Wind: from {Wind.Compass()}, direction ({F(Wind.Direction.X)}, {F(Wind.Direction.Y)}), {F(Wind.Speed)} m/s, gust {F(Wind.Gust)}\n" +
             $"Sun elevation {F(_sunElevation)}°, night {F(_night)}, daylight {F(_daylight)}, ocean time {F(OceanTime)} s\n" +
-            $"Air load {F(_airLoad)} (moisture {F(_airMoisture)}, dust {F(_airDust)}; climate {F(_airRain)} mm/yr; rays {(GameSettings.RayWeather.Index == 1 ? "by the weather" : "always")})\n" +
+            $"Air load {F(_airLoad)} (moisture {F(_airMoisture)}, dust {F(_airDust)}; climate {F(_airRain)} mm/yr; rays {(GameSettings.RayWeather.Index == 1 ? "by the weather" : "always")}; cloud base {F(CloudBaseAboveSea)} m above the sea, region {F(_regionalGround)} m)\n" +
             $"Sea: effective sea state {F(_wavesState)} (setting {F(GameSettings.SeaState.Value)} + storm), wave heading {F(_wavesAngle)} rad, " +
             $"spectrum origin ({F(Spectrum.OriginX)}, {F(Spectrum.OriginZ)})";
     }
@@ -1054,7 +1074,7 @@ public partial class Atmosphere : Node3D
         _air.SetShaderParameter("shadow_edge", Dev("airedge", 8));
         _air.SetShaderParameter("shaft_glow", Dev("airglow", .6f));
         _air.SetShaderParameter("world_origin", new Vector2((float)originX, (float)originZ));
-        _air.SetShaderParameter("cloud_base", SeaLevel + 1500);
+        _air.SetShaderParameter("cloud_base", SeaLevel + CloudBaseAboveSea);
         _air.SetShaderParameter("cloud_shade", Dev("aircloud", _shadow.Visible ? _shadowStrength : .62f));
         _air.SetShaderParameter("sea_level", SeaLevel);
         _air.SetShaderParameter("steps", q switch { 1 => 24, 2 => 40, _ => 64 });

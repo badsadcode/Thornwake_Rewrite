@@ -313,7 +313,9 @@ vec4 ct_far(vec3 dir, vec3 sun_dir, vec3 sun_col, vec3 ambient, vec3 haze, vec3 
 
 // Mackerel sky (altocumulus, ~4.5 km): rows of small cloudlets across the wind, in patches; smoothed to their
 // average where a cloudlet would be smaller than a pixel.
-float ct_mackerel(vec2 xz, float t_dist, float up) {
+// footprint_k: how much larger a pixel is than the full-resolution estimate (the sky's half-resolution pass: the cells
+// aliased into rows of white dashes — D161; the rounded cloud draft passes 3).
+float ct_mackerel_f(vec2 xz, float t_dist, float up, float footprint_k) {
 	float m = cloud_more.x;
 	if (m <= 0.001) return 0.0;
 	float wa = cloud_more.y;
@@ -322,9 +324,10 @@ float ct_mackerel(vec2 xz, float t_dist, float up) {
 	vec2 w = vec2(dot(xz + warp, al), dot(xz + warp, ac));
 	float cells = (0.5 + 0.5 * sin(w.x * CT_TAU / 320.0)) * (0.5 + 0.5 * sin(w.y * CT_TAU / 230.0 + sin(w.x / 700.0) * 2.0));
 	cells = smoothstep(0.15, 0.7, cells) * (0.7 + 0.3 * texture(cloud_tex, xz / 1500.0).g);
-	float footprint = t_dist * 0.0018 / max(up, 0.05);
+	float footprint = t_dist * 0.0018 / max(up, 0.05) * footprint_k;
 	cells = mix(cells, 0.33, smoothstep(50.0, 160.0, footprint));
 	float pm = texture(cloud_tex, xz / 16000.0 + vec2(0.41, 0.73)).r;
 	float mask = smoothstep(0.95 - m * 0.45, 1.1 - m * 0.45, pm);
 	return cells * mask * 0.6;
 }
+float ct_mackerel(vec2 xz, float t_dist, float up) { return ct_mackerel_f(xz, t_dist, up, 1.0); }

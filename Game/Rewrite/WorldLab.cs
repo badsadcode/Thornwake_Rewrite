@@ -563,6 +563,26 @@ public partial class WorldLab : Node3D
     /// The land for the clouds (Atmosphere.SetRelief): 64 × 64 coarse heights over 64 km around the player, and how
     /// much the wind climbs there (windward slopes). Rebuilt after moving 12 km or when the wind turns by ~25°.
     /// </summary>
+    private double _regionalTimer;
+
+    /// <summary>The land's mean height above the sea within ~10 km (Atmosphere.CloudBaseAboveSea, D161): 9 × 9 coarse
+    /// samples every two seconds.</summary>
+    private void UpdateRegionalGround(double delta)
+    {
+        if (_sampler == null || (_regionalTimer -= delta) > 0) return;
+        _regionalTimer = 2;
+        double sea = _sampler.Plan.Profile.SeaLevel, sum = 0;
+        int n = 0;
+        for (int j = -4; j <= 4; j++)
+            for (int i = -4; i <= 4; i++)
+            {
+                // (Sample, not MacroHeight: the macro height came back NaN — the cloud base never moved, D161)
+                double h = _sampler.Sample(PlayerX + i * 2500, PlayerZ + j * 2500).Height - sea;
+                if (double.IsFinite(h)) { sum += Math.Max(0, h); n++; }
+            }
+        if (n > 0) _atmosphere.RegionalGround = (float)(sum / n);
+    }
+
     private void UpdateRelief()
     {
         if (_sampler == null) return;
@@ -824,6 +844,7 @@ public partial class WorldLab : Node3D
         _hitch.Mark("weather");
         UpdatePeak(delta);
         UpdateRelief();
+        UpdateRegionalGround(delta);
         UpdateAirMap();
         if (!_timeSlider.HasFocus()) _timeSlider.SetValueNoSignal(sky.Hour);
         _atmosphere.Update(delta, sky, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
