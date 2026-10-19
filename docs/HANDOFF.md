@@ -90,6 +90,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   **Build 89** (`abf3506`, `dist/Preview-89`): the ridge stood in the bottom of the cloud layer (D169); draft *Sky →
   Cloud sea → under the high ridges* puts a thin broken layer below the ridges (`artifacts/ridge-cloud-sea.jpg`). Tom:
   "this is the direction". Open: shafts under the gaps from a valley, cost looking down onto it, tuning after his play.
+  **Build 90** (`787dddc`, `dist/Preview-90`): the fast fog waves were the air rays' lanes turning about the world's
+  centre as the sun moved (D170); now steady. `--shot-clock` + `--extra-every` capture bursts with the clock running.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
