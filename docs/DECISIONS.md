@@ -2701,6 +2701,21 @@ try" denser clouds. Two drafts, both off by default (`artifacts/clouds-see-throu
 * Tom also asked about **cloud layers** (low / middle / high) and clouds that look "like shaving foam" in some light —
   answered in chat, not changed.
 
+## D177 — "Shaving foam" clouds: two crisper-billow drafts, dropped (2026-10-19)
+Tom: "depending on the lighting, sometimes the clouds look bland … lack crispness and details … like shaving foam. Not
+always"; "I will rely on your choice". Draft *Cloud detail → crisper billows*, paired captures (bench suite, never
+committed):
+* Try 1 (light): deeper self-shadow ×1.4, stronger dark-side powder, sky fill ×0.72 with a high sun, the finer billow
+  octave out to ~10 km. The clouds went greyer, not crisper (the big noon cumulus lost brightness, no new lumps); only
+  Tom's ridge looked a little more defined.
+* Try 2 (shape): the finer octave stronger (0.35 → 0.55), a third one (110 m) within 2.5 km, erosion cutting deeper
+  (0.52 → 0.62), shading mostly back. Noon and broken cover: no visible change; Tom's ridge: crisper but blockier,
+  column-like walls (Tom: "I don't like blocky clouds") — `artifacts/cloud-crisper-draft.jpg`, build 91 left.
+* **Dropped.** The smooth faces are not a tuning matter: the billow detail comes from a 64³ noise (its 16-cell octave has
+  4 texels per cell) and most of the sky's clouds are drawn at half resolution with a coarser detail level far away.
+  A real fix is bigger (finer, sharper detail noise; detail at the sky pass's distances), best aimed at Tom's own
+  "foam" moments — his dumps when it happens — and the light/sun angle each time.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
