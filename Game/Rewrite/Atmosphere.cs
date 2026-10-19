@@ -1282,7 +1282,17 @@ public partial class Atmosphere : Node3D
         _forestAirMaterial.SetShaderParameter("drift", _forestDrift);
         _forestAirMaterial.SetShaderParameter("albedo", new Color("ece6da").Lerp(Sun.LightColor, .25f));
         e.VolumetricFogEnabled = true;
-        Sun.LightVolumetricFogEnergy = FogSunEnergy(1 + Dev("boost", a2 ? A2Boost : 1.8f) * _forest);
+        // Sun glare (Tom, build 80: "in the forest the sun is so bright, blinding; above the canopy it is normal"): the
+        // extra sunlight in the forest air scatters forward, so straight toward the sun it piled up into a white glare
+        // over the sun and the crowns. Softened: it eases off as the view turns toward the sun (to 20 % looking right
+        // at it), so the shafts beside and across the view keep their strength. Build 80: as before.
+        float glare = 1;
+        if (GameSettings.ForestSunGlare.Index == 1 && cam != null)
+        {
+            float facing = (-cam.GlobalBasis.Z).Normalized().Dot(Sun.GlobalTransform.Basis.Z.Normalized());
+            glare = 1 - Dev("glarecut", .8f) * Mathf.SmoothStep(.7f, .97f, facing);
+        }
+        Sun.LightVolumetricFogEnergy = FogSunEnergy(1 + Dev("boost", a2 ? A2Boost : 1.8f) * _forest * glare);
     }
 
     /// <summary>

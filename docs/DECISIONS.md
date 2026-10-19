@@ -2295,6 +2295,20 @@ Tom: "go for sharper and stronger shafts, closer to my references, even if less 
 * Developer: `--ray-dev=airnoise,airlane,airedge,airglow`. A shader input named `edge` clashed with a local variable
   (SHADER ERROR caught in the log; renamed `shadow_edge`).
 
+## D151 — The sun blinding under the trees (forest rays); Tom's milky mountain dumps are the cloud deck (2026-10-19)
+Tom on build 80: "in the forest the sun is so bright, blinding; above the canopy it is normal, I can see its disc".
+* Reproduced in `patch32` forest (winter noon, sun ~22°, first person facing it): with *Forest rays* A or A2 (0.85 or
+  0.75) the sun and the crowns round it blow out to white; forest rays off and above the canopy (forest rays fade out
+  12–30 m above the ground) the sun is normal. Cause: the extra sunlight in the forest air (A ×2.8, A2 ×5–8)
+  scatters forward, so straight toward the sun it piles up into a white glare.
+* New setting **Forest rays: sun glare** (`fx.forest_sun_glare`): *build 80 (full glare)* or **softened** (default): the
+  extra light eases off as the view turns toward the sun (smoothstep over 14–46° from it, to 20 % looking straight at
+  it), so shafts beside and across the view keep their strength
+  (`artifacts/rays/m2-forest-sun-glare.jpg`). A fix of a reported glare; build 80's look stays selectable.
+* His dumps 025558/025615 (milky white, 17–23 m above a slope at 2,200 m) are the cloud deck at that height, not the
+  forest rays: identical with A2, A or no forest rays.
+* Noted: his settings file now has Distance haze 0 and God ray contrast 0 (set by him after the dumps; tests never save).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

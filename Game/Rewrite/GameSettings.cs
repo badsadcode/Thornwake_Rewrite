@@ -227,6 +227,11 @@ public static class GameSettings
         "How much the forest air throws the sun's light forward (A2 only). High: bright, crisp shafts when you look toward " +
         "the sun, almost none from the side or with the sun behind you. Low: shafts seen from every side, softer and with " +
         "more glowing haze between the trees. 0.75 = build 76.", "×"));
+    public static readonly Setting ForestSunGlare = Add(new("fx.forest_sun_glare", "Lighting and effects", "Forest rays: sun glare", 0, 1, 1, 1,
+        "Looking at the sun from under the trees with forest rays A or A2 on. Softened: the sunlit forest air glows less " +
+        "the more directly you look at the sun, so the sun and the crowns round it are not blown out to white; shafts " +
+        "beside and across the view keep their strength. Build 80: the full glare.",
+        options: new[] { "build 80 (full glare)", "softened" }));
     public static readonly Setting AirRays = Add(new("fx.air_rays", "Lighting and effects", "Rays in open air (M2 draft)", 0, 3, 1, 0,
         "Shafts of sunlight anywhere outdoors, kilometres long: past mountain peaks and ridges and through gaps in the " +
         "clouds, in the haze over valleys, lakes and plains (the forest rays only reach a few hundred metres). Replaces the " +
