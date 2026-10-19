@@ -2544,6 +2544,16 @@ above a 30° sun); *Rays and haze → always* or the Atmospheric / Dramatic look
   already does this within 10 km, D154), (2) the cloud sea's own structure from above (lit tops, gaps), then (3)
   mountain shadows on it (this draft). Cost of the draft not measured (Tom's game shared the GPU).
 
+## D168 — Height-aware distance haze (draft); the ridge's flat view is the cloud veil (2026-10-19)
+Tom: "make the distance haze height-aware (clear up high, hazy in the valleys) as a switchable draft". New setting
+**Haze and height** (`fx.height_haze`): *build 88* (default) or *height-aware (draft)*: Godot's distance fog thins with the
+camera's height over the region's ground (×e^(−(h−200 m)/1,400 m), at least a quarter); the air pass's own haze is
+already shaped per ray within ~10 km (D154). Captures on his ridge at 08:48 (`artifacts/ridge-height-haze.jpg`,
+Natural look): with no clouds the view is the one he liked — shafts past the peaks, layered haze, far ranges — and
+height-aware makes the far ranges slightly crisper; the cliff lake (low down) is unchanged. **Correction to D167**: with
+70 % cover the flat blue-grey is the clouds in front of the land — an even veil about 80 % opaque instead of a broken
+cloud sea with gaps and tops — not the distance fog. Next in M3: the cloud field seen from above (gaps, tops, light).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

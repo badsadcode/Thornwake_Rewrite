@@ -675,6 +675,7 @@ public partial class Atmosphere : Node3D
         }
         _camera3DHeight = cameraLocal.Y;
         UpdateAirRays(toSun, cameraWorldX, cameraWorldZ, originX, originZ);
+        UpdateHeightHaze(cameraLocal.Y);
 
         // Shadow decal: ground point g is shaded by the cloud at g + toSun.xz · H / toSun.y. With the texture laid as
         // 3×3 tiles of period P, the decal centre must be ≡ P/2 − (origin + shift + wind) (mod P), chosen nearest the camera.
@@ -1245,6 +1246,18 @@ public partial class Atmosphere : Node3D
             e.VolumetricFogTemporalReprojectionAmount = GameSettings.FogSmoothing.F;
             e.VolumetricFogDensity = GameSettings.VolumetricFog.On ? (Natural ? .002f : .0035f) : 0;
         }
+    }
+
+    // ---- height-aware distance haze (D168, Tom: "clear up high, hazy in the valleys"). Godot's distance fog counts
+    // only distance, so looking down from a 3 km ridge at land 8 km away fogged as if along the valley floor (a flat
+    // blue-grey, D167). Real haze thins with height: above the region's ground the camera looks through thinner air,
+    // so the distance fog thins with the camera's height over the land (to a quarter, falling to ~37 % per 1.4 km above
+    // the first 200 m). Within ~10 km the air rays' own haze (environment contrast) is shaped per ray; this is the rest.
+    private void UpdateHeightHaze(float cameraY)
+    {
+        if (GameSettings.HeightHaze.Index == 0 || float.IsNaN(_regionalGround)) return;
+        float above = cameraY - (SeaLevel + _regionalGround);
+        Environment.FogDensity *= Mathf.Max(Mathf.Exp(-Mathf.Max(above - Dev("hazefloor", 200), 0) / Dev("hazeheight", 1400)), .25f);
     }
 
     // ---- air load (D152, Tom: shafts "only where weather effects are met for them to naturally show up"): how much

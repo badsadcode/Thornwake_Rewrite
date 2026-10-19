@@ -230,6 +230,11 @@ public static class GameSettings
     public static readonly Setting WindWaves = Add(new("fx.wind_waves", "Lighting and effects", "Wind waves on grass", 0, 2, .1, 1,
         "Gusts sweep across meadows as lighter bands moving with the wind (the grass catches the light as it bends). " +
         "0 = none (the grass still sways), 1 = build 86.", "×"));
+    public static readonly Setting HeightHaze = Add(new("fx.height_haze", "Lighting and effects", "Haze and height", 0, 1, 1, 0,
+        "Draft. Height-aware: the distance haze thins as you rise above the land around you, so from a peak or high ridge " +
+        "the view down into the valleys and across to far ranges is clearer, while the valleys themselves stay hazy. " +
+        "Build 88: the same haze at every height.",
+        options: new[] { "build 88", "height-aware (draft)" }));
     public static readonly Setting RayWeather = Add(new("fx.ray_weather", "Lighting and effects", "Rays and haze", 0, 1, 1, 0,
         "When shafts of light show. Always: as build 81, wherever the effects are on (forest rays in every forest by day). " +
         "By the weather (draft): only when the air holds something to catch the light: morning haze after a cool night, " +
