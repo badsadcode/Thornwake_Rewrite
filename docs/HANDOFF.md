@@ -57,6 +57,10 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   **Build 79** (`6550c2a`, `dist/Preview-79`, 2026-10-19): A2 eased at a high sun (noon was milky white), suite `rays3`
   (A2 through the day); benchmarks never save settings (D146). Capture runs: use a hang watchdog (one froze, cause unknown).
   **Waiting for Tom**: his forward scattering value and how A2 looks through the day.
+  **Build 80** (`abc5fcb`, `dist/Preview-80`, 2026-10-19): *Rays in open air* (D148–D150) — a full-screen pass through a
+  512² terrain sun-shadow map (20 km), lanes along ridge shadows; mountains block the sun (fog glow, screen shafts,
+  near fog, terrain shadows to ~3 km). Off by default; Tom to try. Next: lanes for cloud-gap shafts (his reference 1),
+  defaults after his notes. Scene `air-cliff`, suite `airrays` (cost); tools `--ray-vantage[=edge]`, `--air-preview`.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
