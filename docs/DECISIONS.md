@@ -2621,6 +2621,23 @@ high cover. Third option of *Sky → Cloud sea*: **broken from below (draft)** (
   90 % (closed), the ridge from above. Rough cost from the HUD in captures: ~37–40 FPS looking up from the valley where
   build 89 showed ~45–47 (more cloud detail visible, fewer rays stop early). Known: hole edges stand as vertical curtains.
 
+## D173 — Light through the cloud sea's gaps: in place, still subtle (2026-10-19)
+Tom: "work on the sunlit shafts coming down through the gaps first, then make a build". Why none showed (D172): the
+air pass shades the haze with the flat 2D cloud map, which has no holes — under the sea 95 % of the sun was gone
+everywhere. Now, with *Cloud sea → broken from below*:
+* the air pass reads the same hole noise as the clouds (`sea_open`, the cloud noise texture), so the haze is lit
+  where the sky shows through — confirmed in its debug view (`--ray-dev=airdebug=1`): bands of sunlit air under the
+  holes where build 89 was uniform;
+* the light's edge is crisper and ragged by the lanes' noise (constant along the light: a comb of rays);
+* the holes' sides in the clouds are rounded with height and ragged (they stood as straight vertical walls);
+* under the sea the valley air is damper (air moisture at least 0.35 × the sea's strength while the camera is below
+  its base; `--ray-dev=seamoist=`): more haze to light.
+* **Result, honestly**: the light follows the gaps, but in the captured valleys (`artifacts/cloud-sea-shafts.jpg`)
+  shafts are subtle — a valley 2 km wide with the clouds 200–300 m overhead has little air to light along a view, and
+  in the basin 1 km lower the morning shafts come mostly from the terrain. Tom's fjord reference looks across km of
+  air under a high gap. Next if wanted: stronger contrast of lit vs shaded haze under the sea, and a test spot with a
+  wide valley under a higher sea.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

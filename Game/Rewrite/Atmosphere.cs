@@ -205,6 +205,7 @@ public partial class Atmosphere : Node3D
         _air = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/AirRays.gdshader"), RenderPriority = 101 };
         _air.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
         _air.SetShaderParameter("cloud_period", CloudPeriod);
+        _air.SetShaderParameter("cloud_noise", _cloudNoise); // (the broken cloud sea's holes, D173)
         _beams.SetShaderParameter("cloud_period", CloudPeriod);
         _beams.SetShaderParameter("cloud_height", CloudHeight);
         _curtains = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/RainCurtains.gdshader"), RenderPriority = 98 };
@@ -1116,6 +1117,7 @@ public partial class Atmosphere : Node3D
         _air.SetShaderParameter("cloud_shade", Dev("aircloud", _shadow.Visible ? _shadowStrength : .62f));
         // (D172: under the broken cloud sea the clouds take nearly all the sun; light comes down through the gaps)
         _air.SetShaderParameter("sea_shade", GameSettings.CloudSea.Index == 2 ? CloudSea * Dev("airsea", .95f) : 0f);
+        _air.SetShaderParameter("sea_hole", GameSettings.CloudSea.Index == 2 ? CloudSea * Dev("seahole", .5f) : 0f);
         _air.SetShaderParameter("sea_level", SeaLevel);
         _air.SetShaderParameter("steps", q switch { 1 => 24, 2 => 40, _ => 64 });
         // (developer tool, --ray-dev: airgain, airside, airsun, airshade, airdens, airhaze (haze height), airvalley, aircloud, airdebug)
@@ -1333,6 +1335,10 @@ public partial class Atmosphere : Node3D
         float afterRain = Dev("airwetk", .95f) * Mathf.Pow(Mathf.Clamp(_wetness, 0, 1), Dev("airwetp", .5f)) * (1 - _storm);
         _airMoisture = Mathf.Clamp(humid * (.2f + .9f * Mathf.Min(morning, 1)) + afterRain, 0, 1) * (.35f + .65f * calm);
         _airDust = dry * Mathf.SmoothStep(4, 11, Wind.SteadySpeed) * (1 - _wetness);
+        // Under the broken cloud sea (D173) the valley air is damp (the sea is the top of a moist layer): more haze for
+        // the light coming down through its gaps.
+        if (GameSettings.CloudSea.Index == 2 && CloudSea > 0)
+            _airMoisture = Math.Max(_airMoisture, Dev("seamoist", .35f) * CloudSea * Mathf.SmoothStep(-50, 150, SeaLevel + CloudBaseAboveSea - _camera3DHeight) * (1 - _storm));
         float target = Mathf.Clamp(_airMoisture + .8f * _airDust, 0, 1);
         _airLoad = StillShot || SnapExposure ? target : Mathf.MoveToward(_airLoad, target, (float)delta / 20);
     }

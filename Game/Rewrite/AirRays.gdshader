@@ -57,8 +57,20 @@ uniform vec2 world_origin = vec2(0.0); // the scene origin's world position (the
 uniform vec2 lane_pivot = vec2(0.0);
 uniform vec2 lane_offset = vec2(0.0);
 uniform int lane_mode = 1;
-// Under the broken cloud sea (D172): how much of the sun its clouds take (0 = the usual cloud_shade).
+// Under the broken cloud sea (D172): how much of the sun its clouds take (0 = the usual cloud_shade), and its holes
+// (D173: the same 2D cell noise as SkyCommon's vdens, so the light comes down where the sky shows through).
 uniform float sea_shade = 0.0;
+uniform float sea_hole = 0.0; // the hole size × the cloud sea's strength (0 = no holes)
+uniform sampler3D cloud_noise : filter_linear, repeat_enable;
+// jag: the lanes' noise (−0.5…0.5, constant along the light): a ragged edge, so the light through a hole comes down as a
+// comb of rays, not one soft column (D173).
+float sea_open(vec2 xz, float coverage, float jag) {
+	float hole = sea_hole * (1.0 - smoothstep(0.72, 0.9, coverage));
+	if (hole <= 0.0) return 0.0;
+	float cell = texture(cloud_noise, vec3(xz / 1700.0, 0.61)).r * 0.7 + texture(cloud_noise, vec3(xz / 650.0, 0.23)).g * 0.3;
+	cell += jag * 0.14;
+	return 1.0 - smoothstep(hole + 0.03, hole + 0.09, cell);
+}
 global uniform vec4 cloud_state;
 global uniform sampler2D weather_map : filter_linear, repeat_disable;
 global uniform vec4 weather_frame;
@@ -146,7 +158,7 @@ void fragment() {
 		// Clouds: the deck above this point toward the sun (none once the point is above the deck).
 		if (clouds > 0.0 && p.y < cloud_base) {
 			vec2 xz = cloud_state.xy + (p.xz - cam.xz) + l.xz / lift * (cloud_base - p.y);
-			sun *= 1.0 - max(cloud_shade, sea_shade) * clouds * cloud_density(xz, coverage);
+			sun *= 1.0 - max(cloud_shade, sea_shade) * clouds * cloud_density(xz, coverage) * (1.0 - sea_open(xz, coverage, rough / max(2.0 * ray_noise, 1e-3)));
 		}
 		// (own haze for the near and middle distance only: Godot's fog, which fades into the sky's colour, keeps the far
 		// distance; a far haze of plain fog colour went dark violet along distant ridges)

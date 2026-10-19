@@ -499,7 +499,9 @@ float vdens(vec3 p, bool detail) {
 		// see sky through it and sunlight comes down; fewer as the cover rises, none from ~90 % (a closed, grey day).
 		float hole = sea_tune.x * (1.0 - smoothstep(0.72, 0.9, cloud_state.z)) * SEA_K;
 		float cell = texture(cloud_noise, vec3(p.xz / 1700.0, 0.61)).r * 0.7 + texture(cloud_noise, vec3(p.xz / 650.0, 0.23)).g * 0.3;
-		d *= smoothstep(hole, hole + 0.16, cell);
+		// (rounded sides: wider holes toward the base and the top, ragged with the billows — straight they stood as walls)
+		float hole_h = hole + (0.1 * smoothstep(0.4, 0.0, h) + 0.06 * smoothstep(0.65, 1.0, h) + (n.g - 0.5) * 0.12) * step(0.001, hole);
+		d *= smoothstep(hole_h, hole_h + 0.16, cell);
 	}
 	if (cloud_turbulence == 1 && detail && d > 0.0) {
 		float k = 1.0 - smoothstep(150.0, 600.0, length(vec3(p.x - cloud_state.x, p.y, p.z - cloud_state.y)));
