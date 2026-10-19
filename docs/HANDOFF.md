@@ -80,6 +80,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   land* (D159–D161; suite `clouds`), settings presets. Open in M3: thin sunset clouds with the rounded shape, the
   horizon slices (stacked layers at sunset), the cost toward the horizon (45 ms at noon), detail and movement,
   Tom's office dumps 115949 / 120402.
+  **Build 86** (`aba92e5`, `dist/Preview-86`): built-in presets keep the look, the ray passes' dither holds still without
+  TAA (D162); Tom's seven look settings reset to defaults at his request (backup `rewrite_settings.before-look-reset-20261019.cfg`).
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
