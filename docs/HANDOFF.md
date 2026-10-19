@@ -92,6 +92,10 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   "this is the direction". Open: shafts under the gaps from a valley, cost looking down onto it, tuning after his play.
   **Build 90** (`787dddc`, `dist/Preview-90`): the fast fog waves were the air rays' lanes turning about the world's
   centre as the sun moved (D170); now steady. `--shot-clock` + `--extra-every` capture bursts with the clock running.
+  **Build 91** (`b0a7f34`, `dist/Preview-91`): *Cloud sea → broken from below* (D172–D173): a broken sky from the valleys,
+  closed at ~90 %, still a sea from the ridge; light follows the gaps but shafts are subtle. Test spots: valley
+  -214638,84223 (floor 1,690 m), basin -210238,87823 (880 m); `--lows=` probe in Tests/WorldGen. Open: stronger shafts
+  (wide valley, high sea), hole edges as curtains, cloud cost.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done

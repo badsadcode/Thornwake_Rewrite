@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 91** (cloud sea broken from below D172, light through its gaps D173) | `b0a7f34` | Thornwake-Rewrite-Preview-91 (v0.9.91) | Versions must match to connect; Cloud sea → under the high ridges = build 89/90; build 90 = `787dddc` |
 | **Build 90** (steady ray lanes, no more fast fog waves D170) | `787dddc` | Thornwake-Rewrite-Preview-90 (v0.9.90) | Versions must match to connect; Ray lanes → build 89 (fast waves) = build 89; build 89 = `abf3506` |
 | **Build 89** (cloud sea under the high ridges D169, height-aware haze D168, mountains shade the clouds D167) | `abf3506` | Thornwake-Rewrite-Preview-89 (v0.9.89) | Versions must match to connect; all three are drafts, off by default = build 88; build 88 = `ff0dc7d` |
 | **Build 88** (clouds hide the air rays D166, mountain clouds by region D165) | `ff0dc7d` | Thornwake-Rewrite-Preview-88 (v0.9.88) | Versions must match to connect; Rays and clouds → rays over clouds = build 87; build 87 = `604f125` |
