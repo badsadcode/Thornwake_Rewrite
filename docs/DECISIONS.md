@@ -2228,6 +2228,34 @@ mountain"; dump 005742 (tundra 3,729 m) shows no sun effects at all: "is there a
   hidden there (horizon 4°), so nothing cut shafts; the global volumetric fog is thin, even haze. No change yet:
   rays in open mountain air would be a new effect (Tom's call).
 
+## D148 — Rays in open air: a draft pass through a terrain sun-shadow map (2026-10-19, in progress)
+Tom wants shafts everywhere outdoors, not only in forests; his references (kept locally, not in git:
+`artifacts/rays/reference-1-cloud-shafts.webp` — a stock photo with a watermark — and `reference-2-mountain-shafts.png`,
+a game screenshot): shafts from a gap in the clouds over a fjord, shafts past mountain peaks at sunrise.
+* Why Godot's fog cannot: it reaches ~180 m, the sun's shadow map 450 m, distant terrain casts no shadow (D147).
+* **Draft**: setting *Rays in open air (M2 draft)* (`fx.air_rays`: off / low / medium / high = 24 / 40 / 64 steps;
+  default off). `WorldLab.AirRays.cs` builds, on a worker thread, a 256² map over 20 km around the player: ground
+  heights and each cell's **sun-shadow height** (the lowest height whose air sees the sun over every ridge toward it);
+  heights ~0.15 s, shadows ~10 ms, again after moving 2.5 km or when the sun moves ~0.36°. `AirRays.gdshader`
+  (full-screen, after the clouds in front of the land) marches each view ray: air below the shadow height is in a
+  mountain's shadow, air under a cloud toward the sun is in the cloud's shadow (the deck at its real height, dimmed as
+  the ground's cloud shadows); the haze's opacity is Godot's distance fog's, thicker low down and close above the
+  ground. It **darkens Godot's haze where the air is shadowed and adds sunlight where it is lit**, so Godot's colours
+  and aerial perspective stay (a first version that replaced Godot's fog went black at dawn: that fog's colour is
+  mostly the sky's).
+* **Where it stands**: the shadow geometry is right (probes and debug views: the sunlit share of the haze, the haze's
+  opacity), no shader errors, Tom's files untouched in every run. Visible only exaggerated so far: a mountain's shadow
+  as a dark wedge with a sharp edge across the sky (`artifacts/rays/m2-air-rays-first-shadow-wedge.jpg`). Not yet
+  many shafts nor Tom's look. Found on the way: the light beams' cloud-cover dimming hid it under Tom's 52–80 % cover
+  (removed for the pass); the near-cloud pass covered it (it now draws after); test spots above the cloud deck or
+  wholly in one mountain's shadow show nothing by nature.
+* Developer tools: `--air-preview=out.png[,yaw offsets]` (headless: the sunlit share of the air per view, from the
+  same map), `--ray-vantage` (sunlit raised viewpoints with many lit/shadow changes toward the sun), `--sun-block`,
+  `--ray-dev=air…` (airgain, airside, airsun, airshade, airdens, airhaze, airvalley, aircloud, airdebug 1/2/3).
+* Also fixed: a Reproduce line's `--hour` was set at the start position's latitude, so the clock read another hour
+  after the jump to `--at` (dump 005618: 10:59 instead of 10:40, sun 22.9° instead of 17.9°).
+* Next: a finer map (more, narrower shafts), strength, a clear-weather test scene against the references, the cost.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -227,6 +227,12 @@ public static class GameSettings
         "How much the forest air throws the sun's light forward (A2 only). High: bright, crisp shafts when you look toward " +
         "the sun, almost none from the side or with the sun behind you. Low: shafts seen from every side, softer and with " +
         "more glowing haze between the trees. 0.75 = build 76.", "×"));
+    public static readonly Setting AirRays = Add(new("fx.air_rays", "Lighting and effects", "Rays in open air (M2 draft)", 0, 3, 1, 0,
+        "Shafts of sunlight anywhere outdoors, kilometres long: past mountain peaks and ridges and through gaps in the " +
+        "clouds, in the haze over valleys, lakes and plains (the forest rays only reach a few hundred metres). Replaces the " +
+        "light beams under clouds while on. Low / medium / high: how finely each view ray is followed (GPU time). Off = as " +
+        "build 79.",
+        options: new[] { "off", "low", "medium", "high" }));
     public static readonly Setting LightModel = Add(new("fx.light_model", "Lighting and effects", "Light model", 0, 1, 1, 0,
         "Atmosphere 2.0 (experimental, M1): sunlight by phase of the day — golden hour, a softer morning and afternoon, " +
         "a stronger white noon — with the sky light following. Build 47 = the light until now.",

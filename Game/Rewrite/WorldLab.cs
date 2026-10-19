@@ -800,13 +800,17 @@ public partial class WorldLab : Node3D
         var cam = _camera.GlobalPosition;
         RenderingServer.GlobalShaderParameterSet("tree_camera", new Vector4(cam.X, cam.Y, cam.Z, 0)); // tree hand-overs (TreeFade)
         double latitude = _sampler.Plan.Climate.Latitude(PlayerZ);
-        if (_pendingHour is { } setHour) { _clock.SetHour(setHour, latitude); _pendingHour = null; }
+        // (a Reproduce line's --hour is set before the jump to its --at: with the latitude there, or the day's share
+        // of daylight differs and the clock reads another hour after the jump — dump 005618: 10:59 instead of 10:40)
+        double hourLatitude = _shotAt is { } goingTo && Math.Abs(PlayerZ - goingTo.Z) > 2 ? _sampler.Plan.Climate.Latitude(goingTo.Z) : latitude;
+        if (_pendingHour is { } setHour) { _clock.SetHour(setHour, hourLatitude); _pendingHour = null; }
         var sky = _clock.Advance(delta, latitude, run: _shotPath == null);
         _hitch.Mark("ground snap, camera, others");
         UpdateWeather(delta, sky);
         _hitch.Mark("weather");
         UpdatePeak(delta);
         UpdateRelief();
+        UpdateAirMap();
         if (!_timeSlider.HasFocus()) _timeSlider.SetValueNoSignal(sky.Hour);
         _atmosphere.Update(delta, sky, _originX + cam.X, _originZ + cam.Z, _originX, _originZ, cam);
         _hitch.Mark("atmosphere");

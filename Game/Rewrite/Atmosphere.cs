@@ -28,7 +28,7 @@ public partial class Atmosphere : Node3D
     private const int Tile = 256;
     private ShaderMaterial _cloudsNear = null!;
     private MeshInstance3D? _cloudsNearQuad;
-    private ShaderMaterial _sky = null!, _shafts = null!, _beams = null!, _curtains = null!;
+    private ShaderMaterial _sky = null!, _shafts = null!, _beams = null!, _curtains = null!, _air = null!;
     private GpuParticles3D? _splashes;
     private ShaderMaterial? _splashMaterial;
     private float _splashLevel = float.NaN;
@@ -41,7 +41,7 @@ public partial class Atmosphere : Node3D
     private ImageTexture _shadowTexture = null!;
     private double _windX, _windZ;
     private float _shadowCoverage = -1;
-    private MeshInstance3D? _shaftQuad, _beamQuad;
+    private MeshInstance3D? _shaftQuad, _beamQuad, _airQuad;
     private readonly ShaderMaterial _underwater = new() { Shader = GD.Load<Shader>("res://Game/Rewrite/Underwater.gdshader"), RenderPriority = 127 };
     private float _daylight = 1;
     private GpuParticles3D? _rainParticles;
@@ -163,6 +163,11 @@ public partial class Atmosphere : Node3D
         _shafts = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/SunShafts.gdshader"), RenderPriority = 100 };
         _beams = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/LightBeams.gdshader"), RenderPriority = 99 };
         _beams.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
+        // (after the clouds drawn in front of the land, 99: in the mountains the deck sits at valley height and covered
+        // the pass; the shadows of mountains and cloud gaps fall across those clouds too)
+        _air = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/AirRays.gdshader"), RenderPriority = 101 };
+        _air.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
+        _air.SetShaderParameter("cloud_period", CloudPeriod);
         _beams.SetShaderParameter("cloud_period", CloudPeriod);
         _beams.SetShaderParameter("cloud_height", CloudHeight);
         _curtains = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/RainCurtains.gdshader"), RenderPriority = 98 };
@@ -194,6 +199,12 @@ public partial class Atmosphere : Node3D
             Visible = GameSettings.LightBeams.Value > 0,
         };
         camera.AddChild(_beamQuad);
+        _airQuad = new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(2, 2) }, MaterialOverride = _air, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            ExtraCullMargin = 16384, Position = new Vector3(0, 0, -1), GIMode = GeometryInstance3D.GIModeEnum.Disabled, Visible = false,
+        };
+        camera.AddChild(_airQuad);
         // Cloud renderer v2: the cloud volume in front of the scene (hidden with the other cloud qualities).
         _cloudsNearQuad = new MeshInstance3D
         {
@@ -391,6 +402,7 @@ public partial class Atmosphere : Node3D
             _cloudPixels = pixels;
             SkyParam("cloud_tex", ImageTexture.CreateFromImage(WithMipmaps(pixels == Tile ? _noise : CloudNoise(pixels, 4242))));
             _beams?.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
+            _air?.SetShaderParameter("cloud_tex", _sky.GetShaderParameter("cloud_tex"));
             ShareClouds();
         }
         SkyParam("sun_glare", GameSettings.SunGlare.F);
@@ -636,6 +648,7 @@ public partial class Atmosphere : Node3D
             _beams.SetShaderParameter("light_direction", toSun);
             _beams.SetShaderParameter("light_color", Sun.LightColor * Sun.LightEnergy);
         }
+        UpdateAirRays(toSun, cameraWorldX, cameraWorldZ);
 
         // Shadow decal: ground point g is shaded by the cloud at g + toSun.xz · H / toSun.y. With the texture laid as
         // 3×3 tiles of period P, the decal centre must be ≡ P/2 − (origin + shift + wind) (mod P), chosen nearest the camera.
@@ -965,6 +978,52 @@ public partial class Atmosphere : Node3D
     {
         SkyParam("relief_tex", ImageTexture.CreateFromImage(image));
         _reliefX = x; _reliefZ = z; _reliefSize = size;
+    }
+
+    // ---- rays in open air (M2, D148): AirRays.gdshader over a sun-shadow height map built by WorldLab.
+    private double _airX, _airZ;
+    private float _airSize;
+
+    /// <summary>Toward the sun (world directions), for the sun-shadow height map.</summary>
+    public Vector3 SunDirection => Sun.GlobalTransform.Basis.Z.Normalized();
+
+    /// <summary>The air map around (<paramref name="x"/>, <paramref name="z"/>), <paramref name="size"/> m wide:
+    /// r = ground height, g = the height above which the air sees the sun over the terrain (RGF).</summary>
+    public void SetAirMap(Image image, double x, double z, float size)
+    {
+        _air.SetShaderParameter("air_map", ImageTexture.CreateFromImage(image));
+        _airX = x; _airZ = z; _airSize = size;
+    }
+
+    private void UpdateAirRays(Vector3 toSun, double cameraWorldX, double cameraWorldZ)
+    {
+        if (_airQuad == null) return;
+        int q = GameSettings.AirRays.Index;
+        bool on = q > 0 && _airSize > 0 && toSun.Y > -.01f;
+        _airQuad.Visible = on;
+        // (the light beams under clouds are part of the air rays while they are on)
+        if (_beamQuad != null) _beamQuad.Visible = !on && GameSettings.LightBeams.Value > 0 && GameSettings.Clouds.Value > 0;
+        if (!on) return;
+        _air.SetShaderParameter("light_direction", toSun);
+        _air.SetShaderParameter("light_color", Sun.LightColor * Sun.LightEnergy);
+        _air.SetShaderParameter("map_frame", new Vector4((float)(cameraWorldX - _airX), (float)(cameraWorldZ - _airZ), _airSize, 0));
+        // The pass works on Godot's distance haze as it is this frame (its density: how much of each view is haze).
+        var e = Environment;
+        _air.SetShaderParameter("density", e.FogEnabled ? e.FogDensity * Dev("airdens", 1) : 0);
+        _air.SetShaderParameter("sun_scatter", Dev("airsun", 0));
+        _air.SetShaderParameter("shade", Dev("airshade", .6f));
+        _air.SetShaderParameter("cloud_base", SeaLevel + 1500);
+        _air.SetShaderParameter("cloud_shade", Dev("aircloud", _shadow.Visible ? _shadowStrength : .62f));
+        _air.SetShaderParameter("sea_level", SeaLevel);
+        _air.SetShaderParameter("steps", q switch { 1 => 24, 2 => 40, _ => 64 });
+        // (developer tool, --ray-dev: airgain, airside, airsun, airshade, airdens, airhaze (haze height), airvalley, aircloud, airdebug)
+        // (no dimming by the cloud cover as the light beams have: the clouds' shadows in the pass do that, and shafts
+        // belong under broken cloud — Tom's reference 1)
+        _air.SetShaderParameter("gain", Dev("airgain", 1) * (1f - .9f * _storm));
+        _air.SetShaderParameter("side_scatter", Dev("airside", .5f));
+        _air.SetShaderParameter("haze_height", Dev("airhaze", 1400));
+        _air.SetShaderParameter("valley_haze", Dev("airvalley", 3));
+        _air.SetShaderParameter("debug", (int)Dev("airdebug", 0));
     }
 
     /// <summary>Screenshots with forced storms: light one far cell.</summary>
