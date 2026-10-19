@@ -2488,6 +2488,23 @@ itself (mist patches) drifts at a tenth of that.
   swaying grass); if it is not, the next suspect is the cloud shadows (*Sky → Cloud shadows*).
 * Tom also: "it's really hard to decide on the settings" — proposed: a few named look presets for the atmosphere.
 
+## D164 — Look presets for the atmosphere: Clear, Natural, Atmospheric, Dramatic (2026-10-19)
+Tom: "it's really hard to decide on the settings … make 3–4 named look presets (clear, natural, atmospheric,
+dramatic), show me captures of each, then a build". Data in `Content/look_presets.json` (editable without code); in
+the Settings tab's preset list after Low–Ultra as "Look: …"; they set only the atmosphere's look (haze, glow, sun
+shafts, god ray contrast, light beams, forest rays and their scattering and glare, rays in open air, rays and haze,
+light and shadow in the haze, rays strength, ground fog, wind waves, saturation), never quality or performance.
+* **Clear**: little haze, no air rays, forest rays by the weather. **Natural**: everything by the weather, Noor's
+  environment contrast, medium air rays. **Atmospheric**: hazier, rays always, high air rays, rays strength 1.4.
+  **Dramatic**: strong shafts and glow (rays strength 1.8, sun shafts 1.6, god ray contrast 0.7), saturation 1.15.
+  A first proposal (artistic): Tom judges from `artifacts/look-presets.jpg` (cliff lake at dawn after rain, forest
+  at 06:48 facing the sun, his ridges at 08:48) and in play.
+* `--presets-test` also checks the four look presets and that they leave quality alone.
+* **Found**: on Tom's ridge (3,062 m, his dump 100445 at 08:48) with *rays in open air* off, *volumetric v2* clouds
+  paint an even blue wall over the whole view (v1 clouds: the land shows; air rays on: the land shows). So Clear shows
+  it there, and so would anyone with air rays off at that height: an M3 bug, next to fix
+  (`artifacts/v2-blue-wall-ridge.jpg`). Clear first had *Ground fog: valleys* (not the cause; now valleys + patches).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

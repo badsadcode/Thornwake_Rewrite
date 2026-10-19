@@ -28,7 +28,16 @@ public static class SettingPresets
 
     public sealed record Preset(string Name, bool BuiltIn, string Id);
 
-    /// <summary>Built-in presets first (Low … Ultra), then the player's own by name.</summary>
+    /// <summary>The look presets (Content/look_presets.json, D164): built-in, setting only the atmosphere's look.</summary>
+    private static IEnumerable<JsonObject> LookPresets()
+    {
+        var json = JsonNode.Parse(Godot.FileAccess.GetFileAsString("res://Content/look_presets.json"));
+        if (json?["presets"] is JsonArray list)
+            foreach (var p in list) if (p is JsonObject o) yield return o;
+    }
+
+    /// <summary>Built-in quality presets first (Low … Ultra), then the look presets (Clear … Dramatic), then the player's
+    /// own by name.</summary>
     public static List<Preset> All()
     {
         var list = new List<Preset>();
@@ -38,6 +47,8 @@ public static class SettingPresets
             string name = node?["name"]?.GetValue<string>() ?? id;
             list.Add(new Preset(name.Split(" (")[0], true, id)); // ("Medium (game defaults)" → "Medium")
         }
+        foreach (var o in LookPresets())
+            list.Add(new Preset("Look: " + (o["name"]?.GetValue<string>() ?? "?"), true, "look:" + o["id"]!.GetValue<string>()));
         string dir = ProjectSettings.GlobalizePath(Folder);
         if (Directory.Exists(dir))
             foreach (var file in Directory.GetFiles(dir, "*.cfg").OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
@@ -68,6 +79,14 @@ public static class SettingPresets
     /// covered setting it saved. Returns a line for the status bar.</summary>
     public static string Apply(Preset preset)
     {
+        if (preset.BuiltIn && preset.Id.StartsWith("look:"))
+        {
+            var look = LookPresets().FirstOrDefault(o => "look:" + o["id"]!.GetValue<string>() == preset.Id);
+            if (look?["settings"] is not JsonObject values) return $"Could not read the preset {preset.Name}.";
+            foreach (var (key, v) in values)
+                if (GameSettings.All.FirstOrDefault(s => s.Key == key) is { } s) s.Value = v!.GetValue<double>();
+            return $"Preset {preset.Name} loaded (the atmosphere's look; quality and performance are unchanged).";
+        }
         if (preset.BuiltIn)
         {
             var profile = Profiles().FirstOrDefault(p => p.Id == preset.Id).Node?["settings"] as JsonObject;

@@ -45,7 +45,13 @@ public partial class WorldLab
             var ssr = GameSettings.All.First(s => s.Key == "fx.ssr");
             Check(ssr.Value == 0, "Low turns reflections off");
             Check(season.Index == 2, "season untouched (a world setting)");
-            Check(SettingPresets.All().Where(p => p.BuiltIn).Select(p => p.Name).SequenceEqual(new[] { "Low", "Medium", "High", "Ultra" }), "built-ins Low…Ultra");
+            Check(SettingPresets.All().Where(p => p.BuiltIn).Select(p => p.Name).SequenceEqual(new[] { "Low", "Medium", "High", "Ultra",
+                "Look: Clear", "Look: Natural", "Look: Atmospheric", "Look: Dramatic" }), "built-ins Low…Ultra, looks");
+            var shadows = GameSettings.All.First(s => s.Key == "fx.shadows");
+            double shadowsWas = shadows.Value;
+            SettingPresets.Apply(SettingPresets.All().First(p => p.Name == "Look: Dramatic"));
+            Check(Math.Abs(GameSettings.All.First(s => s.Key == "fx.ray_strength").Value - 1.8) < 1e-6, "Dramatic sets rays strength");
+            Check(shadows.Value == shadowsWas, "a look preset leaves quality alone");
             if (mine != null) Check(SettingPresets.Delete(mine).Contains("deleted"), "delete");
             Check(SettingPresets.All().All(p => p.BuiltIn), "gone after delete");
         }
