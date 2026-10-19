@@ -78,6 +78,20 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 85 — cloud drafts, settings presets
+**Host and everyone joining need build 85** (versions must match to connect).
+* **Settings presets** (Settings tab, top row): pick *Low*, *Medium*, *High*, *Ultra* or one of your own and press
+  *Load*; type a name and *Save as* to keep your current look and performance settings; *Delete* removes your own.
+  A preset covers graphics and effects, not the time, weather, simulation, interface, window or audio.
+* **Sky → Cloud shape → rounded (draft)**: clouds no longer "locked in a box" — each cloud has its own height, domed
+  tops and slightly uneven, lumpy bases, finer billows close up. Overcast and storm decks stay as they were. Known:
+  at sunset there is less cloud than before.
+* **Sky → Cloud base → above the land (draft)**: in high country the cloud base rides ~1.5 km over the region's
+  ground instead of 1.5 km over the sea (in your mountain world: ~2,950 m instead of 1,500 m), so the deck no longer
+  sits at valley height. High spots near 3,000 m are now at the cloud base itself.
+* The noon sky's rows of small white dashes (the "mackerel" clouds) are smoothed with the rounded shape.
+* Both cloud drafts need *Cloud quality: volumetric v2* (the Ultra preset sets it). The "Go to" launchers are here too.
+
 ## New in build 84 — "Go to" launchers for the test spots
 **Host and everyone joining need build 84** (versions must match to connect).
 * Next to `JOIN.cmd` there are **"Go to - … .cmd"** files: each starts the game at one of the test spots — the same
