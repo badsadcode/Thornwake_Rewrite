@@ -78,6 +78,21 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 91 — cloud sea broken from below (draft)
+**Host and everyone joining need build 91** (versions must match to connect).
+* **Settings → Sky → Cloud sea → broken from below (draft)** (*under the high ridges* is build 89's first draft). Seen
+  from a ridge it is still a cloud sea; down in a valley you now stand *under* it instead of in fog: a broken sky of sunlit
+  clouds with blue between, pink-lit clouds in the morning. At about 90 % cover it closes into a grey day.
+* Near you, while you are below the sea, the clouds keep a few hundred metres clear of the ground; climb a slope up into
+  it and they come down around you. (So two players at different heights see a valley differently.)
+* Light under the sea comes down through its gaps, with ragged edges, and the valley air is damper. Honest note: the
+  shafts are still subtle in the valleys I tried; they need a wide valley with the sea high above. Tell me (or dump)
+  where you see them or miss them.
+* Known: the edges of the holes can still look like soft vertical curtains close overhead; looking down onto the cloud
+  sea and up through it costs some frame rate.
+* To try: **Go to - valley under the cloud sea (draft), 08-00** (next to your ridge) and **Go to - mountain ridges,
+  cloud sea (draft) 08-48** (now with the broken option); both turn it on for that run only.
+
 ## New in build 90 — no more fast fog waves
 **Host and everyone joining need build 90** (versions must match to connect).
 * The fast waves in the air (your dumps 19:46 and 19:49) were the sun shafts' fine lanes. They turned about the
