@@ -78,6 +78,18 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 87 — look presets, wind waves slider
+**Host and everyone joining need build 87** (versions must match to connect).
+* **Look presets** in the Settings tab's preset list: *Look: Clear*, *Natural*, *Atmospheric*, *Dramatic*. Each sets only
+  the atmosphere's look (haze, glow, rays, mist, contrast), never quality or performance, so you can combine any of
+  them with Low–Ultra. A starting point: change anything afterwards and *Save as* your own.
+  * Clear: crisp and far, few rays. Natural: rays and haze only when the weather makes them. Atmospheric: hazier,
+    rays any time. Dramatic: strong shafts and glow, richer colour.
+* **Wind waves on grass** (Lighting and effects): the lighter bands that gusts sweep over meadows — 0 turns them off
+  (the grass still sways). I think these were the "waves moving like the wind" in your last dump; tell me if not.
+* Known: high up in the mountains (around 3,000 m) with *Rays in open air* off, the volumetric v2 clouds can cover the
+  whole view in an even blue (Clear has air rays off). Next on my list.
+
 ## New in build 86 — presets keep your look; no more fast bands in the light
 **Host and everyone joining need build 86** (versions must match to connect).
 * **Fixed: loading Ultra blew the picture out.** The built-in presets (Low–Ultra) now only change quality and
