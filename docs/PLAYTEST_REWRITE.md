@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 83 — Noor's notes: light and shadow in the haze (draft); stronger after rain
+**Host and everyone joining need build 83** (versions must match to connect).
+* New setting: Settings → Lighting and effects → **Light and shadow in the haze** — *build 82* (default) or
+  **environment contrast (draft)**, from Noor's notes: contrast from the world, not a darker picture.
+  * Mountains shade each other out to ~10 km: ground in a far mountain's shadow loses most of the direct sun (the sky
+    still lights it, so not black).
+  * The haze near you is shaped by height: thick in valleys, thinner on ridges, so the mountain layers separate, and
+    it takes sunlight only where the sun reaches it, so shafts stand out against darker haze.
+  * Works with **Rays in open air** on (any level).
+* **After rain** the air fills with much more haze, even in dry country (wet ground steams); the shafts are stronger.
+* New slider **Rays strength** (0.5–2.5, 1 = as build 82) for the forest rays and the rays in open air.
+* Behind the scenes: my capture windows no longer react to your mouse and keys if you play while they run.
+
 ## New in build 82 — rays by the weather (draft)
 **Host and everyone joining need build 82** (versions must match to connect).
 New setting: Settings → Lighting and effects → **Rays and haze** — *always (build 81)* (default) or **by the weather
