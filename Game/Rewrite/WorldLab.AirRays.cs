@@ -153,7 +153,8 @@ public partial class WorldLab
     private void UpdateAirMap()
     {
         _atmosphere.TerrainSunAtCamera = 1;
-        if ((GameSettings.AirRays.Index == 0 && GameSettings.AtmoContrast.Index == 0) || _sampler == null || _generation != null) return;
+        bool cloudShadow = GameSettings.CloudTerrainShadow.Index == 1 && GameSettings.CloudQuality.Index == 3;
+        if ((GameSettings.AirRays.Index == 0 && GameSettings.AtmoContrast.Index == 0 && !cloudShadow) || _sampler == null || _generation != null) return;
         if (_airMap != null)
         {
             // Is the camera in a mountain's shadow? (the near volumetric fog only knows the 450 m shadow map)

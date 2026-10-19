@@ -325,6 +325,18 @@ global uniform vec4 lightning; // round 27: horizontal direction to the strike (
 // by how far they rise above their region, not above the sea (a whole high country was one cloud bank, painting an even
 // blue over the view from Tom's 3,060 m ridge).
 global uniform float cloud_region;
+// Mountains shade the clouds (D167): the air map's sun-shadow heights (WorldLab.AirRays, 20 km around the player). xy: the
+// camera's offset from the map's centre (m), z: the map's size (0 = off), w: the camera's scene height (m).
+global uniform sampler2D air_map : filter_linear, repeat_disable;
+global uniform vec4 cloud_air;
+// 1 = sunlit over the terrain at a cloud point (camera-relative xz, y above the camera), 0 = in a mountain's shadow.
+float cloud_terrain_sun(vec2 rel, float y) {
+	if (cloud_air.z <= 0.0) return 1.0;
+	vec2 m = (rel + cloud_air.xy) / cloud_air.z + 0.5;
+	if (m.x <= 0.0 || m.y <= 0.0 || m.x >= 1.0 || m.y >= 1.0) return 1.0;
+	float shadow = textureLod(air_map, m, 0.0).g;
+	return smoothstep(shadow - 40.0, shadow + 40.0, y + cloud_air.w);
+}
 
 // Extra cloud at a point (relative to the camera, xz in m): x = mass the land and the front add, y = extra height (m),
 // z = how low the base comes down toward the ground (m above the camera; 1e9 = unchanged).
@@ -606,6 +618,10 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 			float gl = dot(amb, vec3(0.2126, 0.7152, 0.0722));
 			amb = mix(amb, gl * vec3(0.88, 0.94, 1.12) * 1.3, (1.0 - hb) * 0.75 * smoothstep(0.1, 0.45, sun_dir.y));
 		}
+		// Mountains shade the clouds (D167): a peak between this point and the sun takes its direct light, so ranges cast
+		// long shadows and lanes of light across a cloud sea at sunrise; the sky's light stays.
+		float tsun = night > 0.5 ? 1.0 : cloud_terrain_sun(p.xz - cam, p.y);
+		light_col *= tsun;
 		// (test / reference: brighter sunlit tops)
 		vec3 s = light_col * sun_e * powder * 1.3 * (1.0 + (0.35 * cloud_dev.y + (cloud_look == 1 ? 0.25 : 0.0)) * h) + amb;
 		// v2 (round 29): seen from inside a thick deck the light comes from every side, scattered many times — grey-
@@ -617,6 +633,7 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 			vec3 inside = vec3(gl) * 1.6 + light_col * (0.35 + 0.35 * phase_f) * exp(-od * sigma_k * 0.06);
 			s = mix(s, max(s, inside), deep * 0.85);
 		}
+		light_col /= max(tsun, 1e-3); // (back for the next sample: light_col is shared by the whole march)
 		// Under a full deck the dense parts are darker, the thin ones brighter (light through them).
 		s *= mix(1.0, 1.35 - 0.6 * clamp(d, 0.0, 1.0), smoothstep(0.6, 0.9, cloud_state.z));
 		// Aerial perspective, thicker toward the horizon where the clouds meet it (Noor).

@@ -2529,6 +2529,21 @@ Natural look): the cliff lake in clear air is unchanged; Tom's ridge at 08:48 an
 below him instead of the land painted over it. **Next M3 problem shown by it**: from above, the cloud sea is a flat,
 even blue-grey — no billowed tops, no sunlit sides, no texture.
 
+## D167 — Mountains shade the clouds (draft, off); why the view down from the ridge is flat (2026-10-19)
+Tom: "draft mountains casting shadows and shafts across the cloud sea, with lit cloud tops". Also: "the rays depend on
+the time of day; around 7 am it looks okay, at least in the forest" — by design (morning moisture, a low sun, A2 easing
+above a 30° sun); *Rays and haze → always* or the Atmospheric / Dramatic look give rays at any hour.
+* **Draft** *Sky → Mountains shade the clouds* (`sky.cloud_terrain_shadow`, default off): the cloud march reads the air
+  map's sun-shadow heights (global `cloud_air`; the map is built for it too), and a cloud point in a mountain's shadow
+  loses the sun's direct light (the sky's stays).
+* **No visible effect on Tom's ridge** (08:48, cover 0.7; `--cloud-split-test=3`): the clouds drawn in front of the land
+  are ~80 % opaque there and even, with no lit tops for shadows to fall on; and under them Godot's distance fog,
+  thickened by the cloud cover (×1 → ×4 with overcast, ~×2 here) and blind to height, turns land 5–10 km below a
+  3 km viewpoint into the same blue-grey (the land returns with no cloud cover). Real haze thins with height.
+* So the order for M3: (1) height-aware distance haze (clear above, hazy in the valleys — the air pass's own haze
+  already does this within 10 km, D154), (2) the cloud sea's own structure from above (lit tops, gaps), then (3)
+  mountain shadows on it (this draft). Cost of the draft not measured (Tom's game shared the GPU).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

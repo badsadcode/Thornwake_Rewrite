@@ -673,6 +673,7 @@ public partial class Atmosphere : Node3D
             _beams.SetShaderParameter("light_direction", toSun);
             _beams.SetShaderParameter("light_color", Sun.LightColor * Sun.LightEnergy);
         }
+        _camera3DHeight = cameraLocal.Y;
         UpdateAirRays(toSun, cameraWorldX, cameraWorldZ, originX, originZ);
 
         // Shadow decal: ground point g is shaded by the cloud at g + toSun.xz · H / toSun.y. With the texture laid as
@@ -1016,6 +1017,7 @@ public partial class Atmosphere : Node3D
     /// <summary>1 = the camera sees the sun over the terrain, 0 = it stands in a mountain's shadow (WorldLab, from the
     /// sun-shadow map; 1 without it).</summary>
     public float TerrainSunAtCamera { get; set; } = 1;
+    private float _camera3DHeight;
 
     /// <summary>Toward the sun (world directions), for the sun-shadow height map.</summary>
     public Vector3 SunDirection => Sun.GlobalTransform.Basis.Z.Normalized();
@@ -1036,6 +1038,10 @@ public partial class Atmosphere : Node3D
         bool contrast = GameSettings.AtmoContrast.Index == 1;
         RenderingServer.GlobalShaderParameterSet("air_frame", contrast && _airSize > 0
             ? new Vector4((float)(_airX - originX), (float)(_airZ - originZ), _airSize, Dev("farshadow", .7f)) : Vector4.Zero);
+        // Mountains shade the clouds (D167): the cloud march reads the same sun-shadow map.
+        bool cloudShadow = GameSettings.CloudTerrainShadow.Index == 1 && GameSettings.CloudQuality.Index == 3 && _airSize > 0;
+        RenderingServer.GlobalShaderParameterSet("cloud_air", cloudShadow
+            ? new Vector4((float)(cameraWorldX - _airX), (float)(cameraWorldZ - _airZ), _airSize, _camera3DHeight) : Vector4.Zero);
         int q = GameSettings.AirRays.Index;
         bool on = q > 0 && _airSize > 0 && toSun.Y > -.01f;
         // (D166, Tom: "draw the air rays before the clouds so clouds hide what is behind them"; 101 = after the clouds in
