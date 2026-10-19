@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 86 — presets keep your look; no more fast bands in the light
+**Host and everyone joining need build 86** (versions must match to connect).
+* **Fixed: loading Ultra blew the picture out.** The built-in presets (Low–Ultra) now only change quality and
+  performance (view distances, detail, shadows, effect quality); your look settings (haze, glow, sun shafts, god ray
+  contrast, light beams, field of view, exposure, saturation) stay as you set them. Ultra used to carry an old test
+  look (haze 1.95, glow 1.5, sun shafts 3…).
+* I reset those values in your settings to their defaults (haze 1, glow 0.6, sun shafts 0.6, god ray contrast 0,
+  light beams 1, field of view 70, Rays strength 1); the old file is kept as
+  `rewrite_settings.before-look-reset-20261019.cfg`. Everything else is as you had it.
+* **Fixed (I think): fast-moving bands in the lit fog.** The ray effects moved their sampling pattern every frame,
+  which only TAA smooths out; with SMAA it crawled through the light. Now it holds still unless TAA or FSR 2 is on.
+  Tell me if you still see them.
+
 ## New in build 85 — cloud drafts, settings presets
 **Host and everyone joining need build 85** (versions must match to connect).
 * **Settings presets** (Settings tab, top row): pick *Low*, *Medium*, *High*, *Ultra* or one of your own and press
