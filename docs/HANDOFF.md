@@ -82,6 +82,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   Tom's office dumps 115949 / 120402.
   **Build 86** (`aba92e5`, `dist/Preview-86`): built-in presets keep the look, the ray passes' dither holds still without
   TAA (D162); Tom's seven look settings reset to defaults at his request (backup `rewrite_settings.before-look-reset-20261019.cfg`).
+  **Build 87** (`604f125`, `dist/Preview-87`): look presets Clear / Natural / Atmospheric / Dramatic
+  (`Content/look_presets.json`, D164), *Wind waves on grass* (D163). **Next in M3**: the v2 blue wall on Tom's ridge
+  (3,062 m, dump 100445 at 08:48) with air rays off (D164, `artifacts/v2-blue-wall-ridge.jpg`).
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
