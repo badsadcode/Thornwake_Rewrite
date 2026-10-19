@@ -78,6 +78,14 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 93 — no more grain in thin cloud
+**Host and everyone joining need build 93** (versions must match to connect).
+* The grainy, dotted pattern on Alden and the ground near him when you stand in thin cloud (your screenshot at the
+  badlands summit, 13:59) is gone. The clouds in front of the land are marched in steps of ~20 m; for anything nearer
+  than one step a pixel got either a whole step of cloud or none. Now the last step ends at what is behind it, so
+  near things are evenly veiled. Clouds further away look the same as before.
+* To check: **Go to - summit in the clouds (one pass draft), 14-00**, or walk into any thin cloud.
+
 ## New in build 92 — clouds that hide the mountains (draft)
 **Host and everyone joining need build 92** (versions must match to connect).
 * Your "uniformly transparent" clouds in the mountains: the clouds over the land and over the sky are drawn by two
