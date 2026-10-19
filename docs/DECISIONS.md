@@ -2371,6 +2371,15 @@ weather (`time.*`, `sky.clouds`, `sky.cloud_speed`, `sky.sea_state`, `--wet`, `-
 which stay his (and `--set` is never saved): his mountain dump 100445, the same at a low sun, his rock pillar 034332,
 and the cliff lake in the test world.
 
+## D156 — The atmosphere's look choices stay player settings (2026-10-19)
+Tom, after build 84: "I'll leave some of the options for players so they can set up their game how they like, because
+it's hard to decide." Extends D142 (heavy effects stay selectable) to look choices that are a matter of taste:
+*Forest rays* (and A2's *forward scattering*, *sun glare*), *Rays in open air*, *Rays and haze* (always / by the
+weather), *Light and shadow in the haze*, *Rays strength*. They are not removed when M2 is closed; Tom picks good
+defaults, and options still named after builds ("build 82", "always (build 81)") get player-facing names before release.
+Pure A/B comparison switches may still go once Tom picks. The final strengths are best set after M3 (clouds), which
+changes the light under the clouds and the cloud-gap shafts.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
