@@ -76,6 +76,10 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   Since build 84: settings presets on the Settings tab (D157; built-in Low–Ultra and the player's own, named); the
   atmosphere's look options stay player settings (D156); a Codex prompt for the UI kit from Tom's mockup
   (`docs/UI_KIT_CODEX_PROMPT.md`, D158) — when Codex delivers, build a Godot Theme from `Assets/UI/ui_manifest.json`.
+  **Build 85** (`7d880a9`, `dist/Preview-85`, 2026-10-19): M3 drafts *Cloud shape → rounded* and *Cloud base → above the
+  land* (D159–D161; suite `clouds`), settings presets. Open in M3: thin sunset clouds with the rounded shape, the
+  horizon slices (stacked layers at sunset), the cost toward the horizon (45 ms at noon), detail and movement,
+  Tom's office dumps 115949 / 120402.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
