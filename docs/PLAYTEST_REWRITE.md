@@ -78,6 +78,22 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 89 — cloud sea under the high ridges (draft)
+**Host and everyone joining need build 89** (versions must match to connect).
+* Why your ridge view was flat: there the clouds' base was ~100 m below you and their tops 1–2 km above, so you were
+  standing in the bottom of the layer, and every view down crossed its blue-grey underside.
+* **Draft: Settings → Sky → Cloud sea → under the high ridges.** It needs *Cloud base → above the land* and volumetric
+  v2 clouds. In high country the clouds form a thin, broken layer about 350 m over the region's ground, below the
+  ridges and summits: from up high you look down onto lit, lumpy tops with gaps onto the valleys. In the valleys the
+  ceiling is lower. Lowlands are unchanged, and storms keep their thick deck. *Build 88* keeps the old clouds.
+  The launcher **Go to - mountain ridges, cloud sea (draft) 08-48** turns it on for that run only, without saving it.
+* Looking down onto the cloud sea costs more than build 88's opaque layer (in our captures ~44–53 FPS where build 88
+  was at the 60 cap). Not checked yet: shafts under the gaps, seen from a valley.
+* **Draft: Sky → Mountains shade the clouds** (from before; you have it on): cloud in a mountain's shadow is now grey,
+  not a saturated sky blue.
+* **Draft: Lighting and effects → Haze and height → height-aware**: Godot's distance haze thins with your height above
+  the region (clear up high, hazy in the valleys). Small effect: with no clouds the far ranges are a little crisper.
+
 ## New in build 88 — clouds hide the rays
 **Host and everyone joining need build 88** (versions must match to connect).
 * The "blue wall" high on your ridge is the real cloud sea below you (70 % cover, the deck between ~1.5 and 3 km).
