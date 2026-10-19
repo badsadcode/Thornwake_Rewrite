@@ -2666,6 +2666,21 @@ resolution), v1 − flat ≈ the sky's volume (half resolution):
 * Proposed cuts, each switchable and checked by captures: fewer light steps for far samples; a step budget that
   grows faster with distance; faster skipping of empty air; the clouds in front of the land at lower resolution.
 
+## D175 — Cheaper cloud march (cuts 1–3): tried, dropped (2026-10-19)
+Tom: "do cuts 1–3 as switchable options, then measure again with the same suite and show me before/after captures".
+Draft (never committed; a setting *Cloud drawing → faster*): far samples lit with 4 or 3 longer steps toward the sun
+instead of 6 (and once the ray was half / three-quarters covered), steps growing to ×0.01 of the distance past
+12–30 km (first try: from 3 km), 2.5× longer strides through empty air.
+* First run (A, B per scene): −2 to +3 ms, inside the run-to-run spread (the same scene varied by ±2 ms between the
+  cloudcost and cloudfast runs). Second run, A-B-A-B per scene, averaged: summit −2.2 ms, valley toward the peaks −1.7,
+  Tom's ridge −1.4, under the cloud sea −0.5 (noise), horizon / broken / sea from the ridge / swamp 0 ± 0.3.
+* The look changed (`artifacts/cloud-faster-draft.jpg`): coarser self-shadowing made the sky's cumulus grainy and
+  mottled and the ridge's clouds blockier and denser; only the summit (inside thin cloud) was unchanged.
+* **Dropped**: 0–2 ms (≤ 15 % of the clouds' cost) for a visible change is not worth a setting. The cost is not in the
+  light steps of far samples: it is each density sample itself (map, weather, relief, 3D noise, the cloud sea's
+  clearance and holes) times the clouds drawn in front of the land at full resolution (D174: 7–17 ms in the
+  mountains). The lever left is cut 4, those clouds at half resolution.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
