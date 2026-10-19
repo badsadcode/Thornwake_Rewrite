@@ -163,6 +163,28 @@ if (biomeProbe != null)
     return 0;
 }
 
+// Valley probe (captures from under a cloud layer, D171): --lows=<profile>,<seed>,<x>,<z>,<radius m> prints the lowest
+// dry ground on a 400 m grid around a point, with its height above the sea and how far the land around rises.
+string? lowsArg = args.FirstOrDefault(a => a.StartsWith("--lows="))?[7..];
+if (lowsArg != null)
+{
+    var v = lowsArg.Split(',');
+    var s = CoreTests.Sampler(v[0], int.Parse(v[1]));
+    double cx = double.Parse(v[2]), cz = double.Parse(v[3]), r = double.Parse(v[4]), sea = s.Plan.Profile.SeaLevel;
+    var found = new List<(double H, double X, double Z, double Rise)>();
+    for (double x = cx - r; x <= cx + r; x += 400)
+        for (double z = cz - r; z <= cz + r; z += 400)
+        {
+            var t = s.Sample(x, z);
+            if (t.Water != WaterKind.None) continue;
+            double rise = 0;
+            for (int k = 0; k < 8; k++) rise = Math.Max(rise, s.Height(x + Math.Cos(k * Math.PI / 4) * 1500, z + Math.Sin(k * Math.PI / 4) * 1500) - t.Height);
+            found.Add((t.Height - sea, x, z, rise));
+        }
+    foreach (var f in found.OrderBy(f => f.H).Take(12)) Console.WriteLine($"{f.X:0} {f.Z:0} ground {f.H:0} m, land within 1.5 km rises {f.Rise:0} m");
+    return 0;
+}
+
 // Point probe on a test profile: --point=<profile id>,<seed>,<x>,<z> → biome terrain mods and heights (rev 11 / current).
 string? pointArg = args.FirstOrDefault(a => a.StartsWith("--point="))?[8..];
 if (pointArg != null)

@@ -2588,6 +2588,19 @@ showed it: the clock stands still in a capture.
 * (D162's dither fix and D163's grass slider were other causes of moving bands; *Wind waves on grass* at 1.9 in his
   settings still brightens the grass in gusts, not the air.)
 
+## D171 — The cloud sea from below: fog and a grey ceiling, no gaps or shafts yet (2026-10-19)
+Tom: "this looks good, what's next?" → the cloud sea (D169) seen from the valleys, before any change. Valleys found with
+the new probe `--lows=<profile>,<seed>,<x>,<z>,<radius>` (Tests/WorldGen): one 2.4 km from his ridge (floor ~1,690 m,
+region 1,489 m, base 1,840 m) and a basin 8.5 km away (~880 m). Captures at 08:00, 12:12 and after rain, his current
+settings, `artifacts/valley-under-cloud-sea.jpg`:
+* Next to the ridge the camera sits in the layer's lumpy bottom (the base comes down a few hundred metres toward the
+  land): flat grey fog, the slopes as silhouettes; at 08:00 a dark murk. Build 88 there: a clear valley under a high
+  deck.
+* In the basin 1 km lower: a flat grey ceiling; no cloud underside structure, no gaps, no shafts through them (the air
+  pass's cloud shadows read the flat cloud map, not the sea's lumps and gaps).
+* Realistic for an inversion day (grey below, sun above), but not Tom's "light through it". How valleys under the sea
+  should look is his call (asked).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
