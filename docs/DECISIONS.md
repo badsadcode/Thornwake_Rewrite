@@ -2393,6 +2393,17 @@ covered setting; a setting newer than a preset keeps its value. `SettingPresets.
 scratch folder, Tom's settings never written): save, change, load back, Low, world settings untouched, delete — pass.
 Look presets (e.g. "Cinematic", "Natural" for the rays and haze) can join the built-ins once Tom picks their contents.
 
+## D158 — A UI kit from Tom's mockup, made by Codex (2026-10-19)
+Tom shared a UI mockup (main menu, settings, new world, inventory, crafting, character, HUD bars, compass, minimap,
+quests, item tooltip, discovery banner) and asked for a prompt so Codex can make the elements for a new UI; the current
+menus are placeholders, and the game will use two or three fonts. `docs/UI_KIT_CODEX_PROMPT.md`: separate, reusable,
+text-free parts (9-slice frames and panels, buttons and tabs in all states, form controls, slots, HUD pieces, pixel-art
+icons for every game item, building category, stat, window and weather, the logo with a compass-rose O, two or three
+free-to-ship fonts), 1× and @2x PNGs under `Assets/UI/`, a manifest with slice margins and target Godot controls,
+preview sheets for Tom; a style tile first, for Tom's approval. Codex adds assets only (no game code). Afterwards
+Claude builds a Godot Theme from the manifest and rebuilds the windows. The mockup goes to
+`ArtKit/References/UI/ui_mockup_01.png` (Tom saves it; it reached Claude only as a chat image).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

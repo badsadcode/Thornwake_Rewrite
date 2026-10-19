@@ -73,6 +73,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   **Build 84** (`15f0ce2`, `dist/Preview-84`): play starts at a dump's place; "Go to - … .cmd" launchers for the test
   spots beside `JOIN.cmd` (D155; written from Tom's dumps by a script, not in git). Tom asked whether M3 changes it all:
   the structure stays, the final strengths are best set after the cloud work.
+  Since build 84: settings presets on the Settings tab (D157; built-in Low–Ultra and the player's own, named); the
+  atmosphere's look options stay player settings (D156); a Codex prompt for the UI kit from Tom's mockup
+  (`docs/UI_KIT_CODEX_PROMPT.md`, D158) — when Codex delivers, build a Godot Theme from `Assets/UI/ui_manifest.json`.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
