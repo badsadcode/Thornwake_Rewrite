@@ -61,6 +61,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   512² terrain sun-shadow map (20 km), lanes along ridge shadows; mountains block the sun (fog glow, screen shafts,
   near fog, terrain shadows to ~3 km). Off by default; Tom to try. Next: lanes for cloud-gap shafts (his reference 1),
   defaults after his notes. Scene `air-cliff`, suite `airrays` (cost); tools `--ray-vantage[=edge]`, `--air-preview`.
+  **Build 81** (`c41f3c7`, `dist/Preview-81`, 2026-10-19): *Forest rays: sun glare* softened (D151). Godot sometimes
+  does not quit after an export (the pack is complete: check the log ends with "DONE savepack"). Tom asked for more
+  detailed, more varied cloud noise over the mountains (M3, a look decision: draft as an option, captures first).
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
