@@ -626,15 +626,22 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 	float trans = 1.0;
 	vec3 light = vec3(0.0);
 	float phase_f = mix(vhg(lmu, 0.6), vhg(lmu, -0.25), 0.4);
-	float t = t0 + jitter * clamp(t0 * 0.005, min_step, 450.0);
+	// Segments from t0 to t1, one sample each at its dithered point (D178, Tom: "what is this grainy pattern on the
+	// character?"): the whole grid was shifted by the dither and every sample counted a full step, so in front of
+	// something nearer than a step (Alden in thin cloud, the slope beside him) a pixel got either a full 20 m of cloud
+	// or none — a fixed grain without TAA. Now the last segment ends at the scene and the dither only moves the sample
+	// within its segment.
+	float s0 = t0;
 	for (int i = 0; i < max_steps; i++) {
-		if (t > t1) break;
-		float step_len = clamp(t * 0.005, min_step, 450.0);
+		if (s0 >= t1) break;
+		float step_len = clamp(s0 * 0.005, min_step, 450.0);
+		float seg = min(step_len, t1 - s0);
+		float t = s0 + jitter * seg;
 		vec3 p = vec3(cam.x, 0.0, cam.y) + dir * t;
-		t += step_len;
-		bool near = t < 18000.0;
+		s0 += seg;
+		bool near = s0 < 18000.0;
 		float d = vdens(p, near);
-		if (d < 0.0) { t += step_len * 0.5; continue; } // empty column: stride a little (cheaper; more would chip the edges)
+		if (d < 0.0) { s0 += step_len * 0.5; continue; } // empty column: stride a little (cheaper; more would chip the edges)
 		if (d <= 0.002) continue;
 		// Toward the light: six steps, longer and longer (≈3 km), cheap density.
 		float od = 0.0, sl = 60.0;
@@ -696,7 +703,7 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		s = mix(s, haze, clamp(1.0 - exp(-t / 36000.0) + (1.0 - smoothstep(0.0, 0.12, abs(dir.y))) * 0.25, 0.0, 0.92) * cloud_dev.x);
 		// Far away a step is longer than a cloud edge is thick: soften there so samples do not flicker on and off.
 		float sigma = d * sigma_k * mix(1.0, 0.45, smoothstep(150.0, 450.0, step_len));
-		float ab = exp(-sigma * step_len);
+		float ab = exp(-sigma * seg);
 		light += trans * (1.0 - ab) * s;
 		trans *= ab;
 		if (trans < 0.015) break;

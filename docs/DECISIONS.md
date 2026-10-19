@@ -2716,6 +2716,16 @@ committed):
   A real fix is bigger (finer, sharper detail noise; detail at the sky pass's distances), best aimed at Tom's own
   "foam" moments — his dumps when it happens — and the light/sun angle each time.
 
+## D178 — The grain on Alden in thin cloud: the cloud march's last step ends at the scene (2026-10-19)
+Tom (build 92, screenshot at -226426, 85136, 13:59, standing in thin cloud): "what is this grainy pattern on the
+character?". The clouds in front of the land march 20 m steps from the camera to the scene; the dither shifted the
+whole step grid per pixel and every sample counted a full step. In front of anything nearer than a step (Alden ~5 m,
+the slope beside him) a pixel got a full 20 m of cloud or none: a fixed grain (SMAA does not average a dither; TAA
+would). Fix (`cloud_march`): segments from t0 to the scene, the last one cut at the scene, one sample per segment at
+its dithered point. Not switchable — a bug fix; build 92 (`344ebfe`) is the return point. Captures at his spot
+(`artifacts/cloud-grain-fix.png`): grain gone, Alden evenly veiled; Tom's ridge view unchanged (mean difference
+0.2 levels of 255, no pixel over 12).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
