@@ -636,6 +636,7 @@ public partial class Atmosphere : Node3D
         UpdateMood(delta);
         UpdateCloudTypes(delta, sky, cameraWorldX, cameraWorldZ, cameraLocal);
         UpdateRegionalGround(delta);
+        RenderingServer.GlobalShaderParameterSet("cloud_region", GameSettings.CloudBase.Index == 1 && !float.IsNaN(_regionalGround) ? _regionalGround : 0f);
         UpdateMist(delta, hour, originX, originZ);
         UpdateAirLoad(delta, hour);
         UpdateForestRays(delta);

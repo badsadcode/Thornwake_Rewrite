@@ -321,6 +321,10 @@ uniform sampler2D relief_tex : filter_linear, hint_default_black, repeat_disable
 global uniform vec4 relief_frame;
 global uniform vec4 cloud_front;
 global uniform vec4 lightning; // round 27: horizontal direction to the strike (x, z), brightness, distance (km)
+// The region's mean ground above the sea (m) when the cloud base rides on the land (D165), else 0: mountains catch cloud
+// by how far they rise above their region, not above the sea (a whole high country was one cloud bank, painting an even
+// blue over the view from Tom's 3,060 m ridge).
+global uniform float cloud_region;
 
 // Extra cloud at a point (relative to the camera, xz in m): x = mass the land and the front add, y = extra height (m),
 // z = how low the base comes down toward the ground (m above the camera; 1e9 = unchanged).
@@ -332,7 +336,7 @@ vec3 land_and_front(vec2 rel) {
 			vec2 t = texture(relief_tex, uv).rg;
 			float hgt = t.r * 4000.0;
 			// Mountains catch cloud: caps on the high peaks, banks along the windward slopes (moist air pushed up).
-			float oro = smoothstep(600.0, 2200.0, hgt) * (0.35 + 0.65 * t.g) * (0.35 + 0.65 * cloud_state.z);
+			float oro = smoothstep(600.0, 2200.0, hgt - cloud_region) * (0.35 + 0.65 * t.g) * (0.35 + 0.65 * cloud_state.z);
 			r.x = oro * 0.85;
 			r.y = oro * 900.0;
 			r.z = hgt - relief_frame.w - 250.0; // the bank sits on the ridge, just below its top

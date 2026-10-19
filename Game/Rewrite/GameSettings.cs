@@ -340,8 +340,9 @@ public static class GameSettings
         options: new[] { "build 84", "rounded (draft)" }));
     public static readonly Setting CloudBase = Add(new("sky.cloud_base", "Sky", "Cloud base", 0, 1, 1, 0,
         "Volumetric v2 (M3 draft). Above the land: the cloud base rides about 1.5 km over the region's ground, so in the " +
-        "mountains the deck sits above the valleys and the high peaks reach into it. Build 84: 1.5 km above the sea " +
-        "everywhere (in high country the deck is at or below the valleys).",
+        "mountains the deck sits above the valleys and the high peaks reach into it; and mountains catch cloud by how far " +
+        "they rise above their region (a whole high country is no longer one cloud bank). Build 84: 1.5 km above the sea " +
+        "everywhere (in high country the deck is at or below the valleys, and the view from high ridges can be all cloud).",
         options: new[] { "above the sea (build 84)", "above the land (draft)" }));
     public static readonly Setting CloudTurbulence = Add(new("sky.cloud_turbulence", "Sky", "Cloud turbulence", 0, 1, 1, 0,
         "Volumetric v2: near you a cloud churns — wisps and eddies drifting by when you walk or fly through cloud.",

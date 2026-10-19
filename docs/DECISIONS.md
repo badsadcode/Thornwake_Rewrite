@@ -2505,6 +2505,22 @@ light and shadow in the haze, rays strength, ground fog, wind waves, saturation)
   it there, and so would anyone with air rays off at that height: an M3 bug, next to fix
   (`artifacts/v2-blue-wall-ridge.jpg`). Clear first had *Ground fog: valleys* (not the cause; now valleys + patches).
 
+## D165 — The "blue wall" on the ridge is the cloud sea; air rays paint the hidden land over clouds (2026-10-19)
+Tom: "fix the blue wall from the v2 clouds high in the mountains". On his ridge (3,062 m, dump 100445 at 08:48, cloud
+cover 0.7, Clear look = air rays off) the whole view is an even blue-grey.
+* Isolated: no cloud cover → the land shows; sun shafts, light beams, volumetric fog → no change. With 70 % cover the
+  deck lies between ~1,500 m and 3,000+ m, the camera just above it: looking down at a low winter sun (11°) the view
+  is the top of a cloud sea in shade. That is the clouds working as built.
+* **The real fault is the air rays pass** (D148–D150): it marches to the land's depth, but the clouds drawn in front
+  of the land (CloudsNear) are not in the depth buffer and the pass draws after them (D149 moved it there because the
+  deck at valley height "covered" it), so it paints its haze and shafts from the hidden land over the clouds — the land
+  seemed to show "with air rays on". Tom's admired dump 100445 (12:12, same ridge, cover 0.7) was largely this.
+  Decision for Tom: draw the air pass before the clouds (clouds hide what is behind them, rays only in clear air) or
+  keep the painted-over look.
+* Also, under *Cloud base → above the land*: mountains catch cloud by how far they rise above the region's mean
+  ground, not above the sea (global `cloud_region`): in a high country every cell over 2,200 m was a cloud bank.
+  From the ridge this made the sea of cloud a little greyer, not open (the cover itself is the main thing there).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
