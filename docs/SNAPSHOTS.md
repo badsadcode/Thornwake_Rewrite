@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 84** (play starts at a dump's place, "Go to" launchers D155) | `15f0ce2` | Thornwake-Rewrite-Preview-84 (v0.9.84) | Versions must match to connect; otherwise as build 83 = `964aa6f` |
 | **Build 83** (light and shadow in the haze draft D154, stronger after rain and Rays strength D153) | `964aa6f` | Thornwake-Rewrite-Preview-83 (v0.9.83) | Versions must match to connect; Light and shadow in the haze → build 82 and Rays strength 1 give build 82's look (after-rain haze is stronger by the weather); build 82 = `2196de3` |
 | **Build 82** (rays and haze by the weather, draft D152) | `2196de3` | Thornwake-Rewrite-Preview-82 (v0.9.82) | Versions must match to connect; Rays and haze → always = build 81; build 81 = `c41f3c7` |
 | **Build 81** (forest rays sun glare softened D151) | `c41f3c7` | Thornwake-Rewrite-Preview-81 (v0.9.81) | Versions must match to connect; Forest rays: sun glare → build 80 gives build 80's glare; build 80 = `abc5fcb` |
