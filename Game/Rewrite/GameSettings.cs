@@ -331,6 +331,10 @@ public static class GameSettings
         "Volumetric v2: the cloud that mountains catch. Dense: thick enough to hide the summit it sits on (from a distance " +
         "the rock no longer shows through). Build 54: as before.",
         options: new[] { "build 54", "dense" }));
+    public static readonly Setting CloudShape = Add(new("sky.cloud_shape", "Sky", "Cloud shape", 0, 1, 1, 0,
+        "Volumetric v2 (M3 draft). Rounded: every cloud its own height, domed tops that close, bases a little uneven and " +
+        "lumpy — no longer cut flat at one floor and one ceiling. Build 84: as before.",
+        options: new[] { "build 84", "rounded (draft)" }));
     public static readonly Setting CloudTurbulence = Add(new("sky.cloud_turbulence", "Sky", "Cloud turbulence", 0, 1, 1, 0,
         "Volumetric v2: near you a cloud churns — wisps and eddies drifting by when you walk or fly through cloud.",
         options: new[] { "off", "on" }));

@@ -361,6 +361,14 @@ uniform int cloud_caps = 0;
 // Cloud turbulence (setting): 0 = off; 1 = within ~600 m of the camera the cloud churns — eddies ~60 m across drifting
 // and turning at a few m/s, so walking or flying through cloud shows wisps going by (Tom: "some kind of turbulence").
 uniform int cloud_turbulence = 0;
+// Cloud shape (setting, M3 draft D160; Tom: "really flat and sharply cut off on the bottom and on top, like the clouds
+// are locked in a box"): 0 = build 84; 1 = rounded — each cloud its own height (big tops and small ones), domes that
+// close before the layer's ceiling and a top roughened by the billows; bases still near level (the condensation
+// level) but a few hundred metres apart from cloud to cloud, lumpy, with a softer onset.
+uniform int cloud_shape = 0;
+#define SHAPE_TALL (cloud_shape == 1 ? 1.35 : 1.0)
+#define SHAPE_TOP_EXTRA (cloud_shape == 1 ? 200.0 : 0.0)
+#define SHAPE_LOW_EXTRA (cloud_shape == 1 ? 250.0 : 0.0)
 float cloud_windy() { return cloud_look == 1 ? smoothstep(1.5, 2.5, wind.y) : smoothstep(0.5, 1.6, wind.y); }
 float cloud_map(vec2 uv, float lod, int ch) {
 	vec4 c = lod >= 0.0 ? textureLod(cloud_tex, uv, lod) : texture(cloud_tex, uv);
@@ -405,12 +413,21 @@ float vdens(vec3 p, bool detail) {
 	float full = smoothstep(0.6, 0.9, cloud_state.z) * (1.0 - 0.75 * smoothstep(7000.0, 22000.0, length(p.xz - cloud_state.xy))); // (far away the 3D noise would repeat visibly)
 	wx.x *= mix(1.0, 0.2 + 1.0 * smoothstep(0.3, 0.75, n.r), full);
 	wx.z += full * (n.g - 0.5) * 500.0;
+	if (cloud_shape == 1) {
+		// (the broad noise moves with the clouds: each cloud keeps its own height and base as it drifts)
+		vec4 big = texture(cloud_noise, vec3(p.xz / 5200.0, 0.37));
+		wx.y *= mix(0.55, 1.35, big.r);
+		wx.z += (big.g - 0.5) * 300.0 + (n.b - 0.5) * 140.0;
+	}
 	float h = (p.y - wx.z) / wx.y;
 	if (h <= 0.0 || h >= 1.0) return 0.0;
 	// Flat base, rounded domes: higher up only the denser parts of the map remain.
 	// (the map never quite fills: the 3D noise carves lumps and gaps inside clouds too, not only at their edges)
 	float dome = mix(0.62, 0.84, smoothstep(1800.0, 4500.0, wx.y)); // towers keep their width and round off only at the top
-	float cov = clamp(vremap(wx.x, smoothstep(dome, 1.0, h) * 0.95, 1.0, 0.0, 1.0), 0.0, 1.0) * smoothstep(0.0, 0.06, h) * mix(wx.x, 1.0, 0.25) * 0.8;
+	float hs = cloud_shape == 1 ? clamp(h + (n.r - 0.5) * 0.14, 0.0, 1.0) : h; // (rounded: a billowed top)
+	// (rounded: the threshold passes 1 before the ceiling, so even the densest cloud closes its dome)
+	float cov = clamp(vremap(wx.x, smoothstep(dome, 1.0, hs) * (cloud_shape == 1 ? 1.08 : 0.95), 1.0, 0.0, 1.0), 0.0, 1.0)
+		* smoothstep(0.0, cloud_shape == 1 ? 0.1 : 0.06, h) * mix(wx.x, 1.0, 0.25) * 0.8;
 	float wf = n.g * 0.7 + n.b * 0.3;
 	float base = clamp(vremap(n.r, wf - 1.0, 1.0, 0.0, 1.0), 0.0, 1.0);
 	base = base * base * (3.0 - 2.0 * base); // rounder lumps
@@ -599,8 +616,8 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 
 vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float coverage, float storm) {
 	if (dir.y < 0.005 || coverage < 0.001) return vec4(0.0);
-	float vtop = VBOTTOM + 350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0 + 900.0;
-	float vlow = relief_frame.z > 0.0 ? max(VBOTTOM - 500.0, VLOW_MIN) : VBOTTOM;
+	float vtop = VBOTTOM + (350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0) * SHAPE_TALL + 900.0 + SHAPE_TOP_EXTRA;
+	float vlow = (relief_frame.z > 0.0 ? max(VBOTTOM - 500.0, VLOW_MIN) : VBOTTOM) - SHAPE_LOW_EXTRA;
 	float t0 = vlow / dir.y, t1 = min(min(vtop / dir.y, 50000.0), front_distance(dir)); // nothing beyond a front shows
 	if (t0 > t1) return vec4(0.0);
 	// Steps grow with distance (the same angular detail near and far), ~45 m close up, up to 900 m far away.
@@ -614,8 +631,8 @@ vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float
 // scene's depth in front of geometry, unlimited in the sky). Steps start at 20 m so a cloud around the camera is fog.
 vec4 volumetric_v2(vec3 dir, float t_far, float jitter, int max_steps, vec3 sun_dir, vec3 sun_col, float day, float mu, float coverage, float storm) {
 	if (coverage < 0.001) return vec4(0.0);
-	float vtop = VBOTTOM + 350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0 + 900.0;
-	float vlow = relief_frame.z > 0.0 ? max(VBOTTOM - 500.0, VLOW_MIN) : VBOTTOM;
+	float vtop = VBOTTOM + (350.0 + 950.0 + cloud_types.x * 5200.0 + storm * 700.0) * SHAPE_TALL + 900.0 + SHAPE_TOP_EXTRA;
+	float vlow = (relief_frame.z > 0.0 ? max(VBOTTOM - 500.0, VLOW_MIN) : VBOTTOM) - SHAPE_LOW_EXTRA;
 	float t0, t1;
 	if (abs(dir.y) < 1e-4) {
 		if (vlow > 0.0 || vtop < 0.0) return vec4(0.0);

@@ -2424,6 +2424,21 @@ next (Tom's asks: more detailed, more varied clouds and movement; the deck at va
   3080), 31 ms at sunset, 10–22 ms elsewhere — the march toward the horizon is the expensive part.
 * Tom's office-PC dumps 115949 / 120402 (M3's acceptance shots, D87) are not on this PC: asked for.
 
+## D160 — Clouds "locked in a box": a rounded shape draft (2026-10-19)
+Tom on the baseline (D159): "really flat and sharply cut off on the bottom and on top of the clouds … like the clouds
+are locked in a box"; he follows the recommended order (shape and deck first, then detail and movement).
+* Cause (`vdens`, SkyCommon.gdshaderinc): every cloud's height comes from the cloud map's mass, which saturates at 1
+  inside most clouds, so nearly all end at the same ceiling; the dome rounding left full density up to it (threshold
+  0.95), so the tops were cut flat; the base is one height everywhere with density switched on within 6 % of the
+  cloud's height.
+* New setting **Sky → Cloud shape** (`sky.cloud_shape`): *build 84* (default) or *rounded (draft)*: each cloud its own
+  height (broad noise moving with the clouds, ×0.55–1.35), domes that close before the ceiling (threshold 1.08) with
+  a top roughened by the billow noise, bases a few hundred metres apart from cloud to cloud and lumpy (±150 m and
+  ±70 m), a softer onset (10 %); the volume's bounds grow with it (×1.35 + 200 m up, 250 m down).
+* A/B stills (`artifacts/m3-cloud-shape-rounded.jpg`): separate rounded masses of different heights, undersides
+  curving up at their edges, no slabs; but less cloud (more blue sky) and softer, puffier shapes. To tune after Tom's
+  look: cloud mass, billow sharpness. Same cost (the turn 19.6 ms, the noon horizon 45 ms both ways).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
