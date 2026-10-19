@@ -1041,7 +1041,7 @@ public partial class Atmosphere : Node3D
         // (developer tool, --ray-dev: airgain, airside, airsun, airshade, airdens, airhaze (haze height), airvalley, aircloud, airdebug)
         // (no dimming by the cloud cover as the light beams have: the clouds' shadows in the pass do that, and shafts
         // belong under broken cloud — Tom's reference 1)
-        _air.SetShaderParameter("gain", Dev("airgain", 2.2f) * (1f - .9f * _storm));
+        _air.SetShaderParameter("gain", Dev("airgain", 2.2f) * (1f - .9f * _storm) * GameSettings.RayStrength.F);
         _air.SetShaderParameter("side_scatter", Dev("airside", .8f));
         _air.SetShaderParameter("haze_height", Dev("airhaze", 1400));
         _air.SetShaderParameter("valley_haze", Dev("airvalley", 3));
@@ -1214,7 +1214,10 @@ public partial class Atmosphere : Node3D
         float calm = 1 - Mathf.SmoothStep(5, 13, Wind.SteadySpeed);
         float dry = Mathf.SmoothStep(900, 250, _airRain);
         float humid = Mathf.Clamp(.2f + .5f * _mistBiome + .3f * _mistWater + .25f * Mathf.Clamp(Canopy, 0, 1), 0, 1) * (1 - .75f * dry);
-        _airMoisture = Mathf.Clamp(humid * (.2f + .9f * Mathf.Min(morning, 1)) + .7f * _wetness * (1 - _storm), 0, 1) * (.35f + .65f * calm);
+        // After rain the wet ground steams whatever the climate (Tom, build 82: "shafts show up after rain but they are very
+        // weak"; dump 100445, wetness 0.42, gave a load of 0.31): half-dried ground still fills the air (square root).
+        float afterRain = Dev("airwetk", .95f) * Mathf.Pow(Mathf.Clamp(_wetness, 0, 1), Dev("airwetp", .5f)) * (1 - _storm);
+        _airMoisture = Mathf.Clamp(humid * (.2f + .9f * Mathf.Min(morning, 1)) + afterRain, 0, 1) * (.35f + .65f * calm);
         _airDust = dry * Mathf.SmoothStep(4, 11, Wind.SteadySpeed) * (1 - _wetness);
         float target = Mathf.Clamp(_airMoisture + .8f * _airDust, 0, 1);
         _airLoad = StillShot || SnapExposure ? target : Mathf.MoveToward(_airLoad, target, (float)delta / 20);
@@ -1328,7 +1331,7 @@ public partial class Atmosphere : Node3D
             float facing = (-cam.GlobalBasis.Z).Normalized().Dot(Sun.GlobalTransform.Basis.Z.Normalized());
             glare = 1 - Dev("glarecut", .8f) * Mathf.SmoothStep(.7f, .97f, facing);
         }
-        Sun.LightVolumetricFogEnergy = FogSunEnergy(1 + Dev("boost", a2 ? A2Boost : 1.8f) * _forest * glare * (RaysByWeather ? Mathf.Lerp(.3f, 1.2f, _airLoad) : 1));
+        Sun.LightVolumetricFogEnergy = FogSunEnergy(1 + Dev("boost", a2 ? A2Boost : 1.8f) * _forest * glare * (RaysByWeather ? Mathf.Lerp(.3f, 1.2f, _airLoad) : 1) * GameSettings.RayStrength.F);
     }
 
     /// <summary>

@@ -234,6 +234,8 @@ public static class GameSettings
         "air keeps it, wind clears moisture, the midday sun burns it off. A dry, windy noon is crisp; a calm, wet dawn fills " +
         "with shafts, round rocks and single trees too.",
         options: new[] { "always (build 81)", "by the weather (draft)" }));
+    public static readonly Setting RayStrength = Add(new("fx.ray_strength", "Lighting and effects", "Rays strength", .5, 2.5, .05, 1,
+        "How bright the shafts are, for the forest rays (A, A2) and the rays in open air. 1 = build 82.", "×"));
     public static readonly Setting ForestSunGlare = Add(new("fx.forest_sun_glare", "Lighting and effects", "Forest rays: sun glare", 0, 1, 1, 1,
         "Looking at the sun from under the trees with forest rays A or A2 on. Softened: the sunlit forest air glows less " +
         "the more directly you look at the sun, so the sun and the crowns round it are not blown out to white; shafts " +

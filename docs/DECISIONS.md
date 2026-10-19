@@ -2326,6 +2326,17 @@ time, only where weather effects are met for them to naturally show up".
   034332) calm dry noon 0.01 (crisp either way), windy 0.79 (dust haze), after rain 0.71. The pillar casts no clear
   lane even in loaded air (thin shadow, sun high and off to its side): open.
 
+## D153 — Stronger haze after rain; a Rays strength slider (2026-10-19)
+Tom on build 82: "shafts show up after rain but they are very weak; but there are beautiful moments like my last
+dump" (100445: alpine ridges at 3,060 m, half-dried ground, wetness 0.42, layered shafts through the valley haze).
+* The after-rain moisture was 0.7 × wetness, and a dry climate (284 mm/yr there) adds little else: load 0.31. Now
+  0.95 × √wetness (wet ground steams whatever the climate): his dump 0.31 → 0.63, the cliff lake half-dried
+  (wetness 0.4) 0.46 → 0.75. More haze, more contrast in the lanes (`artifacts/rays/m2-after-rain-stronger.jpg`).
+  Part of the *by the weather* draft (developer: `--ray-dev=airwetk,airwetp`; 0.7 and 1 give build 82).
+* New slider **Rays strength** (`fx.ray_strength`, 0.5–2.5, 1 = build 82): the forest rays' extra sunlight and the
+  rays in open air; at 2 his dump's shafts become bright, separate lanes. Tom sets it by eye while playing.
+* (His running build 82 wrote its own autosave at 10:06:44 during these captures; none of the test runs saved.)
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
