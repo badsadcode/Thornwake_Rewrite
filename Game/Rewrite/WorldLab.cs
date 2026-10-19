@@ -1159,6 +1159,7 @@ public partial class WorldLab : Node3D
         static float MistOf(ResolvedBiome b) => (float)Math.Clamp(b.Def.Atmosphere.Mist + .5 * b.Def.Atmosphere.Fog, 0, 1);
         float nearWater = t.Water != WaterKind.None ? 1 : _sampler.Plan.Hydrology.NearestRiver(PlayerX, PlayerZ, 300, out var near) ? 1 - (float)(near.Distance / 300) : 0;
         _atmosphere.SetMist((float)t.Height, MistOf(biomes.Pool[ba]) * (float)share + MistOf(biomes.Pool[bb]) * (float)(1 - share), nearWater);
+        _atmosphere.SetClimateRain((float)rain);
         string mode = _fly ? (_noclip ? "Fly + noclip" : "Fly") : _swimming ? "Swimming" : "Walk";
         var (dayHours, dayShare) = GameClock.Daylight(_sampler.Plan.Climate.Latitude(PlayerZ));
         var wind = _atmosphere.Wind;
@@ -1612,6 +1613,7 @@ public partial class WorldLab : Node3D
             else if (_smokeStage == 2 && (settled || _smokeTimer > 240) && _smokeTimer > 1.5 && _simTime >= _shotWait)
             {
                 GD.Print($"SCATTER grass={_streamer.GrassCommitted} rocks={_streamer.RocksCommitted} props={_streamer.PropsCommitted} farTrees={_streamer.FarTreesCommitted}");
+                GD.Print("AIR_STATE " + _atmosphere.DebugInfo().Split('\n').FirstOrDefault(l => l.StartsWith("Air load")));
                 Screenshot(_shotPath);
                 if (OS.GetCmdlineUserArgs().Contains("--dump")) DebugDump();
                 if (_extraYaws.Count == 0) GetTree().Quit(0);

@@ -614,6 +614,7 @@ public partial class Atmosphere : Node3D
         UpdateMood(delta);
         UpdateCloudTypes(delta, sky, cameraWorldX, cameraWorldZ, cameraLocal);
         UpdateMist(delta, hour, originX, originZ);
+        UpdateAirLoad(delta, hour);
         UpdateForestRays(delta);
         RenderingServer.GlobalShaderParameterSet("sun_dir_world", toSun);
         // The real sun, also below the horizon (the light stops at −4°): twilight colours follow it (Sky.gdshader).
@@ -961,6 +962,7 @@ public partial class Atmosphere : Node3D
             (float.IsNaN(Peak.X) ? "" : $" (peak {F(Peak.X)}, {F(Peak.Y)}, {F(Peak.Z)}, relief {F(PeakRelief)} m)") + "\n" +
             $"Wind: from {Wind.Compass()}, direction ({F(Wind.Direction.X)}, {F(Wind.Direction.Y)}), {F(Wind.Speed)} m/s, gust {F(Wind.Gust)}\n" +
             $"Sun elevation {F(_sunElevation)}°, night {F(_night)}, daylight {F(_daylight)}, ocean time {F(OceanTime)} s\n" +
+            $"Air load {F(_airLoad)} (moisture {F(_airMoisture)}, dust {F(_airDust)}; climate {F(_airRain)} mm/yr; rays {(GameSettings.RayWeather.Index == 1 ? "by the weather" : "always")})\n" +
             $"Sea: effective sea state {F(_wavesState)} (setting {F(GameSettings.SeaState.Value)} + storm), wave heading {F(_wavesAngle)} rad, " +
             $"spectrum origin ({F(Spectrum.OriginX)}, {F(Spectrum.OriginZ)})";
     }
@@ -1013,7 +1015,8 @@ public partial class Atmosphere : Node3D
         _air.SetShaderParameter("map_frame", new Vector4((float)(cameraWorldX - _airX), (float)(cameraWorldZ - _airZ), _airSize, 0));
         // The pass works on Godot's distance haze as it is this frame (its density: how much of each view is haze).
         var e = Environment;
-        _air.SetShaderParameter("density", e.FogEnabled ? e.FogDensity * Dev("airdens", 1) : 0);
+        // (by the weather: the haze comes from the air load, whatever the Distance haze setting, which only fades the distance)
+        _air.SetShaderParameter("density", (RaysByWeather ? .00009f * Mathf.Lerp(.15f, 3.5f, _airLoad) : e.FogEnabled ? e.FogDensity : 0) * Dev("airdens", 1));
         // Godot's fog glows toward the sun on every pixel, a mountain in front of the sun too (Tom: "the light is going
         // through the mountain"): that glow moves into the pass, where only sunlit air gets it.
         _air.SetShaderParameter("sun_scatter", e.FogSunScatter * Dev("airsun", 1));
@@ -1192,6 +1195,31 @@ public partial class Atmosphere : Node3D
         }
     }
 
+    // ---- air load (D152, Tom: shafts "only where weather effects are met for them to naturally show up"): how much
+    // moisture and dust the air holds here and now. Rays need a blocked sun and something in the air to catch the light;
+    // with *Rays and haze: by the weather* the forest rays, the rays in open air and the near volumetric fog all scale
+    // with this, so dry, windy noon air is crisp and a calm wet dawn fills with shafts.
+    private float _airRain = 800, _airLoad = .5f, _airMoisture, _airDust;
+    /// <summary>The climate's rain where the player is (mm a year): dry climates hold little moisture, raise dust.</summary>
+    public void SetClimateRain(float mmPerYear) => _airRain = mmPerYear;
+    /// <summary>0 crisp to 1 heavy haze (moisture and dust), for the ray effects.</summary>
+    public float AirLoad => _airLoad;
+    private static bool RaysByWeather => GameSettings.RayWeather.Index == 1;
+
+    private void UpdateAirLoad(double delta, float hour)
+    {
+        float sunrise = 12 - _daylightHours / 2, sunset = 12 + _daylightHours / 2;
+        // Morning haze after a cool night, burning off toward midday; a little again before sunset.
+        float morning = Mathf.Exp(-Mathf.Pow((hour - sunrise - .8f) / 2.2f, 2)) + .45f * Mathf.Exp(-Mathf.Pow((hour - sunset + .5f) / 1.8f, 2));
+        float calm = 1 - Mathf.SmoothStep(5, 13, Wind.SteadySpeed);
+        float dry = Mathf.SmoothStep(900, 250, _airRain);
+        float humid = Mathf.Clamp(.2f + .5f * _mistBiome + .3f * _mistWater + .25f * Mathf.Clamp(Canopy, 0, 1), 0, 1) * (1 - .75f * dry);
+        _airMoisture = Mathf.Clamp(humid * (.2f + .9f * Mathf.Min(morning, 1)) + .7f * _wetness * (1 - _storm), 0, 1) * (.35f + .65f * calm);
+        _airDust = dry * Mathf.SmoothStep(4, 11, Wind.SteadySpeed) * (1 - _wetness);
+        float target = Mathf.Clamp(_airMoisture + .8f * _airDust, 0, 1);
+        _airLoad = StillShot || SnapExposure ? target : Mathf.MoveToward(_airLoad, target, (float)delta / 20);
+    }
+
     // ---- forest rays (M2 shoot-out, fx.forest_rays): A = volumetric forest air, B = stronger screen-space shafts.
     private FogVolume? _forestAir;
     private ShaderMaterial? _forestAirMaterial;
@@ -1235,6 +1263,13 @@ public partial class Atmosphere : Node3D
     {
         int mode = GameSettings.ForestRays.Index;
         bool a2 = mode == 3;
+        if (RaysByWeather && GameSettings.VolumetricFog.On)
+        {
+            // The near air everywhere: thin when crisp, thick in a loaded air, so a pillar, a single tree or a building
+            // cuts shafts too; dust warms its colour.
+            Environment.VolumetricFogDensity = (Natural ? .002f : .0035f) * Mathf.Lerp(.25f, 3.5f, _airLoad);
+            Environment.VolumetricFogAlbedo = Environment.VolumetricFogAlbedo.Lerp(new Color("d9b88c"), Mathf.Clamp(_airDust / Math.Max(_airLoad, .01f), 0, 1) * .6f);
+        }
         // How much "forest by day" there is: the canopy around the player (0 when flying), the sun up, no storm.
         float target = mode == 0 ? 0 : Mathf.Clamp(Canopy, 0, 1) * Mathf.SmoothStep(-1, 8, _sunElevation) * (1 - _storm);
         _forest = StillShot || SnapExposure ? target : Mathf.MoveToward(_forest, target, (float)delta / 3);
@@ -1277,7 +1312,8 @@ public partial class Atmosphere : Node3D
         var cam = GetViewport()?.GetCamera3D();
         if (cam != null) _forestAir.GlobalPosition = new Vector3(cam.GlobalPosition.X, _mistGround + 25, cam.GlobalPosition.Z);
         _forestDrift += new Vector3(Wind.Direction.X, 0, Wind.Direction.Y) * (float)(delta * Wind.Speed * .05);
-        _forestAirMaterial.SetShaderParameter("density", Dev("density", a2 ? A2Density : .014f) * _forest);
+        float weather = RaysByWeather ? Mathf.Lerp(.1f, 1.4f, _airLoad) : 1;
+        _forestAirMaterial.SetShaderParameter("density", Dev("density", a2 ? A2Density : .014f) * _forest * weather);
         _forestAirMaterial.SetShaderParameter("ground", _mistGround);
         _forestAirMaterial.SetShaderParameter("drift", _forestDrift);
         _forestAirMaterial.SetShaderParameter("albedo", new Color("ece6da").Lerp(Sun.LightColor, .25f));
@@ -1292,7 +1328,7 @@ public partial class Atmosphere : Node3D
             float facing = (-cam.GlobalBasis.Z).Normalized().Dot(Sun.GlobalTransform.Basis.Z.Normalized());
             glare = 1 - Dev("glarecut", .8f) * Mathf.SmoothStep(.7f, .97f, facing);
         }
-        Sun.LightVolumetricFogEnergy = FogSunEnergy(1 + Dev("boost", a2 ? A2Boost : 1.8f) * _forest * glare);
+        Sun.LightVolumetricFogEnergy = FogSunEnergy(1 + Dev("boost", a2 ? A2Boost : 1.8f) * _forest * glare * (RaysByWeather ? Mathf.Lerp(.3f, 1.2f, _airLoad) : 1));
     }
 
     /// <summary>

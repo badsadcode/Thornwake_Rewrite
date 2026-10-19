@@ -2309,6 +2309,23 @@ Tom on build 80: "in the forest the sun is so bright, blinding; above the canopy
   forest rays: identical with A2, A or no forest rays.
 * Noted: his settings file now has Distance haze 0 and God ray contrast 0 (set by him after the dumps; tests never save).
 
+## D152 — Rays by the weather: an air load drives every ray effect (draft) (2026-10-19)
+Tom: shafts "are not always present in real life, some requirements need to be met first; I don't need them all the
+time, only where weather effects are met for them to naturally show up".
+* **Air load** (Atmosphere, 0 crisp … 1 heavy): **moisture** = humid place (biome mist, water nearby, forest canopy,
+  less in dry climates by the climate's rain) × (a morning haze after sunrise burning off toward midday, a little before
+  sunset) + wetness after rain, kept by calm air and cleared by wind; **dust** = dry climate (< ~600 mm/yr) × wind,
+  none on wet ground. Eased over ~20 s in play. In debug dumps (`Air load …`) and capture logs (`AIR_STATE`).
+* New setting **Rays and haze** (`fx.ray_weather`): *always (build 81)* (default until Tom picks) or *by the weather
+  (draft)*: forest air density ×0.1–1.4 and its sunlight ×0.3–1.2, rays-in-open-air haze from the air load (not from
+  the Distance haze setting, which keeps fading the distance), the near volumetric fog everywhere ×0.25–3.5 (so rocks
+  and single trees cut shafts in loaded air), dust warming the fog's colour.
+* Captures, Tom's current settings, each place both modes (`artifacts/rays/m2-rays-by-weather.jpg`): forest at a dry
+  windy noon (load 0.08) — *always* hazy with shafts, *by the weather* crisp with a blue sky through the crowns; cliff
+  lake at dawn (0.21) and after rain (0.91) — strong shafts past the cliff by the weather; Tom's rock pillar (dump
+  034332) calm dry noon 0.01 (crisp either way), windy 0.79 (dust haze), after rain 0.71. The pillar casts no clear
+  lane even in loaded air (thin shadow, sun high and off to its side): open.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
