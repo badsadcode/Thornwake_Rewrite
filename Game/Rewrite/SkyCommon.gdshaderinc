@@ -503,7 +503,10 @@ float vdens(vec3 p, bool detail) {
 		// Broken cloud sea (D172): holes between the cells, ~1–2 km apart and clear through the layer, so from a valley you
 		// see sky through it and sunlight comes down; fewer as the cover rises, none from ~90 % (a closed, grey day).
 		float hole = sea_tune.x * (1.0 - smoothstep(0.72, 0.9, cloud_state.z)) * SEA_K;
-		float cell = texture(cloud_noise, vec3(p.xz / 1700.0, 0.61)).r * 0.7 + texture(cloud_noise, vec3(p.xz / 650.0, 0.23)).g * 0.3;
+		// (D179: the holes' outline wanders with height — straight columns stood as tall vertical curtains seen from in
+		// the layer, Tom's dump 235543)
+		vec2 hw = p.xz + (texture(cloud_noise, p / 800.0 + vec3(0.13, 0.57, 0.29)).gb - 0.5) * 520.0;
+		float cell = texture(cloud_noise, vec3(hw / 1700.0, 0.61)).r * 0.7 + texture(cloud_noise, vec3(hw / 650.0, 0.23)).g * 0.3;
 		// (rounded sides: wider holes toward the base and the top, ragged with the billows — straight they stood as walls)
 		float hole_h = hole + (0.1 * smoothstep(0.4, 0.0, h) + 0.06 * smoothstep(0.65, 1.0, h) + (n.g - 0.5) * 0.12) * step(0.001, hole);
 		d *= smoothstep(hole_h, hole_h + 0.16, cell);
@@ -731,13 +734,15 @@ vec4 volumetric(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu, float
 // layer's top), CloudsNear draws the sky's
 // pixels too (one pass, full resolution: costlier, only then); 0 = build 91.
 uniform int cloud_one_pass = 0;
-bool clouds_one_pass() {
-	if (cloud_one_pass == 0 || quality != 3 || cloud_blend != 1 || cloud_state.z < 0.001) return false; // (build 52's blend has its own pass)
+// (D179: a weight, faded over ~300 m of height around the base and the top instead of switching there — Tom: "when I got a
+// little bit up, it jumped immediately"; the sky pass keeps (1 − k) of its clouds, CloudsNear adds k over the sky)
+float clouds_one_pass_k() {
+	if (cloud_one_pass == 0 || quality != 3 || cloud_blend != 1 || cloud_state.z < 0.001) return 0.0; // (build 52's blend has its own pass)
 	float vtop = VBOTTOM + ((350.0 + 950.0 + cloud_types.x * 5200.0 + cloud_state.w * 700.0) * SHAPE_TALL + 900.0) * SEA_TALL + SHAPE_TOP_EXTRA;
 	// (at or above the base, a little margin below it; under the broken cloud sea the clouds keep clear of you and the
 	// seam does not show: the first try drew the valley's whole sky at full resolution for nothing, 38 → 26 FPS)
 	float margin = sea_broken == 1 && SEA_K > 0.0 ? 0.0 : 150.0;
-	return cloud_more.w < margin && vtop > -300.0;
+	return (1.0 - smoothstep(margin - 150.0, margin + 150.0, cloud_more.w)) * smoothstep(-600.0, -300.0, vtop);
 }
 
 // Cloud renderer v2: the cloud volume seen from anywhere — below the deck, inside it or above it — out to t_far (the

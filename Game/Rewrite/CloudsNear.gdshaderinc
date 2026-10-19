@@ -49,7 +49,8 @@ void fragment() {
 	// Water writes no depth, and beyond the farthest seabed the far sea's pixels read as sky: the sky's clouds were drawn
 	// behind it and the sea over them — a stepped strip of clear sea along the horizon inside clouds (Tom, dump 220450).
 	bool below = cloud_look == 1 && dir.y < 0.0;
-	if (((sky && !test && !below && !clouds_one_pass()) || quality != 3) && !probe) discard; // sky pixels: the sky draws them
+	float one_k = sky && !test && !below ? clouds_one_pass_k() : 1.0; // (D179: sky pixels faded in over height)
+	if (((sky && !test && !below && one_k <= 0.001) || quality != 3) && !probe) discard; // sky pixels: the sky draws them
 	float scene = 1e9;
 	if (!sky) {
 		vec4 view = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, depth, 1.0);
@@ -75,6 +76,7 @@ void fragment() {
 	}
 #endif
 	// Probe (--cloud-split-test=2): the sun as this pass sees it, beside the sky's (Sky.gdshader).
+	v *= one_k; // (premultiplied: the sky pass keeps 1 − k of its own clouds underneath)
 	if (probe) v = vec4(SCREEN_UV.y < 0.06 ? sun_col * 0.2 : sun_dir * 0.5 + 0.5, 1.0);
 	if (split_test == 3 && test) v = vec4(vec3(v.a), 1.0);
 	ALBEDO = v.rgb / max(v.a, 1e-4);

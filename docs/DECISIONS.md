@@ -2726,6 +2726,22 @@ its dithered point. Not switchable — a bug fix; build 92 (`344ebfe`) is the re
 (`artifacts/cloud-grain-fix.png`): grain gone, Alden evenly veiled; Tom's ridge view unchanged (mean difference
 0.2 levels of 255, no pixel over 12).
 
+## D179 — Clouds jumped at the cloud base; tall vertical curtains; grain in the sky's clouds (2026-10-20)
+Tom (build 93, dumps 235339 / 235532 / 235543): grain in a cloud (SMAA); "TAA fixed it, but … at a certain height the
+clouds were uniformly transparent, and a little bit up it jumped immediately".
+* **Grain** (dump 235339, SMAA): that cloud is in the sky's half-resolution pass, whose fixed dither shows as 2×2
+  speckle; TAA averages it (his other two dumps). *Cloud body → denser* sharpens edges and makes it stronger. Not
+  changed yet: options are TAA, or a smoother sampling in the sky pass (to measure).
+* **The jump**: camera 40 m below the base (2,133 m) vs 10 m above. Two drafts switched exactly there: *Clouds around
+  you → one pass* (on at the base under the broken sea) and the broken sea's clearance near the ground (fades over
+  −50…150 m). **Fix**: the one pass is now a weight faded over ~300 m of height around the base (and the top): the sky
+  pass keeps (1 − k) of its clouds, CloudsNear adds k of its own over the sky.
+* **Tall vertical curtains** (dump 235543): the broken sea's holes were 2D — straight columns through the layer, seen
+  from inside as walls. **Fix**: the holes' outline wanders with height (±260 m from a 3D noise ~800 m across); the air
+  pass's light through them keeps the flat outline (close enough at the base).
+* Rebuilt from both dumps (`artifacts/cloud-jump-curtains-fix.jpg`): no curtains, the two heights alike. Left: a faint
+  straight line along the horizon where the two passes blend (bottom right).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
