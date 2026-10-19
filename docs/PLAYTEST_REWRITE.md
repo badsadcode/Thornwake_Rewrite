@@ -78,6 +78,21 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 92 — clouds that hide the mountains (draft)
+**Host and everyone joining need build 92** (versions must match to connect).
+* Your "uniformly transparent" clouds in the mountains: the clouds over the land and over the sky are drawn by two
+  passes that differ a little; standing in or near the cloud layer, their seam drew the mountains' outlines into
+  cloud that was really opaque. **Settings → Sky → Clouds around you → one pass in the layer (draft)**: while you are
+  at or above the cloud base, one pass draws them all and a cloud in front of you hides what is behind it. It costs
+  some frame rate, only then (about 49 → 41 FPS at a summit in the clouds). You may see a small change in the clouds
+  when you cross the cloud base.
+* **Sky → Cloud body → denser, crisper (draft)**: thin cloud becomes clear air, the rest denser — a little whiter and
+  crisper clouds; small change.
+* Tried and not included: a cheaper cloud march (the clouds went grainy and blocky for 0–2 ms) and "crisper billows"
+  for the shaving-foam look (greyer or blockier, not crisper). When clouds look like foam to you, a dump (F9) then
+  would help the most.
+* To try: **Go to - summit in the clouds (one pass draft), 14-00**.
+
 ## New in build 91 — cloud sea broken from below (draft)
 **Host and everyone joining need build 91** (versions must match to connect).
 * **Settings → Sky → Cloud sea → broken from below (draft)** (*under the high ridges* is build 89's first draft). Seen
