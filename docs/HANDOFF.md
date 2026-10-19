@@ -96,6 +96,11 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   closed at ~90 %, still a sea from the ridge; light follows the gaps but shafts are subtle. Test spots: valley
   -214638,84223 (floor 1,690 m), basin -210238,87823 (880 m); `--lows=` probe in Tests/WorldGen. Open: stronger shafts
   (wide valley, high sea), hole edges as curtains, cloud cost.
+  **Build 92** (`344ebfe`, `dist/Preview-92`): see-through clouds in the mountains were the two cloud passes' seam;
+  *Clouds around you → one pass in the layer* and *Cloud body → denser* drafts (D176). Measured cloud cost (suite
+  cloudcost, D174: 3–19 ms, mostly CloudsNear in the mountains); cheaper march and crisper billows tried and dropped
+  (D175, D177). Tom's rule: today's cloud look always stays selectable (no blocky clouds). Open: "shaving foam"
+  (needs finer detail noise; ask for dumps), cloud layers (low/mid/high), half-res CloudsNear as an option.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
