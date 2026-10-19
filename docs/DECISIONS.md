@@ -2658,7 +2658,7 @@ resolution), v1 − flat ≈ the sky's volume (half resolution):
   volume 2.5–5 ms. (Earlier "~45 ms at noon" was a whole-frame figure, not the clouds alone.) Worst: standing under
   the cloud sea — near-level rays run through the layer for kilometres and use their whole step budget, each step
   with six more toward the sun.
-* **See-through clouds** (captures `artifacts`-less, scratchpad tr-*): in the lowlands the clouds are opaque but haze
+* **See-through clouds** (opacity captures with `--cloud-split-test=3`, swamp at 11:00 and the cloud-summit spot): in the lowlands the clouds are opaque but haze
   veils clouds and sky alike (the same pale colour). In the mountains the camera is often in or at the edge of the
   layer (base over the land, cloud sea, banks on the ridges), and that cloud is thin and even: ~80 % opaque all
   round at a summit, mountains kilometres away as silhouettes. A possible switchable option later: denser cores,
