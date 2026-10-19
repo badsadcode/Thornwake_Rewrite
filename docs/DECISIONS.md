@@ -2380,6 +2380,19 @@ defaults, and options still named after builds ("build 82", "always (build 81)")
 Pure A/B comparison switches may still go once Tom picks. The final strengths are best set after M3 (clouds), which
 changes the light under the clouds and the cloud-gap shafts.
 
+## D157 — Settings presets: built-in and the player's own, named (2026-10-19)
+Tom: "players can choose from one premade, or make their own, save them, and name them so they can load them later"
+(with D156: the look choices stay settings, so presets make them manageable). Settings tab, top row: **Preset** list
+(Low, Medium, High, Ultra, then the player's own marked "yours"), *Load*, *Delete*, a name and *Save as* (the same
+name replaces it). A preset covers how the game looks and runs: Detail, View distance, Lighting and effects, Sky,
+Camera and performance and the Display section's render scale, V-Sync and frame limit — not the world everyone shares
+(time, weather, simulation, sky.clouds/cloud_speed/sea_state: the host's in multiplayer), the interface, the window or
+audio. Built-ins are the benchmark's quality profiles (`Content/benchmarks.json`, one source): every covered setting
+to its default, then the profile's values. The player's presets are `%APPDATA%\Thornwake\presets\<name>.cfg` with every
+covered setting; a setting newer than a preset keeps its value. `SettingPresets.cs`; `--presets-test` (headless, in a
+scratch folder, Tom's settings never written): save, change, load back, Low, world settings untouched, delete — pass.
+Look presets (e.g. "Cinematic", "Natural" for the rays and haze) can join the built-ins once Tom picks their contents.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

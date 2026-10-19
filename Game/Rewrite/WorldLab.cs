@@ -85,7 +85,7 @@ public partial class WorldLab : Node3D
     private (double X, double Z)? _shotAt;
     private bool _playAt = !OS.GetCmdlineUserArgs().Any(a => a.StartsWith("--world-shot") || a.StartsWith("--world-smoke") || a.StartsWith("--bench")
         || a.Contains("-test") || a.StartsWith("--join") || a.StartsWith("--ray-") || a.StartsWith("--air-") || a.StartsWith("--sun-block")
-        || a.StartsWith("--clear-spot") || a.StartsWith("--find-sites") || a.StartsWith("--probe-") || a.StartsWith("--census"));
+        || a.StartsWith("--clear-spot") || a.StartsWith("--find-sites") || a.StartsWith("--probe-") || a.StartsWith("--census") || a.StartsWith("--presets"));
     private bool _playHeightPending, _playAtReport;
     private (float Yaw, float Pitch, float Zoom)? _shotView;
     private bool _faceSun; // debug: turn the camera toward the sun before the screenshot
@@ -851,6 +851,7 @@ public partial class WorldLab : Node3D
         if (_findSitesPending && _sampler != null && _generation == null && !_holding) { _findSitesPending = false; FindSites(); }
         if (_clearSpotPending && _sampler != null && _generation == null && !_holding) { _clearSpotPending = false; ClearSpot(); }
         if (_raySpotPending && _sampler != null && _generation == null && !_holding) { _raySpotPending = false; RaySpot(); }
+        if (_presetsTestPending && _sampler != null) PresetsTest();
         if (_playHeightPending && _sampler != null && _generation == null && !_holding) { _playHeightPending = false; SetFly(true); _player.Position += Vector3.Up * _shotHeight; }
         if (_playAtReport && !_playHeightPending && _sampler != null && _generation == null && !_holding)
         {
@@ -1271,6 +1272,38 @@ public partial class WorldLab : Node3D
 
     private bool _gridShown;
 
+    /// <summary>Settings presets (D157): pick a built-in or your own and load it; save the current settings under a name.</summary>
+    private Control BuildPresetRow()
+    {
+        var row = new HBoxContainer();
+        row.AddChild(new Label { Text = "Preset", TooltipText = "Built-in presets set every look and performance setting; your own presets are saved with a name (time, weather, interface, window and audio are not part of a preset)." });
+        var list = new OptionButton { CustomMinimumSize = new Vector2(220, 0) };
+        var presets = new List<SettingPresets.Preset>();
+        void Refill(string? select = null)
+        {
+            presets = SettingPresets.All();
+            list.Clear();
+            for (int i = 0; i < presets.Count; i++)
+            {
+                list.AddItem(presets[i].BuiltIn ? presets[i].Name : presets[i].Name + "  (yours)");
+                if (select != null && presets[i].Name == select) list.Select(i);
+            }
+        }
+        Refill();
+        var load = new Button { Text = "Load", TooltipText = "Set every look and performance setting from the chosen preset." };
+        load.Pressed += () => { if (list.Selected >= 0 && list.Selected < presets.Count) _status = SettingPresets.Apply(presets[list.Selected]); };
+        var delete = new Button { Text = "Delete", TooltipText = "Delete the chosen preset (only your own)." };
+        delete.Pressed += () => { if (list.Selected >= 0 && list.Selected < presets.Count) { _status = SettingPresets.Delete(presets[list.Selected]); Refill(); } };
+        var name = new LineEdit { PlaceholderText = "new preset name", CustomMinimumSize = new Vector2(200, 0) };
+        var save = new Button { Text = "Save as", TooltipText = "Save the current look and performance settings as your own preset (the same name replaces it)." };
+        save.Pressed += () => { _status = SettingPresets.Save(name.Text); Refill(name.Text.Trim()); };
+        name.TextSubmitted += _ => save.EmitSignal(BaseButton.SignalName.Pressed);
+        row.AddChild(list); row.AddChild(load); row.AddChild(delete);
+        row.AddChild(new VSeparator());
+        row.AddChild(name); row.AddChild(save);
+        return row;
+    }
+
     private void SetFly(bool fly) { _fly = fly; _flyToggle.SetPressedNoSignal(fly); if (!fly) SetNoclip(false); if (fly) { _crouch = false; _me.Crouching = false; } }
     private void SetNoclip(bool noclip) { _noclip = noclip; _noclipToggle.SetPressedNoSignal(noclip); _player.CollisionMask = noclip ? 0u : 1u; if (noclip) SetFly(true); }
 
@@ -1522,6 +1555,7 @@ public partial class WorldLab : Node3D
         var settings = new VBoxContainer { Name = "Settings" };
         tabs.AddChild(settings);
         settings.AddChild(new Label { Text = "Saved automatically. Detail and distance changes rebuild the terrain in the background.", Modulate = new Color(1, 1, 1, .7f) });
+        settings.AddChild(BuildPresetRow());
         settings.AddChild(SettingsUi.List(GameSettings.All.Where(s => s.Section is not ("Audio" or "Display")), GameSettings.ResetSection));
 
         // ---- Display (Tom, 2026-10-11: native resolution, window modes, aspect ratios, UI scale; saved)
