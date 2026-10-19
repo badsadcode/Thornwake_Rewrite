@@ -78,6 +78,20 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 80 — rays in open air (draft)
+**Host and everyone joining need build 80** (versions must match to connect).
+New setting: Settings → Lighting and effects → **Rays in open air (M2 draft)** — *off* (default) / low / medium / high.
+* Shafts of sunlight outside forests, kilometres long: past mountain peaks and ridges and through gaps in the clouds,
+  in the haze over valleys, lakes and plains. Each ridge casts a fan of light lanes with darker lanes between.
+* **Mountains block the sun now**: the glow no longer shines through the rock, and a valley in a mountain's shadow is
+  in shade (its air and ground too; the terrain casts shadows up to ~3 km away while this is on).
+* While on, it replaces the screen-space sun shafts and the light beams under clouds.
+* Best seen: a low sun (sunrise or evening, 5–15° up) just behind a ridge or cliff, looking toward it, over a valley
+  or lake. Cost on your 3080: about +0.3 / +0.7 / +1.3 ms (low / medium / high).
+* Known: shafts from cloud gaps are still soft (no lanes yet); in the high mountains the cloud deck sits at valley
+  height, so many views there look through cloud. Send me a dump (F9) where it looks wrong or especially good.
+* Also: a dump's Reproduce line now gives the same time of day after the jump to its place.
+
 ## New in build 79 — forest rays A2 at noon
 **Host and everyone joining need build 79** (versions must match to connect).
 * **A2 at noon**: with a high sun the forest air went milky white (much more light comes through the crowns). A2's
