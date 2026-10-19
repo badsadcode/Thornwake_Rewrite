@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 94 — no jump at the cloud base, no curtains
+**Host and everyone joining need build 94** (versions must match to connect).
+* Your dumps 23:55: flying up through the cloud base, the clouds jumped from see-through to tall curtains. With
+  *Clouds around you → one pass* the switch now fades in over about 300 m of height, so nothing jumps.
+* The broken cloud sea's holes no longer cut straight columns through the layer (the tall vertical "curtains" seen
+  from inside it): their outline wanders with height, so you see lumpy clouds.
+* Known: a faint straight line can show along the horizon while you are near the base (where the two cloud passes
+  blend); the grain in the sky's clouds with SMAA is still there (TAA hides it).
+* To try: **Go to - cloud base in the volcanic hills (your dump 23-55), 11-04**: fly up and down (Space / C) through
+  the base at ~2,130 m.
+
 ## New in build 93 — no more grain in thin cloud
 **Host and everyone joining need build 93** (versions must match to connect).
 * The grainy, dotted pattern on Alden and the ground near him when you stand in thin cloud (your screenshot at the
