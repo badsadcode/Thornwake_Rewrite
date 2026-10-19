@@ -2337,6 +2337,30 @@ dump" (100445: alpine ridges at 3,060 m, half-dried ground, wetness 0.42, layere
   rays in open air; at 2 his dump's shafts become bright, separate lanes. Tom sets it by eye while playing.
 * (His running build 82 wrote its own autosave at 10:06:44 during these captures; none of the test runs saved.)
 
+## D154 — Noor's notes: contrast from the environment (draft); capture windows take no input (2026-10-19)
+Noor (through Tom): shaded mountain slopes should keep some darkness in haze (not black); stronger separation of the
+mountain layers (dark foreground, softening middle, dissolving far); sunlight selective, shafts in a misty valley with
+darker neighbours; **no global contrast** — from the relation of scattering, sunlight, ambient and terrain shadows.
+* New setting **Light and shadow in the haze** (`fx.atmo_contrast`): *build 82* (default) or *environment contrast
+  (draft)*. With it:
+  * **Far mountain shadows on the ground**: the terrain shader moved unchanged into `TerrainBody.gdshaderinc`
+    (`Terrain.gdshader` includes it: build 82's terrain is the same code); `TerrainAirShadow.gdshader` adds a `light()`
+    (Godot's Burley diffuse and GGX specular) whose sun is dimmed where the air map (now also a global shader input,
+    `air_map`/`air_frame`, built whenever this is on) says a mountain hides it, beyond ~350–700 m where the shadow map is
+    sharper; 70 % of the sun (`--ray-dev=farshadow`), the sky light untouched. Swapped in place on the one terrain material.
+  * **The pass carries the near haze itself** (rays in open air must be on): shaped by height (falling to a third over
+    1,150 m) and thick close above the ground (valleys ×6), lit by the sky everywhere and by the sun only where it
+    reaches, out to ~10 km; Godot's even fog keeps 60 % and the far distance. The sky's light in that haze is Godot's
+    fog light mixed toward the sky's horizon colour by the aerial perspective (plain fog light made the shaded far
+    ridges a dark violet band).
+* Captures (`artifacts/rays/m2-noor-environment-contrast.jpg`): Tom's mountain dump 100445 — deeper, bluer layers that
+  separate, a darker foreground, more distinct shafts; cliff lake after rain — the cliff face and shore keep their
+  form; low sun across the ranges — a little more ridge separation. The far ground shadows show little in these views
+  (heavy haze); their effect is mostly the light falling between ranges.
+* Found on the way: Tom played his build 82 while captures ran; a capture window that got focus took his mouse (turned
+  the camera) and his R (lit a torch). Screenshot runs now ignore input and their window never takes focus
+  (`WindowFlags.NoFocus`). His game also rewrote his settings (dropping keys it does not know): not the tests.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

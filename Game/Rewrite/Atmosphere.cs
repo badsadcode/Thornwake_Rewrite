@@ -723,6 +723,8 @@ public partial class Atmosphere : Node3D
     /// sunset warmth near the horizon, the biome mood, and storms greying and darkening it. Fixed daylight colours made
     /// lakes glow bright blue-white at night.
     /// </summary>
+    private Color _skyHorizon = new(.68f, .75f, .78f);
+
     private void UpdateWaterSky(float elevation)
     {
         if (_water == null) return;
@@ -735,6 +737,7 @@ public partial class Atmosphere : Node3D
         float grey = _storm * .5f;
         Color Grey(Color c) { float l = (c.R + c.G + c.B) / 3; return c.Lerp(new Color(l, l, l), grey); }
         _water.SetShaderParameter("sky_horizon", Grey(horizon) * day);
+        _skyHorizon = Grey(horizon) * day;
         _water.SetShaderParameter("sky_zenith", Grey(zenith) * day);
     }
 
@@ -997,13 +1000,18 @@ public partial class Atmosphere : Node3D
     /// r = ground height, g = the height above which the air sees the sun over the terrain (RGF).</summary>
     public void SetAirMap(Image image, double x, double z, float size)
     {
-        _air.SetShaderParameter("air_map", ImageTexture.CreateFromImage(image));
+        var texture = ImageTexture.CreateFromImage(image);
+        _air.SetShaderParameter("air_map", texture);
+        RenderingServer.GlobalShaderParameterSet("air_map", texture); // (the terrain's far mountain shadows, D154)
         _airX = x; _airZ = z; _airSize = size;
     }
 
     private void UpdateAirRays(Vector3 toSun, double cameraWorldX, double cameraWorldZ, double originX, double originZ)
     {
         if (_airQuad == null) return;
+        bool contrast = GameSettings.AtmoContrast.Index == 1;
+        RenderingServer.GlobalShaderParameterSet("air_frame", contrast && _airSize > 0
+            ? new Vector4((float)(_airX - originX), (float)(_airZ - originZ), _airSize, Dev("farshadow", .7f)) : Vector4.Zero);
         int q = GameSettings.AirRays.Index;
         bool on = q > 0 && _airSize > 0 && toSun.Y > -.01f;
         _airQuad.Visible = on;
@@ -1017,6 +1025,14 @@ public partial class Atmosphere : Node3D
         var e = Environment;
         // (by the weather: the haze comes from the air load, whatever the Distance haze setting, which only fades the distance)
         _air.SetShaderParameter("density", (RaysByWeather ? .00009f * Mathf.Lerp(.15f, 3.5f, _airLoad) : e.FogEnabled ? e.FogDensity : 0) * Dev("airdens", 1));
+        // Environment contrast (D154): the pass is the haze, Godot's even fog keeps a thin remainder (its colour and
+        // aerial perspective still blend the farthest land into the sky).
+        _air.SetShaderParameter("own_haze", contrast && Dev("airown", 1) > 0 ? 1 : 0);
+        // (haze in a shadow is lit by the whole sky: Godot's fog light mixed toward the sky's horizon colour by the
+        // aerial perspective, as Godot's fog looks; the plain fog light made shaded far ridges dark violet)
+        _air.SetShaderParameter("fog_color", (e.FogLightColor.SrgbToLinear() * e.FogLightEnergy).Lerp(_skyHorizon, Mathf.Clamp(e.FogAerialPerspective * Dev("airsky", 1), 0, 1)));
+        _air.SetShaderParameter("own_far", Dev("airfar", 10000));
+        if (contrast) e.FogDensity *= Dev("airkeep", .6f);
         // Godot's fog glows toward the sun on every pixel, a mountain in front of the sun too (Tom: "the light is going
         // through the mountain"): that glow moves into the pass, where only sunlit air gets it.
         _air.SetShaderParameter("sun_scatter", e.FogSunScatter * Dev("airsun", 1));
@@ -1027,7 +1043,10 @@ public partial class Atmosphere : Node3D
         // in a mountain's shadow by the sun-shadow map.
         if (_shaftQuad != null) _shaftQuad.Visible = false;
         Sun.LightVolumetricFogEnergy *= TerrainSunAtCamera;
-        _air.SetShaderParameter("shade", Dev("airshade", .85f));
+        // Noor's notes (D154): haze in a shadow loses all of its sunlight (shaded slopes stay darker, light falls in
+        // distinct shafts); valleys hold more haze, ridge tops less (the layers separate).
+        _air.SetShaderParameter("shade", Dev("airshade", contrast ? 1f : .85f));
+        _air.SetShaderParameter("valley_haze", Dev("airvalley", contrast ? 6f : 3f));
         // Sharper, stronger shafts (D150): lanes along ridge shadows, a crisper edge, a broad glow toward the sun.
         _air.SetShaderParameter("ray_noise", Dev("airnoise", 150));
         _air.SetShaderParameter("ray_size", Dev("airlane", 70));
@@ -1043,8 +1062,7 @@ public partial class Atmosphere : Node3D
         // belong under broken cloud — Tom's reference 1)
         _air.SetShaderParameter("gain", Dev("airgain", 2.2f) * (1f - .9f * _storm) * GameSettings.RayStrength.F);
         _air.SetShaderParameter("side_scatter", Dev("airside", .8f));
-        _air.SetShaderParameter("haze_height", Dev("airhaze", 1400));
-        _air.SetShaderParameter("valley_haze", Dev("airvalley", 3));
+        _air.SetShaderParameter("haze_height", Dev("airhaze", contrast ? 1150 : 1400));
         _air.SetShaderParameter("debug", (int)Dev("airdebug", 0));
     }
 

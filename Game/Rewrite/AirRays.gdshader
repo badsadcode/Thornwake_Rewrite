@@ -28,6 +28,12 @@ uniform float density = 0.0001;    // haze at the camera's height, per metre (Go
 uniform float sun_scatter = 0.0;   // extra glow toward the sun in sunlit haze (Godot's fog already has one)
 uniform float side_scatter = 0.5;  // sunlit haze seen from the side: rays across the view
 uniform float shade = 0.6;         // how much of the haze's light a mountain's or cloud's shadow takes away
+// Environment contrast (D154, Noor's notes): the pass carries the haze itself, shaped by height and terrain (valleys
+// hazy, ridges and the foreground clearer), lit by the sky everywhere and by the sun only where it reaches; Godot's
+// even distance fog is turned down to a thin remainder (Atmosphere).
+uniform int own_haze = 0;
+uniform vec3 fog_color = vec3(0.5, 0.55, 0.6); // the sky's light in the haze (Godot's fog light, linear)
+uniform float own_far = 10000.0;  // where the own haze has handed the distance over to Godot's fog (m)
 uniform float sky_affect = 0.25;   // the sky's own veil of haze (Godot's fog sky affect): the glow round the sun there
 uniform float gain = 1.0;          // sunlight in the haze (developer tuning)
 uniform int steps = 40;
@@ -130,10 +136,12 @@ void fragment() {
 			vec2 xz = cloud_state.xy + (p.xz - cam.xz) + l.xz / lift * (cloud_base - p.y);
 			sun *= 1.0 - cloud_shade * clouds * cloud_density(xz, coverage);
 		}
-		float sigma = scale * haze_shape(p.y, hs.r);
+		// (own haze for the near and middle distance only: Godot's fog, which fades into the sky's colour, keeps the far
+		// distance; a far haze of plain fog colour went dark violet along distant ridges)
+		float sigma = scale * haze_shape(p.y, hs.r) * (own_haze == 1 ? (inside ? 1.0 - smoothstep(own_far * 0.6, own_far, t) : 0.0) : 1.0);
 		float step_t = exp(-sigma * dt);
 		float seen = transmit * (1.0 - step_t); // this stretch's share of what the pixel shows
-		light += sun_light * sun * seen;
+		light += (own_haze == 1 ? fog_color + sun_light * sun : sun_light * sun) * seen;
 		shadowed += (1.0 - sun) * seen;
 		transmit *= step_t;
 		lit += sun * sigma * dt; all_haze += sigma * dt;
@@ -146,6 +154,7 @@ void fragment() {
 	}
 	// scene × (1 − a) + light: the shadowed haze's share darkened, the sunlit haze's light added.
 	float alpha = clamp(shade * shadowed, 1e-3, 1.0);
+	if (own_haze == 1) alpha = clamp(1.0 - transmit, 1e-3, 1.0); // (scene × transmittance + the haze's light)
 	if (debug == 1) { ALBEDO = vec3(lit / max(all_haze, 1e-6)); ALPHA = 1.0; }
 	else if (debug == 3) { ALBEDO = vec3(1.0 - transmit, shadowed, 0.0); ALPHA = 1.0; } // red: haze opacity, green: shadowed part
 	else { ALBEDO = max(light / alpha, vec3(0.0)); ALPHA = alpha; }

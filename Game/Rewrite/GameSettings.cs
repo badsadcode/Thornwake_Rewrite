@@ -234,6 +234,12 @@ public static class GameSettings
         "air keeps it, wind clears moisture, the midday sun burns it off. A dry, windy noon is crisp; a calm, wet dawn fills " +
         "with shafts, round rocks and single trees too.",
         options: new[] { "always (build 81)", "by the weather (draft)" }));
+    public static readonly Setting AtmoContrast = Add(new("fx.atmo_contrast", "Lighting and effects", "Light and shadow in the haze", 0, 1, 1, 0,
+        "Noor's notes (draft): contrast from the environment, not from a darker picture. Mountains shade each other out to " +
+        "10 km (the ground in a far mountain's shadow loses the direct sun, the sky's light stays); haze in a shadow loses " +
+        "its sunlight, so shaded slopes stay darker and sunlight falls in distinct shafts; valleys hold more haze and " +
+        "ridge tops less, so the mountain layers separate. Build 82: as before.",
+        options: new[] { "build 82", "environment contrast (draft)" }));
     public static readonly Setting RayStrength = Add(new("fx.ray_strength", "Lighting and effects", "Rays strength", .5, 2.5, .05, 1,
         "How bright the shafts are, for the forest rays (A, A2) and the rays in open air. 1 = build 82.", "×"));
     public static readonly Setting ForestSunGlare = Add(new("fx.forest_sun_glare", "Lighting and effects", "Forest rays: sun glare", 0, 1, 1, 1,

@@ -1180,6 +1180,9 @@ public partial class WorldLab : Node3D
 
     public override void _UnhandledInput(InputEvent e)
     {
+        // Screenshot runs take no input (D154: Tom playing his own game while captures ran — his mouse turned a capture's
+        // camera and his R lit a capture's torch). Their window never takes focus either (_Ready).
+        if (_shotPath != null) return;
         if (_bench != null)
         {
             if (e is InputEventKey { Pressed: true, Keycode: Key.Escape }) BenchAbort("stopped with Esc");
@@ -1344,6 +1347,7 @@ public partial class WorldLab : Node3D
         _me = new Character(new Color("526b61"), _atmosphere.Wind);
         _player.AddChild(_me);
         _me.Torch.Lit = OS.GetCmdlineUserArgs().Contains("--torch");
+        if (_shotPath != null && DisplayServer.GetName() != "headless") DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.NoFocus, true);
         AddChild(_player);
         _pivot = new Node3D { Name = "CameraPivot" };
         _arm = new SpringArm3D { SpringLength = _zoom, CollisionMask = 1, Margin = .3f };

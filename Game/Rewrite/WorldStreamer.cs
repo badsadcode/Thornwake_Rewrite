@@ -140,9 +140,15 @@ public partial class WorldStreamer : Node3D
     private TreeCatalog _trees = null!;
     private readonly PropCatalog _props = new();
 
+    /// <summary>The terrain shader: with far mountain shadows from the air map (D154) or as before (same body).</summary>
+    private static Shader TerrainShader() => GD.Load<Shader>(GameSettings.AtmoContrast.Index == 1
+        ? "res://Game/Rewrite/TerrainAirShadow.gdshader" : "res://Game/Rewrite/Terrain.gdshader");
+
     public override void _Ready()
     {
-        _terrain = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Terrain.gdshader") };
+        // (swapped in place: every uniform carries over and existing tiles switch at once, as the water's style)
+        GameSettings.Changed += s => { if (s == GameSettings.AtmoContrast) _terrain.Shader = TerrainShader(); };
+        _terrain = new ShaderMaterial { Shader = TerrainShader() };
         _terrain.SetShaderParameter("rock_tex", RockTextureArray.Get());
         // Ground style (current / Noor's textures): a uniform, switched in place.
         _terrain.SetShaderParameter("ground_tex", GroundTextures.Get());
