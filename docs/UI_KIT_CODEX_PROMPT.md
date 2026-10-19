@@ -1,21 +1,30 @@
 # Prompt for Codex: Thornwake UI kit (from Tom's mockup)
 
-Paste everything below the line into Codex. Before that, save Tom's mockup image as
-`ArtKit/References/UI/ui_mockup_01.png` (the prompt points Codex at it).
+Paste everything below the line into Codex. Codex works in **its own folder** (it has no access to the Thornwake
+project): put Tom's mockup image in that folder as `reference/ui_mockup_01.png` first. When Codex delivers, copy the
+contents of its `ThornwakeUI/` folder into the project root (the paths inside match the project: `Assets/UI/…`,
+`ArtKit/UI/…`, `docs/UI_KIT.md`), or give the folder to Claude to bring in.
 
 ---
 
 ## Your task
 
 Create the **UI element kit** for the game **Thornwake** (Godot 4.7, C#), following Tom's mockup
-`ArtKit/References/UI/ui_mockup_01.png`. The mockup is a mood and layout guide, not a final design: reproduce its
+`reference/ui_mockup_01.png` (in your working folder). The mockup is a mood and layout guide, not a final design: reproduce its
 **style and parts**, not the screenshot. The game will assemble every window from your parts in code, so we need
 **separate, reusable pieces** (frames, buttons, slots, icons…), each in all its states, **with no text baked in**.
 
-Work in this repository (`badsadcode/Thornwake_Rewrite`, branch `main`). Only add files under `Assets/UI/`,
-`ArtKit/UI/` (sources), `Licenses/README.txt` (one line per new font or third-party asset) and a short
-`docs/UI_KIT.md`. **Do not change any game code, shaders or other assets.** Commit small, push often, no pull requests.
-Never touch the repository `badsadcode/Thornwake`.
+You work in your own folder, without the game's project. Put **everything you make inside one folder,
+`ThornwakeUI/`**, laid out like the game project so it can be copied in as it is:
+`ThornwakeUI/Assets/UI/…` (the game files), `ThornwakeUI/ArtKit/UI/…` (previews and sources),
+`ThornwakeUI/docs/UI_KIT.md` (notes) and `ThornwakeUI/Licenses/UI_LICENSES.txt` (one line per font or third-party
+source). All paths below are relative to `ThornwakeUI/`. Everything the kit needs from the game (item names, building
+categories, windows) is listed in this prompt.
+
+If you cannot generate images directly, **draw them with code**: SVG, or scripts (Python with Pillow is fine) that
+write the PNGs pixel by pixel. Keep those scripts in `ArtKit/UI/source/` with a `README` saying how to run them, so
+every part can be regenerated in another colour or size. Pixel-art icons suit this well; for wood and parchment use
+simple procedural grain/fibre noise rather than flat fills.
 
 **Start with the style tile (step 1) and stop for Tom's approval before producing the rest.**
 
@@ -65,7 +74,7 @@ Never touch the repository `badsadcode/Thornwake`.
 * **Preview sheets:** `ArtKit/UI/preview_<group>.png` showing every element of a group in every state on both a
   dark and a light background, at 1× and 2×, labelled. Tom reviews these, not the raw files.
 * **Licences:** everything self-made, or CC0. For fonts only SIL OFL or similar free-to-ship licences; put the licence
-  file next to the font and add a line to `Licenses/README.txt`.
+  file next to the font and add a line to `Licenses/UI_LICENSES.txt`.
 * **Sources:** keep layered/vector sources in `ArtKit/UI/source/` (Aseprite, Krita, PSD or SVG).
 
 ## Step 1 — style tile (stop here for approval)
@@ -132,11 +141,11 @@ log, stone, berries, heart, gear). Deliver `ArtKit/UI/preview_style_tile.png` pl
 * **Crosshair** set: dot, small cross, bow aim (with draw ring), build placement.
 
 ### Icons (`Assets/UI/Icons/`, pixel-art, 32×32 and 64×64 at 1×, transparent, 1 px dark outline)
-* **Items** (one per game item; ids from `Content/gameplay_items.json`): stone_axe, stone_knife, spear,
+* **Items** (one per game item, named by these ids): stone_axe, stone_knife, spear,
   stone_sword, bow, arrow, raw_meat, cooked_meat, hide, bone, log, branch, stone, plant_fibre, berries,
   fishing_rod, bait, dried_meat, raw_fish, cooked_fish, book_felling. Also, for planned items: torch, pickaxe,
   iron_ore, iron_ingot, rope, campfire, workbench, simple_bed, wooden_shield, flint, clay, water_skin.
-* **Building categories** (from `Content/gameplay_pieces.json`): Foundation, Floor, Wall, Door, Stairs, Roof,
+* **Building categories**: Foundation, Floor, Wall, Door, Stairs, Roof,
   Fence, Camp.
 * **Stats**: health (heart), stamina (lightning), food (fork and knife), water (drop), warmth (thermometer),
   cold (snowflake), wet (droplets), armor (shield), damage (crossed swords), speed (boot), weight (sack).
@@ -160,7 +169,7 @@ each (`ArtKit/UI/preview_fonts.png`, Latin with Polish diacritics ąćęłńóś
 2. **Body** — settings, descriptions, tooltips, readable at 14–16 px (a book serif or humanist sans).
 3. **Numbers/HUD** (optional) — compact, very readable for counts, bars and the clock; may be a pixel font if it
    suits the icons.
-Deliver the font files with their licence files; do not wire them into the game.
+Deliver the font files with their licence files (you only make files; nothing is wired into the game).
 
 ## Delivery checklist (per step)
 * Files under `Assets/UI/<Group>/` with the naming above, 1× and @2x.
@@ -168,7 +177,7 @@ Deliver the font files with their licence files; do not wire them into the game.
 * Preview sheet(s) in `ArtKit/UI/`.
 * `docs/UI_KIT.md`: colour tokens, slice margins summary, which element is meant for which window of the mockup,
   anything unfinished.
-* `Licenses/README.txt` lines for fonts and any third-party source.
+* `Licenses/UI_LICENSES.txt` lines for fonts and any third-party source.
 * A short summary for Tom: what was made, what to review first, open questions.
 
 ## What happens next (for context, not for you to do)

@@ -2403,6 +2403,10 @@ free-to-ship fonts), 1× and @2x PNGs under `Assets/UI/`, a manifest with slice 
 preview sheets for Tom; a style tile first, for Tom's approval. Codex adds assets only (no game code). Afterwards
 Claude builds a Godot Theme from the manifest and rebuilds the windows. The mockup goes to
 `ArtKit/References/UI/ui_mockup_01.png` (Tom saves it; it reached Claude only as a chat image).
+Update: Tom's Codex (through Ollama) has no access to the project folder, so the prompt has it work in its own folder
+and deliver one `ThornwakeUI/` folder laid out like the project (copied in as it is), with the mockup at
+`reference/ui_mockup_01.png` there; and, being a text model, it may draw the parts with code (SVG or Python/Pillow
+scripts, kept so the parts can be regenerated).
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
