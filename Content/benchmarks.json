@@ -1,6 +1,6 @@
 {
   "_comment": "Thornwake benchmark scenarios (docs/BENCHMARK.md). Every scene is a fixed place, view and hour in a world that generates the same on every PC; time and weather are frozen, V-Sync and the frame limit are off. Profiles set every graphics setting (others keep their defaults) so results compare across PCs; 'current' keeps the player's own settings.",
-  "version": 1,
+  "version": 2,
   "world": {
     "id": "forest32",
     "name": "Tom's test world: Vast continents (classic), 32 km, seed 42, dense forests",
@@ -158,6 +158,12 @@
       "at": [107878.7, -32103.2], "view": [9.666, 0.12, 2.36], "height": 2, "hour": 10.7, "seconds": 6, "clouds": [0.5, 0, 0.1, 0], "settings": { "sky.clouds": 0.55 } },
     { "id": "cloud-turn", "name": "M3 clouds: a 10 s turn under broken cloud (ghosting check)", "world": "patch32", "move": "turn",
       "at": [-4001.0, 5631.3], "view": [0, 0.2, 8], "height": 25, "hour": 13, "seconds": 10, "clouds": [0.6, 0, 0.3, 0], "settings": { "sky.clouds": 0.55 } },
+    { "id": "cloud-sea-valley", "name": "M3 clouds: under the broken cloud sea, a valley next to Tom's ridge (08:00)", "world": "mountains42",
+      "at": [-214638.0, 84223.0], "view": [0.585, 0.4, 0.1], "height": 40, "hour": 8, "seconds": 6, "settings": { "sky.clouds": 0.7, "sky.cloud_base": 1, "sky.cloud_sea": 2 } },
+    { "id": "cloud-sea-ridge", "name": "M3 clouds: the broken cloud sea from Tom's ridge, looking down (08:48)", "world": "mountains42",
+      "at": [-216238.6, 81823.6], "view": [11.489, -0.25, 0.1], "height": 388, "hour": 8.8, "seconds": 6, "settings": { "sky.clouds": 0.7, "sky.cloud_base": 1, "sky.cloud_sea": 2 } },
+    { "id": "swamp-sunrise", "name": "M3 clouds: Tom's swamp at sunrise (dump 194902, 06:21)", "world": "mountains42",
+      "at": [-178138.5, -141323.7], "view": [17.119, -0.233, 2.161], "height": 93, "hour": 6.35, "seconds": 6, "settings": { "sky.clouds": 0.5 } },
     { "id": "rays-dawn-turn", "name": "M2 rays: temperate forest, sunrise (05:24, sun ~10° up), light mist, turning", "world": "patch32",
       "move": "turn", "at": [-3141.8, 2362.6], "view": [0, 0.08, 0.3], "height": 0, "hour": 5.4, "seconds": 20, "mist": [0.35],
       "settings": { "fx.forest_rays": 3, "fx.light_model": 1, "fx.volumetric_fog": 1, "fx.ground_fog": 2, "perf.fog_quality": 3 } },
@@ -219,6 +225,12 @@
       "scenarios": ["air-cliff"],
       "variants": [ { "fx.air_rays": 0 }, { "fx.air_rays": 1 }, { "fx.air_rays": 2 }, { "fx.air_rays": 3 } ],
       "ablate": false
+    },
+    "cloudcost": {
+      "name": "Atmosphere 2.0 M3: what the clouds cost (volumetric v2, volumetric v1 sky only, flat) at the cloud scenes and Tom's spots",
+      "scenarios": ["cloud-horizon-noon", "cloud-broken-up", "cloud-summit", "cloud-mountain-deck", "cloud-valley-peaks", "cloud-sea-valley", "cloud-sea-ridge", "swamp-sunrise"],
+      "variants": [{ "sky.cloud_quality": 3 }, { "sky.cloud_quality": 2 }, { "sky.cloud_quality": 1 }],
+      "ablate": false, "capture": true, "stills": 1
     },
     "clouds": {
       "name": "Atmosphere 2.0 M3: cloud acceptance captures (close cumulus, summit, horizon noon and sunset, broken, storm, Tom's mountain deck, turn)",

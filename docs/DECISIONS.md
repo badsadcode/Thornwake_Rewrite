@@ -2638,6 +2638,34 @@ everywhere. Now, with *Cloud sea → broken from below*:
   air under a high gap. Next if wanted: stronger contrast of lit vs shaded haze under the sea, and a test spot with a
   wide valley under a higher sea.
 
+## D174 — What the clouds cost; why clouds can look evenly see-through (2026-10-19)
+Tom: "let's do this [cloud cost] … sometimes it feels like the clouds are uniformly transparent … especially visible in
+the mountains". New suite **cloudcost** (`Content/benchmarks.json` version 2; scenes cloud-sea-valley, cloud-sea-ridge,
+swamp-sunrise added): each cloud scene with *Clouds* volumetric v2 / volumetric (v1, sky only) / flat, Tom's own
+settings, 1920×1040, RTX 3080. GPU ms (avg); v2 − v1 ≈ the clouds drawn in front of the land (CloudsNear, full
+resolution), v1 − flat ≈ the sky's volume (half resolution):
+| scene | v2 | v1 | flat | in front of land | sky volume | all clouds |
+|---|---|---|---|---|---|---|
+| horizon, noon | 27.0 | 24.9 | 20.2 | 2.1 | 4.7 | 6.8 |
+| broken, looking up | 19.8 | 16.4 | 11.6 | 3.4 | 4.8 | 8.2 |
+| summit | 24.6 | 18.0 | 13.9 | 6.6 | 4.1 | 10.7 |
+| Tom's ridge (12:12) | 26.9 | 16.2 | 13.9 | 10.8 | 2.3 | 13.0 |
+| valley toward peaks | 19.4 | 15.9 | 12.4 | 3.5 | 3.5 | 7.0 |
+| under the broken cloud sea | 38.4 | 21.7 | 19.1 | 16.7 | 2.6 | 19.3 |
+| broken cloud sea from the ridge | 21.6 | 14.3 | 11.7 | 7.3 | 2.6 | 9.8 |
+| swamp at sunrise | 19.9 | 19.7 | 17.2 | 0.2 | 2.5 | 2.7 |
+* The clouds cost 3–19 ms; **the clouds in front of the land are the big part in the mountains** (7–17 ms), the sky's
+  volume 2.5–5 ms. (Earlier "~45 ms at noon" was a whole-frame figure, not the clouds alone.) Worst: standing under
+  the cloud sea — near-level rays run through the layer for kilometres and use their whole step budget, each step
+  with six more toward the sun.
+* **See-through clouds** (captures `artifacts`-less, scratchpad tr-*): in the lowlands the clouds are opaque but haze
+  veils clouds and sky alike (the same pale colour). In the mountains the camera is often in or at the edge of the
+  layer (base over the land, cloud sea, banks on the ridges), and that cloud is thin and even: ~80 % opaque all
+  round at a summit, mountains kilometres away as silhouettes. A possible switchable option later: denser cores,
+  crisper edges, clear air between (also cheaper).
+* Proposed cuts, each switchable and checked by captures: fewer light steps for far samples; a step budget that
+  grows faster with distance; faster skipping of empty air; the clouds in front of the land at lower resolution.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
