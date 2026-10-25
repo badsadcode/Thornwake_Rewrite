@@ -196,6 +196,10 @@ void sky() {
 			// Round 29: a storm deck with structure and racing scud instead of the flat grey (classic model unchanged).
 			if (!AT_CUBEMAP_PASS) overcast = storm_deck(dir, day, max(storm, storm_here), w.b, sun_dir);
 		}
+		// (D186, Tom: "when it's raining during the nighttime, it lights up the whole thing"): the deck's colours had a
+		// daylight floor, a lit grey ~10× brighter than the night sky, which also lit the land as sky light. At night a
+		// rain deck is darker than the clear night sky, lit only faintly from the moon behind it.
+		overcast *= mix(1.0, 0.05 + 0.05 * sky_extra.w, smoothstep(2.0, -10.0, sun_true.w));
 		col = mix(col, overcast, storm_here * (weather_frame.w > 0.5 ? 0.95 : 0.85));
 		disc *= 1.0 - storm;
 		// Lightning (round 27): the clouds light up toward the strike — a broad glow for a near one (the whole deck

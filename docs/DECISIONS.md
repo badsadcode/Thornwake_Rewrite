@@ -2815,6 +2815,16 @@ away, wrapped (full stratification); broken cloud keeps the offset-free ¼ / ¾ 
 (`artifacts/overcast-marble-fix.jpg`): overcast ≈ build 95 (its own faint ripples remain), 70 % cover and the grain spot
 clean. Lesson: check a cloud change at overcast too.
 
+## D186 — Rain made the night brighter (2026-10-25)
+Tom: "when it's raining during the nighttime, it lights up the whole thing. It becomes brighter. I believe it should be the
+opposite." Reproduced (badlands, day 4 01:00, mean screen brightness): pitch-black night clear 5.6 → rain 17.5; normal
+night 23 → 25. Causes: (1) the storm sky (Sky.gdshader `overcast` / `storm_deck`) had a daylight floor — a lit grey
+~10× brighter than the night sky — which also lit the land as sky light; (2) the rain streaks are unshaded, bright white
+at night. **Fix**: the rain sky darkens with the real sun's depth (×0.05–0.1 by the moon's phase, from 2° to −10°), and
+the streaks take the scene's light (`_daylight`, ×0.35 at night). Now: pitch black rain 5.5, normal rain 11.5 (darker
+than clear, as it should be); daytime rain unchanged (`artifacts/night-rain-fix.jpg`). Bug fix; build 96 the return
+point. (Captures in rain show FPS 6–7 on the HUD in build 96 too — the capture's forced rain; to check in play.)
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

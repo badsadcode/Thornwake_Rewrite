@@ -585,6 +585,13 @@ public partial class Atmosphere : Node3D
             if (Snowing != _particlesSnow) SetParticleKind(Snowing);
             float p = Precip;
             _rainParticles.Emitting = p > .05f;
+            // (D186: the streaks are unshaded — at night they stood out bright white; they take the scene's light)
+            if ((_rainParticles.DrawPass1 as QuadMesh)?.Material is StandardMaterial3D rm)
+            {
+                _rainTint ??= rm.AlbedoColor;
+                float l = Mathf.Clamp(_daylight * 1.1f, .06f, 1) * Mathf.Lerp(1, .35f, _night);
+                rm.AlbedoColor = new Color(_rainTint.Value.R * l, _rainTint.Value.G * l, _rainTint.Value.B * l, _rainTint.Value.A);
+            }
             float slant = Snowing ? .12f : .02f;
             if (_steer != null)
             {
@@ -825,9 +832,12 @@ public partial class Atmosphere : Node3D
     private double _nextFlash = 4, _flashTime = -1;
     private readonly Random _flashRandom = new(1234);
 
+    private Color? _rainTint;
+
     private void SetParticleKind(bool snow)
     {
         _particlesSnow = snow;
+        _rainTint = null;
         if (_rainParticles == null) return;
         var pm = (ParticleProcessMaterial)_rainParticles.ProcessMaterial;
         if (snow)
