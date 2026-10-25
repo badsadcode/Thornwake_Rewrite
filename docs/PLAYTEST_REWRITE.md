@@ -78,6 +78,13 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 97 — overcast without the marble, darker rainy nights
+**Host and everyone joining need build 97** (versions must match to connect).
+* **Overcast without the "marble" pattern**: build 96's grain fix banded a thick overcast deck into contour lines (my
+  mistake). Thick decks get the per-pixel offset back; broken cloud keeps the grain fix.
+* **Rain no longer brightens the night**: the rain sky had a daylight floor (a lit grey deck that also lit the land) and
+  the rain streaks were full white. Now a rainy night is darker than a clear one; daytime rain looks as before.
+
 ## New in build 96 — moon shafts, no cloud grain with SMAA
 **Host and everyone joining need build 96** (versions must match to connect).
 * **Moonlight (draft) tuned**: with *Moonlight → rays and shadows* the air now grows damp through calm nights, so the
