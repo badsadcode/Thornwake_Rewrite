@@ -124,6 +124,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   strength (D192, `ColorGrading.cs`). Tom checks grading himself (left for later); wind trails not judged yet.
   **Build 101** (`8a97481`, `dist/Preview-101`): perf check — recent drafts cost ~nothing (D193); Living air gains dust devils
   (D194, `DustDevil.gdshader`, `--dust-devil`) and embers, fireflies, midge swarms (D195, `AmbientLife.Accents.cs`).
+  **Build 102** (`cc79355`, `dist/Preview-102`): sun dims behind clouds (D201); cloud quality levels (D196). Tom's settings
+  reset to a clean baseline (D200, D201; `tools/settings_baseline.py`; backup in %APPDATA%/Thornwake). Cloud look: Tom keeps
+  today's shading (D199); softness / smooth shading / fine detail drafts off.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
