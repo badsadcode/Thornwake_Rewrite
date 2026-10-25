@@ -627,6 +627,8 @@ uniform int cloud_cost = 0;
 // thin outer parts of a cloud thinner (density^1.7, the cores unchanged), light reaching deeper (extinction ×0.7) and the
 // inside shaded by its own thickness more gradually — translucent edges and wisps instead of a hard opaque skin.
 uniform int cloud_soft = 0;
+// Cloud shading (setting, D198): 0 = build 101; 1 = smooth (finer light march, softer light-to-shade).
+uniform int cloud_shading = 0;
 // The march through the volume from t0 to t1 along dir (camera-relative): premultiplied light, opacity.
 vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, float min_step, vec3 sun_dir, vec3 sun_col, float day, float mu, float storm) {
 	vec2 cam = cloud_state.xy;
@@ -690,12 +692,17 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		if (cloud_soft == 1 && d > 0.0) d = min(pow(d, 1.7) * 1.15, d); // (D197: thin parts thinner, cores as before)
 		if (d <= 0.002) continue;
 		// Toward the light: six steps, longer and longer (≈3 km), cheap density.
-		float od = 0.0, sl = 60.0;
-		vec3 lp = p;
-		for (int k = 0; k < 6; k++) {
+		// (D198, Tom: "the clouds look posterized": six 60 m+ steps made the self-shadow near binary — flat lit and
+		// flat shaded patches with sharp edges. Smooth shading: nine steps from 20 m, each pixel's steps offset, and the
+		// light wrapping into the shade more through the higher scattering orders.)
+		float od = 0.0, sl = cloud_shading == 1 ? 20.0 : 60.0;
+		vec3 lp = p + (cloud_shading == 1 ? ldir * sl * (jitter - 0.5) : vec3(0.0));
+		int ln_s = cloud_shading == 1 ? 9 : 6;
+		float lg_s = cloud_shading == 1 ? 1.55 : 1.75;
+		for (int k = 0; k < ln_s; k++) {
 			lp += ldir * sl;
 			od += max(vdens(lp, false), 0.0) * sl;
-			sl *= 1.75;
+			sl *= lg_s;
 		}
 		od *= (1.0 + cloud_dev.y) * (cloud_look == 1 ? 1.15 : 1.0); // (test / reference: deeper self-shadow)
 		float h = clamp((p.y - VBOTTOM) / 3000.0, 0.0, 1.0);
@@ -704,7 +711,7 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		float sun_e = 0.0, a = 1.0, b = 1.0;
 		for (int o = 0; o < 3; o++) {
 			sun_e += a * exp(-od * sigma_k * b) * mix(1.0, phase_f, b);
-			a *= 0.42; b *= 0.4; // (weaker higher orders: more self-shadowing)
+			if (cloud_shading == 1) { a *= 0.6; b *= 0.35; } else { a *= 0.42; b *= 0.4; } // (weaker higher orders: more self-shadowing; smooth: they carry more)
 		}
 		float powder = mix(1.0, 1.0 - exp(-d * 6.0 - od * sigma_k * 1.5), 0.6 * (1.0 - max(lmu, 0.0)));
 		float hb = smoothstep(0.0, 0.45, (p.y - VBOTTOM) / 1800.0);
@@ -714,6 +721,14 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		// "contrast … darker undersides, thicker cores"); thin parts keep the full light.
 		float deep = 1.0 - exp(-od * sigma_k * 0.45);
 		amb *= mix(1.0, 0.45, deep) * mix(0.75, 1.0, hb);
+		if (cloud_shading == 1) {
+			// (D198: the shaded parts were lit by flat sky light, one colour per lobe — overlapping lobes read as flat
+			// cut-outs. Sky-light occlusion: cloud above and toward the open sky darkens a point's ambient, so folds,
+			// undersides and the gaps between lobes shade gradually.)
+			float oa = max(vdens(p + vec3(0.0, 90.0, 0.0), false), 0.0) * 90.0 + max(vdens(p + vec3(0.0, 300.0, 0.0), false), 0.0) * 210.0
+				+ max(vdens(p - dir * 120.0, false), 0.0) * 120.0;
+			amb *= mix(0.35, 1.0, exp(-oa * sigma_k * 0.5));
+		}
 		amb = mix(amb, amb * vec3(0.86, 0.9, 1.12), deep * 0.6);
 		amb *= mix(1.0 - 0.45 * cloud_dev.y, 1.0, hb); // (test: darker bases)
 		if (cloud_look == 1) {

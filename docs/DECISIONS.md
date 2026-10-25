@@ -2931,6 +2931,19 @@ same, inside the summit cloud grey instead of deep blue. It does not change what
 reference look's denser, crisper setting (`cloud_look`, sigma ×1.25), dense caps (Tom has *Cloud caps → dense*, ×3.5),
 the strong biome mood tinting the clouds. Needs Tom's dump of a foam moment (or a reference photo of what he expects).
 
+## D198 — "The clouds look posterized": flat-lit lobes; smooth shading draft (2026-10-25)
+Tom (on the D196/D197 captures): "the foaminess … it looks like the clouds are posterized". Checked at the pixel level:
+no colour banding. Each cloud lobe has one nearly flat colour inside, with a soft but sudden edge to the next lobe: the
+cloud is opaque within tens of metres, so only its skin shows, and that skin is lit by (a) a self-shadow from six light
+steps starting at 60 m (near binary: fully lit or shaded) and (b) flat sky light. Overlapping lobes read as flat cut-outs.
+Exposure, cloud look, cloud shape and glow do not change it (suite posterize). Draft **Cloud shading → smooth**
+(`sky.cloud_shading`): nine light steps from 20 m with a per-pixel offset, higher scattering orders carrying more, and
+sky-light occlusion from three density samples (above at 90 / 300 m, toward the camera at 120 m). Result
+(`artifacts/cloud-shading-draft.jpg`): darker folds and more contrast in the noon cumulus, but the lobes still read as
+flat shapes; cost up to ~30 % near and inside clouds (Tom's ridge 58 → 40 FPS). The real cause is likely the detail:
+billows are carved by a 64³ noise, too coarse to shade within a lobe — a finer or procedural detail noise is the bigger
+fix (with Tom's say on the look).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
