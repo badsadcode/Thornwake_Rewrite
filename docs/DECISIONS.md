@@ -2767,6 +2767,22 @@ Atmosphere) — at **65,536 m**: no strips; seams 16× rarer; floats still exact
 4 km cell the ground's patch layout differs (same look, other places). Bug fix; build 94 (`2c512d5`) is the return
 point (`artifacts/ground-fold-strip-fix.jpg`). The mesh UVs are no longer read by the terrain shader.
 
+## D182 — Moonlight with shadows and rays (draft) (2026-10-25)
+Tom: "for the volumetric lighting we need to do a similar thing at night, when the moon is shining". The moon was its own
+light without shadows, so nothing could cut shafts from it. New setting **Moonlight** (`fx.moon_rays`): *build 94* or
+*rays and shadows (draft)*. While the moon is the main light (as the light beams already chose: moon energy ×3 above the
+dimmed sun), the shadow-casting sun light takes the moon's direction, colour and energy and the moon light is off; a
+sky-only copy of the real sun keeps the sky (LIGHT0) and the clouds get the real sun (`cloud_light`). The forest rays'
+amount and A2 boost follow the main light's elevation (`LightElevation`), so they work by moonlight.
+* Moonlight is ~6× weaker than daylight and the night exposure barely makes up for it: the shafts existed but were
+  invisible. The haze takes more of the moon than the ground does (film-like, not physical): Godot's volumetric fog
+  ×6 (`--ray-dev=moonfog=`), the rays in open air ×1.5 (`moonair`; ×3 lit a night valley like dusk, ×8 blew it out).
+* Captures (`artifacts/moonlight-rays-draft.jpg`, day 9 00:30, moon ~47° up, Normal night darkness): from Tom's ridge the
+  valleys fill with moonlit haze cut by the mountains' shadows and the moon glows in the sky; in a dense forest the
+  canopy's moon shadows make it darker than build 94, with no visible shafts yet (a forest needs gaps and mist). With
+  Pitch black nights (Tom's) the moon itself is dimmed, so little changes there.
+* Debug: captures log `MOON_STATE`. Look choices (how bright, how blue, forest) are Tom's: shown, not tuned further.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

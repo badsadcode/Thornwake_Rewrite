@@ -259,6 +259,11 @@ public static class GameSettings
         options: new[] { "build 89 (fast waves)", "steady" }));
     public static readonly Setting RayStrength = Add(new("fx.ray_strength", "Lighting and effects", "Rays strength", .5, 2.5, .05, 1,
         "How bright the shafts are, for the forest rays (A, A2) and the rays in open air. 1 = build 82.", "×"));
+    public static readonly Setting MoonRays = Add(new("fx.moon_rays", "Lighting and effects", "Moonlight", 0, 1, 1, 0,
+        "Draft (D182). Rays and shadows: at night the moon casts shadows like the sun — trees and mountains shade the " +
+        "moonlit ground, and the forest rays and rays in open air come from the moon. Build 94: soft moonlight without " +
+        "shadows or rays.",
+        options: new[] { "build 94 (no shadows or rays)", "rays and shadows (draft)" }));
     public static readonly Setting ForestSunGlare = Add(new("fx.forest_sun_glare", "Lighting and effects", "Forest rays: sun glare", 0, 1, 1, 1,
         "Looking at the sun from under the trees with forest rays A or A2 on. Softened: the sunlit forest air glows less " +
         "the more directly you look at the sun, so the sun and the crowns round it are not blown out to white; shafts " +

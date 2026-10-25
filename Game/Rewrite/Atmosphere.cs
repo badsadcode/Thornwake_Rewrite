@@ -630,6 +630,7 @@ public partial class Atmosphere : Node3D
         else if (_flash != null) _flash.Visible = false;
         // Warmer light at a low sun (AtmosphereLight: build 47's single warm factor, or the colour curve by phase).
         Sun.LightColor = light.SunColor;
+        UpdateMoonRays(sunDir);
         var toSun = Sun.GlobalTransform.Basis.Z.Normalized(); // a directional light shines along -Z
 
         if (_steer is { } steer)
@@ -703,6 +704,7 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("terrain_fold", new Vector2((float)(originX - Math.Floor(originX / 65536) * 65536), (float)(originZ - Math.Floor(originZ / 65536) * 65536)));
         UpdateAirRays(toSun, cameraWorldX, cameraWorldZ, originX, originZ);
         UpdateHeightHaze(cameraLocal.Y);
+        Sun.LightVolumetricFogEnergy *= MoonRayBoost; // (D182: the haze's moonlight, after the forest and air passes set it)
 
         // Shadow decal: ground point g is shaded by the cloud at g + toSun.xz · H / toSun.y. With the texture laid as
         // 3×3 tiles of period P, the decal centre must be ≡ P/2 − (origin + shift + wind) (mod P), chosen nearest the camera.
@@ -964,8 +966,9 @@ public partial class Atmosphere : Node3D
         float windAngle = Mathf.Atan2(Wind.Direction.Y, Wind.Direction.X);
         RenderingServer.GlobalShaderParameterSet("cloud_more", new Vector4(mackerel, windAngle, (float)_cloudTime, baseAbove));
         // The sun as the sky sees it, for the clouds drawn in front of the scene (CloudsNear.gdshader).
-        var toLight = Sun.GlobalTransform.Basis.Z.Normalized();
-        RenderingServer.GlobalShaderParameterSet("cloud_light", new Vector4(Sun.LightColor.R, Sun.LightColor.G, Sun.LightColor.B, Sun.LightEnergy));
+        // (the real sun, also while the moon drives the light, D182: the clouds handle the night themselves)
+        var toLight = _trueSunDir;
+        RenderingServer.GlobalShaderParameterSet("cloud_light", new Vector4(_trueSunColor.R, _trueSunColor.G, _trueSunColor.B, _trueSunEnergy));
         RenderingServer.GlobalShaderParameterSet("cloud_light_dir", new Vector4(toLight.X, toLight.Y, toLight.Z, 0));
         // Godot's fog as it falls on the sky (sky.glsl), so CloudsNear can veil its clouds the same way.
         var env = Environment;
@@ -1082,7 +1085,7 @@ public partial class Atmosphere : Node3D
         if (_beamQuad != null) _beamQuad.Visible = !on && GameSettings.LightBeams.Value > 0 && GameSettings.Clouds.Value > 0;
         if (!on) return;
         _air.SetShaderParameter("light_direction", toSun);
-        _air.SetShaderParameter("light_color", Sun.LightColor * Sun.LightEnergy);
+        _air.SetShaderParameter("light_color", Sun.LightColor * Sun.LightEnergy * MoonAirBoost);
         _air.SetShaderParameter("map_frame", new Vector4((float)(cameraWorldX - _airX), (float)(cameraWorldZ - _airZ), _airSize, 0));
         // The pass works on Godot's distance haze as it is this frame (its density: how much of each view is haze).
         var e = Environment;
@@ -1179,6 +1182,7 @@ public partial class Atmosphere : Node3D
         float lit = (float)(.5 - .5 * Math.Cos(sky.MoonPhase * Math.Tau));
         _night = 1 - Mathf.SmoothStep(-10, 4, sunElevation);
         float moonUp = Mathf.SmoothStep(-2, 8, (float)sky.MoonElevation);
+        _moonElevation = (float)sky.MoonElevation;
         _moon.Basis = Basis.LookingAt(-moonDir, Mathf.Abs(moonDir.Y) > .99f ? Vector3.Forward : Vector3.Up);
         // (light model 1: brighter moonlight, so a night is dark but readable)
         _moon.LightEnergy = .14f * lit * moonUp * _night * Mathf.Lerp(1, .25f, _storm) * (AtmosphereLight.Modern ? 1.5f : 1)
@@ -1187,6 +1191,52 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("night_sky", new Vector4(moonDir.X, moonDir.Y, moonDir.Z, (float)sky.MoonPhase));
         RenderingServer.GlobalShaderParameterSet("star_rotation", sky.Stars);
         RenderingServer.GlobalShaderParameterSet("sky_extra", new Vector4((float)(sky.Day + sky.Hour / 24), GameSettings.Planets.F, GameSettings.Stars.F, lit));
+    }
+
+    // ---- moonlit rays and shadows (D182, Tom: "for the volumetric lighting we need to do a similar thing at night,
+    // when the moon is shining"). The moon light had no shadows, so nothing could cut shafts out of it. While the moon
+    // is the main light the shadow-casting sun light takes its direction, colour and strength (forest rays, rays in
+    // open air, tree and mountain shadows by moonlight) and the moon light is off. The sky reads its sun from its first
+    // light: a sky-only copy of the real sun stands in for it, and the clouds get the real sun too.
+    private DirectionalLight3D? _skySun;
+    private Vector3 _trueSunDir = Vector3.Up;
+    private Color _trueSunColor = Colors.White;
+    private float _trueSunEnergy, _moonElevation;
+    /// <summary>The haze's light while the moon is the light (D182): moonlight is ~6× weaker than daylight but the night
+    /// exposure barely brightens, so its shafts were there but invisible; the haze takes this much more of it (the
+    /// ground keeps the plain moonlight). Like a film's moonlight: shafts readable, not realistic.</summary>
+    private float MoonRayBoost => MoonLit ? Dev("moonfog", 6) : 1;
+    /// <summary>The same for the rays in open air (D182): ×3 lit the whole night valley like dusk, ×8 blew it out.</summary>
+    private float MoonAirBoost => MoonLit ? Dev("moonair", 1.5f) : 1;
+    /// <summary>How high the main light stands: the moon's elevation while it is the light (D182), else the sun's.</summary>
+    private float LightElevation => MoonLit ? _moonElevation : _sunElevation;
+    public string MoonInfo => $"moon {(_moon?.LightEnergy ?? 0):0.000} visible {_moon?.Visible} · main light {Sun.LightEnergy:0.000} moonlit {MoonLit} · toward {Sun.GlobalTransform.Basis.Z.Normalized()} · fog energy {Sun.LightVolumetricFogEnergy:0.00} density {Environment.VolumetricFogDensity:0.0000} forest {_forest:0.00} canopy {Canopy:0.00} exposure {Environment.TonemapExposure:0.00} vol fog {Environment.VolumetricFogEnabled}";
+    /// <summary>True while the moon drives the main light (D182).</summary>
+    public bool MoonLit { get; private set; }
+
+    private void UpdateMoonRays(Vector3 sunDir)
+    {
+        _trueSunDir = sunDir; _trueSunColor = Sun.LightColor; _trueSunEnergy = Sun.LightEnergy;
+        MoonLit = GameSettings.MoonRays.Index == 1 && _moon != null && _moon.Visible
+            && Sun.LightEnergy * Mathf.Clamp(sunDir.Y * 8, 0, 1) < _moon.LightEnergy * 3;
+        if (_skySun == null)
+        {
+            _skySun = new DirectionalLight3D { ShadowEnabled = false, Visible = false, SkyMode = DirectionalLight3D.SkyModeEnum.SkyOnly };
+            AddChild(_skySun);
+        }
+        if (!MoonLit)
+        {
+            Sun.SkyMode = DirectionalLight3D.SkyModeEnum.LightAndSky;
+            _skySun.Visible = false;
+            return;
+        }
+        _skySun.Basis = Sun.Basis; _skySun.LightColor = Sun.LightColor; _skySun.LightEnergy = Sun.LightEnergy;
+        _skySun.Visible = true;
+        Sun.SkyMode = DirectionalLight3D.SkyModeEnum.LightOnly;
+        Sun.Basis = _moon!.Basis;
+        Sun.LightColor = _moon.LightColor;
+        Sun.LightEnergy = _moon.LightEnergy * Dev("moonk", 1);
+        _moon.Visible = false;
     }
 
     private DirectionalLight3D CreateMoon()
@@ -1384,7 +1434,7 @@ public partial class Atmosphere : Node3D
     private static float A2Aniso => GameSettings.RayScatter.F;
     // A high sun lets far more light through the crowns: at full boost the noon air went milky white (rays3 captures,
     // D146), so the boost eases from a 30° to a 65° sun, down to 35 %.
-    private float A2Boost => (8 + (.75f - A2Aniso) * 26.7f) * Mathf.Lerp(1, .35f, Mathf.SmoothStep(30, 65, _sunElevation));
+    private float A2Boost => (8 + (.75f - A2Aniso) * 26.7f) * Mathf.Lerp(1, .35f, Mathf.SmoothStep(30, 65, LightElevation));
 
     private void UpdateForestRays(double delta)
     {
@@ -1398,7 +1448,7 @@ public partial class Atmosphere : Node3D
             Environment.VolumetricFogAlbedo = Environment.VolumetricFogAlbedo.Lerp(new Color("d9b88c"), Mathf.Clamp(_airDust / Math.Max(_airLoad, .01f), 0, 1) * .6f);
         }
         // How much "forest by day" there is: the canopy around the player (0 when flying), the sun up, no storm.
-        float target = mode == 0 ? 0 : Mathf.Clamp(Canopy, 0, 1) * Mathf.SmoothStep(-1, 8, _sunElevation) * (1 - _storm);
+        float target = mode == 0 ? 0 : Mathf.Clamp(Canopy, 0, 1) * Mathf.SmoothStep(-1, 8, LightElevation) * (1 - _storm);
         _forest = StillShot || SnapExposure ? target : Mathf.MoveToward(_forest, target, (float)delta / 3);
         if (mode == 2 && _shaftQuad != null)
         {

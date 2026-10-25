@@ -1699,6 +1699,7 @@ public partial class WorldLab : Node3D
             {
                 GD.Print($"SCATTER grass={_streamer.GrassCommitted} rocks={_streamer.RocksCommitted} props={_streamer.PropsCommitted} farTrees={_streamer.FarTreesCommitted}");
                 GD.Print("AIR_STATE " + _atmosphere.DebugInfo().Split('\n').FirstOrDefault(l => l.StartsWith("Air load")));
+                GD.Print("MOON_STATE " + _atmosphere.MoonInfo);
                 Screenshot(_shotPath);
                 if (OS.GetCmdlineUserArgs().Contains("--dump")) DebugDump();
                 if (_extraYaws.Count == 0) GetTree().Quit(0);
