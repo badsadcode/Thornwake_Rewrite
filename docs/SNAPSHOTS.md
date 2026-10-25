@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 99** (Living air draft D190, patchy cirrus D189, moon glow D188) | `0c93671` | Thornwake-Rewrite-Preview-99 (v0.9.99) | Versions must match to connect; Living air off = build 98; build 98 = `2bc1d9b` |
 | **Build 98** (cloud layers draft, high clouds dark at night D187) | `2bc1d9b` | Thornwake-Rewrite-Preview-98 (v0.9.98) | Versions must match to connect; Cloud layers → build 97 = no cirrus/sheet; build 97 = `c90cde0` |
 | **Build 97** (overcast marble fixed D185, darker rainy nights D186) | `c90cde0` | Thornwake-Rewrite-Preview-97 (v0.9.97) | Versions must match to connect; fixes, not switchable; build 96 = `b4b624c` (has the overcast marble) |
 | **Build 96** (moon shafts tuned D183, cloud grain with SMAA D184) | `b4b624c` | Thornwake-Rewrite-Preview-96 (v0.9.96) | Versions must match to connect; Cloud grain without TAA → build 95 = old march; build 95 = `c927386` |
