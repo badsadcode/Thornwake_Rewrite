@@ -2955,6 +2955,19 @@ self-shadow), lit and shaded areas meeting in a sharp line. Test with the existi
 sides against darker shaded masses — the lobes read as volumes; y = 2 too dark. A look choice: asked Tom. Tom: "keep today's
 shading for now" — nothing changed; the self-shadow test stays a dev switch, Cloud shading / detail drafts off.
 
+## D200 — "Everything so hazy, bland, I feel like starting over": two settings, not the system (2026-10-25)
+Tom (build 101, dumps 171147–171411): "in the mountains the whole area is filled with clouds even though the coverage is
+small … constantly in the fog … sun glare fills the screen … so bland". In his settings at that moment:
+* **Wind strength 3.9** (`sky.cloud_speed`, normal 1; with simulated weather off the classic wind takes it): a 19–20 m/s
+  gale in every dump → dust in dry country (air load 0.8 in the badlands, dust 0.99), haze, air rays and glare lit by it.
+* **Cloud base → above the sea** (build 84's 1,500 m): his mountain dumps stand at 1,746 and 1,910 m — inside the cloud
+  layer, so even 40–45 % cover is grey fog all round.
+Rebuilt from his dumps (`artifacts/hazy-mountains-fix.jpg`): with normal wind the badlands view is clear and colourful
+(air load 0.8 → 0.07); the alpine view stays fog until the cloud base is above the land, then clear with clouds overhead.
+Also stacked: many drafts at once (cloud sea, caps dense, body, one pass, layers, air rays high with Rays strength 2.45,
+light beams 2.65, saturation 1.5, strong biome moods) — hard to judge any one of them. Proposed to Tom: a clean,
+recommended baseline instead of starting over.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
