@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 102 — the sun behind clouds, cloud quality levels, a clean baseline
+**Host and everyone joining need build 102** (versions must match to connect).
+* **The sun dims behind clouds** (Sky → Sun behind clouds, on): when a cloud passes in front of the sun, the sunlight
+  on you and around you drops, shadows fade and the glare in the air goes. Build 101's way is the other option.
+* **Sky → Cloud quality level**: High (as before), Medium, Low — 3–13 FPS more where clouds fill the view.
+* **Your settings were reset to a clean baseline** (backup: rewrite_settings.before-baseline-20261025.cfg in
+  %APPDATA%/Thornwake): Wind strength 1 (it was 3.9 — a 20 m/s gale full of dust), cloud base above the land (above the
+  sea put you inside the clouds in the mountains), the Natural look, and only the drafts I recommend on.
+* Also in, off by default: Cloud softness, Cloud shading → smooth, Cloud detail → fine (small effects, D197–D199).
+
 ## New in build 101 — dust devils, embers, fireflies, midges (Living air draft)
 **Host and everyone joining need build 101** (versions must match to connect).
 With **Living air** on (subtle / more):

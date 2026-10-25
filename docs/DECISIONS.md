@@ -2971,7 +2971,7 @@ recommended baseline instead of starting over.
 ## D201 — A clean settings baseline for Tom; the sun dims behind clouds (2026-10-25)
 **Baseline** (Tom: "back up my settings and set a clean recommended baseline: Wind strength 1, cloud base above the land,
 drafts off except the ones you recommend, normal look values"). Game closed; backup
-`%APPDATA%\Thornwakeewrite_settings.before-baseline-20261025.cfg`; script `tools/settings_baseline.py`. Look: the
+`%APPDATA%/Thornwake/rewrite_settings.before-baseline-20261025.cfg`; script `tools/settings_baseline.py`. Look: the
 Natural look preset (haze 1, glow 0.6, sun shafts 0.6, god ray contrast 0, light beams 1, ray scatter 0.5, air rays
 medium, rays by the weather, rays strength 1, wind waves 1, saturation 1); the rest of the look at defaults (exposure 1,
 sun glare 1, storm and forest darkness 0.5, leaf translucency 0.8, biome moods off, lens build 54, cloud shadows 0.55;
