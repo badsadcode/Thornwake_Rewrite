@@ -1,6 +1,6 @@
 // The rain streak (D207), shared by RainStreak.gdshader (transparent) and RainStreakTaa.gdshader (hashed, for TAA).
 
-uniform vec3 fall_dir = vec3(0.0, -1.0, 0.0); // the drops' velocity, normalized
+uniform vec3 fall_dir = vec3(0.0, -1.0, 0.0); // the rain's velocity now, normalized (only a fallback, D208)
 uniform float streak_len = 0.5;               // m
 uniform float width = 0.01;                   // m
 uniform vec4 tint : source_color = vec4(0.78, 0.83, 0.88, 0.2);
@@ -15,11 +15,17 @@ void vertex() {
 	float h = hash(id);
 	vec3 to_cam = CAMERA_POSITION_WORLD - o;
 	float d = length(to_cam);
-	vec3 side = normalize(cross(fall_dir, to_cam / max(d, 1e-3)) + vec3(1e-5));
+	// Each streak along its own drop's velocity (D208, Tom: "the lines are always oriented the same way"): the particle's Y
+	// axis follows its velocity (ParticleProcessMaterial align Y). At first every streak took the wind of this frame from
+	// one uniform, while each drop keeps the velocity it was born with: all lines stayed parallel and turned together with
+	// each gust, not with the drops' own motion.
+	vec3 axis = MODEL_MATRIX[1].xyz;
+	axis = dot(axis, axis) > 1e-8 ? normalize(axis) : fall_dir;
+	vec3 side = normalize(cross(axis, to_cam / max(d, 1e-3)) + vec3(1e-5));
 	// (a pixel is ~d × 0.0014 at 1080p: never thinner than ~1.2 pixels — thinner, they flickered; fainter instead)
 	float w0 = width * (0.7 + 0.6 * h), w = max(w0, d * 0.0017);
 	float len = streak_len * (0.75 + 0.5 * hash(id + 3.7));
-	VERTEX = o + fall_dir * len * (0.5 - UV.y) + side * w * (UV.x - 0.5);
+	VERTEX = o + axis * len * (0.5 - UV.y) + side * w * (UV.x - 0.5);
 	// Fades: in and out over the particle's life (no popping), close to the camera (no poles through the view), far away.
 	float life = INSTANCE_CUSTOM.y;
 	v_alpha = sqrt(w0 / w) * sin(clamp(life, 0.0, 1.0) * 3.14159) * smoothstep(1.0, 3.5, d) * (1.0 - smoothstep(16.0, 22.0, d))

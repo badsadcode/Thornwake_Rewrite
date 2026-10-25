@@ -3075,6 +3075,16 @@ Captures (`artifacts/rain-by-strength.jpg`: drizzle, moderate, downpour vs build
 Not yet (Tom and Noor's Weather 2.0 notes, `docs/Thornwake_Weather_2_0_Suggestions.md`): rain stopping under shelter,
 wetness by material and over time, dripping trees, splash kinds by surface.
 
+## D208 — Each rain streak along its own drop's motion (2026-10-25)
+Tom on build 105: "how the rain is being drawn, these lines, is changing direction. That's good, but the lines are always
+oriented the same way." The streaks took their angle from one uniform, the wind of the current frame, while each drop
+keeps the velocity it was born with for its 1.4 s: every line was parallel and all of them turned together with each
+gust or wind change, not with their own drop. Now the particle's Y axis follows its velocity (`ParticleFlagAlignY`) and
+the streak lies along it (`RainStreak.gdshaderinc`; the uniform only a fallback); the drops' direction spread 2° → 5°
+and speed ±8 % → ±15 %, so lines differ a little. When the wind turns, new drops lean the new way and the rain swings
+over within ~1.5 s. Same overall slant (`artifacts/rain-per-drop.jpg`). Part of the draft *Rain look → by strength*;
+build 105 (`5008995`) is the return point.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

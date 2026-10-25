@@ -906,8 +906,10 @@ public partial class Atmosphere : Node3D
         var v = new Vector3(drift.X, -fall, drift.Y);
         float speed = v.Length();
         var dir = v / speed;
-        pm.Direction = dir; pm.Spread = 2; pm.Gravity = Vector3.Zero;
-        pm.InitialVelocityMin = speed * .92f; pm.InitialVelocityMax = speed * 1.08f;
+        // (each drop drawn along its own velocity, D208: a little spread in direction and speed so the lines are not parallel)
+        pm.ParticleFlagAlignY = true;
+        pm.Direction = dir; pm.Spread = 5; pm.Gravity = Vector3.Zero;
+        pm.InitialVelocityMin = speed * .85f; pm.InitialVelocityMax = speed * 1.15f;
         // (drops are born through the whole volume, the volume upwind so the drifting drops fill the view; only ~16 m around
         // the camera — farther a drop is under a pixel, and spread over 52 m the near rain was too sparse to read)
         pm.EmissionBoxExtents = new Vector3(16, 7, 16);
@@ -950,6 +952,7 @@ public partial class Atmosphere : Node3D
         var pm = (ParticleProcessMaterial)_rainParticles.ProcessMaterial;
         // (back to build 104's emitter; the rain look by strength sets its own each frame, D207)
         _rainParticles.MaterialOverride = null;
+        pm.ParticleFlagAlignY = false;
         _rainParticles.Position = new Vector3(0, 14, 0);
         pm.EmissionBoxExtents = new Vector3(28, 3, 28);
         if (snow)
