@@ -1217,9 +1217,13 @@ public partial class Atmosphere : Node3D
     /// <summary>The haze's light while the moon is the light (D182): moonlight is ~6× weaker than daylight but the night
     /// exposure barely brightens, so its shafts were there but invisible; the haze takes this much more of it (the
     /// ground keeps the plain moonlight). Like a film's moonlight: shafts readable, not realistic.</summary>
-    private float MoonRayBoost => MoonLit ? Dev("moonfog", 2) * (1 + Dev("moonforest", 2) * _forest) : 1; // (×6 made a blue wall with Tom's own ray settings; more under a canopy, where the shafts are narrow, D183)
+    // (×6 made a blue wall with Tom's own ray settings; more under a canopy, where the shafts are narrow, D183. D188: tuned
+    // at air load ~0.4; in denser air — after rain, Tom's dump 135336 at 0.79 — it glowed white round the moon, so the boost
+    // backs off as the air thickens, and the canopy adds ×1 instead of ×2.)
+    private float MoonRayBoost => MoonLit ? 1 + (Dev("moonfog", 2) * (1 + Dev("moonforest", 1) * _forest) - 1) * MoonDensityK : 1;
+    private float MoonDensityK => Mathf.Clamp(Dev("moonref", .4f) / Math.Max(_airLoad, .01f), .25f, 1);
     /// <summary>The same for the rays in open air (D182): ×3 lit the whole night valley like dusk, ×8 blew it out.</summary>
-    private float MoonAirBoost => MoonLit ? Dev("moonair", 1.5f) : 1;
+    private float MoonAirBoost => MoonLit ? 1 + (Dev("moonair", 1.5f) - 1) * MoonDensityK : 1;
     /// <summary>How high the main light stands: the moon's elevation while it is the light (D182), else the sun's.</summary>
     private float LightElevation => MoonLit ? _moonElevation : _sunElevation;
     public string MoonInfo => $"moon {(_moon?.LightEnergy ?? 0):0.000} visible {_moon?.Visible} · main light {Sun.LightEnergy:0.000} moonlit {MoonLit} · toward {Sun.GlobalTransform.Basis.Z.Normalized()} · fog energy {Sun.LightVolumetricFogEnergy:0.00} density {Environment.VolumetricFogDensity:0.0000} forest {_forest:0.00} canopy {Canopy:0.00} exposure {Environment.TonemapExposure:0.00} vol fog {Environment.VolumetricFogEnabled}";

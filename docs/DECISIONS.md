@@ -2839,6 +2839,14 @@ Tom: "softer mackerel at night, visible cirrus, then the middle grey sheet befor
   mood) both barely show and the sheet read as a pale glare (first try, then made grey). Known: near the horizon the
   sheet's texture stretches into fine horizontal stripes. Look choices are Tom's.
 
+## D188 — Moonlight glowed white in damp air (2026-10-25)
+Tom (build 98, dump 135336, taiga at 00:54 after rain, Moonlight draft on, Rays strength 2.45): "way too bright, the glow
+shouldn't be like that". Air load 0.79 (wet ground + damp night): the moon's haze boost of D183 (×2, ×6 under a full
+canopy) was tuned at ~0.4 and doubled up in denser haze — a white glow round the moon (fog light energy 6.4; the build-94
+moonlight 1.0). **Fix**: the moon boosts back off as the air thickens (× 0.4 / air load, 0.25–1, `moonref`) and the canopy
+adds ×1, not ×2. His dump: energy 3.1, the moon and clouds visible through a soft glow; the test forest's shafts subtler
+than D183, still there (`artifacts/moon-glow-fix.jpg`). Lesson: tune look effects at the weather extremes too.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
