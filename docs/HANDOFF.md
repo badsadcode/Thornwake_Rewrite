@@ -10,7 +10,7 @@ Written for the next conversation (the previous one ran out of context). Everyth
   (`98ec6a9`): draft *Cloud bases → shaped* (D203, off by default). Note: Tom's settings file has `fx.wind_wisps=1`
   (plain swooshes, written by a capture while that was the default) — the strands need option 2. Builds 76–103 in the previous session:
   Atmosphere 2.0 M2 (rays) and M3 (clouds), moonlight, Living air, colour grading, many fixes. Decisions D143–D202 in
-  `docs/DECISIONS.md` (next: **D220**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
+  `docs/DECISIONS.md` (next: **D221**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
 * **Tom's settings were reset to a clean baseline** (D200, D201; `tools/settings_baseline.py`; backup
   `%APPDATA%/Thornwake/rewrite_settings.before-baseline-20261025.cfg`). Since then he chose Colour grading *Fantasy* and
   Rays strength 2.5 himself. Earlier his "hazy, bland, constantly in fog" look came from Wind strength 3.9 (a 20 m/s gale

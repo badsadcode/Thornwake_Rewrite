@@ -3266,6 +3266,20 @@ and dispersing the light a little". `LensDrops.gdshader`:
   dispersion and rim fringe — a visible glassy line with darker edges, colour where it crosses detail.
 Capture (`artifacts/lens-trail-smooth.jpg`): wavy trails as soft glassy lines over the sky.
 
+## D220 — Lens drops tuned: readable beads, drops that gather then run (2026-10-25)
+Tom: "tune the lens drops more first". Over a busy forest (burst captures at the forest and grassland spots, downpour)
+the drops melted into the picture and the runners crawled evenly from above the top for 4–12 s. `LensDrops.gdshader`:
+* **readable**: beads 0.16–0.38 of their cell (were 0.12–0.32), the picture through them sharper (mip 0.5) and from a
+  wider angle; a thin dark outline at the rim and a small highlight up-left; edge light only toward the rim (at the
+  centre the direction is undefined and drew a pinched cross); fewer beads (rates ×0.6 — they read as soap bubbles);
+* **dispersion softer**: the split 0.05–0.15 (was 0.12–0.34; runners showed harsh red/green bands), the rim fringe
+  halved;
+* **runners gather, then run**: each first sits as a bead somewhere in the upper half of the lens, growing as it gathers
+  water (30–55 % of its cycle), then breaks loose and runs down, speeding up (travel ∝ t^1.3), cycles of 3.5–7 s:
+  a drop crosses the screen in ~2–5 s; the trail starts where it gathered, a little wider (0.2 of the drop) and a
+  stronger sideways lens (×3.2).
+Captures: `artifacts/lens-drops-bead.jpg`, `artifacts/lens-drops-runner.jpg`. Still off by default (Lens drops).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

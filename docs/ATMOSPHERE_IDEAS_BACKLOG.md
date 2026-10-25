@@ -29,6 +29,10 @@ a switchable draft when it is picked up. Source notes: `DOCS/Thornwake_Visual At
   camera lens — not too big"): an optional screen effect in heavy rain, small drops that bead, slide and fade; more
   when facing into the wind, none under shelter. A player setting (off by default). Not in Noor's Weather 2.0 notes;
   after them.
+* **Raindrops on water by the kind of water** (Tom, 2026-10-25: "we need to add water drops on water, depending on the
+  type of water — river, lake or ocean — left for later when we rework the water shaders"): rings and crowns on calm
+  lakes and ponds, rings carried and stretched by a river's current, fine noise and few rings on the sea's swell
+  (Noor's notes §7). With the water shader rework, not before.
 * Weather 2.0 (Tom and Noor, `docs/Thornwake_Weather_2_0_Suggestions.md`): done — rain by strength, slanted by the
   wind, splashes, a test tab (D206–D209), rain light and veil (D210). Next: shelter, wetness over time by material,
   dripping trees, splash kinds by surface, sound layers.

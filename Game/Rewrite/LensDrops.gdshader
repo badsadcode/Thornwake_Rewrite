@@ -34,7 +34,7 @@ vec4 lens(vec2 q, vec2 centre, float r, float stretch) {
 	if (body <= 0.0) return vec4(0.0, 0.0, 0.0, 9.0);
 	// (spherical cap: the picture from across the centre, pulled harder toward the rim)
 	vec2 n = d / r;
-	return vec4(-n * r * (1.6 + 1.2 * dist * dist), body, dist);
+	return vec4(-n * r * (2.2 + 1.6 * dist * dist), body, dist);
 }
 
 vec4 pick(vec4 a, vec4 b) { return a.z >= b.z ? a : b; }
@@ -63,50 +63,51 @@ vec4 beads(vec2 q, float cell, float seed, float rate) {
 	float cycle = floor(t), k = fract(t);
 	if (hash(c + seed + cycle * 1.37) > rate) return vec4(0.0, 0.0, 0.0, 9.0);
 	vec2 centre = vec2(0.2 + 0.6 * hash(c + seed + cycle + 2.3), 0.2 + 0.6 * hash(c + seed + cycle + 7.7)) * cell;
-	float r = cell * (0.12 + 0.2 * hash(c + seed + cycle + 1.9)) * size * (1.0 - 0.7 * k) * step(0.02, k);
+	float r = cell * (0.16 + 0.22 * hash(c + seed + cycle + 1.9)) * size * (1.0 - 0.7 * k) * step(0.02, k);
 	return lens(f * cell, centre, max(r, 1e-4), 1.0);
 }
 
 // One runner of lane column `col`, run `cycle` (the current one or the one before, whose trail may still be drying).
-// Returns the drop or its trail beads (lens) and, in `smear`, the wet trail's strength at q.
+// Returns the drop or its trail (lens) and, in `smear`, the wet trail's strength at q.
+// (D220: a runner first sits as a bead somewhere in the upper part of the lens, growing as it gathers water, then breaks
+// loose and runs down, speeding up — the first version crawled evenly from above the top over 4–12 s)
 vec4 runner(vec2 q, float lane, float col, float cycle, float progress, float period, float seed, float rate, out float smear) {
 	smear = 0.0;
 	if (hash1(col * 3.7 + cycle * 1.9 + seed) > rate) return vec4(0.0, 0.0, 0.0, 9.0);
 	float h = hash1(col * 7.1 + cycle + seed);
-	float spd = 0.9 + 0.5 * h;
-	// stick-slip: the run pauses and slips (a ripple on the progress)
-	float run = progress * spd;
-	float y = -0.15 + 1.35 * (run + 0.011 * sin(run * 90.0 + h * 6.0));
+	float wait = 0.3 + 0.25 * hash1(col + cycle * 2.3 + seed); // the share of the cycle spent gathering
+	float y0 = 0.05 + 0.45 * hash1(col * 5.3 + cycle + seed);  // where it gathers (screen heights from the top)
+	float len = 1.25 - y0;                                      // to below the bottom
+	float run = clamp((progress - wait) / (1.0 - wait), 0.0, 1.0);
+	// accelerating, with small stick-slip pauses on the way
+	float travel = pow(run, 1.3); // (gentler: at 1.7 most of the run happened in its last moments, gone in ~0.5 s)
+	float y = y0 + len * (travel + 0.008 * sin(travel * 70.0 + h * 6.0) * step(0.001, run));
 	float cx = (col + 0.5) * lane;
-	// the path wanders sideways with the height (fixed in place: the trail follows the path)
-	float wander = lane * 0.28 * (sin(q.y * 9.0 + h * 6.3) * 0.6 + sin(q.y * 23.0 + h * 2.1) * 0.4);
-	float wanderAt = lane * 0.28 * (sin(y * 9.0 + h * 6.3) * 0.6 + sin(y * 23.0 + h * 2.1) * 0.4);
-	float r = lane * (0.16 + 0.06 * h) * size;
-	vec4 drop = tear(q, vec2(cx + wanderAt, y), r);
+	float wander = lane * 0.26 * (sin(q.y * 9.0 + h * 6.3) * 0.6 + sin(q.y * 23.0 + h * 2.1) * 0.4);
+	float wanderAt = lane * 0.26 * (sin(y * 9.0 + h * 6.3) * 0.6 + sin(y * 23.0 + h * 2.1) * 0.4);
+	float r = lane * (0.15 + 0.1 * h) * size * mix(0.55, 1.0, smoothstep(0.0, wait, progress)) * step(0.02, progress);
+	vec4 drop = run > 0.0 ? tear(q, vec2(cx + wanderAt, y), r) : lens(q, vec2(cx + wanderAt, y), max(r, 1e-4), 1.0);
 	// how long ago the drop passed this height (s): the trail dries over trail_fade
-	float pq = ((q.y + 0.15) / 1.35) / spd;
+	float tq = pow(clamp((q.y - y0) / len, 0.0, 1.0), 1.0 / 1.3);
+	float pq = wait + tq * (1.0 - wait);
 	float age = (progress - pq) * period;
-	// (D219, Tom: the trail "thinner and not cut off … smoother, the transition between the trail and the drop"): a thin
-	// trail with soft edges (a gaussian across), widening only in the drop's neck, narrowing as it dries; it fades in
-	// from inside the drop's tail instead of starting at a hard line
 	float behind = y - q.y;
-	float fresh = smoothstep(-r * 0.5, r * 1.5, behind) * smoothstep(-0.02, 0.0, age) * (1.0 - smoothstep(0.0, trail_fade, age));
+	float fresh = smoothstep(-r * 0.5, r * 1.5, behind) * step(y0, q.y) * smoothstep(-0.02, 0.0, age) * (1.0 - smoothstep(0.0, trail_fade, age));
 	float neck = 1.0 - smoothstep(r * 1.5, r * 3.5, behind);
-	float tw = r * mix(0.14, 0.32, neck) * (0.55 + 0.45 * fresh);
+	float tw = max(r, 1e-4) * mix(0.2, 0.36, neck) * (0.6 + 0.4 * fresh);
 	float dx = q.x - (cx + wander);
 	float onPath = exp(-dx * dx / (tw * tw));
 	smear = fresh * onPath * 0.5;
-	// (D219, Tom: "the trail … should also be refracting and dispersing the light a little"): the wet line is a thin
-	// cylindrical lens — the picture from across it, flipped sideways, with the colour split at its edges
-	vec4 line = vec4(-dx * 2.2, 0.0, fresh * onPath * 0.9, abs(dx) / (tw * 1.6));
+	// (the trail a thin cylindrical lens: the picture from across it, flipped sideways, dispersed at its edges)
+	// (stronger bend than at first: over grass the trail barely showed)
+	vec4 line = vec4(-dx * 3.2, 0.0, fresh * onPath, abs(dx) / (tw * 1.6));
 	vec4 trail = vec4(0.0, 0.0, 0.0, 9.0);
-	float bcell = r * 1.1;
+	float bcell = max(r, 1e-3) * 1.1;
 	float bi = floor(q.y / bcell);
 	if (fresh > 0.0 && neck < 1.0 && hash1(bi + col * 13.0 + cycle) < 0.45) {
-		// (tiny beads left behind; they shrink as they dry)
 		float br = r * (0.12 + 0.14 * hash1(bi * 3.1 + col + cycle)) * (0.35 + 0.65 * fresh) * (1.0 - neck);
 		vec2 bc = vec2(cx + wander + (hash1(bi + 5.0 + cycle) - 0.5) * r * 0.3, (bi + 0.5) * bcell);
-		trail = lens(q, bc, br, 1.0);
+		trail = lens(q, bc, max(br, 1e-4), 1.0);
 	}
 	return pick(pick(drop, line), trail);
 }
@@ -114,7 +115,7 @@ vec4 runner(vec2 q, float lane, float col, float cycle, float progress, float pe
 // Runner lanes `lane` screen heights wide; each lane runs a drop now and then. smear: the wet trails at q.
 vec4 runners(vec2 q, float lane, float seed, float rate, out float smear) {
 	float col = floor(q.x / lane);
-	float period = 5.0 + 6.0 * hash1(col + seed);
+	float period = 3.5 + 3.5 * hash1(col + seed); // (runs of ~1.5–4 s once loose)
 	float t = clock / period + hash1(col + seed + 3.3) * 5.0;
 	float cycle = floor(t), p = fract(t);
 	float s1, s2;
@@ -138,7 +139,7 @@ void fragment() {
 	vec4 run = pick(runners(q, 0.09, 1.7, amount * 0.55, w1), runners(q + vec2(0.045, 0.0), 0.13, 8.3, amount * 0.35, w2));
 	float smear = max(w1, w2);
 	float wiped = clamp(smear * 1.8, 0.0, 1.0); // (a runner's path is wiped of beads)
-	vec4 bead = pick(beads(q, 0.035, 2.9, amount * 0.45 * (1.0 - wiped)), beads(q + vec2(0.017, 0.011), 0.022, 6.1, amount * 0.35 * (1.0 - wiped)));
+	vec4 bead = pick(beads(q, 0.035, 2.9, amount * 0.28 * (1.0 - wiped)), beads(q + vec2(0.017, 0.011), 0.022, 6.1, amount * 0.2 * (1.0 - wiped)));
 	vec4 l = pick(run, bead);
 	if (l.z <= 0.002 && smear <= 0.002) discard;
 	vec3 here = textureLod(screen_tex, uv, 0.0).rgb;
@@ -147,18 +148,25 @@ void fragment() {
 	vec2 off = l.xy / vec2(aspect, 1.0);
 	// dispersion: each colour refracted by its own amount (red least, blue most), the split growing toward the rim
 	vec2 ca = vec2(0.001), cb = vec2(0.999);
-	float split = 0.12 + 0.22 * smoothstep(0.3, 1.0, l.w);
+	float split = 0.05 + 0.1 * smoothstep(0.4, 1.0, l.w); // (D220: softer — the runners showed harsh red/green bands)
 	vec3 behindDrop = vec3(
-		textureLod(screen_tex, clamp(uv + off * (1.0 - split), ca, cb), 1.0).r,
-		textureLod(screen_tex, clamp(uv + off, ca, cb), 1.0).g,
-		textureLod(screen_tex, clamp(uv + off * (1.0 + split), ca, cb), 1.0).b);
+		textureLod(screen_tex, clamp(uv + off * (1.0 - split), ca, cb), 0.5).r,
+		textureLod(screen_tex, clamp(uv + off, ca, cb), 0.5).g,
+		textureLod(screen_tex, clamp(uv + off * (1.0 + split), ca, cb), 0.5).b);
 	// lit on the upper edge (light from above), darker toward the lower rim; a faint spectral fringe at the rim
 	vec2 nrm = normalize(-l.xy + vec2(1e-5));
 	float rim = smoothstep(0.55, 0.92, l.w) * (1.0 - smoothstep(0.92, 1.0, l.w));
-	float topEdge = smoothstep(0.4, 1.0, -nrm.y) * 0.08;
-	float lowEdge = smoothstep(0.4, 1.0, nrm.y) * 0.18;
-	vec3 fringe = spectrum(fract(atan(nrm.y, nrm.x) / 6.2832 + 0.15)) * rim * 0.09 * (0.6 + 0.4 * dot(here, vec3(0.33)));
-	vec3 drop = behindDrop * (1.0 - lowEdge) + vec3(topEdge) + fringe;
+	// (edge light only toward the rim: at the centre the direction is undefined and drew a pinched cross)
+	float edgeK = smoothstep(0.35, 0.9, l.w);
+	float topEdge = smoothstep(0.4, 1.0, -nrm.y) * 0.08 * edgeK;
+	float lowEdge = smoothstep(0.4, 1.0, nrm.y) * 0.18 * edgeK;
+	vec3 fringe = spectrum(fract(atan(nrm.y, nrm.x) / 6.2832 + 0.15)) * rim * 0.045 * (0.6 + 0.4 * dot(here, vec3(0.33)));
+	// (D220: a thin dark outline — light bent away at the rim — and a small bright highlight up-left: over a busy
+	// forest the drops had melted into the picture)
+	float outline = smoothstep(0.78, 0.96, l.w) * (1.0 - smoothstep(0.96, 1.0, l.w)) * 0.35;
+	vec2 hp = -l.xy / max(length(l.xy), 1e-5) * min(l.w, 1.0); // (where on the drop, -1..1, from its offset)
+	float spec = smoothstep(0.22, 0.0, length(hp - vec2(-0.38, -0.42))) * 0.5 * step(l.w, 0.9);
+	vec3 drop = behindDrop * (1.0 - lowEdge) * (1.0 - outline) + vec3(topEdge + spec) + fringe;
 	ALBEDO = mix(smeared, drop, l.z);
 	ALPHA = 1.0;
 }
