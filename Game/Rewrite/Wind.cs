@@ -33,9 +33,14 @@ public sealed class Wind
         Gust = (float)Math.Clamp(.5 + .5 * Noise.Value(_time / 4, 11, seed + 4) + .3 * Noise.Value(_time / 1.3, 13, seed + 5), 0, 1);
         Speed = (float)(Math.Max(.5, baseSpeed) * (0.85 + .35 * Gust) * GameSettings.CloudSpeed.Value);
         SteadySpeed = (float)(Math.Max(.5, baseSpeed) * GameSettings.CloudSpeed.Value);
+        Forced();
         RenderingServer.GlobalShaderParameterSet("wind_field", Vector4.Zero); // classic sway
         RenderingServer.GlobalShaderParameterSet("wind", new Vector4(Direction.X, Math.Min(2.5f, Speed / 8), Direction.Y, Gust));
     }
+
+    /// <summary>Tests only (<c>--wind=m/s</c>, D190): the wind's speed fixed for captures (gusts still vary). Never a setting.</summary>
+    public static float? ForceSpeed { get; set; }
+    private void Forced() { if (ForceSpeed is { } f) { SteadySpeed = f; Speed = f * (.85f + .35f * Gust); } }
 
     /// <summary>The speed without gusts (m/s): what builds the sea and bends the plants.</summary>
     public float SteadySpeed { get; private set; } = 6;
@@ -59,6 +64,7 @@ public sealed class Wind
         // (not scaled by the Cloud speed setting: that speeds the clouds up; a Cloud speed of 4 made 63 m/s gales here)
         SteadySpeed = steady;
         Speed = SteadySpeed * (0.85f + (.35f + .25f * storm) * Gust);
+        Forced();
         RenderingServer.GlobalShaderParameterSet("wind", new Vector4(Direction.X, Math.Min(2.5f, SteadySpeed / 8), Direction.Y, Gust));
         // Plants (WindSway.gdshaderinc): gusts carried downwind at ~70 % of the wind speed, gustier in storms.
         _gustTravel = (_gustTravel + realSeconds * SteadySpeed * .7) % 100000;

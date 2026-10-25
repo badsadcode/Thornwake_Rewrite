@@ -259,6 +259,11 @@ public static class GameSettings
         options: new[] { "build 89 (fast waves)", "steady" }));
     public static readonly Setting RayStrength = Add(new("fx.ray_strength", "Lighting and effects", "Rays strength", .5, 2.5, .05, 1,
         "How bright the shafts are, for the forest rays (A, A2) and the rays in open air. 1 = build 82.", "×"));
+    public static readonly Setting AmbientLife = Add(new("fx.ambient_life", "Lighting and effects", "Living air", 0, 2, 1, 0,
+        "Draft (D190). Small effects around you: faint wind trails gliding along the wind when it blows, and the biome's own " +
+        "particles — dust in deserts and badlands, ash in volcanic land, blown snow in the cold, leaves in forests in gusts, " +
+        "pollen, spores over swamps. Cheap and only near you. Off: build 98.",
+        options: new[] { "off (build 98)", "subtle (draft)", "more (draft)" }));
     public static readonly Setting MoonRays = Add(new("fx.moon_rays", "Lighting and effects", "Moonlight", 0, 1, 1, 0,
         "Draft (D182). Rays and shadows: at night the moon casts shadows like the sun — trees and mountains shade the " +
         "moonlit ground, and the forest rays and rays in open air come from the moon. Build 94: soft moonlight without " +

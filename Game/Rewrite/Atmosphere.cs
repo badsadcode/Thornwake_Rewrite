@@ -147,6 +147,8 @@ public partial class Atmosphere : Node3D
     private double _wavesState = -1, _wavesAngle = Math.Atan2(.6, .8);
     /// <summary>The simulated wind (direction, speed, gusts).</summary>
     public Wind Wind { get; } = new();
+    /// <summary>Wind wisps and biome motes around the camera (D190).</summary>
+    public AmbientLife? Life { get; private set; }
     private float _wetness, _puddles; // cosmetic rain wetness of the ground and puddles (0..1)
     private ShaderMaterial? _water;
     private ImageTexture? _foamNet;
@@ -281,6 +283,9 @@ public partial class Atmosphere : Node3D
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         camera.AddChild(_rainParticles);
+        // Living air (D190): wind wisps and biome motes around the camera.
+        Life = new AmbientLife();
+        camera.AddChild(Life);
         // Raindrop splashes on water (simulated weather): placed at the water surface near the camera each frame.
         _splashMaterial = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/RainSplash.gdshader") };
         _splashes = new GpuParticles3D
@@ -640,6 +645,7 @@ public partial class Atmosphere : Node3D
         // Warmer light at a low sun (AtmosphereLight: build 47's single warm factor, or the colour curve by phase).
         Sun.LightColor = light.SunColor;
         UpdateMoonRays(sunDir);
+        Life?.Tick(delta, Wind.Direction, Wind.Speed, Wind.Gust, _daylight, Mathf.Clamp(Precip, 0, 1), Canopy);
         var toSun = Sun.GlobalTransform.Basis.Z.Normalized(); // a directional light shines along -Z
 
         if (_steer is { } steer)

@@ -2854,6 +2854,20 @@ there is more of it and its streaks lined up as regular parallel bands; now it c
 wisps of varied width (`artifacts/cirrus-patches.jpg`: fair-weather cirrus as natural wisps; with a front the bands are
 weaker). Left: faint streaks low in the sky with a front coming, probably the mackerel rows that come with it.
 
+## D190 — Living air: wind wisps and biome particles (draft) (2026-10-25)
+Tom: "when there's wind, some kind of trails of wind in the direction around the player, not too often … flying
+particles, small and cheap … depending on the biome, dust in the desert or badlands"; Noor's ideas and her reference image
+(curving translucent ribbons, leaves carried by the wind). New `AmbientLife` (camera child, two GPU particle systems,
+client-side, nothing synced) and setting **Living air** (`fx.ambient_life`): off (default, build 98) / subtle / more.
+* **Wind wisps**: up to 14 ribbon trails (RibbonTrailMesh cross, 0.9 s trail) gliding along the wind at its speed, bent by a
+  slow broad turbulence; from ~4 m/s, more in gusts, almost none in rain or under a canopy; faint, lit by the daylight.
+* **Biome motes** (profiles by biome id): dust (desert, badlands, needle rocks, savanna; needs wind), ash (volcanic, also
+  at night), blown snow (arctic, tundra, alpine), spores and midges (swamps), pollen (grassland, jungle, taiga), leaves
+  (temperate and ancient forests, in gusts; a leaf-shaped texture, 22 cm). Fewer in rain; most only by day.
+* Test flag `--wind=m/s` (fixed speed for captures). First try: motes 4–5 cm (sub-pixel) and the streaks upright
+  (billboards ignore the velocity) — fixed with bigger motes and trails. Stills show little (`artifacts/living-air-draft.jpg`):
+  the effects are motion; to judge in play. Not yet: dust devils, embers, insects (the backlog).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
