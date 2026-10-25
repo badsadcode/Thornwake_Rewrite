@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 97** (overcast marble fixed D185, darker rainy nights D186) | `c90cde0` | Thornwake-Rewrite-Preview-97 (v0.9.97) | Versions must match to connect; fixes, not switchable; build 96 = `b4b624c` (has the overcast marble) |
 | **Build 96** (moon shafts tuned D183, cloud grain with SMAA D184) | `b4b624c` | Thornwake-Rewrite-Preview-96 (v0.9.96) | Versions must match to connect; Cloud grain without TAA → build 95 = old march; build 95 = `c927386` |
 | **Build 95** (ground stripes D180, 4 km strips D181, moonlight with shadows and rays — draft D182) | `c927386` | Thornwake-Rewrite-Preview-95 (v0.9.95) | Versions must match to connect; ground fixes not switchable, Moonlight → build 94 = no moon shadows; build 94 = `2c512d5` |
 | **Build 94** (no jump at the cloud base, wavy cloud-sea holes D179) | `2c512d5` | Thornwake-Rewrite-Preview-94 (v0.9.94) | Versions must match to connect; fixes inside drafts (one pass, broken sea); build 93 = `b3862f7` |
