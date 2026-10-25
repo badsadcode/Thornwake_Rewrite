@@ -78,6 +78,24 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 105 — wind wisps with strands, a weather test tab, rain by strength
+**Host and everyone joining need build 105** (versions must match to connect).
+* **Wind wisps** (Lighting and effects → Wind wisps, with Living air): no more straight scratch lines. **Swooshes with
+  strands** (default): short soft strokes that draw themselves along the wind and fade, some ending in a curl, with a
+  faint haze and fine bright strands braided through it (your reference). *Swooshes* = the same without strands;
+  *build 104* = the old trails.
+* **Esc → Weather test** (nothing is saved; switch a test off to get the weather back; works with the weather off too):
+  * Rain here: strength 0–1, or the buttons Drizzle / Light / Moderate / Heavy / Downpour.
+  * Wind: speed (0–30 m/s) and where it blows from.
+  * Lightning: a strike ahead at 150 m … 20 km, or a test storm striking all around you every few seconds (thunder
+    comes at the speed of sound: seconds × 343 m).
+* **Rain look → by strength** (Settings → Simulation, default): the drops lean with the wind (sideways rain in a gale);
+  drizzle is fine, short and slow, a downpour long, heavy and fast; from moderate rain on, drops splash on the ground,
+  rocks, logs and roofs around you. With TAA the old rain was nearly invisible — now it shows. *Build 104* = the old rain.
+* Worth trying: Weather test → Downpour, then Wind 15 m/s and turn around; then Drizzle; then the test storm at dusk.
+* Launcher "Go to - rain test spot (Weather test), 13-00.cmd": the grassland in a 10 m/s wind with a downpour (change
+  it in Esc → Weather test).
+
 ## New in build 104 — cloud bottoms with shape (draft)
 **Host and everyone joining need build 104** (versions must match to connect).
 * **Sky → Cloud bases → shaped (draft)** — your note that the bottoms of the clouds look flat. Off by default, so the sky
