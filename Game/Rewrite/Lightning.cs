@@ -379,6 +379,9 @@ void fragment() {
         _ambience = player.GetStreamPlayback() as AudioStreamGeneratorPlayback;
     }
 
+    /// <summary>0 in the open … 1 under cover (Atmosphere.Sheltered, D211): the rain's hiss and ticks drop, a dull patter stays.</summary>
+    public float Shelter { get; set; }
+
     private void StepAmbience(float precipitation, bool snowing, float windSpeed, float gust)
     {
         if (_ambience == null) return;
@@ -391,6 +394,8 @@ void fragment() {
         // noise; soft tones low-pass it (a gentler patter) and quieten the hiss and the drops.
         double tone = GameSettings.RainTone.F;
         double hissCut = .12 + .88 * tone, hissGain = .35 * (.55 + .45 * tone), dropGain = .25 * (.5 + .5 * tone);
+        // (under cover: the open hiss and single drops mostly gone, the deeper roar from outside kept)
+        hissCut *= 1 - .7 * Shelter; hissGain *= 1 - .6 * Shelter; dropGain *= 1 - .7 * Shelter;
         var buffer = new Vector2[frames];
         for (int i = 0; i < frames; i++)
         {

@@ -865,6 +865,7 @@ public partial class WorldLab : Node3D
                 _lightning = new Lightning { GroundAt = (x, z) => _sampler?.Height(x, z, 32) ?? 0 };
                 AddChild(_lightning);
             }
+            _lightning.Shelter = _atmosphere.Sheltered;
             _lightning.Step(delta, sky.Day * 24 + sky.Hour, _atmosphere.Cells, false, _atmosphere.Snowing, cam, _originX, _originZ,
                 _atmosphere.Precipitation, _atmosphere.Wind.Speed, _atmosphere.Wind.Gust);
         }
@@ -1209,13 +1210,26 @@ public partial class WorldLab : Node3D
         _atmosphere.SetBiomeMood(Mood(biomes.Pool[ba]) * (float)share + Mood(biomes.Pool[bb]) * (float)(1 - share));
         _atmosphere.Life?.SetBiome(biomes.Pool[ba].Def.Id, (float)share);
         if (_atmosphere.Life is { GroundY: null } life) life.GroundY = (x, z) => (float)_sampler.Height(x + _originX, z + _originZ);
-        // Rain splashes (D207): the first surface straight down — terrain, rocks, logs, objects, roofs — else the terrain.
+        // Rain splashes (D207) and shelter (D211): the first surface straight down that rain lands on — terrain, rocks, built
+        // pieces, roofs — else the terrain. Trunks, logs and bushes (cylinders, capsules) are passed through: on a trunk a
+        // splash stood in the air on its collider's top, and in the cover map each trunk left a dry column in the rain.
         _atmosphere.SurfaceY ??= (x, z) =>
         {
+            var space = _player.GetWorld3D().DirectSpaceState;
             var from = new Vector3(x, _camera.GlobalPosition.Y + 40, z);
-            var q = PhysicsRayQueryParameters3D.Create(from, from + Vector3.Down * 120, 1, new Godot.Collections.Array<Rid> { _player.GetRid() });
-            var hit = _player.GetWorld3D().DirectSpaceState.IntersectRay(q);
-            return hit.Count > 0 ? ((Vector3)hit["position"]).Y : (float)(_sampler?.Height(x + _originX, z + _originZ) ?? from.Y - 40);
+            float bottom = from.Y - 120;
+            var exclude = new Godot.Collections.Array<Rid> { _player.GetRid() };
+            for (int i = 0; i < 6; i++)
+            {
+                var hit = space.IntersectRay(PhysicsRayQueryParameters3D.Create(from, new Vector3(x, bottom, z), 1, exclude));
+                if (hit.Count == 0) break;
+                var y = ((Vector3)hit["position"]).Y;
+                var owner = hit["collider"].As<CollisionObject3D>();
+                var shape = owner?.ShapeOwnerGetOwner(owner.ShapeFindOwner(hit["shape"].AsInt32())) as CollisionShape3D;
+                if (shape?.Shape is not (CylinderShape3D or CapsuleShape3D)) return y;
+                from = new Vector3(x, y - .05f, z);
+            }
+            return (float)(_sampler?.Height(x + _originX, z + _originZ) ?? from.Y - 40);
         };
         LightProfiles.SetTarget(LightProfiles.For(biomes.Pool[ba].Def.Id), LightProfiles.For(biomes.Pool[bb].Def.Id), (float)share);
         static float MistOf(ResolvedBiome b) => (float)Math.Clamp(b.Def.Atmosphere.Mist + .5 * b.Def.Atmosphere.Fog, 0, 1);

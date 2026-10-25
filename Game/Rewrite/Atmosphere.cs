@@ -54,6 +54,21 @@ public partial class Atmosphere : Node3D
     private int _splashPointNext;
     private readonly Random _splashRandom = new(77);
     private const int SplashPointCount = 1024;
+    // Shelter (D211): the cover map — the first surface rain lands on, 1 m cells over 40 m around the camera, held
+    // toroidally (cell x, z mod 40) with the cell it holds; 100 cells refreshed a frame (all within ~16 frames).
+    private const int CoverN = 40;
+    private Image? _coverImage;
+    private ImageTexture? _coverTex;
+    private int _coverNext;
+    private (int, int)[]? _coverOrder;
+    private int? _coverInner;
+    private int _coverFar;
+    private readonly float[] _coverData = new float[CoverN * CoverN * 4];
+    private readonly byte[] _coverBytes = new byte[CoverN * CoverN * 16];
+    private readonly int[] _coverX = new int[CoverN * CoverN], _coverZ = new int[CoverN * CoverN];
+    private readonly bool[] _coverOk = new bool[CoverN * CoverN];
+    /// <summary>0 in the open … 1 under cover at the camera (eased): the rain sound muffles (Lightning.Shelter).</summary>
+    public float Sheltered { get; private set; }
     private int _particlesLook = -1;
     /// <summary>The first surface straight down at a scene x, z (WorldLab: terrain, rocks, objects, buildings), for splashes.</summary>
     public Func<float, float, float>? SurfaceY { get; set; }
@@ -960,25 +975,116 @@ public partial class Atmosphere : Node3D
         // (wide and opaque enough to survive TAA, which smeared build 104's 1 cm, 20 % streaks to almost nothing)
         _rainStreakMat.SetShaderParameter("width", Mathf.Lerp(.008f, .022f, k));
         _rainStreakMat.SetShaderParameter("tint", new Color(.82f * l, .86f * l, .92f * l, Mathf.Lerp(.28f, .55f, k)));
+        UpdateCover(camera, dir);
         bool splash = p > .3f && _groundSplashes != null && SurfaceY != null;
         if (_groundSplashes == null) return;
         _groundSplashes.Emitting = splash;
         if (!splash) { _splashPointNext = 0; return; }
-        // Splash points: 2–16 m around the camera (even over the area), on the first surface below; 96 of the 1,024 moved per
-        // frame (all within ~0.2 s), the first time all at once. A splash every ~0.6 s per point in a downpour.
+        // Splash points: 2–16 m around the camera (even over the area), on the surface rain lands on (the cover map, D211:
+        // no rays of their own); 96 of the 1,024 moved per frame (all within ~0.2 s), the first time all at once. A splash
+        // every ~0.6 s per point in a downpour.
         int n = _splashPointNext == 0 ? SplashPointCount : 96;
         for (int i = 0; i < n; i++)
         {
             int at = _splashPointNext++ % SplashPointCount;
             double r = Math.Sqrt(4 + _splashRandom.NextDouble() * (16 * 16 - 4)), a = _splashRandom.NextDouble() * Math.Tau;
             float x = camera.X + (float)(Math.Cos(a) * r), z = camera.Z + (float)(Math.Sin(a) * r);
-            _splashPointsImage!.SetPixel(at, 0, new Color(x, SurfaceY!(x, z) + .01f, z));
+            float y = SurfaceAt(x, z);
+            if (!float.IsNaN(y)) _splashPointsImage!.SetPixel(at, 0, new Color(x, y + .01f, z));
         }
         if (_splashPointNext >= SplashPointCount * 1000) _splashPointNext = SplashPointCount;
         _splashPoints!.Update(_splashPointsImage);
         _groundSplashes.AmountRatio = Mathf.Clamp(Mathf.SmoothStep(.3f, 1f, p) * Math.Clamp(GameSettings.RainStrength.F / 1.6f, .3f, 1), .05f, 1);
         if (_groundSplashes.DrawPass1 is QuadMesh { Material: ShaderMaterial sm })
             sm.SetShaderParameter("tint", new Color(.8f * l, .84f * l, .88f * l));
+    }
+
+    /// <summary>
+    /// The cover map (D211): each cell's first surface rain lands on, cast once when the cell comes into range (nearest
+    /// first, up to 40 a frame while moving) and refreshed in the background (new pieces, felled trees), near you first.
+    /// A first version cast 100 rays a frame and the splash points 96 more: ~3 ms of CPU a frame in a downpour.
+    /// Also feeds the splash points (<see cref="SurfaceAt"/>), the streaks' shelter test and <see cref="Sheltered"/>.
+    /// </summary>
+    private void UpdateCover(Vector3 camera, Vector3 dir)
+    {
+        bool on = GameSettings.RainShelter.Index == 1 && SurfaceY != null;
+        _rainStreakMat!.SetShaderParameter("cover_on", on ? 1 : 0);
+        if (SurfaceY == null) { Sheltered = 0; return; }
+        if (_coverOrder == null)
+        {
+            var order = new System.Collections.Generic.List<(int, int)>();
+            for (int dz = -CoverN / 2; dz < CoverN / 2; dz++)
+                for (int dx = -CoverN / 2; dx < CoverN / 2; dx++) order.Add((dx, dz));
+            _coverOrder = order.OrderBy(o => o.Item1 * o.Item1 + o.Item2 * o.Item2).ToArray();
+            _coverImage = Image.CreateEmpty(CoverN, CoverN, false, Image.Format.Rgbaf);
+            _coverTex = ImageTexture.CreateFromImage(_coverImage);
+        }
+        // (centred a little upwind, like the rain's volume)
+        int cx = Mathf.FloorToInt(camera.X - dir.X * 4), cz = Mathf.FloorToInt(camera.Z - dir.Z * 4);
+        bool changed = false;
+        int rays = 0;
+        foreach (var (dx, dz) in _coverOrder)
+        {
+            if (rays >= 40) break;
+            int wx = cx + dx, wz = cz + dz, t = CoverSlot(wx, wz);
+            if (_coverOk[t] && _coverX[t] == wx && _coverZ[t] == wz) continue;
+            CoverWrite(t, wx, wz); rays++; changed = true;
+        }
+        // (background: 8 a frame within ~8 m — all within ~0.4 s at 60 FPS, so a roof just built shelters at once; 2 a frame
+        // over the rest. With 6 a frame over all 1,600 a hut built beside you stayed rainy inside for seconds.)
+        int inner = _coverInner ??= _coverOrder.Count(o => o.Item1 * o.Item1 + o.Item2 * o.Item2 <= 64);
+        for (int k = 0; k < 10; k++)
+        {
+            var (dx, dz) = k < 8 ? _coverOrder[_coverNext++ % inner] : _coverOrder[_coverFar++ % _coverOrder.Length];
+            CoverWrite(CoverSlot(cx + dx, cz + dz), cx + dx, cz + dz); changed = true;
+        }
+        if (_coverNext >= inner * 1000) _coverNext = 0;
+        if (_coverFar >= _coverOrder.Length * 1000) _coverFar = 0;
+        if (changed)
+        {
+            Buffer.BlockCopy(_coverData, 0, _coverBytes, 0, _coverBytes.Length);
+            _coverImage!.SetData(CoverN, CoverN, false, Image.Format.Rgbaf, _coverBytes);
+            _coverTex!.Update(_coverImage);
+        }
+        _rainStreakMat.SetShaderParameter("cover_tex", _coverTex);
+        // Under cover at the camera: a surface over it, here or a step around (a roof's edge does not snap the sound).
+        int covered = 0;
+        for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+                if (CoverCell(Mathf.FloorToInt(camera.X) + dx, Mathf.FloorToInt(camera.Z) + dz) is var h && !float.IsNaN(h) && h > camera.Y + .3f) covered++;
+        Sheltered = on ? Mathf.MoveToward(Sheltered, covered / 9f, (float)GetProcessDeltaTime() * 2) : 0;
+    }
+
+    private static int CoverSlot(int wx, int wz) => ((wx % CoverN) + CoverN) % CoverN + (((wz % CoverN) + CoverN) % CoverN) * CoverN;
+
+    private void CoverWrite(int t, int wx, int wz)
+    {
+        float h = SurfaceY!(wx + .5f, wz + .5f);
+        _coverOk[t] = true; _coverX[t] = wx; _coverZ[t] = wz;
+        _coverData[t * 4] = h; _coverData[t * 4 + 1] = wx; _coverData[t * 4 + 2] = wz; _coverData[t * 4 + 3] = 1;
+    }
+
+    /// <summary>The cover map's height of cell (wx, wz), NaN if it does not hold that cell yet.</summary>
+    private float CoverCell(int wx, int wz)
+    {
+        int t = CoverSlot(wx, wz);
+        return _coverOk[t] && _coverX[t] == wx && _coverZ[t] == wz ? _coverData[t * 4] : float.NaN;
+    }
+
+    /// <summary>The surface rain lands on at a scene x, z from the cover map: smooth between the four nearest cell centres
+    /// where they agree (ground, a roof's slope), else the cell's own (a roof's edge); NaN where the map has no data yet.</summary>
+    private float SurfaceAt(float x, float z)
+    {
+        float own = CoverCell(Mathf.FloorToInt(x), Mathf.FloorToInt(z));
+        if (float.IsNaN(own)) return own;
+        float fx = x - .5f, fz = z - .5f;
+        int x0 = Mathf.FloorToInt(fx), z0 = Mathf.FloorToInt(fz);
+        float tx = fx - x0, tz = fz - z0;
+        float a = CoverCell(x0, z0), b = CoverCell(x0 + 1, z0), c = CoverCell(x0, z0 + 1), d = CoverCell(x0 + 1, z0 + 1);
+        if (float.IsNaN(a + b + c + d)) return own;
+        float lo = Math.Min(Math.Min(a, b), Math.Min(c, d)), hi = Math.Max(Math.Max(a, b), Math.Max(c, d));
+        if (hi - lo > .6f) return own;
+        return Mathf.Lerp(Mathf.Lerp(a, b, tx), Mathf.Lerp(c, d, tx), tz);
     }
 
     private void SetParticleKind(bool snow)

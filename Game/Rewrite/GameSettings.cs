@@ -540,6 +540,11 @@ public static class GameSettings
         "light, and as the rain grows a grey veil swallows the distance (a downpour leaves the near hills as shapes), colours " +
         "and contrast mute. Build 107: the light changes only from moderate rain on, the distance stays clear.",
         options: new[] { "build 107", "by strength (draft)" }));
+    public static readonly Setting RainShelter = Add(new("sim.rain_shelter", "Simulation", "Rain under cover", 0, 1, 1, 1,
+        "With Rain look by strength (D211). Stops: no rain falls under roofs, floors, rock overhangs and ledges (blown in " +
+        "under the windward edge in wind), drops splash on the roof instead, and the rain sounds muffled while you are under " +
+        "cover. Build 107: the rain falls through everything.",
+        options: new[] { "build 107 (falls through)", "stops under cover" }));
     public static readonly Setting RainLook = Add(new("sim.rain_look", "Simulation", "Rain look", 0, 1, 1, 1,
         "By strength (D207): each drop a streak along its fall, slanted by the wind; drizzle fine, short and slow, a downpour " +
         "long, heavy and fast; in heavy rain the drops splash on the ground, rocks, roofs and leaves around you. Build 104: " +

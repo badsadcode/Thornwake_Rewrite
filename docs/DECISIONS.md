@@ -3114,6 +3114,28 @@ contrasty, the hills 1–2 km away crisp (fog at most ×4: ~8 km of visibility).
 Captures (`artifacts/rain-light.jpg`): clear, drizzle, moderate, downpour. Lens drops (Tom's optional idea) are in the
 ideas backlog.
 
+## D211 — Shelter: no rain under roofs and overhangs (2026-10-25)
+Tom: "go on with shelter: no rain under roofs and overhangs" (Noor's Weather 2.0 notes §5). New setting **Rain under
+cover** (`sim.rain_shelter`, Simulation; default *stops under cover*; *build 107* = falls through), with Rain look by
+strength:
+* a **cover map** (`Atmosphere.UpdateCover`): the first surface rain lands on, 1 m cells over 40 m around the camera
+  (a little upwind), held toroidally with the cell each texel holds; each cell cast once when it comes into range
+  (nearest first, ≤ 40 a frame while moving), refreshed in the background 8 a frame within ~8 m (a roof just built
+  shelters within ~0.4 s at 60 FPS) and 2 a frame beyond;
+* `SurfaceY` (WorldLab) passes through trunks, logs and bushes (cylinders, capsules): roofs, floors, rocks and terrain
+  count; on a trunk's collider a splash had stood in the air, and each trunk would have left a dry column;
+* each **streak** checks its own path back up (rises 0, 1, 2.5, 5 m against its velocity): a surface above where it was
+  hides it — under a roof yes, blown in under the windward eave no, in the lee just outside a wall yes (rain shadow);
+* the **splashes** take their height from the cover map (smoothed between cells, a roof's edge kept sharp): no rays of
+  their own; they land on roofs, not under them;
+* the **rain sound** muffles under cover at the camera (hiss and single drops down, the deeper roar kept;
+  `Lightning.Shelter`), and forced rain (Weather test, `--rain-here`) now brings the rain sound with the weather off.
+Cost: the first version cast 100 cover rays and 96 splash rays a frame — ~3 ms of CPU in a downpour (the splash rays were
+already in builds 105–107); now ~0.2 ms standing, more for a moment while new cells fill as you move. Tested with the
+build test's hut in a downpour with wind (`artifacts/rain-shelter.jpg`): rain inside the closed hut before, none now.
+Not yet: canopies (trees let the rain through), the lean-to and campfire (their collision is an aiming box on the
+blueprint layer), rock overhangs seen only in principle (no test spot), sheltered ground staying dry.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
