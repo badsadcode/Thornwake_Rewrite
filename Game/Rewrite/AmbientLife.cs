@@ -23,6 +23,20 @@ public partial class AmbientLife : Node3D
     private bool _leafy;
     private string _biome = "";
     private float _amount;
+    private double _time;
+
+    /// <summary>
+    /// Leaves come in flurries (D191, Tom: "I don't want it to always be the same amount; sometimes they can not be showing
+    /// up, kind of random"): a smooth random value over ~20–60 s — about half the time no leaves at all, then a flurry that
+    /// builds and fades, strongest in gusts.
+    /// </summary>
+    private float Flurry(float gust)
+    {
+        double t = _time / 37;
+        double n = .5 + .35 * Math.Sin(t * 1.0 + 1.3) + .25 * Math.Sin(t * 2.31 + 4.1) + .15 * Math.Sin(t * 5.17 + .7);
+        float episode = Mathf.SmoothStep(.55f, .85f, (float)n);
+        return episode * (.35f + .65f * gust);
+    }
 
     /// <summary>The biome around the player (its id) and how much of it (0..1).</summary>
     public void SetBiome(string id, float share) => _biome = share >= .5f ? id : _biome == "" ? id : _biome;
@@ -85,6 +99,7 @@ public partial class AmbientLife : Node3D
     /// in a forest (canopy 0..1).</summary>
     public void Tick(double delta, Vector2 windDir, float windSpeed, float gust, float daylight, float rain, float canopy)
     {
+        _time += delta;
         int level = GameSettings.AmbientLife.Index;
         float target = level == 0 ? 0 : level == 1 ? 1 : 2;
         _amount = Mathf.MoveToward(_amount, target, (float)delta * .5f);
@@ -108,7 +123,7 @@ public partial class AmbientLife : Node3D
         // Biome motes.
         var p = Profile(_biome);
         float moteK = p.Amount * Math.Min(_amount, 2) * (1 - .85f * rain) * (p.NeedsWind ? Mathf.SmoothStep(2, 8, windSpeed) : 1)
-            * (p.NightToo ? 1 : Mathf.SmoothStep(.15f, .5f, daylight));
+            * (p.NightToo ? 1 : Mathf.SmoothStep(.15f, .5f, daylight)) * (p.Leaves ? Flurry(gust) * 1.6f : 1);
         _motes.Emitting = moteK > .03f;
         if (_motes.Emitting)
         {

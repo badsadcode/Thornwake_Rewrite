@@ -2868,6 +2868,14 @@ client-side, nothing synced) and setting **Living air** (`fx.ambient_life`): off
   (billboards ignore the velocity) — fixed with bigger motes and trails. Stills show little (`artifacts/living-air-draft.jpg`):
   the effects are motion; to judge in play. Not yet: dust devils, embers, insects (the backlog).
 
+## D191 — Leaves come in random flurries (2026-10-25)
+Tom on build 99: "I like these dust speckles … the leaves are nice, but I don't want it to always be the same amount.
+Sometimes they can not be showing up. Kind of random — always there it's a little too distracting." Leaves (forest
+biomes) now follow a smooth random "flurry" value over ~20–60 s (three slow sines): leaves about 40 % of the time, quiet
+otherwise, each flurry building and fading, stronger in gusts (×1.6 at the peak). Other motes (dust etc.) unchanged.
+Burst capture over 96 s at the windy-forest launcher (`artifacts/leaf-flurries.jpg`): leaves at 0, 36 and 48 s, none at
+12, 24 and 60–96 s. Wind trails not judged yet (Tom).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
