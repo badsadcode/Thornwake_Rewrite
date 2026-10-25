@@ -2742,6 +2742,20 @@ clouds were uniformly transparent, and a little bit up it jumped immediately".
 * Rebuilt from both dumps (`artifacts/cloud-jump-curtains-fix.jpg`): no curtains, the two heights alike. Left: a faint
   straight line along the horizon where the two passes blend (bottom right).
 
+## D180 — Straight stripes across the ground: the terrain noise's float precision (2026-10-25)
+Tom (build 94, dumps 001338 / 001407, volcanic hills): "this weird texture issue" — straight bands across the ground,
+the dark patches cut along them. Found by elimination (debug views with `--debug-draw=1` and the shader's values written
+to ALBEDO): not shadows, lighting, geometry (the colour alone had them; lighting alone was even), not the rock textures,
+not the UVs (smooth at 2 m). The terrain's value noise `vnoise` at fine scales (×1.7, ×0.93 …) hashes lattice cells up to
+~7,000 (UVs folded to 4,096 m): at that size float rounding gives neighbouring cells different values for the same
+corner, so the noise — and the bare patches, speckle, puddles and parallax built on it — jumps along straight lines.
+The same noise on small coordinates is smooth. **Fix**: `hash` wraps cells to 0–1000; cells below 1000 (the coarser
+noises) hash exactly as before; the finer ones repeat every ~600 m (invisible). Bug fix, not switchable; build 94
+(`2c512d5`) is the return point (`artifacts/ground-stripes-fix.jpg`).
+* Also found: basalt (volcanic rock) is a columns texture and its edges (and sandstone's) do not tile seamlessly —
+  not the cause here (flat volcanic ground showed no rock), left as is for now.
+* Lesson for captures: `--set=` given before a dump's own `Reproduce:` arguments is overridden by them — put tests after.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
