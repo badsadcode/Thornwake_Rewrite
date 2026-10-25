@@ -1,9 +1,10 @@
-# Handoff — START HERE (2026-10-25, after build 105)
+# Handoff — START HERE (2026-10-25, after build 106)
 
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 105** (v0.9.105, return point `5008995`, `dist/Preview-105`): wind wisps with strands (D204,
+* **Last build Tom has: 106** (v0.9.106, return point `f848430`, `dist/Preview-106`): each rain streak along its own
+  drop (D208). Build 105 (`5008995`, `dist/Preview-105`): wind wisps with strands (D204,
   D205), Esc → Weather test (D206), rain by strength with splashes (D207); launcher "Go to - rain test spot". Build 104
   (`98ec6a9`): draft *Cloud bases → shaped* (D203, off by default). Note: Tom's settings file has `fx.wind_wisps=1`
   (plain swooshes, written by a capture while that was the default) — the strands need option 2. Builds 76–103 in the previous session:
