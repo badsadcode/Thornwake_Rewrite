@@ -86,7 +86,9 @@ milestone M6), caves.
   and a middle grey sheet that spreads over the sky from ~70 km before a front, thicker on the front's side, the sun
   dimmed behind it. Best seen in clear air (the dusty badlands haze hides them). Known: faint horizontal stripes in the
   sheet near the horizon.
-* To try: **Go to - valley, a front coming (cloud layers draft), 11-00** (the front forced at 30 km for that run).
+* To try: **Go to - valley, a front coming (cloud layers draft), 11-00** (for that run: a front at 30 km, the cloud
+  layers draft on, the cloud sea draft off and the cloud base above the land — you have it above the sea, which puts
+  the clouds at 1.5 km, inside this 1,690 m valley).
 
 ## New in build 97 — overcast without the marble, darker rainy nights
 **Host and everyone joining need build 97** (versions must match to connect).

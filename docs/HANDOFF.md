@@ -114,6 +114,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   **Build 97** (`c90cde0`, `dist/Preview-97`): D184 had banded overcast into a "marble" (fixed, D185); rain no longer
   brightens the night (D186). Ideas backlog: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`. Next: mackerel at night, cirrus,
   middle grey sheet before fronts.
+  **Build 98** (`2bc1d9b`, `dist/Preview-98`): high layers dark at night; draft *Cloud layers → layered* (fair cirrus,
+  grey sheet before fronts) (D187). Tom: "this direction is good". Tom's own settings now have Cloud base → above the sea
+  (clouds at 1.5 km, mountain valleys inside them): launchers set what they need. Open: sheet stripes near the horizon.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
