@@ -1205,7 +1205,7 @@ public partial class Atmosphere : Node3D
     /// <summary>The haze's light while the moon is the light (D182): moonlight is ~6× weaker than daylight but the night
     /// exposure barely brightens, so its shafts were there but invisible; the haze takes this much more of it (the
     /// ground keeps the plain moonlight). Like a film's moonlight: shafts readable, not realistic.</summary>
-    private float MoonRayBoost => MoonLit ? Dev("moonfog", 2) : 1; // (×6 made a blue wall with Tom's own ray settings)
+    private float MoonRayBoost => MoonLit ? Dev("moonfog", 2) * (1 + Dev("moonforest", 2) * _forest) : 1; // (×6 made a blue wall with Tom's own ray settings; more under a canopy, where the shafts are narrow, D183)
     /// <summary>The same for the rays in open air (D182): ×3 lit the whole night valley like dusk, ×8 blew it out.</summary>
     private float MoonAirBoost => MoonLit ? Dev("moonair", 1.5f) : 1;
     /// <summary>How high the main light stands: the moon's elevation while it is the light (D182), else the sun's.</summary>
@@ -1389,6 +1389,10 @@ public partial class Atmosphere : Node3D
         float afterRain = Dev("airwetk", .95f) * Mathf.Pow(Mathf.Clamp(_wetness, 0, 1), Dev("airwetp", .5f)) * (1 - _storm);
         _airMoisture = Mathf.Clamp(humid * (.2f + .9f * Mathf.Min(morning, 1)) + afterRain, 0, 1) * (.35f + .65f * calm);
         _airDust = dry * Mathf.SmoothStep(4, 11, Wind.SteadySpeed) * (1 - _wetness);
+        // Moonlight draft (D183): the air grows damp through a calm night (the ground cools, dew and haze form), so the
+        // moon has haze to light; at midnight the day's model had dry air and forest shafts by moonlight did not show.
+        if (GameSettings.MoonRays.Index == 1)
+            _airMoisture = Math.Max(_airMoisture, Dev("nightdamp", .4f) * _night * (.35f + .65f * calm) * (1 - .6f * dry) * (1 - _storm));
         // Under the broken cloud sea (D173) the valley air is damp (the sea is the top of a moist layer): more haze for
         // the light coming down through its gaps.
         if (GameSettings.CloudSea.Index == 2 && CloudSea > 0)

@@ -2784,6 +2784,18 @@ amount and A2 boost follow the main light's elevation (`LightElevation`), so the
   Pitch black nights (Tom's) the moon itself is dimmed, so little changes there.
 * Debug: captures log `MOON_STATE`. Look choices (how bright, how blue, forest) are Tom's: shown, not tuned further.
 
+## D183 — Moonlight tuned: damp night air, stronger haze under the canopy (2026-10-25)
+Tom: "tune the moonlight and then go back to clouds". Why forest shafts barely showed by moonlight (D182): at midnight
+the air load was ~0.09 (the weather model makes haze in the morning and after rain), so there was almost nothing for
+the moon to light; with a forced mist bank the shafts appeared at once. With *Moonlight → rays and shadows*:
+* **Damp nights**: air moisture at least 0.4 × night × calm (× less in dry climates, none in storms) — the ground cools,
+  dew and haze form (`--ray-dev=nightdamp=`). Air load at the test forest 0.09 → 0.39; Tom's ridge 0.16.
+* **Under a canopy** the haze takes ×(1 + 2 × forest) more moonlight on top of the ×2 (`moonforest`): narrow shafts
+  between trees need it; open air keeps ×1.5.
+* Captures (`artifacts/moonlight-tuned.jpg`, day 9 00:30, Normal night darkness): the forest facing the moon shows
+  silver shafts between the trunks (build 94: black); from Tom's ridge, layered moonlit ranges with shafts through the
+  haze (before: one flat blue haze).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
