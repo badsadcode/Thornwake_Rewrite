@@ -78,6 +78,15 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 104 — cloud bottoms with shape (draft)
+**Host and everyone joining need build 104** (versions must match to connect).
+* **Sky → Cloud bases → shaped (draft)** — your note that the bottoms of the clouds look flat. Off by default, so the sky
+  is as in build 103 until you switch it on. Shaped: the undersides come in lumps and, in a breeze, rolls along the wind;
+  each cloud's base rises toward its thin edges (rounded, lowest under the core) with lobes hanging from it; under thick
+  cores the base is darker, under thin edges lighter. The blue-grey colour stays. Costs well under 1 ms.
+* Best seen looking up under broken cumulus (cloud cover around 0.5–0.6), at midday and in the late afternoon. Worth
+  also flying just under the cloud layer and checking the horizon for any line.
+
 ## New in build 103 — no cream-white glare round the sun
 **Host and everyone joining need build 103** (versions must match to connect).
 * Looking up toward the sun, half the sky turned cream-white even in clear, dry air (your dump 17:39 — not a cloud). That
