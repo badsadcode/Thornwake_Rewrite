@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 101 — dust devils, embers, fireflies, midges (Living air draft)
+**Host and everyone joining need build 101** (versions must match to connect).
+With **Living air** on (subtle / more):
+* **Dust devils** in deserts, badlands, needle rocks and savanna: on sunny days with light wind, now and then a whirling
+  dust column forms 50–160 m away, drifts with the wind for 20–40 s and fades.
+* **Embers** in volcanic land: orange sparks drifting up, best at night.
+* **Fireflies** on calm nights in meadows, forests and swamps (not in winter), blinking slowly.
+* **Midge swarms** on calm days by swamps and meadows: a small dark cloud hovering a few metres off.
+* Performance: I measured the recent drafts with your settings; none costs anything noticeable (D193). If it still feels
+  slower, a dump at that moment (it records the FPS) would show what it is.
+* To try: **Go to - badlands, dust devil (Living air), 14-00**, **Go to - volcanic hills at night (embers), 23-00**,
+  **Go to - forest at night (fireflies), summer**.
+
 ## New in build 100 — colour grading presets (draft), leaves in flurries
 **Host and everyone joining need build 100** (versions must match to connect).
 * **Settings → Lighting and effects → Colour grading (draft)**: Natural (as before), Cinematic, Fantasy, Dreamy, Rustic,
