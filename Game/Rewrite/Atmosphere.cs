@@ -51,6 +51,8 @@ public partial class Atmosphere : Node3D
     private GpuParticles3D? _groundSplashes;
     private Image? _splashPointsImage;
     private ImageTexture? _splashPoints;
+    private Image? _splashColorImage;
+    private ImageTexture? _splashColors; // (r: how hard the surface is, D213)
     private int _splashPointNext;
     private readonly Random _splashRandom = new(77);
     private const int SplashPointCount = 1024;
@@ -69,9 +71,63 @@ public partial class Atmosphere : Node3D
     private readonly bool[] _coverOk = new bool[CoverN * CoverN];
     /// <summary>0 in the open … 1 under cover at the camera (eased): the rain sound muffles (Lightning.Shelter).</summary>
     public float Sheltered { get; private set; }
+    private float _dripSound;
+    /// <summary>Under wet leaves (D213): 0 … 1, for the rain sound — patter on the leaves, drips after the rain.</summary>
+    public float LeafDrip => _dripSound;
     private int _particlesLook = -1;
+    // Trees in the rain (D213): the crown map (1 m cells, 48 x 48 around the camera: the underside of the crown over each
+    // cell), the leaves' own wetness, and the drips falling from the crowns' undersides.
+    private const int CanopyN = 48;
+    private Image? _canopyImage;
+    private ImageTexture? _canopyTex;
+    private Vector2 _canopyOrigin;
+    private readonly System.Collections.Generic.List<Vector3> _crownCells = new();
+    private float _leafWet;
+    private GpuParticles3D? _drips;
+    private ShaderMaterial? _dripMat;
+    private Image? _dripPointsImage;
+    private ImageTexture? _dripPoints;
+    private int _dripNext;
+    private const int DripPointCount = 512;
+
+    /// <summary>
+    /// The crowns around the camera (D213; WorldLab, every half second): scene x, z, radius and the height of the crown's
+    /// underside. Drawn into the crown map — the lowest underside where crowns overlap.
+    /// </summary>
+    public void SetCrowns(System.Collections.Generic.List<(float X, float Z, float R, float Low)> crowns, Vector3 camera)
+    {
+        _canopyImage ??= Image.CreateEmpty(CanopyN, CanopyN, false, Image.Format.Rgf);
+        _canopyImage.Fill(new Color(0, 0, 0));
+        _canopyOrigin = new Vector2(Mathf.Floor(camera.X) - CanopyN / 2, Mathf.Floor(camera.Z) - CanopyN / 2);
+        _crownCells.Clear();
+        foreach (var (x, z, r, low) in crowns)
+        {
+            int x0 = Mathf.FloorToInt(x - r - _canopyOrigin.X), x1 = Mathf.FloorToInt(x + r - _canopyOrigin.X);
+            int z0 = Mathf.FloorToInt(z - r - _canopyOrigin.Y), z1 = Mathf.FloorToInt(z + r - _canopyOrigin.Y);
+            for (int cz = Math.Max(z0, 0); cz <= Math.Min(z1, CanopyN - 1); cz++)
+                for (int cx = Math.Max(x0, 0); cx <= Math.Min(x1, CanopyN - 1); cx++)
+                {
+                    float dx = cx + .5f + _canopyOrigin.X - x, dz = cz + .5f + _canopyOrigin.Y - z;
+                    if (dx * dx + dz * dz > r * r) continue;
+                    var old = _canopyImage.GetPixel(cx, cz);
+                    if (old.G > .5f && old.R <= low) continue;
+                    _canopyImage.SetPixel(cx, cz, new Color(low, 1, 0));
+                }
+        }
+        for (int cz = 0; cz < CanopyN; cz++)
+            for (int cx = 0; cx < CanopyN; cx++)
+                if (_canopyImage.GetPixel(cx, cz) is var c && c.G > .5f) _crownCells.Add(new Vector3(cx + _canopyOrigin.X, c.R, cz + _canopyOrigin.Y));
+        if (_canopyTex == null) _canopyTex = ImageTexture.CreateFromImage(_canopyImage);
+        else _canopyTex.Update(_canopyImage);
+    }
+
+    /// <summary>Whether the crown map is wanted (WorldLab asks before gathering the trees).</summary>
+    public bool WantsCrowns => GameSettings.RainTrees.Index == 1 && GameSettings.RainLook.Index == 1 && (Precip > .02f || _leafWet > .01f) && !Snowing;
     /// <summary>The first surface straight down at a scene x, z (WorldLab: terrain, rocks, objects, buildings), for splashes.</summary>
     public Func<float, float, float>? SurfaceY { get; set; }
+    /// <summary>The terrain's own height at a scene x, z (WorldLab): a surface above it is a roof, a rock, a log (D213:
+    /// hard surfaces splash harder).</summary>
+    public Func<float, float, float>? GroundY { get; set; }
     private byte[] _noiseBase = Array.Empty<byte>();
     /// <summary>Rain on (the water simulation's rain): the sky clouds over, light dims, haze thickens, rain falls.</summary>
     public bool Raining { get; set; }
@@ -335,6 +391,9 @@ public partial class Atmosphere : Node3D
         // (a first try let the drops collide with a height field and spawn splashes as a sub-emitter: none appeared)
         _splashPointsImage = Image.CreateEmpty(SplashPointCount, 1, false, Image.Format.Rgbf);
         _splashPoints = ImageTexture.CreateFromImage(_splashPointsImage);
+        _splashColorImage = Image.CreateEmpty(SplashPointCount, 1, false, Image.Format.Rgba8);
+        _splashColorImage.Fill(new Color(.35f, 1, 1, 1));
+        _splashColors = ImageTexture.CreateFromImage(_splashColorImage);
         _groundSplashes = new GpuParticles3D
         {
             Amount = 3000, Lifetime = .3, Emitting = false, LocalCoords = false,
@@ -343,6 +402,7 @@ public partial class Atmosphere : Node3D
             ProcessMaterial = new ParticleProcessMaterial
             {
                 EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Points, EmissionPointTexture = _splashPoints, EmissionPointCount = SplashPointCount,
+                EmissionColorTexture = _splashColors,
                 Gravity = Vector3.Zero, InitialVelocityMin = 0, InitialVelocityMax = 0, Spread = 0, ScaleMin = .6f, ScaleMax = 1.2f,
             },
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
@@ -570,7 +630,7 @@ public partial class Atmosphere : Node3D
     /// origin at (<paramref name="originX"/>, <paramref name="originZ"/>).
     /// </summary>
     /// <summary>Sets the cosmetic rain wetness and puddles directly (screenshots and tests).</summary>
-    public void SetWetness(float wetness, float puddles) { _wetness = wetness; _puddles = puddles; }
+    public void SetWetness(float wetness, float puddles) { _wetness = wetness; _puddles = puddles; _leafWet = wetness; } // (the leaves too, D213)
     public (float Wetness, float Puddles) Wetness => (_wetness, _puddles);
 
     public void Update(double delta, SkyState sky, double cameraWorldX, double cameraWorldZ, double originX, double originZ, Vector3 cameraLocal)
@@ -605,6 +665,7 @@ public partial class Atmosphere : Node3D
             _wetness = wetting ? Mathf.Min(1, _wetness + dt / 30 * Precip * 1.5f) : Mathf.Max(0, _wetness - dt / 360);
             _puddles = wetting && Precip > .3f ? Mathf.Min(1, _puddles + dt / 120 * Precip * 1.5f) : Mathf.Max(0, _puddles - dt / 900);
         }
+        _dripSound = GameSettings.RainTrees.Index == 1 ? _leafWet * Mathf.Clamp(Canopy * 1.5f, 0, 1) : 0;
         GameplayModels.SetWetness(GameSettings.WetLook.Index == 1 ? Mathf.SmoothStep(.15f, .45f, _wetness) : 0);
         RenderingServer.GlobalShaderParameterSet("rain_wetness", new Vector2(_wetness, _puddles));
         RenderingServer.GlobalShaderParameterSet("ocean_time", (float)(OceanTime % 100000));
@@ -991,7 +1052,9 @@ public partial class Atmosphere : Node3D
         // (wide and opaque enough to survive TAA, which smeared build 104's 1 cm, 20 % streaks to almost nothing)
         _rainStreakMat.SetShaderParameter("width", Mathf.Lerp(.008f, .022f, k));
         _rainStreakMat.SetShaderParameter("tint", new Color(.82f * l, .86f * l, .92f * l, Mathf.Lerp(.28f, .55f, k)));
-        UpdateCover(camera, dir);
+        // (only while it rains or the leaves still drip: in dry weather the cover map cost ~0.2 ms a frame for nothing)
+        if (p > .02f || _leafWet > .01f) UpdateCover(camera, dir);
+        UpdateTrees(p, camera);
         bool splash = p > .3f && _groundSplashes != null && SurfaceY != null;
         if (_groundSplashes == null) return;
         _groundSplashes.Emitting = splash;
@@ -1006,10 +1069,18 @@ public partial class Atmosphere : Node3D
             double r = Math.Sqrt(4 + _splashRandom.NextDouble() * (16 * 16 - 4)), a = _splashRandom.NextDouble() * Math.Tau;
             float x = camera.X + (float)(Math.Cos(a) * r), z = camera.Z + (float)(Math.Sin(a) * r);
             float y = SurfaceAt(x, z);
-            if (!float.IsNaN(y)) _splashPointsImage!.SetPixel(at, 0, new Color(x, y + .01f, z));
+            if (float.IsNaN(y)) continue;
+            _splashPointsImage!.SetPixel(at, 0, new Color(x, y + .01f, z));
+            // Splash kinds by surface (D213, Noor's notes §3): hard surfaces (roofs, rocks, logs) throw a bright crown with
+            // many droplets; on the ground the drop mostly sinks into grass and soil (a small, dull splash); in the woods
+            // the leaf litter swallows more.
+            int t = CoverSlot(Mathf.FloorToInt(x), Mathf.FloorToInt(z));
+            float hard = _coverOk[t] && _coverData[t * 4 + 3] > 1.5f ? 1 : Canopy > .4f ? .1f : .35f;
+            _splashColorImage!.SetPixel(at, 0, new Color(hard, 1, 1, 1));
         }
         if (_splashPointNext >= SplashPointCount * 1000) _splashPointNext = SplashPointCount;
         _splashPoints!.Update(_splashPointsImage);
+        _splashColors!.Update(_splashColorImage);
         _groundSplashes.AmountRatio = Mathf.Clamp(Mathf.SmoothStep(.3f, 1f, p) * Math.Clamp(GameSettings.RainStrength.F / 1.6f, .3f, 1), .05f, 1);
         if (_groundSplashes.DrawPass1 is QuadMesh { Material: ShaderMaterial sm })
             sm.SetShaderParameter("tint", new Color(.8f * l, .84f * l, .88f * l));
@@ -1071,13 +1142,82 @@ public partial class Atmosphere : Node3D
         Sheltered = on ? Mathf.MoveToward(Sheltered, covered / 9f, (float)GetProcessDeltaTime() * 2) : 0;
     }
 
+    /// <summary>
+    /// Trees in the rain (D213; Noor's Weather 2.0 notes §4: canopies intercept rainfall, water drips from branches and
+    /// foliage, gusts shake loose clusters of droplets, dripping continues after rainfall stops and fades as the foliage
+    /// dries). The leaves' wetness soaks up in ~1 min of rain and dries over ~2-6 min after it (sun and wind faster); the
+    /// drips: larger, slower drops from random points under the crowns, more in gusts.
+    /// </summary>
+    private void UpdateTrees(float p, Vector3 camera)
+    {
+        float dt = (float)GetProcessDeltaTime();
+        bool on = GameSettings.RainTrees.Index == 1 && !Snowing;
+        float sunOnGround = Mathf.Clamp(_daylight, 0, 1) * (1 - _gloom);
+        float dryK = .4f + 1.3f * sunOnGround + .05f * Math.Min(Wind.Speed, 20);
+        _leafWet = p > .02f ? Mathf.Min(1, _leafWet + dt / 60 * (.3f + p * 1.5f)) : Mathf.Max(0, _leafWet - dt / 240 * dryK);
+        bool crowns = on && _canopyTex != null && _crownCells.Count > 0;
+        _rainStreakMat!.SetShaderParameter("canopy_on", crowns ? 1 : 0);
+        if (crowns)
+        {
+            _rainStreakMat.SetShaderParameter("canopy_tex", _canopyTex);
+            _rainStreakMat.SetShaderParameter("canopy_origin", _canopyOrigin);
+        }
+        if (_drips == null)
+        {
+            _dripMat = (ShaderMaterial)_rainStreakMat.Duplicate();
+            _dripPointsImage = Image.CreateEmpty(DripPointCount, 1, false, Image.Format.Rgbf);
+            _dripPoints = ImageTexture.CreateFromImage(_dripPointsImage);
+            _drips = new GpuParticles3D
+            {
+                Amount = 700, Lifetime = 1.8, Emitting = false, LocalCoords = false, TopLevel = true,
+                VisibilityAabb = new Aabb(new Vector3(-1e5f, -1e4f, -1e5f), new Vector3(2e5f, 2e4f, 2e5f)), // (points in scene space)
+                DrawPass1 = new QuadMesh { Size = Vector2.One }, MaterialOverride = _dripMat,
+                ProcessMaterial = new ParticleProcessMaterial
+                {
+                    EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Points, EmissionPointTexture = _dripPoints, EmissionPointCount = DripPointCount,
+                    Direction = Vector3.Down, Spread = 4, InitialVelocityMin = .3f, InitialVelocityMax = 1.2f, Gravity = new Vector3(0, -9.8f, 0),
+                    ParticleFlagAlignY = true,
+                },
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            };
+            AddChild(_drips);
+        }
+        float rate = crowns ? _leafWet * (.55f + .45f * Wind.Gust) * Mathf.Clamp(_crownCells.Count / 400f, .25f, 1) : 0;
+        _drips.Emitting = rate > .02f;
+        if (!_drips.Emitting) return;
+        _drips.GlobalTransform = Transform3D.Identity;
+        _drips.AmountRatio = Mathf.Clamp(rate, 0, 1);
+        // Drip points: under the crowns, at the underside or a little higher in the leaves; 64 moved a frame.
+        int n = _dripNext == 0 ? DripPointCount : 64;
+        for (int i = 0; i < n; i++)
+        {
+            var cell = _crownCells[_splashRandom.Next(_crownCells.Count)];
+            float x = cell.X + (float)_splashRandom.NextDouble(), z = cell.Z + (float)_splashRandom.NextDouble();
+            float y = cell.Y + (float)_splashRandom.NextDouble() * 1.2f;
+            _dripPointsImage!.SetPixel(_dripNext++ % DripPointCount, 0, new Color(x, y, z));
+        }
+        if (_dripNext >= DripPointCount * 1000) _dripNext = DripPointCount;
+        _dripPoints!.Update(_dripPointsImage);
+        // (the rain's own streak, shorter and a little heavier; landing on the cover map like the rain; not caught by crowns)
+        _dripMat!.Shader = _rainStreakMat.Shader;
+        // (a first try at 22 cm x 1.6 cm read as specks in the leaves)
+        _dripMat.SetShaderParameter("streak_len", .34f);
+        _dripMat.SetShaderParameter("width", .024f);
+        _dripMat.SetShaderParameter("tint", (Color)_rainStreakMat.GetShaderParameter("tint") with { A = .5f });
+        _dripMat.SetShaderParameter("cover_on", _rainStreakMat.GetShaderParameter("cover_on"));
+        _dripMat.SetShaderParameter("cover_tex", _coverTex);
+        _dripMat.SetShaderParameter("canopy_on", 0);
+    }
+
     private static int CoverSlot(int wx, int wz) => ((wx % CoverN) + CoverN) % CoverN + (((wz % CoverN) + CoverN) % CoverN) * CoverN;
 
     private void CoverWrite(int t, int wx, int wz)
     {
         float h = SurfaceY!(wx + .5f, wz + .5f);
+        bool hard = GroundY != null && h > GroundY(wx + .5f, wz + .5f) + .15f;
         _coverOk[t] = true; _coverX[t] = wx; _coverZ[t] = wz;
-        _coverData[t * 4] = h; _coverData[t * 4 + 1] = wx; _coverData[t * 4 + 2] = wz; _coverData[t * 4 + 3] = 1;
+        // (a: 1 written on the ground, 2 on a hard surface — roof, rock, log; the shader only tests a > 0.5)
+        _coverData[t * 4] = h; _coverData[t * 4 + 1] = wx; _coverData[t * 4 + 2] = wz; _coverData[t * 4 + 3] = hard ? 2 : 1;
     }
 
     /// <summary>The cover map's height of cell (wx, wz), NaN if it does not hold that cell yet.</summary>

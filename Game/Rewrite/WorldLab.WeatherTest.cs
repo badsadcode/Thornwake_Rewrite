@@ -173,7 +173,7 @@ public partial class WorldLab
         bool simulated = GameSettings.WeatherModel.Index == 1 && GameSettings.WeatherOn.On;
         // (the rain test brings the rain sound too: it lives in the Lightning node, which the weather off has none of)
         if (_shotRainHere >= 0) EnsureTestLightning();
-        if (_lightning != null) _lightning.Shelter = _atmosphere.Sheltered;
+        if (_lightning != null) { _lightning.Shelter = _atmosphere.Sheltered; _lightning.LeafDrip = _atmosphere.LeafDrip; }
         if (!simulated && _lightning != null)
             _lightning.Step(delta, sky.Day * 24 + sky.Hour, null, false, _atmosphere.Snowing, cam, _originX, _originZ,
                 _atmosphere.Precipitation, _atmosphere.Wind.Speed, _atmosphere.Wind.Gust);

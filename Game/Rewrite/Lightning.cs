@@ -381,6 +381,8 @@ void fragment() {
 
     /// <summary>0 in the open … 1 under cover (Atmosphere.Sheltered, D211): the rain's hiss and ticks drop, a dull patter stays.</summary>
     public float Shelter { get; set; }
+    /// <summary>0 … 1 under wet leaves (Atmosphere.LeafDrip, D213): a softer, busier patter in the rain, single drips after it.</summary>
+    public float LeafDrip { get; set; }
 
     private void StepAmbience(float precipitation, bool snowing, float windSpeed, float gust)
     {
@@ -410,13 +412,15 @@ void fragment() {
             _rainLp2 += .06 * (n2 - _rainLp2);
             double roar = _rainLp2 * 2.2 * Math.Clamp(_rainLevel * 1.5 - .3, 0, 1);
             _dropTimer -= 1.0 / Rate;
-            if (_dropTimer <= 0 && _rainLevel > .02)
+            // (under wet leaves: drips keep ticking after the rain, a few a second; in the rain the patter is busier)
+            double drip = LeafDrip * volume * GameSettings.RainVolume.F;
+            if (_dropTimer <= 0 && (_rainLevel > .02 || drip > .05))
             {
-                _dropTimer = _random.NextDouble() * .25 / (1 + _rainLevel * 30);
+                _dropTimer = _random.NextDouble() * .25 / (1 + _rainLevel * 30 * (1 + LeafDrip) + drip * 6);
                 _dropAmp = (float)(.3 + .7 * _random.NextDouble());
             }
             _dropAmp *= .992f;
-            double rain = _rainLevel * (hiss * hissGain + roar) + _dropAmp * n * dropGain * Math.Min(1, _rainLevel * 6);
+            double rain = _rainLevel * (hiss * hissGain * (1 - .35 * LeafDrip) + roar) + _dropAmp * n * dropGain * Math.Max(Math.Min(1, _rainLevel * 6), drip * .8);
             // Wind: low rushing band, its pitch and level rising with the speed.
             _windLp += .02 * (n2 - _windLp);
             _windLp2 += .02 * (_windLp - _windLp2);

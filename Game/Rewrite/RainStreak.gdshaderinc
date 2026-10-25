@@ -31,6 +31,19 @@ bool sheltered(vec3 o, vec3 axis) {
 
 float hash(float n) { return fract(sin(n * 91.3 + 17.1) * 43758.5453); }
 
+// Trees (D213): the crown map around the camera (Atmosphere.SetCrowns): r = the underside of the crown over the cell
+// (scene y), g = 1 where a crown is; canopy_origin = the map's first cell (scene x, z), 48 x 48 cells of 1 m.
+uniform sampler2D canopy_tex : filter_nearest, repeat_disable;
+uniform vec2 canopy_origin;
+uniform int canopy_on = 0;
+uniform float canopy_catch = 0.75; // the share of the rain the leaves catch
+float crown_low(vec2 xz) {
+	vec2 c = floor(xz) - canopy_origin;
+	if (c.x < 0.0 || c.y < 0.0 || c.x >= 48.0 || c.y >= 48.0) return 1e9;
+	vec4 v = texelFetch(canopy_tex, ivec2(c), 0);
+	return v.g > 0.5 ? v.r : 1e9;
+}
+
 void vertex() {
 	vec3 o = MODEL_MATRIX[3].xyz;
 	float id = float(INSTANCE_ID);
@@ -49,6 +62,8 @@ void vertex() {
 	float len = streak_len * (0.75 + 0.5 * hash(id + 3.7));
 	VERTEX = o + axis * len * (0.5 - UV.y) + side * w * (UV.x - 0.5);
 	bool hidden = cover_on == 1 && sheltered(o, axis);
+	// (under a crown: most drops caught by the leaves — the drips fall instead)
+	if (canopy_on == 1 && o.y < crown_low(o.xz) && hash(id + 21.3) < canopy_catch) hidden = true;
 	if (hidden) VERTEX = o; // (a degenerate quad: nothing drawn)
 	// Fades: in and out over the particle's life (no popping), close to the camera (no poles through the view), far away.
 	float life = INSTANCE_CUSTOM.y;

@@ -540,6 +540,11 @@ public static class GameSettings
         "light, and as the rain grows a grey veil swallows the distance (a downpour leaves the near hills as shapes), colours " +
         "and contrast mute. Build 107: the light changes only from moderate rain on, the distance stays clear.",
         options: new[] { "build 107", "by strength (draft)" }));
+    public static readonly Setting RainTrees = Add(new("sim.rain_trees", "Simulation", "Trees in the rain", 0, 1, 1, 1,
+        "With Rain look by strength (D213). Catch and drip: under a tree's crown most of the rain is caught by the leaves, " +
+        "and the leaves drip — bigger, slower drops, more in gusts — and keep dripping for a few minutes after the rain " +
+        "stops, until they dry. Build 108: the rain falls through the trees.",
+        options: new[] { "build 108 (falls through)", "catch and drip" }));
     public static readonly Setting WetLook = Add(new("sim.wet_look", "Simulation", "Wet look", 0, 1, 1, 1,
         "By material (D212): rain soaks in over time (hours of drizzle wet everything, a short shower less) and dries in the " +
         "sun and wind, slowly at night and under cloud. Rock turns dark and glossy and dries first, earth and paths go darkest " +

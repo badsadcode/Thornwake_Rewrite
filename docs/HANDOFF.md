@@ -9,7 +9,7 @@ Written for the next conversation (the previous one ran out of context). Everyth
   (`98ec6a9`): draft *Cloud bases → shaped* (D203, off by default). Note: Tom's settings file has `fx.wind_wisps=1`
   (plain swooshes, written by a capture while that was the default) — the strands need option 2. Builds 76–103 in the previous session:
   Atmosphere 2.0 M2 (rays) and M3 (clouds), moonlight, Living air, colour grading, many fixes. Decisions D143–D202 in
-  `docs/DECISIONS.md` (next: **D213**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
+  `docs/DECISIONS.md` (next: **D214**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
 * **Tom's settings were reset to a clean baseline** (D200, D201; `tools/settings_baseline.py`; backup
   `%APPDATA%/Thornwake/rewrite_settings.before-baseline-20261025.cfg`). Since then he chose Colour grading *Fantasy* and
   Rays strength 2.5 himself. Earlier his "hazy, bland, constantly in fog" look came from Wind strength 3.9 (a 20 m/s gale
@@ -43,8 +43,8 @@ Cloud shape = rounded):
 * Living air (D190–D195): Tom likes the dust and leaves (leaves now in flurries). Wind wisps: Tom asked to fix them —
   now soft swooshes with curls and braided strands (D204, D205, setting *Wind wisps*; not yet in a build). Also on his list:
   the darkness (not started). Rain: Esc → Weather test (D206), Rain look by strength with splashes (D207), in build 105. Rain light and veil by strength (D210, draft), shelter under roofs (D211), wet look by material (D212).
-  Next from Tom and Noor's `docs/Thornwake_Weather_2_0_Suggestions.md`: dripping trees, splash kinds by surface, sound
-  layers, dry ground under shelter; lens drops in the backlog.
+  After build 108: trees in the rain, splash kinds, sound under leaves (D213). Next from Tom and Noor's
+  `docs/Thornwake_Weather_2_0_Suggestions.md`: dry ground under shelter, after-rain mist, wet characters; lens drops in the backlog.
 * Colour grading presets (D192): Tom will judge them in play.
 * Cloud drafts off by default: softness (D197), smooth shading (D198, costly), fine detail (D199). Cloud quality levels
   High/Medium/Low (D196). Sun behind clouds (D201) and glow by the haze (D202) are on.

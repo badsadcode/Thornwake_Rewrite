@@ -9,9 +9,11 @@ uniform vec3 tint : source_color = vec3(0.75, 0.8, 0.85);
 uniform float ring_k = 1.0;
 varying float age;
 varying float seed;
+varying float hard; // (D213: 1 a hard surface — roof, rock: a bright crown; ~0.35 ground, ~0.1 leaf litter: small and dull)
 
 void vertex() {
 	age = INSTANCE_CUSTOM.y;
+	hard = ring_k < 0.99 ? COLOR.r : 1.0; // (on water, ring_k 1: as before)
 	seed = fract(sin(dot(MODEL_MATRIX[3].xz, vec2(12.9898, 78.233))) * 43758.5453);
 	vec3 right = normalize(vec3(INV_VIEW_MATRIX[0].x, 0.0, INV_VIEW_MATRIX[0].z) + vec3(1e-4, 0.0, 0.0));
 	vec3 back = cross(right, vec3(0.0, 1.0, 0.0));
@@ -38,7 +40,8 @@ void fragment() {
 		vec2 d = uv - p;
 		drops += exp(-dot(d, d) * (380.0 - 120.0 * h)) * step(0.0, up);
 	}
-	float alpha = clamp(ring * 0.8 * ring_k + drops * 1.3, 0.0, 1.0) * (1.0 - smoothstep(0.7, 1.0, a));
+	float alpha = clamp(ring * 0.8 * ring_k + drops * 1.3 * mix(0.35, 1.0, hard), 0.0, 1.0) * (1.0 - smoothstep(0.7, 1.0, a));
+	alpha *= mix(0.45, 1.0, hard);
 	if (alpha < 0.02) discard;
 	ALBEDO = tint * (1.15 + drops * 0.5);
 	ALPHA = alpha * 0.85;

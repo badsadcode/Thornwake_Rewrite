@@ -138,6 +138,8 @@ public partial class WorldStreamer : Node3D
     private ShaderMaterial _terrain = null!, _water = null!, _farTree = null!;
     private Mesh _grass = null!, _card = null!;
     private TreeCatalog _trees = null!;
+    /// <summary>The tree species' models (crowns for the rain, D213).</summary>
+    public TreeCatalog Trees => _trees;
     private readonly PropCatalog _props = new();
 
     /// <summary>The terrain shader: with far mountain shadows from the air map (D154) or as before (same body).</summary>
@@ -565,6 +567,27 @@ public sealed class TreeCatalog
     private readonly Dictionary<(int Species, int Lod), List<(Mesh Mesh, Transform3D Transform)>> _parts = new();
 
     public List<(Mesh Mesh, Transform3D Transform)> PartsOf(int species, int lod) => Parts(species, lod);
+
+    private readonly Dictionary<int, (float Radius, float Low)> _crowns = new();
+
+    /// <summary>
+    /// A species' crown at scale 1 (D213, rain under trees): its radius (the model's half width, a little in) and the
+    /// height of its underside (~30 % of the tree's height, at least 1.6 m), from the detailed model's bounds.
+    /// </summary>
+    public (float Radius, float Low) CrownOf(int species)
+    {
+        if (_crowns.TryGetValue(species, out var c)) return c;
+        var box = new Aabb();
+        bool first = true;
+        foreach (var (mesh, xf) in Parts(species, 0))
+        {
+            var b = xf * mesh.GetAabb();
+            box = first ? b : box.Merge(b);
+            first = false;
+        }
+        float height = box.End.Y, half = Math.Max(box.Size.X, box.Size.Z) * .5f;
+        return _crowns[species] = first ? (2.5f, 2.5f) : (half * .85f, Math.Max(1.6f, height * .3f));
+    }
 
     private static readonly Dictionary<Material, Material> Barks = new();
 

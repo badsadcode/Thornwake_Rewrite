@@ -436,7 +436,24 @@ public partial class WorldLab : Node3D
     {
         // How closed the forest is around the player, for the exposure of light model 1 (4× a second; with the weather off too, so a switch
         // to model 1 starts from the right value).
-        if ((_canopyTimer -= delta) <= 0) { _canopyTimer = .25; _atmosphere.Canopy = CanopyAround(PlayerX, PlayerZ); }
+        if ((_canopyTimer -= delta) <= 0)
+        {
+            _canopyTimer = .25;
+            _atmosphere.Canopy = CanopyAround(PlayerX, PlayerZ);
+            // Trees in the rain (D213): the crowns within ~26 m of the camera, twice a second.
+            if (_sampler != null && _atmosphere.WantsCrowns && (_crownTimer -= .25) <= 0)
+            {
+                _crownTimer = .5;
+                var cam = _camera.GlobalPosition;
+                var crowns = new List<(float, float, float, float)>();
+                foreach (var t in Vegetation.TreesNear(_sampler, _originX + cam.X, _originZ + cam.Z, 26, DetailConfig.For(_sampler)))
+                {
+                    var (r, low) = _streamer.Trees.CrownOf(t.Species);
+                    crowns.Add(((float)(t.X - _originX), (float)(t.Z - _originZ), r * t.Scale, (float)t.Y + low * t.Scale));
+                }
+                _atmosphere.SetCrowns(crowns, cam);
+            }
+        }
         if (!GameSettings.WeatherOn.On || _sampler == null)
         {
             _atmosphere.Precipitation = 0; _atmosphere.Snowing = false; _atmosphere.Thunder = false; _atmosphere.WeatherClouds = float.NaN;
@@ -696,7 +713,7 @@ public partial class WorldLab : Node3D
         return (float)h;
     }
 
-    private double _canopyTimer;
+    private double _canopyTimer, _crownTimer;
 
     /// <summary>0 open … 1 closed forest: forest density at the player and six points 10 m around.</summary>
     private float CanopyAround(double x, double z)
@@ -866,6 +883,7 @@ public partial class WorldLab : Node3D
                 AddChild(_lightning);
             }
             _lightning.Shelter = _atmosphere.Sheltered;
+            _lightning.LeafDrip = _atmosphere.LeafDrip;
             _lightning.Step(delta, sky.Day * 24 + sky.Hour, _atmosphere.Cells, false, _atmosphere.Snowing, cam, _originX, _originZ,
                 _atmosphere.Precipitation, _atmosphere.Wind.Speed, _atmosphere.Wind.Gust);
         }
@@ -1213,6 +1231,7 @@ public partial class WorldLab : Node3D
         // Rain splashes (D207) and shelter (D211): the first surface straight down that rain lands on — terrain, rocks, built
         // pieces, roofs — else the terrain. Trunks, logs and bushes (cylinders, capsules) are passed through: on a trunk a
         // splash stood in the air on its collider's top, and in the cover map each trunk left a dry column in the rain.
+        _atmosphere.GroundY ??= (x, z) => (float)(_sampler?.Height(x + _originX, z + _originZ) ?? 0);
         _atmosphere.SurfaceY ??= (x, z) =>
         {
             var space = _player.GetWorld3D().DirectSpaceState;

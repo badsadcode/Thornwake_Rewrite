@@ -3153,6 +3153,26 @@ Captures with `--wet` (`artifacts/wet-by-material.jpg`, `artifacts/wet-ground-zo
 the path dark with a sheen and the grass richer; half dried, the grass back and the path still wet; a boulder catches the
 sun when wet. Not yet: sheltered ground staying dry (the cover map is not in the terrain shader), wet characters, drips.
 
+## D213 — Trees in the rain, splash kinds, rain sound under leaves (2026-10-25)
+Tom: "go for it" (the next items of Noor's Weather 2.0 notes: §4 vegetation, §3 impacts by material, §8 sound). New
+setting **Trees in the rain** (`sim.rain_trees`, Simulation; default *catch and drip*; *build 108* = falls through):
+* **crown map**: the trees within ~26 m (WorldLab, twice a second, from `Vegetation.TreesNear` and each species' crown
+  from its model, `TreeCatalog.CrownOf`: radius ~0.85 × half width, underside ~30 % of the height) drawn into a 48 × 48 m
+  map of crown undersides; a rain streak below a crown is caught by the leaves 75 % of the time;
+* **drips**: the leaves' own wetness soaks up in ~1 min of rain and dries over ~2–6 min after it (sun and wind faster);
+  while wet, up to 700 larger, slower drops (34 cm streaks) fall from random points under the crowns — more in gusts,
+  and on after the rain stops until the leaves dry; they land like the rain (the cover map). First try at 22 × 1.6 cm read
+  as specks;
+* **splash kinds**: the cover map remembers whether a cell is the ground or a hard surface above it (a roof, a rock, a
+  log: > 15 cm over the terrain); splashes there are bright crowns with many droplets, on the ground smaller and dull,
+  in the woods (leaf litter) fainter still (`RainSplash` reads the point's colour);
+* **sound**: under wet leaves the rain's hiss softens and the patter gets busier; after the rain, single drips keep
+  ticking a few a second while the leaves drip (`Lightning.LeafDrip`).
+Also: the cover map updated every frame in dry weather (~0.2 ms, since D211); now only while it rains or the leaves drip.
+Captures (`artifacts/rain-trees.jpg`: moderate rain under trees, build 108 vs catch and drip, after the rain;
+`artifacts/rain-drips.jpg`). Not seen: the hard-surface crowns on a roof (no capture framed one) and the sound (not
+audible in captures).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
