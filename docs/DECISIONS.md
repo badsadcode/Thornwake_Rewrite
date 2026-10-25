@@ -3237,6 +3237,22 @@ Tom: "please continue" — the last item of Noor's Weather 2.0 notes and Tom's o
   under water or in snow; they build over ~3 s and dry over ~8 s. Test flag `--lens-test`. Capture:
   `artifacts/lens-drops.jpg`. Drops 1–2 % of the screen height.
 
+## D218 — Lens drops run down with lingering trails, refraction and dispersion; mist band fixed (2026-10-25)
+Tom on D217's lens drops: "more realistic and dropping down the camera lens in a natural way", "refraction and the light
+dispersion, so I can see the basic colours — maybe not green and red", "leaving trails that disappear slowly".
+`LensDrops.gdshader` rewritten:
+* **beads** land, sit and evaporate (shrinking over 6–14 s);
+* **runners**: in lanes, now and then a bigger drop runs down from above the top to below the bottom in stick-slip jerks,
+  wandering sideways along a fixed path, wiping the beads off it; behind it a wet smear and a row of tiny beads that
+  **linger and dry over ~7 s** (the age since the drop passed each height; the previous run's trail is kept too, so it
+  stays after the drop has left the screen);
+* **refraction**: each drop a spherical cap — the picture from across its centre, pulled harder toward the rim, lit on
+  its upper edge, darker at the lower rim; **dispersion**: red, green and blue sampled at 0.88–1.34 × the offset
+  (the split grows toward the rim) and a faint spectral fringe round the rim.
+Capture (`artifacts/lens-drops-trails.jpg`): two runners' wavy trails with bead rows; a bead with a cool/warm fringe.
+Also: a horizontal grey band across the treetops in the rain captures was the after-rain mist (D214) lifting while it
+still rained (the ground barely wet at a rain's start); the lift now waits until the rain has stopped.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

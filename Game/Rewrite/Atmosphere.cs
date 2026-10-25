@@ -1898,7 +1898,9 @@ public partial class Atmosphere : Node3D
             float woods = 1 + .4f * Mathf.Clamp(Canopy, 0, 1);
             afterRain = Mathf.SmoothStep(.1f, .6f, _wetness) * (1 - _storm) * calm * cool * woods * 1.45f;
             float sunOnGround = Mathf.Clamp(_daylight, 0, 1) * (1 - _gloom);
-            _mistLift = 25 * sunOnGround * (1 - Mathf.SmoothStep(.15f, .55f, _wetness)) * (_wetness > .02f ? 1 : 0);
+            // (only once the rain has stopped: at the start of a rain the ground is barely wet too, and the mist hung as a
+            // bank at tree height — a band across the view, D218)
+            _mistLift = 25 * sunOnGround * (1 - Mathf.SmoothStep(.15f, .55f, _wetness)) * (_wetness > .02f && Precip < .02f ? 1 : 0);
         }
         float target = mode == 0 || float.IsNaN(_mistGround) ? 0
             : Mathf.Clamp((.7f * dawn + .5f * _mistBiome + .1f * _mistWater) * (1 - .65f * noon) + .35f * afterRain + .3f * _storm, 0, 1) * .75f;
