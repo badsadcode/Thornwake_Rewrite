@@ -117,6 +117,9 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   **Build 98** (`2bc1d9b`, `dist/Preview-98`): high layers dark at night; draft *Cloud layers → layered* (fair cirrus,
   grey sheet before fronts) (D187). Tom: "this direction is good". Tom's own settings now have Cloud base → above the sea
   (clouds at 1.5 km, mountain valleys inside them): launchers set what they need. Open: sheet stripes near the horizon.
+  **Build 99** (`0c93671`, `dist/Preview-99`): moon glow backs off in dense air (D188), cirrus in patches (D189), draft
+  *Living air* — wind ribbons and biome particles (D190, `AmbientLife.cs`, test flag `--wind=`). Next: colour grading
+  (backlog), Tom's feedback on Living air in motion.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
