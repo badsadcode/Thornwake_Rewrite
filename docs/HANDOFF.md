@@ -1,9 +1,10 @@
-# Handoff — START HERE (2026-10-25, after build 103)
+# Handoff — START HERE (2026-10-25, after build 104)
 
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 103** (v0.9.103, return point `1a75bac`, `dist/Preview-103`). Builds 76–103 this session:
+* **Last build Tom has: 104** (v0.9.104, return point `98ec6a9`, `dist/Preview-104`: draft *Cloud bases → shaped*, D203,
+  off by default; launcher "Go to - cumulus bases overhead"). Builds 76–103 in the previous session:
   Atmosphere 2.0 M2 (rays) and M3 (clouds), moonlight, Living air, colour grading, many fixes. Decisions D143–D202 in
   `docs/DECISIONS.md` (next: **D204**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
 * **Tom's settings were reset to a clean baseline** (D200, D201; `tools/settings_baseline.py`; backup
@@ -15,7 +16,7 @@ Written for the next conversation (the previous one ran out of context). Everyth
   `Reproduce:` line.
 
 ## Tom's open point (his last message): the bottoms of the clouds look flat, without details
-**Draft done (D203, not yet in a build):** *Sky → Cloud bases → shaped* (`sky.cloud_bases`, off by default), suite
+**Draft done (D203, in build 104):** *Sky → Cloud bases → shaped* (`sky.cloud_bases`, off by default), suite
 `cloudbases`, captures `artifacts/cloud-bases-draft.jpg`. Waiting for Tom's look; next ideas if he wants more: a darker
 core / brighter edge contrast, rolls stronger in wind, sunset tuning. Notes from before the draft — where it comes from in `Game/Rewrite/SkyCommon.gdshaderinc` (Tom plays with Cloud look = reference,
 Cloud shape = rounded):

@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 104** (cloud bases shaped — draft D203) | `98ec6a9` | Thornwake-Rewrite-Preview-104 (v0.9.104) | Versions must match to connect; Cloud bases → build 103 = old flat bases (the default); build 103 = `1a75bac` |
 | **Build 103** (glow round the sun by the haze D202) | `1a75bac` | Thornwake-Rewrite-Preview-103 (v0.9.103) | Versions must match to connect; Glow round the sun → build 102 = old glow; build 102 = `cc79355` |
 | **Build 102** (sun behind clouds D201, cloud quality levels D196, cloud drafts D197-D199) | `cc79355` | Thornwake-Rewrite-Preview-102 (v0.9.102) | Versions must match to connect; Sun behind clouds → build 101 = old sun; build 101 = `8a97481` |
 | **Build 101** (dust devils D194, embers / fireflies / midges D195, perf check D193) | `8a97481` | Thornwake-Rewrite-Preview-101 (v0.9.101) | Versions must match to connect; Living air off = build 99 look; build 100 = `1bad637` |
