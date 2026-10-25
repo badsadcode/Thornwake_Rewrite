@@ -2952,7 +2952,8 @@ finest layer within ~3–9 km. Suite **cloudfine** (A-B-A-B): no measurable cost
 **So the flat, "posterized" look is the lighting**: the shaded parts are too bright and even (strong sky light, short
 self-shadow), lit and shaded areas meeting in a sharp line. Test with the existing dev switch `--cloud-dev=1,y`
 (deeper self-shadow, darker bases; `artifacts/cloud-self-shadow-test.jpg`, noon cumulus: y = 0 / 1 / 2): y = 1 gives lit
-sides against darker shaded masses — the lobes read as volumes; y = 2 too dark. A look choice: asked Tom.
+sides against darker shaded masses — the lobes read as volumes; y = 2 too dark. A look choice: asked Tom. Tom: "keep today's
+shading for now" — nothing changed; the self-shadow test stays a dev switch, Cloud shading / detail drafts off.
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
