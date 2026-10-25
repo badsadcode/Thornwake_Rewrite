@@ -78,6 +78,22 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 108 — rain light, shelter, wet by material
+**Host and everyone joining need build 108** (versions must match to connect). All three are in Settings → Simulation,
+each with *build 107* as the other option.
+* **Rain light** (draft): the light changes with the rain. Drizzle already under a closed grey sky with soft light; as
+  the rain grows a grey veil swallows the distance (in a downpour the near hills are soft shapes), colours and contrast
+  mute.
+* **Rain under cover**: no rain falls under roofs, floors and rock overhangs; in wind it still blows in under the
+  windward edge; drops splash on the roof instead; the rain sounds duller while you are under cover. Test rain (Weather
+  test, the rain launcher) now has its sound too with the weather off. Not yet: trees, the lean-to and the campfire.
+* **Wet look** (by material): rain soaks in over time (drizzle too, slowly) and dries in sun and wind, slowly at night.
+  Rock turns dark and glossy and dries first, earth and paths go darkest and stay wet longest (drying in patches), grass
+  turns a richer green without shine; boulders, bark and your log buildings and thatch get wet too.
+* Also: the rain costs much less CPU (~0.2 ms a frame instead of up to ~3 ms in a downpour).
+* Try: Esc → Weather test → Downpour for a minute, walk into the hut or under a ledge, then switch Rain here off and
+  watch the ground dry in the sun.
+
 ## New in build 107 — the rain stays put when you turn
 **Host and everyone joining need build 107** (versions must match to connect).
 * Your note on 106 ("the rain's direction shouldn't matter to where the camera is looking"): the rain turned with the
