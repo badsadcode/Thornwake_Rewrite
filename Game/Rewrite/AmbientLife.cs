@@ -202,13 +202,16 @@ public partial class AmbientLife : Node3D
             // (the stroke draws itself at about the wind's speed; the particle only drifts a little)
             _swooshPm.Direction = dir;
             _swooshPm.InitialVelocityMin = windSpeed * .15f; _swooshPm.InitialVelocityMax = windSpeed * .3f;
-            _swooshes.Position = -dir * 8 + new Vector3(0, .8f, 0);
+            // (world frame, D209: hung on the camera, the drift and the area upwind turned with the view)
+            var camAt = GetParent<Node3D>().GlobalPosition;
+            _swooshes.TopLevel = true;
+            _swooshes.GlobalTransform = new Transform3D(Basis.Identity, camAt - dir * 8 + new Vector3(0, .8f, 0));
             if (WispTest)
             {
                 var cam = GetParent<Node3D>().GlobalTransform;
                 var fwd = -cam.Basis.Z; fwd.Y = 0; fwd = fwd.Normalized();
                 _swooshPm.EmissionBoxExtents = new Vector3(6, 1.5f, 6);
-                _swooshes.GlobalPosition = cam.Origin + fwd * 16 - dir * 5 + new Vector3(0, 1.5f, 0);
+                _swooshes.GlobalTransform = new Transform3D(Basis.Identity, cam.Origin + fwd * 16 - dir * 5 + new Vector3(0, 1.5f, 0));
             }
             _swooshMat.SetShaderParameter("wind_dir", dir);
             _swooshMat.SetShaderParameter("stroke_len", Mathf.Clamp(windSpeed * .9f, 5, 13));

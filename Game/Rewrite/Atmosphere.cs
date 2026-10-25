@@ -913,7 +913,11 @@ public partial class Atmosphere : Node3D
         // (drops are born through the whole volume, the volume upwind so the drifting drops fill the view; only ~16 m around
         // the camera — farther a drop is under a pixel, and spread over 52 m the near rain was too sparse to read)
         pm.EmissionBoxExtents = new Vector3(16, 7, 16);
-        _rainParticles.GlobalPosition = camera + new Vector3(-dir.X, 0, -dir.Z) * 4 + new Vector3(0, 2, 0);
+        // (D209, Tom: "the rain's direction shouldn't matter to where the camera is looking": the emitter hangs on the camera,
+        // and a particle's direction is in its emitter's frame — the drops' fall turned with the view. Now top level: it
+        // follows the camera's position only, never its rotation.)
+        _rainParticles.TopLevel = true;
+        _rainParticles.GlobalTransform = new Transform3D(Basis.Identity, camera + new Vector3(-dir.X, 0, -dir.Z) * 4 + new Vector3(0, 2, 0));
         float sheets = .7f + .45f * Wind.Gust;
         _rainParticles.AmountRatio = Mathf.Clamp(Mathf.Pow(p, .45f) * sheets, 0, 1) * Math.Clamp(GameSettings.RainStrength.F / 1.6f, .12f, 1);
         float l = Mathf.Clamp(_daylight * 1.1f, .06f, 1) * Mathf.Lerp(1, .35f, _night);
@@ -953,6 +957,8 @@ public partial class Atmosphere : Node3D
         // (back to build 104's emitter; the rain look by strength sets its own each frame, D207)
         _rainParticles.MaterialOverride = null;
         pm.ParticleFlagAlignY = false;
+        _rainParticles.TopLevel = false; // (build 104's emitter turns with the camera, as it did)
+        _rainParticles.Transform = Transform3D.Identity;
         _rainParticles.Position = new Vector3(0, 14, 0);
         pm.EmissionBoxExtents = new Vector3(28, 3, 28);
         if (snow)

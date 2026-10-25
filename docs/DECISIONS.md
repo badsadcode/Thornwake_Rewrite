@@ -3085,6 +3085,18 @@ and speed ±8 % → ±15 %, so lines differ a little. When the wind turns, new d
 over within ~1.5 s. Same overall slant (`artifacts/rain-per-drop.jpg`). Part of the draft *Rain look → by strength*;
 build 105 (`5008995`) is the return point.
 
+## D209 — The rain no longer turns with the camera (2026-10-25)
+Tom on build 106: "the rain's direction shouldn't matter to where the camera is looking." The rain emitter hangs on the
+camera, and a particle's direction is taken in its emitter's frame: the drops' fall (and since D208 the streaks along
+it) turned with the view — at 45°, 135°, 225° and 315° of camera yaw every streak leaned the same way on screen
+(`artifacts/rain/turn-before`). Also behind Tom's first note on 105 (the lines kept one angle while the drops moved
+otherwise: then the streak took the world wind, the motion the camera's frame). Now, with *Rain look → by strength*, the
+emitter is top level and placed each frame at the camera's position with no rotation; facing opposite ways the streaks
+lean opposite ways on screen (`artifacts/rain-world-fixed.jpg`). Build 104's rain keeps its old emitter (the return
+option). The wind swooshes had the same fault (drift and their upwind area turned with the view): their emitter is top
+level too. Not changed: the biome motes (meant to sit in front of the camera; their wind comes through gravity, which is
+in world space) and build 104's wind trails (the return option).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
