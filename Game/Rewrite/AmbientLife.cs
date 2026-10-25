@@ -17,8 +17,9 @@ namespace Thornwake.Rewrite;
 /// </summary>
 public partial class AmbientLife : Node3D
 {
-    private GpuParticles3D _wisps = null!, _motes = null!;
-    private ParticleProcessMaterial _wispPm = null!, _motePm = null!;
+    private GpuParticles3D _wisps = null!, _motes = null!, _swooshes = null!;
+    private ParticleProcessMaterial _wispPm = null!, _motePm = null!, _swooshPm = null!;
+    private ShaderMaterial _swooshMat = null!;
     private StandardMaterial3D _wispMat = null!, _moteMat = null!, _leafMat = null!;
     private bool _leafy;
     private string _biome = "";
@@ -100,6 +101,9 @@ public partial class AmbientLife : Node3D
         if (_devilAge > _devilLife) { _devilAge = -1; _devilWait = 25 + 60 * (float)_rng.NextDouble(); }
     }
 
+    /// <summary>The light's colour around the player (Atmosphere: the sun's, toward the fog's): the swooshes take it.</summary>
+    public Color Tint { get; set; } = Colors.White;
+
     /// <summary>The biome around the player (its id) and how much of it (0..1).</summary>
     public void SetBiome(string id, float share) => _biome = share >= .5f ? id : _biome == "" ? id : _biome;
 
@@ -131,6 +135,21 @@ public partial class AmbientLife : Node3D
             ProcessMaterial = _wispPm, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         AddChild(_wisps);
+        // Swooshes (D204, setting Wind wisps): the same kind of emitter, each particle a stroke drawn by WindWisp.gdshader.
+        _swooshMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/WindWisp.gdshader") };
+        _swooshPm = new ParticleProcessMaterial
+        {
+            EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box, EmissionBoxExtents = new Vector3(24, 2.5f, 24),
+            Gravity = Vector3.Zero, Spread = 6, InitialVelocityMin = 1, InitialVelocityMax = 1, LifetimeRandomness = .35,
+        };
+        _swooshes = new GpuParticles3D
+        {
+            Amount = 10, Lifetime = 2.6, LocalCoords = false, Emitting = false,
+            VisibilityAabb = new Aabb(new Vector3(-60, -15, -60), new Vector3(120, 35, 120)),
+            DrawPass1 = SwooshMesh(48), MaterialOverride = _swooshMat,
+            ProcessMaterial = _swooshPm, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        AddChild(_swooshes);
         _moteMat = new StandardMaterial3D
         {
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
@@ -171,7 +190,22 @@ public partial class AmbientLife : Node3D
         // Wind wisps: from ~4 m/s, more with the gusts; almost none in the rain (the rain shows the wind) or under a canopy.
         float windy = Mathf.SmoothStep(3.5f, 11, windSpeed) * (.45f + .55f * gust) * (1 - .8f * rain) * (1 - .7f * Mathf.Clamp(canopy, 0, 1));
         float wispK = windy * Math.Min(_amount, 1.5f);
-        _wisps.Emitting = wispK > .03f;
+        bool swoosh = GameSettings.WindWisps.Index == 1;
+        _wisps.Emitting = wispK > .03f && !swoosh;
+        _swooshes.Emitting = wispK > .03f && swoosh;
+        if (_swooshes.Emitting)
+        {
+            _swooshes.AmountRatio = Mathf.Clamp(wispK * .7f, 0, 1);
+            // (the stroke draws itself at about the wind's speed; the particle only drifts a little)
+            _swooshPm.Direction = dir;
+            _swooshPm.InitialVelocityMin = windSpeed * .15f; _swooshPm.InitialVelocityMax = windSpeed * .3f;
+            _swooshes.Position = -dir * 8 + new Vector3(0, .8f, 0);
+            _swooshMat.SetShaderParameter("wind_dir", dir);
+            _swooshMat.SetShaderParameter("stroke_len", Mathf.Clamp(windSpeed * .9f, 5, 13));
+            // (unshaded, tinted by the light: lit by the scene they did not draw at all, and plain white was a cool grey in an
+            // orange evening)
+            _swooshMat.SetShaderParameter("colour", new Color(Tint.R * light, Tint.G * light, Tint.B * light, .24f + .1f * gust));
+        }
         if (_wisps.Emitting)
         {
             _wisps.AmountRatio = Mathf.Clamp(wispK * .7f, 0, 1);
@@ -239,6 +273,21 @@ public partial class AmbientLife : Node3D
         }
         Quad(Vector3.Right); Quad(Vector3.Back);
         st.SetMaterial(material);
+        return st.Commit();
+    }
+
+    // A strip for one swoosh: UV.x along it (0..1), UV.y the side (0 / 1); WindWisp.gdshader bends and widens it.
+    private static ArrayMesh SwooshMesh(int segments)
+    {
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+        for (int i = 0; i < segments; i++)
+        {
+            float a = (float)i / segments, b = (float)(i + 1) / segments;
+            void V(float s, float side) { st.SetUV(new Vector2(s, side)); st.AddVertex(new Vector3(s, side, 0)); }
+            V(a, 0); V(b, 0); V(b, 1);
+            V(a, 0); V(b, 1); V(a, 1);
+        }
         return st.Commit();
     }
 

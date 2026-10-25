@@ -653,6 +653,7 @@ public partial class Atmosphere : Node3D
         // Warmer light at a low sun (AtmosphereLight: build 47's single warm factor, or the colour curve by phase).
         Sun.LightColor = light.SunColor;
         UpdateMoonRays(sunDir);
+        if (Life != null) Life.Tint = Sun.LightColor.Lerp(Environment.FogLightColor, .4f); // (wisps take the light's colour)
         Life?.Tick(delta, Wind.Direction, Wind.Speed, Wind.Gust, _daylight, Mathf.Clamp(Precip, 0, 1), Canopy);
         var toSun = Sun.GlobalTransform.Basis.Z.Normalized(); // a directional light shines along -Z
 

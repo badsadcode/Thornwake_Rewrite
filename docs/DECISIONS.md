@@ -3017,6 +3017,20 @@ alone crinkled the base like foil at sunset — now a coarser noise, gentler. Re
 relief, darker cores and lighter edges under overhead cloud, the white sunlit cumulus unchanged; cost +0.1–0.8 ms GPU.
 Off by default: a look decision for Tom.
 
+## D204 — Wind wisps as swooshes (2026-10-25)
+Tom (after build 104): "maybe we should fix the wind wisps". Captured at the windy badlands and forest launchers
+(`artifacts/wisps/`): build 99's wisps (D190) are 6 cm cross-shaped ribbon trails ~10 m long — hard, straight, thin
+lines; near the camera a scratch across the screen, edge-on a wire, nothing like moving air. New setting **Wind wisps**
+(`fx.wind_wisps`, Lighting and effects; default *swooshes*, *build 104* the old trails), with Living air:
+* each particle is a short stroke (`WindWisp.gdshader` on a 48-segment strip, `AmbientLife.SwooshMesh`): 5–13 m by the
+  wind, a camera-facing ribbon up to 0.3 m wide, bent into a gentle S, about half ending in an open curl rolling over;
+  drawn on along the wind over the first 60 % of its 2.6 s life and wiped from the tail, tapered at both ends;
+* none within ~4–9 m of the camera (no strokes across the screen), faded out beyond ~40 m; still from ~4 m/s, more in
+  gusts, almost none in rain or under a canopy; up to 10 at a time;
+* unshaded, tinted by the light (the sun's colour toward the fog's, Atmosphere → `AmbientLife.Tint`). Tried: plain white
+  read as cool grey in an orange evening; lit by the scene (camera-facing normal) they did not draw at all.
+Close-ups old vs new: `artifacts/wind-wisps-swooshes.jpg`. Motion is the point: Tom to judge in play.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

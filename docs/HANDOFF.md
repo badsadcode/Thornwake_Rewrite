@@ -6,7 +6,7 @@ Written for the next conversation (the previous one ran out of context). Everyth
 * **Last build Tom has: 104** (v0.9.104, return point `98ec6a9`, `dist/Preview-104`: draft *Cloud bases → shaped*, D203,
   off by default; launcher "Go to - cumulus bases overhead"). Builds 76–103 in the previous session:
   Atmosphere 2.0 M2 (rays) and M3 (clouds), moonlight, Living air, colour grading, many fixes. Decisions D143–D202 in
-  `docs/DECISIONS.md` (next: **D204**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
+  `docs/DECISIONS.md` (next: **D205**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
 * **Tom's settings were reset to a clean baseline** (D200, D201; `tools/settings_baseline.py`; backup
   `%APPDATA%/Thornwake/rewrite_settings.before-baseline-20261025.cfg`). Since then he chose Colour grading *Fantasy* and
   Rays strength 2.5 himself. Earlier his "hazy, bland, constantly in fog" look came from Wind strength 3.9 (a 20 m/s gale
@@ -37,7 +37,9 @@ Cloud shape = rounded):
   today's shading for now).
 
 ## Other open items
-* Living air (D190–D195): Tom likes the dust and leaves (leaves now in flurries); wind trails not judged yet.
+* Living air (D190–D195): Tom likes the dust and leaves (leaves now in flurries). Wind wisps: Tom asked to fix them —
+  now soft swooshes with curls (D204, setting *Wind wisps*, after build 104; not yet in a build). Also on his list:
+  rain effects and the darkness (not started).
 * Colour grading presets (D192): Tom will judge them in play.
 * Cloud drafts off by default: softness (D197), smooth shading (D198, costly), fine detail (D199). Cloud quality levels
   High/Medium/Low (D196). Sun behind clouds (D201) and glow by the haze (D202) are on.
