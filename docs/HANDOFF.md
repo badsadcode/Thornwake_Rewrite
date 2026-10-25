@@ -127,6 +127,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   **Build 102** (`cc79355`, `dist/Preview-102`): sun dims behind clouds (D201); cloud quality levels (D196). Tom's settings
   reset to a clean baseline (D200, D201; `tools/settings_baseline.py`; backup in %APPDATA%/Thornwake). Cloud look: Tom keeps
   today's shading (D199); softness / smooth shading / fine detail drafts off.
+  **Build 103** (`1a75bac`, `dist/Preview-103`): the air pass's sky glow follows the haze (D202) — the cream-white sky near
+  the sun in clear air is gone.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done

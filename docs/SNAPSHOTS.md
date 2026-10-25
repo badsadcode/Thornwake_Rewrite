@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 103** (glow round the sun by the haze D202) | `1a75bac` | Thornwake-Rewrite-Preview-103 (v0.9.103) | Versions must match to connect; Glow round the sun → build 102 = old glow; build 102 = `cc79355` |
 | **Build 102** (sun behind clouds D201, cloud quality levels D196, cloud drafts D197-D199) | `cc79355` | Thornwake-Rewrite-Preview-102 (v0.9.102) | Versions must match to connect; Sun behind clouds → build 101 = old sun; build 101 = `8a97481` |
 | **Build 101** (dust devils D194, embers / fireflies / midges D195, perf check D193) | `8a97481` | Thornwake-Rewrite-Preview-101 (v0.9.101) | Versions must match to connect; Living air off = build 99 look; build 100 = `1bad637` |
 | **Build 100** (colour grading presets draft D192, leaves in flurries D191) | `1bad637` | Thornwake-Rewrite-Preview-100 (v0.9.100) | Versions must match to connect; Colour grading Natural = build 99; build 99 = `0c93671` |
