@@ -1,10 +1,10 @@
-# Handoff — START HERE (2026-10-25, after build 107)
+# Handoff — START HERE (2026-10-25, after build 108)
 
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 107** (v0.9.107, return point `9933046`, `dist/Preview-107`): rain and wind swooshes fixed
-  in the world, no longer turning with the camera (D209). Build 106 (`f848430`): each rain streak along its own drop (D208). Build 105 (`5008995`, `dist/Preview-105`): wind wisps with strands (D204,
+* **Last build Tom has: 108** (v0.9.108, return point `c320f05`, `dist/Preview-108`): rain light (D210), shelter
+  (D211), wet look by material (D212). Build 107 (`9933046`): rain and wind swooshes fixed in the world (D209). Build 106 (`f848430`): each rain streak along its own drop (D208). Build 105 (`5008995`, `dist/Preview-105`): wind wisps with strands (D204,
   D205), Esc → Weather test (D206), rain by strength with splashes (D207); launcher "Go to - rain test spot". Build 104
   (`98ec6a9`): draft *Cloud bases → shaped* (D203, off by default). Note: Tom's settings file has `fx.wind_wisps=1`
   (plain swooshes, written by a capture while that was the default) — the strands need option 2. Builds 76–103 in the previous session:

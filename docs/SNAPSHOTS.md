@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 108** (rain light D210, shelter D211, wet look by material D212) | `c320f05` | Thornwake-Rewrite-Preview-108 (v0.9.108) | Versions must match to connect; Rain light, Rain under cover and Wet look → build 107 give the old look; build 107 = `9933046` |
 | **Build 107** (rain and wind swooshes fixed in the world D209) | `9933046` | Thornwake-Rewrite-Preview-107 (v0.9.107) | Versions must match to connect; Rain look → build 104 = old rain; build 106 = `f848430` (rain turning with the camera) |
 | **Build 106** (each rain streak along its own drop D208) | `f848430` | Thornwake-Rewrite-Preview-106 (v0.9.106) | Versions must match to connect; Rain look → build 104 = old rain; build 105 = `5008995` (parallel streaks) |
 | **Build 105** (wind wisps with strands D204–D205, Weather test tab D206, rain by strength D207) | `5008995` | Thornwake-Rewrite-Preview-105 (v0.9.105) | Versions must match to connect; Wind wisps → build 104 and Rain look → build 104 give the old effects; build 104 = `98ec6a9` |
