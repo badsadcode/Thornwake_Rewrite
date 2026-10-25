@@ -122,6 +122,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   (backlog), Tom's feedback on Living air in motion.
   **Build 100** (`1bad637`, `dist/Preview-100`): leaves in random flurries (D191); draft *Colour grading* — 8 LUT presets +
   strength (D192, `ColorGrading.cs`). Tom checks grading himself (left for later); wind trails not judged yet.
+  **Build 101** (`8a97481`, `dist/Preview-101`): perf check — recent drafts cost ~nothing (D193); Living air gains dust devils
+  (D194, `DustDevil.gdshader`, `--dust-devil`) and embers, fireflies, midge swarms (D195, `AmbientLife.Accents.cs`).
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done

@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 101** (dust devils D194, embers / fireflies / midges D195, perf check D193) | `8a97481` | Thornwake-Rewrite-Preview-101 (v0.9.101) | Versions must match to connect; Living air off = build 99 look; build 100 = `1bad637` |
 | **Build 100** (colour grading presets draft D192, leaves in flurries D191) | `1bad637` | Thornwake-Rewrite-Preview-100 (v0.9.100) | Versions must match to connect; Colour grading Natural = build 99; build 99 = `0c93671` |
 | **Build 99** (Living air draft D190, patchy cirrus D189, moon glow D188) | `0c93671` | Thornwake-Rewrite-Preview-99 (v0.9.99) | Versions must match to connect; Living air off = build 98; build 98 = `2bc1d9b` |
 | **Build 98** (cloud layers draft, high clouds dark at night D187) | `2bc1d9b` | Thornwake-Rewrite-Preview-98 (v0.9.98) | Versions must match to connect; Cloud layers → build 97 = no cirrus/sheet; build 97 = `c90cde0` |
