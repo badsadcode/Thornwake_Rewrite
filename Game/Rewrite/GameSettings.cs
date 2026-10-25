@@ -389,6 +389,10 @@ public static class GameSettings
         "one pass, so a cloud in front of you hides the mountains behind it instead of showing their outlines (the clouds " +
         "looked see-through). Costs more GPU time, only then. Build 91: two passes always.",
         options: new[] { "build 91", "one pass in the layer (draft)" }));
+    public static readonly Setting SunClouds = Add(new("sky.sun_clouds", "Sky", "Sun behind clouds", 0, 1, 1, 1,
+        "When a cloud passes in front of the sun, the sunlight on you and around you drops, shadows fade and the glare in " +
+        "the air goes (D201). Build 101: the sun shone at full strength whatever the clouds (only the ground darkened).",
+        options: new[] { "build 101", "dims" }));
     public static readonly Setting CloudFine = Add(new("sky.cloud_fine", "Sky", "Cloud detail", 0, 1, 1, 0,
         "Volumetric v2 (draft, D199). Fine: the billows are carved by a much finer noise — smaller lumps and creases on " +
         "every lobe, so clouds look less like smooth foam. Build 101: as before.",

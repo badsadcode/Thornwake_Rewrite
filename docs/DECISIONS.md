@@ -2968,6 +2968,25 @@ Also stacked: many drafts at once (cloud sea, caps dense, body, one pass, layers
 light beams 2.65, saturation 1.5, strong biome moods) — hard to judge any one of them. Proposed to Tom: a clean,
 recommended baseline instead of starting over.
 
+## D201 — A clean settings baseline for Tom; the sun dims behind clouds (2026-10-25)
+**Baseline** (Tom: "back up my settings and set a clean recommended baseline: Wind strength 1, cloud base above the land,
+drafts off except the ones you recommend, normal look values"). Game closed; backup
+`%APPDATA%\Thornwakeewrite_settings.before-baseline-20261025.cfg`; script `tools/settings_baseline.py`. Look: the
+Natural look preset (haze 1, glow 0.6, sun shafts 0.6, god ray contrast 0, light beams 1, ray scatter 0.5, air rays
+medium, rays by the weather, rays strength 1, wind waves 1, saturation 1); the rest of the look at defaults (exposure 1,
+sun glare 1, storm and forest darkness 0.5, leaf translucency 0.8, biome moods off, lens build 54, cloud shadows 0.55;
+natural sun style kept). Drafts on: cloud base above the land, rounded clouds, one pass in the layer, cloud layers,
+moonlight, Living air subtle. Off: cloud sea, dense caps, cloud body, mountains shade clouds, turbulence, height haze,
+softness / shading / fine detail. Wind strength 1. His three dump spots afterwards (`artifacts/clean-baseline.jpg`): clear,
+coloured, clouds overhead instead of fog.
+**Sun behind clouds** (Tom: "the sun is always so bright, blowing the whole screen … no shadows from the clouds, like the
+sun just doesn't care about the clouds"). The cloud shadows were only a decal darkening the ground's colour; the sunlight
+on the player, plants and the haze, and the glare, stayed full. New setting **Sun behind clouds** (`sky.sun_clouds`,
+default *dims*; *build 101* the old way): the cloud map (same curve as the shadow decal) is sampled where the camera's ray
+toward the sun crosses the mid deck; covered, the sun's direct light ×0.22 (shadows fade) and the haze's sunlight ×0.15
+(no glare), eased over ~1.5 s. Captured at his grassland dump (`artifacts/sun-behind-clouds.jpg`): glare gone, soft
+light. Note: a capture with `--dump` saves the settings file (it only added the new setting's default here).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

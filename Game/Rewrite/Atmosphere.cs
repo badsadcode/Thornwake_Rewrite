@@ -666,6 +666,7 @@ public partial class Atmosphere : Node3D
         _windX %= CloudPeriod; _windZ %= CloudPeriod;
         double cx = Wrap(cameraWorldX + _windX), cz = Wrap(cameraWorldZ + _windZ);
         RenderingServer.GlobalShaderParameterSet("cloud_state", new Vector4((float)cx, (float)cz, Coverage, _storm));
+        UpdateSunCover(delta, cx, cz, cameraLocal.Y - SeaLevel);
         // Layers ride different winds: high cirrus slow on a veered heading, low clouds faster than the main deck.
         // High winds veer ~50° from the surface wind; low clouds race along it.
         var high = Wind.Direction.Rotated(.9f);
@@ -727,6 +728,7 @@ public partial class Atmosphere : Node3D
         UpdateAirRays(toSun, cameraWorldX, cameraWorldZ, originX, originZ);
         UpdateHeightHaze(cameraLocal.Y);
         Sun.LightVolumetricFogEnergy *= MoonRayBoost; // (D182: the haze's moonlight, after the forest and air passes set it)
+        Sun.LightVolumetricFogEnergy *= 1 - .85f * _sunCover; // (D201: no glare in the haze with the sun behind a cloud)
 
         // Shadow decal: ground point g is shaded by the cloud at g + toSun.xz · H / toSun.y. With the texture laid as
         // 3×3 tiles of period P, the decal centre must be ≡ P/2 − (origin + shift + wind) (mod P), chosen nearest the camera.
@@ -1046,6 +1048,7 @@ public partial class Atmosphere : Node3D
             (float.IsNaN(Peak.X) ? "" : $" (peak {F(Peak.X)}, {F(Peak.Y)}, {F(Peak.Z)}, relief {F(PeakRelief)} m)") + "\n" +
             $"Wind: from {Wind.Compass()}, direction ({F(Wind.Direction.X)}, {F(Wind.Direction.Y)}), {F(Wind.Speed)} m/s, gust {F(Wind.Gust)}\n" +
             $"Sun elevation {F(_sunElevation)}°, night {F(_night)}, daylight {F(_daylight)}, ocean time {F(OceanTime)} s\n" +
+            $"Sun behind clouds {F(_sunCover)}\n" +
             $"Air load {F(_airLoad)} (moisture {F(_airMoisture)}, dust {F(_airDust)}; climate {F(_airRain)} mm/yr; rays {(GameSettings.RayWeather.Index == 1 ? "by the weather" : "always")}; cloud base {F(CloudBaseAboveSea)} m above the sea (cloud sea {F(CloudSea)}), region {F(_regionalGround)} m)\n" +
             $"Sea: effective sea state {F(_wavesState)} (setting {F(GameSettings.SeaState.Value)} + storm), wave heading {F(_wavesAngle)} rad, " +
             $"spectrum origin ({F(Spectrum.OriginX)}, {F(Spectrum.OriginZ)})";
@@ -1387,6 +1390,42 @@ public partial class Atmosphere : Node3D
     // blue-grey, D167). Real haze thins with height: above the region's ground the camera looks through thinner air,
     // so the distance fog thins with the camera's height over the land (to a quarter, falling to ~37 % per 1.4 km above
     // the first 200 m). Within ~10 km the air rays' own haze (environment contrast) is shaped per ray; this is the rest.
+    // ---- sun behind clouds (D201; Tom: "the sun is always so bright … no shadows from the clouds, like the sun just
+    // doesn't care about the clouds"). The cloud shadows were only a decal darkening the ground's colour; the sun shone on
+    // at full strength on the player, plants, the haze and the glare. Now the cloud map is sampled where the camera's ray
+    // toward the sun crosses the cloud layer: covered, the direct sunlight drops (shadows fade), and the haze takes no
+    // glare. Eased over ~1.5 s, as a cloud edge passes.
+    private float _sunCover;
+
+    private void UpdateSunCover(double delta, double cx, double cz, float cameraAboveSea)
+    {
+        float target = 0;
+        var toSun = _trueSunDir;
+        if (GameSettings.SunClouds.Index == 1 && !MoonLit && toSun.Y > .02f && Coverage > .01f)
+        {
+            float layer = CloudBaseAboveSea + 700 - cameraAboveSea; // (mid deck above the camera)
+            if (layer > 0)
+            {
+                double t = layer / Math.Max(toSun.Y, .08);
+                double x = cx + toSun.X * t, z = cz + toSun.Z * t;
+                float n = SampleNoise(x, z) * .8f + .5f * .2f, edge = 1 - Coverage;
+                target = Mathf.SmoothStep(edge - .05f, edge + .2f, n) * (1 - .5f * _storm);
+            }
+        }
+        _sunCover = StillShot || SnapExposure ? target : Mathf.MoveToward(_sunCover, target, (float)delta / 1.5f);
+        if (!MoonLit) Sun.LightEnergy *= 1 - Dev("suncover", .78f) * _sunCover;
+    }
+
+    /// <summary>The cloud map's base channel at world xz (bilinear, wrapped over the cloud period).</summary>
+    private float SampleNoise(double x, double z)
+    {
+        double u = x / CloudPeriod * Tile, v = z / CloudPeriod * Tile;
+        int x0 = (int)Math.Floor(u), y0 = (int)Math.Floor(v);
+        float fx = (float)(u - x0), fy = (float)(v - y0);
+        float P(int a, int b) => _noiseBase[(((b % Tile) + Tile) % Tile) * Tile + ((a % Tile) + Tile) % Tile] / 255f;
+        return Mathf.Lerp(Mathf.Lerp(P(x0, y0), P(x0 + 1, y0), fx), Mathf.Lerp(P(x0, y0 + 1), P(x0 + 1, y0 + 1), fx), fy);
+    }
+
     private void UpdateHeightHaze(float cameraY)
     {
         if (GameSettings.HeightHaze.Index == 0 || float.IsNaN(_regionalGround)) return;
