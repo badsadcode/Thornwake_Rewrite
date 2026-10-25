@@ -78,6 +78,26 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 109 — the rest of Noor's Weather 2.0 notes
+**Host and everyone joining need build 109** (versions must match to connect). Each is in Settings → Simulation with
+*build 108* (or 107) as the other option, unless said otherwise.
+* **Trees in the rain**: under a tree's crown most of the rain is caught by the leaves; the leaves drip (bigger, slower
+  drops, more in gusts) and keep dripping for a few minutes after the rain until they dry. Under wet leaves the rain
+  sounds softer and busier, and single drips tick after it.
+* **Splashes by surface**: roofs, rocks and logs throw bright crowns; on the ground a splash is small and dull, in the
+  woods fainter still.
+* **Dry under cover** (with Rain under cover): the ground and grass under roofs and overhangs stay dry, no puddles.
+* **Mist after rain** (draft): lingers in calm, cool air (evening, night, woods), cleared by wind and the midday sun,
+  lifting off the ground as it dries.
+* **Wet characters** (with Wet look): clothes and hair darken as you soak; dry off over a few minutes, faster under cover;
+  swimming soaks you at once. **Footstep splashes** on wet ground and in shallow water.
+* **Sun showers** (with Rain light): rain from a mostly open sky keeps the sun and brings a rainbow. Esc → Weather test →
+  *Sun shower* forces one.
+* **Drips from roof and ledge edges** while wet, and **lightning lights up the rain** around you.
+* Weather test: *Put a test roof ahead* (a 4 × 4 m board on posts; again to remove) to try shelter anywhere.
+* Try: Weather test → Downpour under a tree, then switch Rain here off and listen; the test roof in a downpour, then
+  after; Moderate + Sun shower at ~16:00 facing away from the sun; a test storm at night.
+
 ## New in build 108 — rain light, shelter, wet by material
 **Host and everyone joining need build 108** (versions must match to connect). All three are in Settings → Simulation,
 each with *build 107* as the other option.
