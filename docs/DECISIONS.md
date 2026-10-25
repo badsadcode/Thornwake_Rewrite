@@ -2806,6 +2806,15 @@ less grain inside clouds, wisps still speckled. Result (`artifacts/cloud-grain-s
 banding, clouds a little crisper; cost on the HUD 60 → 50–57 FPS in those views (one more density sample per cloud
 sample). A visual default changed, so the old way is the other option (return point build 95 `c927386`).
 
+## D185 — The overcast "marble" sky was D184's regression; the dither back for thick decks (2026-10-25)
+Tom (after build 96's captures of today's layers): "overcast without the marble pattern". The contour-line marble on a
+90 % deck came from D184 (build 96): without TAA the march had no per-pixel offset, and a thick deck's long paths banded
+into contours (build 95's dithered march: smooth; flat clouds: none). Halving the offset (stratified) left faint
+contours. **Fix**: the offset returns with the cover (smoothstep 55–85 %) and the second density sample sits half a step
+away, wrapped (full stratification); broken cloud keeps the offset-free ¼ / ¾ that removed Tom's grain. Captures
+(`artifacts/overcast-marble-fix.jpg`): overcast ≈ build 95 (its own faint ripples remain), 70 % cover and the grain spot
+clean. Lesson: check a cloud change at overcast too.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -638,7 +638,14 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 	// within its segment.
 	float s0 = t0;
 	bool smooth2 = cloud_smooth == 1 && cloud_v2 < 1.5;
-	if (smooth2) jitter = 0.25; // (D184: no per-pixel offset without TAA; two samples per step at ¼ and ¾ instead)
+	// (D184: without TAA two samples per step at ¼ and ¾, no per-pixel offset: no grain on broken cloud. D185: in a thick
+	// overcast deck that banded into contour lines — the "marble" sky in build 96; there the full offset comes back with
+	// the second sample half a step on (wrapped), toward 85 % cover.)
+	float strat_b = 0.5;
+	if (smooth2) {
+		jitter = mix(0.25, jitter, smoothstep(0.55, 0.85, cloud_state.z));
+		strat_b = fract(jitter + 0.5) - jitter;
+	}
 	for (int i = 0; i < max_steps; i++) {
 		if (s0 >= t1) break;
 		float step_len = clamp(s0 * 0.005, min_step, 450.0);
@@ -653,7 +660,7 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		// inside or just outside: a fixed diagonal grain over thin cloud, Tom's dump 235339 with SMAA. Without TAA: no
 		// offset, two density samples per step (¼ and ¾), one more density sample per cloud sample; the six light
 		// samples stay one each. A second sample with the offset kept left the wisps speckled.)
-		if (smooth2 && d >= 0.0) d = 0.5 * (d + max(vdens(p + dir * seg * 0.5, near), 0.0));
+		if (smooth2 && d >= 0.0) d = 0.5 * (d + max(vdens(p + dir * seg * strat_b, near), 0.0));
 		if (d <= 0.002) continue;
 		// Toward the light: six steps, longer and longer (≈3 km), cheap density.
 		float od = 0.0, sl = 60.0;
