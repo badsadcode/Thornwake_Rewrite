@@ -2847,6 +2847,13 @@ moonlight 1.0). **Fix**: the moon boosts back off as the air thickens (× 0.4 / 
 adds ×1, not ×2. His dump: energy 3.1, the moon and clouds visible through a soft glow; the test forest's shafts subtler
 than D183, still there (`artifacts/moon-glow-fix.jpg`). Lesson: tune look effects at the weather extremes too.
 
+## D189 — Cloud layers: no aliasing in the grey sheet, cirrus in patches (2026-10-25)
+The stripes noted in D187. (1) The grey sheet's texture is now read at a mip level from each pixel's footprint and its
+fine octave fades out toward the horizon (it aliased there). (2) Most of the stripes were the cirrus: in layered mode
+there is more of it and its streaks lined up as regular parallel bands; now it comes in patches tens of km across with
+wisps of varied width (`artifacts/cirrus-patches.jpg`: fair-weather cirrus as natural wisps; with a front the bands are
+weaker). Left: faint streaks low in the sky with a front coming, probably the mackerel rows that come with it.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

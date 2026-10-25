@@ -87,7 +87,12 @@ void sky() {
 				float near_front = cloud_front.w * smoothstep(70000.0, 15000.0, cloud_front.z);
 				// thicker toward the front's side of the sky, patchy over tens of km
 				float side = 0.6 + 0.4 * dot(normalize(dir.xz + vec2(1e-4)), cloud_front.xy);
-				float n = texture(cloud_tex, xz / 36000.0 + vec2(0.17, 0.59)).r * 0.7 + texture(cloud_tex, xz / 9000.0).g * 0.3;
+				// (D189: toward the horizon one pixel spans kilometres of the sheet and the texture aliased into horizontal
+				// stripes: an explicit mip level from the footprint, and the fine octave fades out there)
+				float fp = log2(max(t * 0.0015 / max(up, 0.02) / (36000.0 / float(textureSize(cloud_tex, 0).x)), 1.0));
+				float fine = 1.0 - smoothstep(0.06, 0.2, 0.25 - up);
+				float n = textureLod(cloud_tex, xz / 36000.0 + vec2(0.17, 0.59), fp).r * 0.7
+					+ mix(0.5, textureLod(cloud_tex, xz / 9000.0, fp + 2.0).g, fine) * 0.3;
 				float d = clamp(near_front * side * 1.4 - (0.6 - n) * 0.9, 0.0, 0.92) * smoothstep(0.01, 0.12, up);
 				if (d > 0.0) {
 					// (a flat grey-blue, darker toward the thick parts; the horizon colour made a pale glare)

@@ -154,7 +154,11 @@ float cirrus_density(vec2 xz, float coverage, float front) {
 	if (layers_mode == 1) {
 		// (layered: fair-weather cirrus at any cover, more and denser as a front comes; front = its strength 0..1)
 		edge = 1.0 - (0.3 + coverage * 0.25 + front * 0.3);
-		return smoothstep(edge, edge + 0.3, n) * (0.45 + 0.2 * front);
+		// (D189: more cirrus lined up as regular parallel bands across the sky: patches tens of km across, with wisps
+		// of varied width, instead of one even field of streaks)
+		float patches = smoothstep(0.35, 0.75, texture(cloud_tex, uv * 0.23 + vec2(0.61, 0.27)).r + front * 0.25);
+		float wisp = texture(cloud_tex, uv * vec2(2.0, 0.7) + vec2(0.13, 0.81)).g;
+		return smoothstep(edge, edge + 0.3, n * (0.75 + 0.5 * wisp)) * (0.45 + 0.2 * front) * patches;
 	}
 	return smoothstep(edge, edge + 0.3, n) * 0.35;
 }
