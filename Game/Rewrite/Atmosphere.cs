@@ -699,6 +699,8 @@ public partial class Atmosphere : Node3D
             _beams.SetShaderParameter("light_color", Sun.LightColor * Sun.LightEnergy);
         }
         _camera3DHeight = cameraLocal.Y;
+        // The scene origin's world xz folded to 65,536 m: the terrain folds each pixel's own world position (D181).
+        RenderingServer.GlobalShaderParameterSet("terrain_fold", new Vector2((float)(originX - Math.Floor(originX / 65536) * 65536), (float)(originZ - Math.Floor(originZ / 65536) * 65536)));
         UpdateAirRays(toSun, cameraWorldX, cameraWorldZ, originX, originZ);
         UpdateHeightHaze(cameraLocal.Y);
 

@@ -154,6 +154,10 @@ cloud_region={
 "type": "float",
 "value": 0.0
 }
+terrain_fold={
+"type": "vec2",
+"value": Vector2(0, 0)
+}
 cloud_sea={
 "type": "float",
 "value": 0.0

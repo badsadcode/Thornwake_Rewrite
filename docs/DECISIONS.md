@@ -2756,6 +2756,17 @@ noises) hash exactly as before; the finer ones repeat every ~600 m (invisible). 
   not the cause here (flat volcanic ground showed no rock), left as is for now.
 * Lesson for captures: `--set=` given before a dump's own `Reproduce:` arguments is overridden by them — put tests after.
 
+## D181 — Long stretched strips across the ground: the 4 km UV fold (2026-10-25)
+Tom (dump 133310, x −204,802): "lines of stretched textures … for very long distances". The terrain's UVs were the
+world xz folded to 4,096 m **per vertex** (TileBuilder.Fold, float precision far from the origin). The triangle row
+across a fold line interpolated from ~4,092 back to 0 and squeezed the whole ground pattern into one strip — at every
+multiple of 4,096 m in x and z, across the world (his spot: 2 m from −204,800 = 50 × 4,096); in far tiles (8–32 km wide)
+the strip is a whole cell wide. And the ground's patches (not 4 km-periodic) met there in a straight colour seam.
+**Fix**: the terrain folds each pixel's own world position — scene xz + the origin folded (global `terrain_fold`,
+Atmosphere) — at **65,536 m**: no strips; seams 16× rarer; floats still exact to < 1 cm. Side effect: outside the old
+4 km cell the ground's patch layout differs (same look, other places). Bug fix; build 94 (`2c512d5`) is the return
+point (`artifacts/ground-fold-strip-fix.jpg`). The mesh UVs are no longer read by the terrain shader.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -26,6 +26,13 @@ uniform int ground_style = 0;
 uniform float sea_level = 0.0;
 uniform float flora_tint = 1.0; // ground under the plant patches: richer where grass is dense (0: classic grass)
 varying float world_height;
+// (D181) The scene xz of this point; with terrain_fold (the scene origin's world xz folded to 65,536 m, Atmosphere) the
+// fragment folds its own world position. The mesh UVs folded per vertex to 4,096 m: the row of triangles across a fold
+// line ran from ~4,092 back to 0 and squeezed the whole ground pattern into one long stretched strip, every 4 km in x and
+// z (Tom's dump 133310, x = −204,802, 2 m from −204,800 = 50 × 4,096); and the ground's patches (not periodic) met in a
+// straight seam there. Per pixel there is no strip; at 65,536 m a seam is 16× rarer, floats still exact to < 1 cm.
+varying vec2 scene_xz;
+global uniform vec2 terrain_fold;
 #ifdef AIR_SHADOW
 // Far mountain shadows (D154, Noor's notes through Tom): the sun's shadow map reaches ~450 m (3 km with air rays), so
 // beyond it mountains did not shade each other and whole ranges were lit evenly. The air map (WorldLab.AirRays, 20 km)
@@ -98,13 +105,14 @@ float gheight_lod(int layer, vec2 p, float lod) {
 void vertex() {
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	world_height = (MODEL_MATRIX * vec4(VERTEX, 1.0)).y;
+	scene_xz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
 	biome_a = CUSTOM0; biome_b = CUSTOM1; biome_c = CUSTOM2; biome_d = CUSTOM3;
 	rock_pair = vec2(mod(CUSTOM2.g, 8.0), floor(CUSTOM2.g / 8.0 + 0.01));
 	map_packed = CUSTOM2.r;
 }
 
 void fragment() {
-	vec2 p = UV;
+	vec2 p = mod(scene_xz + terrain_fold, 65536.0); // (was UV: folded per vertex to 4,096 m, D181)
 	float h = world_height - sea_level;
 	float cover = UV2.x;
 	float forest = COLOR.r, mountain = COLOR.g, wet = COLOR.b, submerged = smoothstep(0.5, 0.8, COLOR.a);
