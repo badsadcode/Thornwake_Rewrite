@@ -39,6 +39,21 @@ vec4 lens(vec2 q, vec2 centre, float r, float stretch) {
 
 vec4 pick(vec4 a, vec4 b) { return a.z >= b.z ? a : b; }
 
+// A running drop (D219): a teardrop — round below, drawn out above into a tail that narrows into the trail.
+vec4 tear(vec2 q, vec2 centre, float r) {
+	vec2 d = q - centre;
+	float up = clamp(-d.y / (r * 2.6), 0.0, 1.0); // 0 at the centre … 1 at the tail's end
+	// above the centre the width shrinks smoothly (a neck), so the drop flows into the trail without a step
+	float w = r * mix(1.0, 0.22, smoothstep(0.0, 1.0, up));
+	float dy = d.y < 0.0 ? d.y / 2.6 : d.y;
+	vec2 e = vec2(d.x * r / max(w, 1e-5), dy);
+	float dist = length(e) / r;
+	float body = 1.0 - smoothstep(0.8, 1.0, dist);
+	if (body <= 0.0) return vec4(0.0, 0.0, 0.0, 9.0);
+	vec2 n = vec2(d.x / max(w, 1e-5), dy / r);
+	return vec4(-n * r * (1.5 + 1.1 * dist * dist), body, dist);
+}
+
 // Beads: cells of `cell` screen heights; a drop lands at its own moment, sits and evaporates.
 vec4 beads(vec2 q, float cell, float seed, float rate) {
 	vec2 c = floor(q / cell);
@@ -67,23 +82,33 @@ vec4 runner(vec2 q, float lane, float col, float cycle, float progress, float pe
 	float wander = lane * 0.28 * (sin(q.y * 9.0 + h * 6.3) * 0.6 + sin(q.y * 23.0 + h * 2.1) * 0.4);
 	float wanderAt = lane * 0.28 * (sin(y * 9.0 + h * 6.3) * 0.6 + sin(y * 23.0 + h * 2.1) * 0.4);
 	float r = lane * (0.16 + 0.06 * h) * size;
-	vec4 drop = lens(q, vec2(cx + wanderAt, y), r, 1.25);
+	vec4 drop = tear(q, vec2(cx + wanderAt, y), r);
 	// how long ago the drop passed this height (s): the trail dries over trail_fade
 	float pq = ((q.y + 0.15) / 1.35) / spd;
 	float age = (progress - pq) * period;
-	float fresh = step(0.0, age) * (1.0 - smoothstep(0.0, trail_fade, age)) * step(0.0, y - q.y);
-	float onPath = 1.0 - smoothstep(r * 0.25, r * 0.65, abs(q.x - (cx + wander)));
-	smear = fresh * onPath * 0.55;
+	// (D219, Tom: the trail "thinner and not cut off … smoother, the transition between the trail and the drop"): a thin
+	// trail with soft edges (a gaussian across), widening only in the drop's neck, narrowing as it dries; it fades in
+	// from inside the drop's tail instead of starting at a hard line
+	float behind = y - q.y;
+	float fresh = smoothstep(-r * 0.5, r * 1.5, behind) * smoothstep(-0.02, 0.0, age) * (1.0 - smoothstep(0.0, trail_fade, age));
+	float neck = 1.0 - smoothstep(r * 1.5, r * 3.5, behind);
+	float tw = r * mix(0.14, 0.32, neck) * (0.55 + 0.45 * fresh);
+	float dx = q.x - (cx + wander);
+	float onPath = exp(-dx * dx / (tw * tw));
+	smear = fresh * onPath * 0.5;
+	// (D219, Tom: "the trail … should also be refracting and dispersing the light a little"): the wet line is a thin
+	// cylindrical lens — the picture from across it, flipped sideways, with the colour split at its edges
+	vec4 line = vec4(-dx * 2.2, 0.0, fresh * onPath * 0.9, abs(dx) / (tw * 1.6));
 	vec4 trail = vec4(0.0, 0.0, 0.0, 9.0);
 	float bcell = r * 1.1;
 	float bi = floor(q.y / bcell);
-	if (fresh > 0.0 && hash1(bi + col * 13.0 + cycle) < 0.55) {
+	if (fresh > 0.0 && neck < 1.0 && hash1(bi + col * 13.0 + cycle) < 0.45) {
 		// (tiny beads left behind; they shrink as they dry)
-		float br = r * (0.18 + 0.2 * hash1(bi * 3.1 + col + cycle)) * (0.35 + 0.65 * fresh);
-		vec2 bc = vec2(cx + wander + (hash1(bi + 5.0 + cycle) - 0.5) * r * 0.5, (bi + 0.5) * bcell);
+		float br = r * (0.12 + 0.14 * hash1(bi * 3.1 + col + cycle)) * (0.35 + 0.65 * fresh) * (1.0 - neck);
+		vec2 bc = vec2(cx + wander + (hash1(bi + 5.0 + cycle) - 0.5) * r * 0.3, (bi + 0.5) * bcell);
 		trail = lens(q, bc, br, 1.0);
 	}
-	return pick(drop, trail);
+	return pick(pick(drop, line), trail);
 }
 
 // Runner lanes `lane` screen heights wide; each lane runs a drop now and then. smear: the wet trails at q.
@@ -118,7 +143,7 @@ void fragment() {
 	if (l.z <= 0.002 && smear <= 0.002) discard;
 	vec3 here = textureLod(screen_tex, uv, 0.0).rgb;
 	// the wet smear: a little blur and a touch of light
-	vec3 smeared = mix(here, textureLod(screen_tex, uv, 2.0).rgb * 1.04, smear);
+	vec3 smeared = mix(here, textureLod(screen_tex, uv, 1.5).rgb * 1.05, smear);
 	vec2 off = l.xy / vec2(aspect, 1.0);
 	// dispersion: each colour refracted by its own amount (red least, blue most), the split growing toward the rim
 	vec2 ca = vec2(0.001), cb = vec2(0.999);

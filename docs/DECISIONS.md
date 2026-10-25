@@ -3253,6 +3253,19 @@ Capture (`artifacts/lens-drops-trails.jpg`): two runners' wavy trails with bead 
 Also: a horizontal grey band across the treetops in the rain captures was the after-rain mist (D214) lifting while it
 still rained (the ground barely wet at a rain's start); the lift now waits until the rain has stopped.
 
+## D219 — Lens drops: a teardrop flowing into a thin, refracting trail (2026-10-25)
+Tom on D218: "when the drop drips down … the trail should be thinner and not cut off like that … smoother, the
+transition between the trail and the drop", then "the trail sometimes is barely visible; it should also be refracting
+and dispersing the light a little". `LensDrops.gdshader`:
+* a running drop is a **teardrop** (`tear`): round below, drawn out ~2.6 radii above into a neck narrowing to ~0.2 of
+  its width, so it flows into the trail without a step;
+* the **trail** is a gaussian across (soft edges, no hard band), 0.14 of the drop's radius wide (0.32 in the neck),
+  narrowing as it dries; it fades in from inside the drop's tail rather than starting at a line; its tiny beads are
+  smaller, fewer and none in the neck;
+* the trail is a **thin cylindrical lens** itself: the picture from across it, flipped sideways, with the drops'
+  dispersion and rim fringe — a visible glassy line with darker edges, colour where it crosses detail.
+Capture (`artifacts/lens-trail-smooth.jpg`): wavy trails as soft glassy lines over the sky.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
