@@ -185,6 +185,7 @@ public partial class AmbientLife : Node3D
         // Biome motes.
         var p = Profile(_biome);
         UpdateDevil(delta, windDir, windSpeed, daylight, rain, p);
+        UpdateAccent(delta, windDir, windSpeed, daylight, rain);
         float moteK = p.Amount * Math.Min(_amount, 2) * (1 - .85f * rain) * (p.NeedsWind ? Mathf.SmoothStep(2, 8, windSpeed) : 1)
             * (p.NightToo ? 1 : Mathf.SmoothStep(.15f, .5f, daylight)) * (p.Leaves ? Flurry(gust) * 1.6f : 1);
         _motes.Emitting = moteK > .03f;

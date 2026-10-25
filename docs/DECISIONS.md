@@ -2902,6 +2902,17 @@ the ground. A particle shader (`DustDevil.gdshader`): 1,400 puffs orbiting the a
 2–9 m wide and 22–40 m tall, denser at the base. Test flag `--dust-devil` (one right away, 70 m ahead).
 `artifacts/dust-devil.jpg`. A first render was a thin wisp: wider, bigger puffs.
 
+## D195 — Living air accents: embers, fireflies, midge swarms (draft) (2026-10-25)
+Tom: "continue with embers and insects". A third small particle system in `AmbientLife` (`AmbientLife.Accents.cs`),
+one kind at a time, with Living air on and no rain:
+* **Embers** (volcanic, day and night): 160 orange sparks, 9 cm, flickering, drifting up and with the wind, additive glow
+  — clear at night, faint by day against bright ground.
+* **Fireflies** (calm nights, not in winter; grassland, temperate and ancient forest, swamps, marsh, fen, bayou, jungle):
+  70 green-yellow lights, 13 cm, blinking slowly on and off, drifting low around you.
+* **Midge swarm** (calm days, not in winter; swamps, marsh, fen, bayou, jungle, grassland): 140 dark specks churning in a
+  ~1 m cloud hovering 3.5–7.5 m off, moving to another spot every 20–45 s.
+First render: all three sub-pixel or too sparse; made bigger, denser and closer. `artifacts/living-air-accents.jpg`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
