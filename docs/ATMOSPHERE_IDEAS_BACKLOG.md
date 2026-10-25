@@ -20,6 +20,7 @@ a switchable draft when it is picked up. Source notes: `DOCS/Thornwake_Visual At
   complementing the lighting, not overriding it. (The look presets of D164 are a start.)
 
 ## Clouds (in progress)
+* **Flat cloud bottoms without detail** (Tom, 2026-10-25, after build 103): next in line — see `docs/HANDOFF.md`.
 * Layers: mackerel softer at night, cirrus visible, a middle grey sheet (altostratus) before fronts — Tom's order.
 * "Shaving foam" clouds: finer detail noise; Tom's dumps when it happens (D177).
 

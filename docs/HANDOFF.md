@@ -1,4 +1,49 @@
-# Handoff — where the work stands (2026-10-12)
+# Handoff — START HERE (2026-10-25, after build 103)
+
+Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
+
+## Where things stand
+* **Last build Tom has: 103** (v0.9.103, return point `1a75bac`, `dist/Preview-103`). Builds 76–103 this session:
+  Atmosphere 2.0 M2 (rays) and M3 (clouds), moonlight, Living air, colour grading, many fixes. Decisions D143–D202 in
+  `docs/DECISIONS.md` (next: **D203**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
+* **Tom's settings were reset to a clean baseline** (D200, D201; `tools/settings_baseline.py`; backup
+  `%APPDATA%/Thornwake/rewrite_settings.before-baseline-20261025.cfg`). Since then he chose Colour grading *Fantasy* and
+  Rays strength 2.5 himself. Earlier his "hazy, bland, constantly in fog" look came from Wind strength 3.9 (a 20 m/s gale
+  full of dust) and Cloud base *above the sea* (inside the clouds in the mountains) — check his settings first when
+  something looks wrong.
+* Capture and benchmark helpers: `tools/capture/` (README there). Dumps: `%APPDATA%/Thornwake/debug`, each with a
+  `Reproduce:` line.
+
+## Tom's open point (his last message): the bottoms of the clouds look flat, without details
+Not looked at yet. Where it comes from in `Game/Rewrite/SkyCommon.gdshaderinc` (Tom plays with Cloud look = reference,
+Cloud shape = rounded):
+* `vdens`: the base is a near-level plane (`h = (p.y - wx.z) / wx.y`, cut at h ≤ 0 with a short `smoothstep(0, 0.06–0.1, h)`
+  onset); the rounded shape only moves the base by ±150–300 m per cloud (`big.g`, `n.b`), so each cloud's underside is
+  one flat sheet.
+* Detail erosion: with Cloud look *reference*, `df = mix(1 - df, df, smoothstep(0.0, 0.1, h))` — "billowy almost to the
+  base, which stays flat" (round 32, from the M3 references: flat blue-grey bases).
+* Lighting (`cloud_march`, `if (cloud_look == 1)`): the base's ambient is pulled toward one flat blue-grey
+  (`gl * vec3(0.88, 0.94, 1.12) * 1.3`, weight (1 − hb) × 0.75) — every underside the same colour, no shading.
+* Ideas to try, as a switchable draft with paired captures (Tom judges looks; today's look stays selectable): a lumpy
+  base (3D noise pushing the base up/down by 50–150 m per lump, rolls along the wind for stratocumulus), keep some
+  detail erosion at the base, weaker flattening of the base colour plus sky-light occlusion from the cloud above
+  (D198 showed it darkens folds; cost was high at full scale — try only for the base), darker centres under thick
+  cloud, brighter thin edges.
+* Related findings: the clouds' "posterized / foam" look is the lighting, not the noise (D198, D199: finer 128³ noise made
+  no visible difference at 5–15 km; deeper self-shadow `--cloud-dev=1,1` looked more volumetric, but Tom chose to keep
+  today's shading for now).
+
+## Other open items
+* Living air (D190–D195): Tom likes the dust and leaves (leaves now in flurries); wind trails not judged yet.
+* Colour grading presets (D192): Tom will judge them in play.
+* Cloud drafts off by default: softness (D197), smooth shading (D198, costly), fine detail (D199). Cloud quality levels
+  High/Medium/Low (D196). Sun behind clouds (D201) and glow by the haze (D202) are on.
+* Faint stripes low in the sky with a front coming (cloud layers draft, D189); cloud grain with SMAA fixed (D184/D185).
+* The agreed overall order (below): after Atmosphere 2.0, world generation tidy-up, settlements and roads.
+
+---
+
+# Earlier handoff — where the work stood (2026-10-12)
 
 Written when the work moved from the cloud session (CPU rendering only, ~17 s a frame) to Tom's PC (RTX 3080), so the
 heavy Atmosphere 2.0 tests can run on a real GPU. Everything below is on `main`.
