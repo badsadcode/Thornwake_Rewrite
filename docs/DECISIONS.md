@@ -3205,6 +3205,22 @@ small splashes when moving through wet or shallow-water surfaces). Part of *Wet 
   0.75 m). Test flag `--walk-test` (walks forward). Capture (`artifacts/foot-splash.jpg`): a splash behind the foot.
 Rain on water (§7) not changed: the water already rings with the rain (`rain_now`).
 
+## D216 — Sun showers, drips from roof edges, lightning lights the rain (2026-10-25)
+Tom: "keep going with the rest of Noor's list".
+* **Sun showers** (§6, "warm sunlit terrain alongside rain", with *Rain light by strength*): rain from a mostly open
+  sky — the weather's own cover below ~0.6 in light or moderate rain, or Esc → Weather test → *Sun shower* (and
+  `--sun-shower`). The storm's darkening (×0.15), the rain light's grey sheet (none) and most of its veil (×0.35) stay
+  away, the fog keeps the sun's glow; the rainbow (Sky) shows, as the storm is low and the ground wet. Capture
+  (`artifacts/sun-shower.jpg`): the same moderate rain at 16:30, grey vs blue gaps, a stronger bow, sunlit drops.
+* **Drips from roof and ledge edges** (§5, "water drips at the edge of the rock", roof-edge drips): twice a second the
+  cover map's hard cells (roofs, rocks, logs) whose neighbour is open or > 0.5 m lower are the edges; while wet (the
+  leaves' wetness: in the rain and minutes after) drips fall just past them, from the same drip emitter as the trees —
+  half of the drips each when both are near (by count the crowns took nearly all). Capture: the test roof
+  (`artifacts/roof-edge-drips.jpg`).
+* **Lightning lights the rain** (§6): the streaks turn toward the flash's blue-white with the strike's brightness
+  (fading over ~4 km). Multiplying the night tint left them as dark lines in the flash (`artifacts/lightning-rain.jpg`).
+Not done from §9: animals seeking cover (the animal AI); §7 rain on water already rings.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

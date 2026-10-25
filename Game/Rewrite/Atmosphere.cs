@@ -69,6 +69,8 @@ public partial class Atmosphere : Node3D
     private readonly byte[] _coverBytes = new byte[CoverN * CoverN * 16];
     private readonly int[] _coverX = new int[CoverN * CoverN], _coverZ = new int[CoverN * CoverN];
     private readonly bool[] _coverOk = new bool[CoverN * CoverN];
+    private readonly System.Collections.Generic.List<Vector3> _edgeCells = new(); // roof and ledge edges (D216)
+    private float _edgeTimer;
     /// <summary>0 in the open … 1 under cover at the camera (eased): the rain sound muffles (Lightning.Shelter).</summary>
     public float Sheltered { get; private set; }
     private float _dripSound;
@@ -643,7 +645,13 @@ public partial class Atmosphere : Node3D
         _daylightHours = (float)sky.DaylightHours;
         _sunElevation = elevation;
         UpdateNight(sky, elevation);
-        _storm = Mathf.MoveToward(_storm, Mathf.Clamp(Precip * 1.15f, 0, 1), (float)delta / 8); // ~8 s to cloud over or clear
+        // Sun showers (D216; Noor's notes §6: "warm sunlit terrain alongside rain"): rain from a sky that is mostly open — the
+        // weather's own cover below ~0.6 in light or moderate rain, or the Weather test's switch: the storm's darkening,
+        // the rain light's grey sheet and most of its veil stay away, the sun keeps shining; the rainbow comes (Sky).
+        float showerTarget = ForceSunShower ? 1 : GameSettings.RainLight.Index == 1 && !float.IsNaN(WeatherClouds) && Precip > .02f && Precip < .65f
+            ? Mathf.SmoothStep(.62f, .45f, WeatherClouds) : 0;
+        _sunShower = Mathf.MoveToward(_sunShower, Snowing ? 0 : showerTarget, (float)delta / 6);
+        _storm = Mathf.MoveToward(_storm, Mathf.Clamp(Precip * 1.15f, 0, 1) * (1 - .85f * _sunShower), (float)delta / 8); // ~8 s to cloud over or clear
         _rainK = Mathf.MoveToward(_rainK, Snowing ? 0 : Mathf.Clamp(Precip, 0, 1), (float)delta / 8); // (rain light, D210)
         OceanTime += delta;
         // Wet look: the ground darkens within ~30 s of rain and dries over ~6 min; puddles fill over ~2 min, last ~15 min.
@@ -992,7 +1000,10 @@ public partial class Atmosphere : Node3D
     /// <summary>How closed and soft the sky is from the rain alone (draft Rain light): already in drizzle.</summary>
     // (drizzle falls from a low grey sheet: closed already at ~0.15; a first try closing toward 0.3 left drizzle under a
     // broken, sunny sky)
-    private float RainOvercast => GameSettings.RainLight.Index == 1 ? Mathf.SmoothStep(.01f, .15f, _rainK) : 0;
+    private float RainOvercast => GameSettings.RainLight.Index == 1 ? Mathf.SmoothStep(.01f, .15f, _rainK) * (1 - _sunShower) : 0;
+    private float _sunShower;
+    /// <summary>Tests (Esc → Weather test): the rain falls as a sun shower whatever the clouds (D216).</summary>
+    public bool ForceSunShower { get; set; }
 
     /// <summary>
     /// Rain light by strength (D210; Tom: "when it's raining, especially during the downpour, the lighting conditions
@@ -1006,14 +1017,14 @@ public partial class Atmosphere : Node3D
     {
         var e = Environment;
         bool on = GameSettings.RainLight.Index == 1;
-        float r = on ? _rainK : 0;
+        float r = on ? _rainK * (1 - .65f * _sunShower) : 0; // (a sun shower: a light veil, the sun's glow kept)
         e.AdjustmentSaturation = _baseSaturation * (1 - .35f * r);
         e.AdjustmentContrast = _baseContrast * (1 - .1f * r);
         e.FogAerialPerspective = _baseAerial * (1 - .8f * r);
         if (r <= .001f) return;
         e.FogDensity += .0023f * Mathf.Pow(r, 1.5f);
         e.FogEnabled = true;
-        e.FogSunScatter *= 1 - .8f * r;
+        e.FogSunScatter *= 1 - .8f * r * (1 - _sunShower);
     }
 
     /// <summary>
@@ -1130,6 +1141,26 @@ public partial class Atmosphere : Node3D
             CoverWrite(CoverSlot(cx + dx, cz + dz), cx + dx, cz + dz); changed = true;
         }
         if (_coverNext >= inner * 1000) _coverNext = 0;
+        // Edges of roofs and ledges (D216, Noor's notes §5: "water drips at the edge of the rock", roof-edge drips): twice a
+        // second, the hard covered cells whose neighbour is open or much lower; the drips fall just past their edge.
+        if ((_edgeTimer -= (float)GetProcessDeltaTime()) <= 0)
+        {
+            _edgeTimer = .5f;
+            _edgeCells.Clear();
+            foreach (var (dx, dz) in _coverOrder)
+            {
+                if (dx * dx + dz * dz > 18 * 18) continue;
+                int wx = cx + dx, wz = cz + dz, t = CoverSlot(wx, wz);
+                if (!_coverOk[t] || _coverX[t] != wx || _coverZ[t] != wz || _coverData[t * 4 + 3] < 1.5f) continue;
+                float h = _coverData[t * 4];
+                foreach (var (nx, nz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                {
+                    float hn = CoverCell(wx + nx, wz + nz);
+                    if (float.IsNaN(hn) || hn > h - .5f) continue;
+                    _edgeCells.Add(new Vector3(wx + .5f + nx * .55f, h - .05f, wz + .5f + nz * .55f));
+                }
+            }
+        }
         if (_coverFar >= _coverOrder.Length * 1000) _coverFar = 0;
         if (changed)
         {
@@ -1208,6 +1239,7 @@ public partial class Atmosphere : Node3D
         float dryK = .4f + 1.3f * sunOnGround + .05f * Math.Min(Wind.Speed, 20);
         _leafWet = p > .02f ? Mathf.Min(1, _leafWet + dt / 60 * (.3f + p * 1.5f)) : Mathf.Max(0, _leafWet - dt / 240 * dryK);
         bool crowns = on && _canopyTex != null && _crownCells.Count > 0;
+        bool edges = GameSettings.WetLook.Index == 1 && GameSettings.RainShelter.Index == 1 && !Snowing && _edgeCells.Count > 0;
         _rainStreakMat!.SetShaderParameter("canopy_on", crowns ? 1 : 0);
         if (crowns)
         {
@@ -1234,7 +1266,8 @@ public partial class Atmosphere : Node3D
             };
             AddChild(_drips);
         }
-        float rate = crowns ? _leafWet * (.55f + .45f * Wind.Gust) * Mathf.Clamp(_crownCells.Count / 400f, .25f, 1) : 0;
+        int sources = (crowns ? _crownCells.Count : 0) + (edges ? _edgeCells.Count * 6 : 0);
+        float rate = sources > 0 ? _leafWet * (.55f + .45f * Wind.Gust) * Mathf.Clamp(sources / 400f, .25f, 1) : 0;
         _drips.Emitting = rate > .02f;
         if (!_drips.Emitting) return;
         _drips.GlobalTransform = Transform3D.Identity;
@@ -1243,9 +1276,22 @@ public partial class Atmosphere : Node3D
         int n = _dripNext == 0 ? DripPointCount : 64;
         for (int i = 0; i < n; i++)
         {
-            var cell = _crownCells[_splashRandom.Next(_crownCells.Count)];
-            float x = cell.X + (float)_splashRandom.NextDouble(), z = cell.Z + (float)_splashRandom.NextDouble();
-            float y = cell.Y + (float)_splashRandom.NextDouble() * 1.2f;
+            float x, y, z;
+            // (half the drips from the edges when there are both: by count the crowns took nearly all)
+            if (crowns && (!edges || _splashRandom.NextDouble() < .5))
+            {
+                var cell = _crownCells[_splashRandom.Next(_crownCells.Count)];
+                x = cell.X + (float)_splashRandom.NextDouble(); z = cell.Z + (float)_splashRandom.NextDouble();
+                y = cell.Y + (float)_splashRandom.NextDouble() * 1.2f;
+            }
+            else
+            {
+                // (a roof's or a ledge's edge: along the cell's side, just below it)
+                var edge = _edgeCells[_splashRandom.Next(_edgeCells.Count)];
+                float along = (float)_splashRandom.NextDouble() - .5f;
+                bool alongX = Mathf.Abs(edge.X - Mathf.Floor(edge.X) - .5f) < .1f;
+                x = edge.X + (alongX ? along : 0); z = edge.Z + (alongX ? 0 : along); y = edge.Y;
+            }
             _dripPointsImage!.SetPixel(_dripNext++ % DripPointCount, 0, new Color(x, y, z));
         }
         if (_dripNext >= DripPointCount * 1000) _dripNext = DripPointCount;

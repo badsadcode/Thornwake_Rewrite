@@ -4,6 +4,8 @@ uniform vec3 fall_dir = vec3(0.0, -1.0, 0.0); // the rain's velocity now, normal
 uniform float streak_len = 0.5;               // m
 uniform float width = 0.01;                   // m
 uniform vec4 tint : source_color = vec4(0.78, 0.83, 0.88, 0.2);
+// Lightning (D216): a strike lights up the rain around you (x, z toward it, brightness, distance km).
+global uniform vec4 lightning;
 
 varying float v_alpha;
 
@@ -74,7 +76,8 @@ void vertex() {
 void fragment() {
 	float across = 1.0 - abs(UV.x * 2.0 - 1.0);
 	float along = smoothstep(0.0, 0.3, UV.y) * smoothstep(1.0, 0.7, UV.y);
-	ALBEDO = tint.rgb;
+	// (toward the flash's own blue-white, not a multiple of the night tint: multiplied they stayed dark lines in the flash)
+	ALBEDO = mix(tint.rgb, vec3(0.8, 0.86, 1.0), clamp(lightning.z * exp(-lightning.w / 4.0), 0.0, 1.0));
 	ALPHA = tint.a * v_alpha * across * along;
 #ifdef RAIN_HASHED
 	// (the core near-solid: at a streak's low alpha the dither left dotted lines that TAA could not fill on drops this fast;

@@ -50,6 +50,9 @@ public partial class WorldLab
         RainText();
         box.AddChild(rainOn);
         box.AddChild(Row("Strength", rainSlider, rainValue));
+        var shower = new CheckButton { Text = "Sun shower: the sun shines through the rain (D216)" };
+        shower.Toggled += on => _atmosphere.ForceSunShower = on;
+        box.AddChild(shower);
         var presets = new HBoxContainer();
         foreach (var (name, v) in new[] { ("Drizzle", .12f), ("Light", .3f), ("Moderate", .55f), ("Heavy", .8f), ("Downpour", 1f) })
         {
@@ -163,6 +166,7 @@ public partial class WorldLab
 
     /// <summary>Per frame: the test storm, the lightning with the classic weather model, the readout.</summary>
     private Node3D? _testRoof;
+    private bool _sunShowerArg = Array.IndexOf(OS.GetCmdlineUserArgs(), "--sun-shower") >= 0;
     private bool _testRoofPending = Array.IndexOf(OS.GetCmdlineUserArgs(), "--test-roof") >= 0;
 
     private void ToggleTestRoof()
@@ -190,6 +194,7 @@ public partial class WorldLab
 
     private void WeatherTestStep(double delta, SkyState sky, Vector3 cam)
     {
+        if (_sunShowerArg) { _sunShowerArg = false; _atmosphere.ForceSunShower = true; } // (--sun-shower, captures)
         if (_testRoofPending && _sampler != null && _generation == null && !_holding && _streamer.Settled) { _testRoofPending = false; ToggleTestRoof(); }
         if (_testStorm && _sampler != null)
         {
