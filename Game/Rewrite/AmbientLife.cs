@@ -38,6 +38,68 @@ public partial class AmbientLife : Node3D
         return episode * (.35f + .65f * gust);
     }
 
+    /// <summary>The ground's height (scene y) at a scene x, z (WorldLab: the terrain sampler), for the dust devils.</summary>
+    public Func<float, float, float>? GroundY { get; set; }
+
+    // ---- dust devils (D194): now and then a whirling dust column some way off in dry, sunny country.
+    private GpuParticles3D? _devil;
+    private ShaderMaterial? _devilPm;
+    private float _devilAge = -1, _devilLife, _devilWait = 20;
+    private Vector3 _devilPos;
+    private readonly Random _rng = new(97);
+    /// <summary>Tests only (<c>--dust-devil</c>): one right away, ~70 m ahead.</summary>
+    public static bool ForceDevil { get; set; }
+
+    private void UpdateDevil(double delta, Vector2 windDir, float windSpeed, float daylight, float rain, MoteProfile p)
+    {
+        bool dusty = p.Devils && GameSettings.AmbientLife.Index > 0 && daylight > .6f && rain < .05f && windSpeed < 9;
+        if (_devil == null)
+        {
+            _devilPm = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/DustDevil.gdshader") };
+            var mat = (StandardMaterial3D)_moteMat.Duplicate();
+            mat.AlbedoTexture = DotTexture();
+            _devil = new GpuParticles3D
+            {
+                Amount = 1400, Lifetime = 9, LocalCoords = true, Emitting = false, TopLevel = true,
+                VisibilityAabb = new Aabb(new Vector3(-20, -2, -20), new Vector3(40, 45, 40)),
+                DrawPass1 = new QuadMesh { Size = new Vector2(.6f, .6f), Material = mat },
+                ProcessMaterial = _devilPm, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            };
+            AddChild(_devil);
+        }
+        var dir = new Vector3(windDir.X, 0, windDir.Y).Normalized();
+        if (_devilAge < 0)
+        {
+            _devil.Emitting = false;
+            if (!dusty || GroundY == null) return;
+            _devilWait -= (float)delta;
+            if (_devilWait > 0 && !ForceDevil) return;
+            // a new one 50–160 m away, ahead of the camera more often than behind
+            var cam = GetParent<Node3D>().GlobalTransform;
+            var fwd = -cam.Basis.Z; fwd.Y = 0; fwd = fwd.LengthSquared() > 1e-4f ? fwd.Normalized() : Vector3.Forward;
+            float a = ForceDevil ? .15f : (float)(_rng.NextDouble() - .5) * 2.2f, d = ForceDevil ? 70 : 50 + 110 * (float)_rng.NextDouble();
+            if (ForceDevil) { ForceDevil = false; _devilAge = 3; }
+            var off = fwd.Rotated(Vector3.Up, a) * d;
+            _devilPos = cam.Origin + off;
+            _devilPos.Y = GroundY(_devilPos.X, _devilPos.Z) - .5f;
+            _devilLife = 18 + 20 * (float)_rng.NextDouble();
+            if (_devilAge < 0) _devilAge = 0;
+            _devil.Restart();
+        }
+        _devilAge += (float)delta;
+        _devilPos += dir * Math.Max(windSpeed, 1.5f) * .45f * (float)delta;
+        if (GroundY != null) _devilPos.Y = Mathf.Lerp(_devilPos.Y, GroundY(_devilPos.X, _devilPos.Z) - .5f, (float)delta * 2);
+        _devil.GlobalPosition = _devilPos;
+        float k = Mathf.SmoothStep(0, 4, _devilAge) * (1 - Mathf.SmoothStep(_devilLife - 6, _devilLife, _devilAge));
+        _devil.Emitting = _devilAge < _devilLife - 4;
+        _devilPm!.SetShaderParameter("strength", k);
+        _devilPm.SetShaderParameter("lean", dir * (2 + windSpeed * .8f));
+        _devilPm.SetShaderParameter("height", 22 + 18 * (_devilLife % 1));
+        var c = p.Colour;
+        ((StandardMaterial3D)((QuadMesh)_devil.DrawPass1).Material).AlbedoColor = new Color(c.R * .92f, c.G * .85f, c.B * .78f, .55f);
+        if (_devilAge > _devilLife) { _devilAge = -1; _devilWait = 25 + 60 * (float)_rng.NextDouble(); }
+    }
+
     /// <summary>The biome around the player (its id) and how much of it (0..1).</summary>
     public void SetBiome(string id, float share) => _biome = share >= .5f ? id : _biome == "" ? id : _biome;
 
@@ -122,6 +184,7 @@ public partial class AmbientLife : Node3D
 
         // Biome motes.
         var p = Profile(_biome);
+        UpdateDevil(delta, windDir, windSpeed, daylight, rain, p);
         float moteK = p.Amount * Math.Min(_amount, 2) * (1 - .85f * rain) * (p.NeedsWind ? Mathf.SmoothStep(2, 8, windSpeed) : 1)
             * (p.NightToo ? 1 : Mathf.SmoothStep(.15f, .5f, daylight)) * (p.Leaves ? Flurry(gust) * 1.6f : 1);
         _motes.Emitting = moteK > .03f;
@@ -140,12 +203,12 @@ public partial class AmbientLife : Node3D
     }
 
     private readonly record struct MoteProfile(float Amount, Color Colour, float Size, float Gravity, float WindFollow,
-        float Swirl, float Height, bool NeedsWind, bool NightToo, bool Glow, bool Leaves = false);
+        float Swirl, float Height, bool NeedsWind, bool NightToo, bool Glow, bool Leaves = false, bool Devils = false);
 
     private static MoteProfile Profile(string biome) => biome switch
     {
         "desert" or "badlands" or "needle-rocks" or "savanna" =>
-            new(1.6f, new Color(.98f, .86f, .66f, .7f), 2.0f, -.05f, .35f, 1.6f, .3f, true, false, false),        // dust (paler than the ground: it catches the light)
+            new(1.6f, new Color(.98f, .86f, .66f, .7f), 2.0f, -.05f, .35f, 1.6f, .3f, true, false, false, false, true), // dust (paler than the ground: it catches the light); dust devils
         "volcanic" =>
             new(1.0f, new Color(.55f, .52f, .5f, .6f), 1.2f, -.12f, .2f, 1.0f, 1.5f, false, true, false),          // ash
         "arctic" or "tundra" or "alpine" =>

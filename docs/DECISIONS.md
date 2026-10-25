@@ -2886,6 +2886,22 @@ table: as before), Cinematic, Fantasy, Dreamy, Rustic, Dark fantasy, Vintage, Vi
 (`artifacts/grading-forest.jpg`, `artifacts/grading-ridge.jpg`; the ridge with Tom's own hazy settings). First guesses
 at each look: Tom picks and tunes. Not yet: vignette, film grain, custom sliders, grading by weather or biome.
 
+## D193 — "Performance is dropping": the recent drafts measured (2026-10-25)
+Tom: "the performance is dropping a little bit, I think, or maybe my PC needs a restart". New suite **perfcheck**, his own
+settings, A-B-A-B per scene (horizon, broken cover, summit, swamp sunrise, forest): *Cloud grain without TAA* off/on and
+*Living air* + *Cloud layers* + *one pass in the layer* off/on. Differences 0 to 0.6 ms GPU (summit 64 → 62 FPS with the
+three drafts), within the run-to-run spread; the grain fix costs nothing for him (he plays with TAA, where it is off).
+Not the drafts: to look at if it persists — his Rays strength 2.5 and other look settings, cloud cover above the
+suite's 0.35, the moonlight at night, or the PC (a restart). A dump with the FPS when it feels slow would show which.
+
+## D194 — Dust devils (Living air draft) (2026-10-25)
+From the backlog (Tom and Noor: "dust devils in the desert or the badlands"). With *Living air* on, in desert, badlands,
+needle rocks and savanna, by day, dry, wind below 9 m/s: now and then (every ~25–85 s) a whirling dust column forms
+50–160 m away (ahead more often), lives 18–38 s, builds up and fades, drifts with the wind and leans downwind, following
+the ground. A particle shader (`DustDevil.gdshader`): 1,400 puffs orbiting the axis, faster low down, the column
+2–9 m wide and 22–40 m tall, denser at the base. Test flag `--dust-devil` (one right away, 70 m ahead).
+`artifacts/dust-devil.jpg`. A first render was a thin wisp: wider, bigger puffs.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

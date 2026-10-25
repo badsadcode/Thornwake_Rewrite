@@ -226,6 +226,14 @@
       "variants": [ { "fx.air_rays": 0 }, { "fx.air_rays": 1 }, { "fx.air_rays": 2 }, { "fx.air_rays": 3 } ],
       "ablate": false
     },
+    "perfcheck": {
+      "name": "What the recent drafts cost with the player's settings (D193): grain smoothing, one pass, cloud layers, Living air, moonlight — each off vs on, A-B-A-B",
+      "scenarios": ["cloud-horizon-noon", "cloud-broken-up", "cloud-summit", "swamp-sunrise", "forest"],
+      "variants": [{ "sky.cloud_smooth": 0 }, { "sky.cloud_smooth": 1 }, { "sky.cloud_smooth": 0 }, { "sky.cloud_smooth": 1 },
+        { "fx.ambient_life": 0, "sky.cloud_layers": 0, "sky.cloud_one_pass": 0 }, { "fx.ambient_life": 2, "sky.cloud_layers": 1, "sky.cloud_one_pass": 1 },
+        { "fx.ambient_life": 0, "sky.cloud_layers": 0, "sky.cloud_one_pass": 0 }, { "fx.ambient_life": 2, "sky.cloud_layers": 1, "sky.cloud_one_pass": 1 }],
+      "ablate": false, "capture": false, "stills": 0
+    },
     "cloudcost": {
       "name": "Atmosphere 2.0 M3: what the clouds cost (volumetric v2, volumetric v1 sky only, flat) at the cloud scenes and Tom's spots",
       "scenarios": ["cloud-horizon-noon", "cloud-broken-up", "cloud-summit", "cloud-mountain-deck", "cloud-valley-peaks", "cloud-sea-valley", "cloud-sea-ridge", "swamp-sunrise"],
