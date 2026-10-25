@@ -24,5 +24,14 @@ a switchable draft when it is picked up. Source notes: `DOCS/Thornwake_Visual At
 * Layers: mackerel softer at night, cirrus visible, a middle grey sheet (altostratus) before fronts — Tom's order.
 * "Shaving foam" clouds: finer detail noise; Tom's dumps when it happens (D177).
 
+## Rain (Tom, 2026-10-25)
+* **Raindrops on the camera lens** (Tom: "a spray, maybe optional, kind of like a screen effect of raindrops on the
+  camera lens — not too big"): an optional screen effect in heavy rain, small drops that bead, slide and fade; more
+  when facing into the wind, none under shelter. A player setting (off by default). Not in Noor's Weather 2.0 notes;
+  after them.
+* Weather 2.0 (Tom and Noor, `docs/Thornwake_Weather_2_0_Suggestions.md`): done — rain by strength, slanted by the
+  wind, splashes, a test tab (D206–D209), rain light and veil (D210). Next: shelter, wetness over time by material,
+  dripping trees, splash kinds by surface, sound layers.
+
 ## Direction (Noor)
 Visual cohesion and a living world over more rendering complexity: Thornwake's own recognisable look.

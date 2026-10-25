@@ -437,9 +437,9 @@ public partial class Atmosphere : Node3D
         e.GlowHdrLuminanceCap = natural ? 4 : 12;
         for (int level = 0; level < 7; level++)
             e.SetGlowLevel(level, natural ? level switch { 0 => .6f, 1 => .8f, 2 => 1, 3 => .5f, 4 => .15f, _ => 0 } : level is 2 or 4 ? 1 : 0);
-        e.AdjustmentContrast = natural ? 1.06f : 1;
-        e.FogAerialPerspective = Math.Clamp((natural ? .26f : .35f) * GameSettings.Haze.F, 0, 1);
-        e.AdjustmentSaturation = GameSettings.Saturation.F * (natural ? 1.08f : 1);
+        e.AdjustmentContrast = _baseContrast = natural ? 1.06f : 1;
+        e.FogAerialPerspective = _baseAerial = Math.Clamp((natural ? .26f : .35f) * GameSettings.Haze.F, 0, 1);
+        e.AdjustmentSaturation = _baseSaturation = GameSettings.Saturation.F * (natural ? 1.08f : 1);
         // Colour grading presets (D192): a lookup table after tone mapping; Natural = none (as before).
         e.AdjustmentColorCorrection = ColorGrading.Lut(GameSettings.Grading.Index, GameSettings.GradingStrength.F);
         RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
@@ -569,6 +569,7 @@ public partial class Atmosphere : Node3D
         _sunElevation = elevation;
         UpdateNight(sky, elevation);
         _storm = Mathf.MoveToward(_storm, Mathf.Clamp(Precip * 1.15f, 0, 1), (float)delta / 8); // ~8 s to cloud over or clear
+        _rainK = Mathf.MoveToward(_rainK, Snowing ? 0 : Mathf.Clamp(Precip, 0, 1), (float)delta / 8); // (rain light, D210)
         OceanTime += delta;
         // Wet look: the ground darkens within ~30 s of rain and dries over ~6 min; puddles fill over ~2 min, last ~15 min.
         float dt = (float)delta;
@@ -599,10 +600,12 @@ public partial class Atmosphere : Node3D
         // Overcast without rain also changes the mood (Noor: "proper overcast where the whole lighting mood changes"):
         // weaker, flatter sunlight, greyer and hazier air.
         float overcast = Mathf.SmoothStep(.7f, .95f, Coverage);
-        float gloom = Math.Max(_storm, overcast * .7f);
+        float gloom = Math.Max(Math.Max(_storm, overcast * .7f), RainOvercast * .9f);
+        // (rain light, D210: under drizzle's grey sheet the sun is mostly gone too — the sky closed but the land stayed sunlit)
+        float stormLight = Math.Max(_storm, RainOvercast * .6f);
         _gloom = gloom;
         LightProfiles.Update(dt, StillShot || SnapExposure);
-        var light = AtmosphereLight.Darken(AtmosphereLight.Compute(elevation, gloom, _storm, Natural), elevation, gloom, Canopy);
+        var light = AtmosphereLight.Darken(AtmosphereLight.Compute(elevation, gloom, stormLight, Natural), elevation, gloom, Canopy);
         Sun.LightEnergy = light.SunEnergy;
         _daylight = Mathf.Clamp(elevation / 20, .08f, 1) * Mathf.Lerp(1, .45f, gloom);
         UpdateWaterSky(elevation);
@@ -718,6 +721,7 @@ public partial class Atmosphere : Node3D
             (float)WrapTo(cameraWorldX + _highX, highPeriod), (float)WrapTo(cameraWorldZ + _highZ, highPeriod),
             (float)WrapTo(cameraWorldX + _lowX, lowPeriod), (float)WrapTo(cameraWorldZ + _lowZ, lowPeriod)));
         UpdateMood(delta);
+        RainLight();
         UpdateCloudTypes(delta, sky, cameraWorldX, cameraWorldZ, cameraLocal);
         UpdateRegionalGround(delta);
         RenderingServer.GlobalShaderParameterSet("cloud_region", GameSettings.CloudBase.Index == 1 && !float.IsNaN(_regionalGround) ? _regionalGround : 0f);
@@ -870,7 +874,7 @@ public partial class Atmosphere : Node3D
     }
 
     /// <summary>Cloud cover in effect: the setting, closing in toward overcast while it rains.</summary>
-    private float Coverage => Mathf.Lerp(float.IsNaN(WeatherClouds) ? GameSettings.Clouds.F : WeatherClouds, .97f, _storm);
+    private float Coverage => Mathf.Lerp(float.IsNaN(WeatherClouds) ? GameSettings.Clouds.F : WeatherClouds, .97f, Math.Max(_storm, RainOvercast * .85f));
 
     private void UpdateCoverage()
     {
@@ -885,6 +889,36 @@ public partial class Atmosphere : Node3D
     private readonly Random _flashRandom = new(1234);
 
     private Color? _rainTint;
+
+    // ---- rain light (D210)
+    private float _rainK; // the rain here, eased like the storm (~8 s)
+    private float _baseContrast = 1, _baseSaturation = 1, _baseAerial = .35f;
+    /// <summary>How closed and soft the sky is from the rain alone (draft Rain light): already in drizzle.</summary>
+    // (drizzle falls from a low grey sheet: closed already at ~0.15; a first try closing toward 0.3 left drizzle under a
+    // broken, sunny sky)
+    private float RainOvercast => GameSettings.RainLight.Index == 1 ? Mathf.SmoothStep(.01f, .15f, _rainK) : 0;
+
+    /// <summary>
+    /// Rain light by strength (D210; Tom: "when it's raining, especially during the downpour, the lighting conditions
+    /// should change"; Noor's Weather 2.0 notes §6: drizzle a soft veil with visibility kept, heavy rain a strong loss of
+    /// contrast at middle and long range, a downpour a substantial veil). On top of the storm's darkening (which starts only
+    /// from moderate rain): drizzle closes the sky and softens the light (RainOvercast); a grey veil of depth fog grows
+    /// with the rain — ~25 km of visibility in drizzle, ~4 km in moderate rain, ~1.3 km in a downpour; colours and
+    /// contrast mute and the fog loses its sun glow and its blue aerial tint.
+    /// </summary>
+    private void RainLight()
+    {
+        var e = Environment;
+        bool on = GameSettings.RainLight.Index == 1;
+        float r = on ? _rainK : 0;
+        e.AdjustmentSaturation = _baseSaturation * (1 - .35f * r);
+        e.AdjustmentContrast = _baseContrast * (1 - .1f * r);
+        e.FogAerialPerspective = _baseAerial * (1 - .8f * r);
+        if (r <= .001f) return;
+        e.FogDensity += .0023f * Mathf.Pow(r, 1.5f);
+        e.FogEnabled = true;
+        e.FogSunScatter *= 1 - .8f * r;
+    }
 
     /// <summary>
     /// Rain look by strength (D207, Tom: "the direction of raindrops should be determined by the wind … raindrops splashing

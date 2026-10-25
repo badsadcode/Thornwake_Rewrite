@@ -3097,6 +3097,23 @@ option). The wind swooshes had the same fault (drift and their upwind area turne
 level too. Not changed: the biome motes (meant to sit in front of the camera; their wind comes through gravity, which is
 in world space) and build 104's wind trails (the return option).
 
+## D210 — Rain light: the light and a grey veil by the rain's strength (draft) (2026-10-25)
+Tom: "when it's raining, especially during the downpour, the lighting conditions should change" (and Noor's Weather 2.0
+notes §6: drizzle a soft veil with visibility kept, heavy rain a strong loss of contrast at middle and long range, a
+downpour a substantial veil with readable silhouettes). Before (`artifacts/rainlight/a*`): the storm's darkening starts
+only from moderate rain — drizzle was a sunny day with streaks; moderate rain and a downpour looked alike, saturated and
+contrasty, the hills 1–2 km away crisp (fog at most ×4: ~8 km of visibility). New setting **Rain light**
+(`sim.rain_light`, Simulation; default *by strength (draft)*; *build 107* = as before). From the rain here, eased over
+~8 s like the storm:
+* drizzle already closes the sky (cover toward overcast by ~0.15 of rain) and softens the sun (gloom up to 0.9, the
+  sun's storm share 0.6) — a first try closing toward 0.3 left drizzle under a broken sunny sky, and with the sky closed
+  but the sun untouched the land stayed sunlit;
+* a grey veil of depth fog: + 0.0023 × rain^1.5 (visibility roughly 15 km in drizzle, ~3 km moderate, ~1 km downpour);
+  the fog's sun glow and blue aerial tint fade with it;
+* saturation × (1 − 0.35 × rain), contrast × (1 − 0.1 × rain).
+Captures (`artifacts/rain-light.jpg`): clear, drizzle, moderate, downpour. Lens drops (Tom's optional idea) are in the
+ideas backlog.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

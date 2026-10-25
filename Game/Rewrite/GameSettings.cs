@@ -535,6 +535,11 @@ public static class GameSettings
         "Grey curtains of rain under distant showers and storms (simulated weather model). 0 = off.", "×"));
     public static readonly Setting RainFrequency = Add(new("sim.rain_frequency", "Simulation", "Rain frequency", .3, 2.5, .05, 1,
         "How often weather fronts bring rain (1 = as the climate says).", "×"));
+    public static readonly Setting RainLight = Add(new("sim.rain_light", "Simulation", "Rain light", 0, 1, 1, 1,
+        "By strength (draft, D210): the light changes with the rain — drizzle already under a closed grey sky with soft " +
+        "light, and as the rain grows a grey veil swallows the distance (a downpour leaves the near hills as shapes), colours " +
+        "and contrast mute. Build 107: the light changes only from moderate rain on, the distance stays clear.",
+        options: new[] { "build 107", "by strength (draft)" }));
     public static readonly Setting RainLook = Add(new("sim.rain_look", "Simulation", "Rain look", 0, 1, 1, 1,
         "By strength (D207): each drop a streak along its fall, slanted by the wind; drizzle fine, short and slow, a downpour " +
         "long, heavy and fast; in heavy rain the drops splash on the ground, rocks, roofs and leaves around you. Build 104: " +
