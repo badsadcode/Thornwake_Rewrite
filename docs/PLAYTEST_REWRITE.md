@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 110 — raindrops on the lens, animals take cover
+**Host and everyone joining need build 110** (versions must match to connect).
+* **Lens drops** (Settings → Lighting and effects → Lens drops, **off by default**): raindrops on the camera lens in the
+  rain. Small beads land and slowly dry; now and then one gathers, breaks loose and runs down, leaving a thin wet trail
+  that dries over a few seconds. Each drop bends the picture behind it like a little lens, with a soft colour fringe.
+  More when you face into the rain, none under cover or under water. Turn it on and try Weather test → Downpour, then
+  face into the wind.
+* **Animals take cover** (with Trees in the rain): in heavy rain deer and other grazers walk to the nearest trees and
+  stand under them; predators lie low.
+
 ## New in build 109 — the rest of Noor's Weather 2.0 notes
 **Host and everyone joining need build 109** (versions must match to connect). Each is in Settings → Simulation with
 *build 108* (or 107) as the other option, unless said otherwise.

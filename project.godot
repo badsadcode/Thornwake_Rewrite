@@ -2,7 +2,7 @@ config_version=5
 
 [application]
 config/name="Thornwake"
-config/version="0.9.109"
+config/version="0.9.110"
 run/main_scene="res://Game/Launcher.tscn"
 run/flush_stdout_on_print=true
 config/features=PackedStringArray("4.7", "C#", "Forward Plus")
