@@ -776,7 +776,9 @@ public partial class Atmosphere : Node3D
         }
         // Raindrops ringing on water (round 27): how hard it rains here (not snow), for the water shader.
         // (y: the wet look by material, D212)
-        RenderingServer.GlobalShaderParameterSet("rain_now", new Vector4(Snowing ? 0 : Mathf.Clamp(Precip, 0, 1), GameSettings.WetLook.Index, 0, 0));
+        // (z: the ground stays dry under cover — the cover map is valid and Rain under cover is on, D214)
+        RenderingServer.GlobalShaderParameterSet("rain_now", new Vector4(Snowing ? 0 : Mathf.Clamp(Precip, 0, 1), GameSettings.WetLook.Index,
+            GameSettings.RainShelter.Index == 1 && _coverTex != null ? 1 : 0, 0));
         if (_steer == null) UpdateLightning(delta); // classic model; the simulated one has Lightning.cs
         else if (_flash != null) _flash.Visible = false;
         // Warmer light at a low sun (AtmosphereLight: build 47's single warm factor, or the colour curve by phase).
@@ -1132,6 +1134,7 @@ public partial class Atmosphere : Node3D
             Buffer.BlockCopy(_coverData, 0, _coverBytes, 0, _coverBytes.Length);
             _coverImage!.SetData(CoverN, CoverN, false, Image.Format.Rgbaf, _coverBytes);
             _coverTex!.Update(_coverImage);
+            RenderingServer.GlobalShaderParameterSet("rain_cover", _coverTex); // (the terrain: dry under cover, D214)
         }
         _rainStreakMat.SetShaderParameter("cover_tex", _coverTex);
         // Under cover at the camera: a surface over it, here or a step around (a roof's edge does not snap the sound).
@@ -1733,6 +1736,8 @@ public partial class Atmosphere : Node3D
     /// <summary>Colour of lit mist now: the haze colour, dimmed at night, warmed by a low sun.</summary>
     public Color MistColour => (new Color("dde3e6") * new Color(_mood.X, _mood.Y, _mood.Z)).Lerp(Sun.LightColor, .25f) * Mathf.Clamp(_daylight * 1.05f, .1f, 1);
 
+    private float _mistLift; // m the mist has lifted off the drying ground (D214)
+
     private void UpdateMist(double delta, float hour, double originX, double originZ)
     {
         int mode = GameSettings.GroundFog.Index;
@@ -1742,6 +1747,20 @@ public partial class Atmosphere : Node3D
         float afterRain = _wetness * (1 - _storm);
         // Mist burns off as the sun climbs: around midday only misty biomes, rain and wet ground keep some.
         float noon = Mathf.Exp(-Mathf.Pow((hour - 13f) / (_daylightHours / 4f), 2));
+        _mistLift = 0;
+        if (GameSettings.AfterRainMist.Index == 1)
+        {
+            // Mist after rain by conditions (D214; Noor's Weather 2.0 notes §10: "mist or low haze may linger where weather
+            // conditions support it", her mood E: golden hour after rain, mist lifting). Wet ground breathes mist into calm,
+            // cool air: wind carries it off (gone by ~12 m/s), the midday sun thins it, the woods hold it; as the sun dries
+            // the ground (the last third of the wetness) the mist lifts off it — up to ~25 m — and thins.
+            float calm = 1 - Mathf.SmoothStep(3, 12, Wind.Speed);
+            float cool = 1 - .7f * noon * (1 - _gloom);
+            float woods = 1 + .4f * Mathf.Clamp(Canopy, 0, 1);
+            afterRain = Mathf.SmoothStep(.1f, .6f, _wetness) * (1 - _storm) * calm * cool * woods * 1.45f;
+            float sunOnGround = Mathf.Clamp(_daylight, 0, 1) * (1 - _gloom);
+            _mistLift = 25 * sunOnGround * (1 - Mathf.SmoothStep(.15f, .55f, _wetness)) * (_wetness > .02f ? 1 : 0);
+        }
         float target = mode == 0 || float.IsNaN(_mistGround) ? 0
             : Mathf.Clamp((.7f * dawn + .5f * _mistBiome + .1f * _mistWater) * (1 - .65f * noon) + .35f * afterRain + .3f * _storm, 0, 1) * .75f;
         _mistAmount = MistOverride ?? Mathf.MoveToward(_mistAmount, target, (float)delta / 6);
@@ -1758,7 +1777,7 @@ public partial class Atmosphere : Node3D
             // below a mountain the player stands on went fully grey (Tom, build 25: "sometimes I see nothing, just a
             // single colour"): gentle density, a depth of ~150 m reaches only ~40 %.
             e.FogEnabled = true;
-            e.FogHeight = _mistGround - 4;
+            e.FogHeight = _mistGround - 4 + _mistLift; // (D214: after rain the mist lifts as the ground dries)
             // With mist patches the volume carries the shape (banks, billows); the even height fog only fills in.
             e.FogHeightDensity = .0035f * _mistAmount * _mistAmount * (mode == 2 ? .3f : 1);
         }
@@ -1778,7 +1797,7 @@ public partial class Atmosphere : Node3D
             if (patches)
             {
                 var cam = GetViewport()?.GetCamera3D();
-                if (cam != null) _mistVolume.GlobalPosition = new Vector3(cam.GlobalPosition.X, _mistGround + 15, cam.GlobalPosition.Z);
+                if (cam != null) _mistVolume.GlobalPosition = new Vector3(cam.GlobalPosition.X, _mistGround + 15 + _mistLift * .6f, cam.GlobalPosition.Z);
                 double drift = Wind.Speed * .08;
                 _mistDriftX += delta * drift * Wind.Direction.X; _mistDriftZ += delta * drift * Wind.Direction.Y;
                 _mistDriftX %= 8192; _mistDriftZ %= 8192;

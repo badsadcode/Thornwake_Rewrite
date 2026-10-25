@@ -7,6 +7,9 @@ global uniform float leaf_translucency;
 // Rain (D212, Wet look by material): wet blades a richer, darker green - no shine (no plastic leaves).
 global uniform vec2 rain_wetness;
 global uniform vec4 rain_now;
+// (D214: tufts under a roof or an overhang stay dry — the rain's cover map, as the terrain)
+global uniform sampler2D rain_cover : filter_nearest, repeat_enable;
+varying float dry_cover;
 global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
 varying vec3 world_position;
@@ -33,6 +36,12 @@ void vertex() {
 		VERTEX.z += (wind.z * lean + sin(TIME * 1.3 + phase * 1.3) * 0.015 * (0.3 + wind.y)) * w;
 	}
 	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	dry_cover = 0.0;
+	if (rain_now.z > 0.5 && rain_now.y > 0.5) {
+		vec2 c = floor(origin.xz);
+		vec4 v = texelFetch(rain_cover, ivec2(mod(c, 40.0)), 0);
+		dry_cover = v.a > 0.5 && v.g == c.x && v.b == c.y && v.r > origin.y + 0.3 ? 1.0 : 0.0;
+	}
 }
 
 void fragment() {
@@ -40,7 +49,7 @@ void fragment() {
 	ALBEDO = mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
 	ALBEDO *= 1.0 + sheen * vec3(0.16, 0.15, 0.08); // bent blades show their paler sides: the gusts read as waves
 	if (rain_now.y > 0.5) {
-		float wg = smoothstep(0.2, 0.5, rain_wetness.x);
+		float wg = smoothstep(0.2, 0.5, rain_wetness.x) * (1.0 - dry_cover);
 		float l = dot(ALBEDO, vec3(0.2126, 0.7152, 0.0722));
 		ALBEDO = mix(ALBEDO, max(mix(vec3(l), ALBEDO, 1.18), vec3(0.0)) * 0.8, wg);
 	}

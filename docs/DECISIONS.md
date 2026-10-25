@@ -3173,6 +3173,23 @@ Captures (`artifacts/rain-trees.jpg`: moderate rain under trees, build 108 vs ca
 `artifacts/rain-drips.jpg`). Not seen: the hard-surface crowns on a roof (no capture framed one) and the sound (not
 audible in captures).
 
+## D214 — Dry ground under cover; mist after rain by conditions (draft) (2026-10-25)
+Tom: "keep going with Noor's list: dry ground under shelter and after-rain mist" (notes §5, §10).
+* **Dry under cover** (with *Rain under cover* and *Wet look by material*): the rain's cover map is now a global
+  (`rain_cover`, project.godot) and `rain_now.z` says it is valid; the terrain (within 30 m) stays dry and without puddles
+  where a surface stands > 0.3 m above it, with a soft, ragged ~0.5 m edge (four taps, jittered); grass tufts under
+  cover keep their dry colour. Beyond the 40 m map or before it fills, the ground is as before. Test tool: Esc →
+  Weather test → *Put a test roof ahead* (a 4 × 4 m board on posts, 2.4 m up; not saved) and `--test-roof`. Capture
+  (`artifacts/dry-under-roof.jpg`): soaked ground with puddles under the roof before, dry now. Known: right after the
+  world origin shifts, the map's old cells may mark the wrong spots for a few seconds until re-cast.
+* **Mist after rain** (setting `sim.after_rain_mist`, default *by conditions (draft)*; *build 108* = as before: the same
+  mist after any rain at any hour, ×0.35 of the wetness): wet ground breathes mist into calm, cool air — up to ~1.45 ×
+  the old amount (and from wetness 0.1, full by 0.6); wind carries it off (gone by ~12 m/s), the midday sun under a
+  clear sky cuts it by ~70 %, the woods hold ~40 % more; as the sun dries the ground (the last third of the wetness) the
+  mist lifts off it, up to ~25 m, and thins with the wetness. Captures (`artifacts/mist-after-rain.jpg`): a calm evening
+  after rain 0.29 → 0.42 mist, a windy noon 0.24 → 0.07; a calm dawn unchanged (the dawn mist is already at its cap).
+  Subtle on open plains, where the mist lies in the valleys below; the lift not yet seen in motion.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

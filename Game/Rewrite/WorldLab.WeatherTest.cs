@@ -101,6 +101,12 @@ public partial class WorldLab
             AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(900, 0), Modulate = new Color(1, 1, 1, .6f),
         });
 
+        // Shelter (D214): a test roof — a 4 x 4 m board on four posts, 2.4 m up, ~5 m ahead (for the rain under cover and the
+        // dry ground beneath; not saved, not a building piece).
+        box.AddChild(new Label { Text = "Shelter" });
+        var roof = new Button { Text = "Put a test roof ahead (4 × 4 m, 2.4 m up; again to remove)" };
+        roof.Pressed += ToggleTestRoof;
+        box.AddChild(roof);
         _weatherTestInfo = new Label { Modulate = new Color(1, 1, 1, .8f) };
         box.AddChild(_weatherTestInfo);
         return box;
@@ -156,8 +162,35 @@ public partial class WorldLab
     }
 
     /// <summary>Per frame: the test storm, the lightning with the classic weather model, the readout.</summary>
+    private Node3D? _testRoof;
+    private bool _testRoofPending = Array.IndexOf(OS.GetCmdlineUserArgs(), "--test-roof") >= 0;
+
+    private void ToggleTestRoof()
+    {
+        if (_testRoof != null) { _testRoof.QueueFree(); _testRoof = null; _status = "Test roof removed."; return; }
+        if (_sampler == null) return;
+        var fwd = -_camera.GlobalBasis.Z; fwd.Y = 0; fwd = fwd.LengthSquared() > 1e-4f ? fwd.Normalized() : Vector3.Forward;
+        var at = _player.Position + fwd * 5;
+        float ground = (float)_sampler.Height(at.X + _originX, at.Z + _originZ);
+        _testRoof = new Node3D { Position = new Vector3(at.X, ground, at.Z) };
+        var wood = new StandardMaterial3D { AlbedoColor = new Color("6b4a2e"), Roughness = .8f };
+        var body = new StaticBody3D { CollisionLayer = 1 };
+        void Part(Vector3 size, Vector3 pos)
+        {
+            _testRoof.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = size, Material = wood }, Position = pos });
+            body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size }, Position = pos });
+        }
+        Part(new Vector3(4, .12f, 4), new Vector3(0, 2.4f, 0));
+        foreach (var (x, z) in new[] { (-1.85f, -1.85f), (1.85f, -1.85f), (-1.85f, 1.85f), (1.85f, 1.85f) })
+            Part(new Vector3(.14f, 2.4f, .14f), new Vector3(x, 1.2f, z));
+        _testRoof.AddChild(body);
+        AddChild(_testRoof);
+        _status = "Test roof placed ahead (the button again removes it).";
+    }
+
     private void WeatherTestStep(double delta, SkyState sky, Vector3 cam)
     {
+        if (_testRoofPending && _sampler != null && _generation == null && !_holding && _streamer.Settled) { _testRoofPending = false; ToggleTestRoof(); }
         if (_testStorm && _sampler != null)
         {
             _testStormNext -= delta;

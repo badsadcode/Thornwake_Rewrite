@@ -8,7 +8,15 @@ uniform float snow_line = 2700.0;
 uniform bool show_grid = false;
 // x: surface wetness (rain darkens and glosses the ground), y: cosmetic puddles in flat hollows (Atmosphere.cs).
 global uniform vec2 rain_wetness;
-global uniform vec4 rain_now; // y: the wet look by material (D212)
+global uniform vec4 rain_now; // y: the wet look by material (D212); z: the cover map is valid (D214)
+// Dry ground under cover (D214): the rain's cover map around the camera (Atmosphere, 1 m cells, 40 x 40, toroidal):
+// r = the first surface rain lands on (scene y), g, b = the cell it holds, a > 0.5 written.
+global uniform sampler2D rain_cover : filter_nearest, repeat_enable;
+float covered_at(vec2 xz, float y) {
+	vec2 c = floor(xz);
+	vec4 v = texelFetch(rain_cover, ivec2(mod(c, 40.0)), 0);
+	return v.a > 0.5 && v.g == c.x && v.b == c.y && v.r > y + 0.3 ? 1.0 : 0.0;
+}
 global uniform vec4 wind;
 global uniform float wind_waves; // the setting Wind waves on grass (D163)
 #include "res://Game/Rewrite/WindSway.gdshaderinc"
@@ -320,9 +328,22 @@ void fragment() {
 	// Rain: the whole world gets darker and glossier, and small puddles shine in flat spots (purely visual; real
 	// standing water is the local simulation's).
 	float wetness = rain_wetness.x * (1.0 - snow);
+	float dry_under = 0.0;
+	if (rain_now.z > 0.5 && rain_now.y > 0.5) {
+		// Under a roof or an overhang the ground stays dry (Noor's notes §5), with a soft, ragged edge ~0.5 m wide where the
+		// rain blows in: four taps of the 1 m map half a metre apart.
+		vec3 wpos = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+		if (length(VERTEX) < 30.0) {
+			vec2 j = vec2(vnoise(p * 2.3) - 0.5, vnoise(p * 2.3 + 5.1) - 0.5) * 0.5;
+			vec2 q = wpos.xz + j;
+			dry_under = 0.25 * (covered_at(q + vec2(-0.25, -0.25), wpos.y) + covered_at(q + vec2(0.25, -0.25), wpos.y)
+				+ covered_at(q + vec2(-0.25, 0.25), wpos.y) + covered_at(q + vec2(0.25, 0.25), wpos.y));
+			wetness *= 1.0 - 0.95 * dry_under;
+		}
+	}
 	float flat_ground = 1.0 - smoothstep(0.03, 0.1, slope);
 	float puddle_noise = vnoise(p * 0.21) * 0.65 + vnoise(p * 0.93 + 7.1) * 0.35;
-	float puddle = smoothstep(0.64, 0.7, puddle_noise) * flat_ground * rain_wetness.y * (1.0 - submerged) * (1.0 - snow) * (1.0 - 0.6 * forest);
+	float puddle = smoothstep(0.64, 0.7, puddle_noise) * flat_ground * rain_wetness.y * (1.0 - submerged) * (1.0 - snow) * (1.0 - 0.6 * forest) * (1.0 - dry_under);
 	float wet_rough = 0.45, wet_rough_k = wetness * 0.7;
 	if (rain_now.y > 0.5) {
 		// Wet look by material (D212, Noor's Weather 2.0 notes §2): each ground holds water its own way, and as the

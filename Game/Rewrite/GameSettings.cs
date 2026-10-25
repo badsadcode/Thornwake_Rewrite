@@ -540,6 +540,11 @@ public static class GameSettings
         "light, and as the rain grows a grey veil swallows the distance (a downpour leaves the near hills as shapes), colours " +
         "and contrast mute. Build 107: the light changes only from moderate rain on, the distance stays clear.",
         options: new[] { "build 107", "by strength (draft)" }));
+    public static readonly Setting AfterRainMist = Add(new("sim.after_rain_mist", "Simulation", "Mist after rain", 0, 1, 1, 1,
+        "By conditions (draft, D214): after the rain a mist lingers over the wet land where the air is calm and cool — most in " +
+        "the evening, at night and at dawn, in the woods and in still air, little in wind or at noon — and as the sun dries " +
+        "the ground it lifts off and thins. Build 108: the same mist after any rain at any hour, fading as the ground dries.",
+        options: new[] { "build 108", "by conditions (draft)" }));
     public static readonly Setting RainTrees = Add(new("sim.rain_trees", "Simulation", "Trees in the rain", 0, 1, 1, 1,
         "With Rain look by strength (D213). Catch and drip: under a tree's crown most of the rain is caught by the leaves, " +
         "and the leaves drip — bigger, slower drops, more in gusts — and keep dripping for a few minutes after the rain " +
