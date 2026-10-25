@@ -3221,6 +3221,22 @@ Tom: "keep going with the rest of Noor's list".
   (fading over ~4 km). Multiplying the night tint left them as dark lines in the flash (`artifacts/lightning-rain.jpg`).
 Not done from §9: animals seeking cover (the animal AI); §7 rain on water already rings.
 
+## D217 — Animals seek cover in heavy rain; raindrops on the lens (optional) (2026-10-25)
+Tom: "please continue" — the last item of Noor's Weather 2.0 notes and Tom's own idea from earlier.
+* **Animals seek cover** (§9; with *Trees in the rain*): the host gives the wildlife the rain where they are
+  (`Wildlife.Storm`, ×1.2 in thunder). Above ~0.55, a grazer's next calm choice: under a tree (a trunk within ~3 m)
+  it stands or grazes 10–25 s; in the open it walks (85 %) to a spot beside the nearest trunk or rock within ~35 m
+  (rings of 12 directions, nearest first). Predators lie low (75 % idle 8–20 s). Fright and chases are unchanged.
+  Measured (temporary log, six deer spawned at the grassland spot): grazers within 3 m of a trunk 5 of 24 dry,
+  25 of 25 in a downpour. Synced as before (the host simulates).
+* **Lens drops** (Tom: "a spray, maybe optional … raindrops on the camera lens, not too big"): setting *Lens drops*
+  (`fx.lens_drops`, Lighting and effects, **off** by default). A full-screen pass (`LensDrops.gdshader`, drawn only while
+  drops are on): two layers of cells, each drop appearing at its own moment, beading 3–7 s, a third sliding down with a
+  faint trail, then drying; a drop is a small lens (the picture from across its centre, blurred, a darker rim). How
+  many: the rain's strength × how much you look into it (upwind and up) × not under cover × fewer under trees; none
+  under water or in snow; they build over ~3 s and dry over ~8 s. Test flag `--lens-test`. Capture:
+  `artifacts/lens-drops.jpg`. Drops 1–2 % of the screen height.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

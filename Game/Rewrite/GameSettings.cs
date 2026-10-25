@@ -276,6 +276,10 @@ public static class GameSettings
         "in a curl, never right in front of you. With strands: the same, a faint mottled haze with fine bright strands " +
         "braided through it. Build 104: long, thin straight trails (they read as scratches across the screen).",
         options: new[] { "build 104 (straight trails)", "swooshes", "swooshes with strands" }));
+    public static readonly Setting LensDrops = Add(new("fx.lens_drops", "Lighting and effects", "Lens drops", 0, 1, 1, 0,
+        "Optional (D217): raindrops on the camera lens in the rain — small drops that bead, some slide down, and dry away; more " +
+        "when you look into the rain, none under cover.",
+        options: new[] { "off", "on" }));
     public static readonly Setting MoonRays = Add(new("fx.moon_rays", "Lighting and effects", "Moonlight", 0, 1, 1, 0,
         "Draft (D182). Rays and shadows: at night the moon casts shadows like the sun — trees and mountains shade the " +
         "moonlit ground, and the forest rays and rays in open air come from the moon. Build 94: soft moonlight without " +
@@ -548,7 +552,8 @@ public static class GameSettings
     public static readonly Setting RainTrees = Add(new("sim.rain_trees", "Simulation", "Trees in the rain", 0, 1, 1, 1,
         "With Rain look by strength (D213). Catch and drip: under a tree's crown most of the rain is caught by the leaves, " +
         "and the leaves drip — bigger, slower drops, more in gusts — and keep dripping for a few minutes after the rain " +
-        "stops, until they dry. Build 108: the rain falls through the trees.",
+        "stops, until they dry; in heavy rain deer and other grazers seek the trees and stand under them, predators lie low. " +
+        "Build 108: the rain falls through the trees.",
         options: new[] { "build 108 (falls through)", "catch and drip" }));
     public static readonly Setting WetLook = Add(new("sim.wet_look", "Simulation", "Wet look", 0, 1, 1, 1,
         "By material (D212): rain soaks in over time (hours of drizzle wet everything, a short shower less) and dries in the " +

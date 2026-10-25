@@ -42,6 +42,40 @@ public partial class Atmosphere : Node3D
     private double _windX, _windZ;
     private float _shadowCoverage = -1;
     private MeshInstance3D? _shaftQuad, _beamQuad, _airQuad;
+    // ---- raindrops on the lens (D217)
+    private readonly ShaderMaterial _lensDrops = new() { Shader = GD.Load<Shader>("res://Game/Rewrite/LensDrops.gdshader"), RenderPriority = 126 };
+    private MeshInstance3D? _lensQuad;
+    private float _lensAmount, _lensClock;
+    private bool _cameraUnder;
+    private Vector3 _rainDir = Vector3.Down;
+    /// <summary>Tests only (<c>--lens-test</c>): drops on the lens whatever the setting.</summary>
+    private static readonly bool LensTest = Array.IndexOf(OS.GetCmdlineUserArgs(), "--lens-test") >= 0;
+
+    /// <summary>
+    /// Raindrops on the lens (setting Lens drops, off by default): more the harder it rains and the more you look into it
+    /// (upwind and up), none under cover and fewer under trees, none under water; they build over a few seconds and dry
+    /// away over ~8 s.
+    /// </summary>
+    private void UpdateLens(float dt)
+    {
+        if (_lensQuad == null) return;
+        bool on = (GameSettings.LensDrops.Index == 1 || LensTest) && !Snowing && !_cameraUnder;
+        float target = 0;
+        if (on && Precip > .05f)
+        {
+            var cam = GetViewport()?.GetCamera3D();
+            var fwd = cam != null ? -cam.GlobalBasis.Z : Vector3.Forward;
+            float facing = Mathf.Clamp(.35f + .9f * fwd.Dot(-_rainDir), .15f, 1.2f);
+            target = Mathf.Clamp(Mathf.SmoothStep(.05f, .8f, Precip) * facing * (1 - Sheltered) * (1 - .7f * Mathf.Clamp(Canopy, 0, 1)), 0, 1);
+        }
+        _lensAmount = target > _lensAmount ? Mathf.MoveToward(_lensAmount, target, dt / 3) : Mathf.MoveToward(_lensAmount, target, dt / 8);
+        _lensQuad.Visible = _lensAmount > .005f;
+        if (!_lensQuad.Visible) return;
+        _lensClock += dt;
+        _lensDrops.SetShaderParameter("amount", _lensAmount);
+        _lensDrops.SetShaderParameter("clock", _lensClock);
+    }
+
     private readonly ShaderMaterial _underwater = new() { Shader = GD.Load<Shader>("res://Game/Rewrite/Underwater.gdshader"), RenderPriority = 127 };
     private float _daylight = 1;
     private GpuParticles3D? _rainParticles;
@@ -349,6 +383,13 @@ public partial class Atmosphere : Node3D
             Mesh = new QuadMesh { Size = new Vector2(2, 2) }, MaterialOverride = _underwater, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             ExtraCullMargin = 16384, Position = new Vector3(0, 0, -1), GIMode = GeometryInstance3D.GIModeEnum.Disabled,
         });
+        // Raindrops on the lens (D217, optional): a full-screen pass, drawn only while drops are on.
+        _lensQuad = new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(2, 2) }, MaterialOverride = _lensDrops, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            ExtraCullMargin = 16384, Position = new Vector3(0, 0, -1), GIMode = GeometryInstance3D.GIModeEnum.Disabled, Visible = false,
+        };
+        camera.AddChild(_lensQuad);
         // Rain: streaks falling around the camera (world-space particles, so they do not swing with the view).
         var streak = new StandardMaterial3D
         {
@@ -420,6 +461,7 @@ public partial class Atmosphere : Node3D
     public void SetUnderwater(float depth, WorldGen.WaterKind kind)
     {
         bool under = depth > .02f;
+        _cameraUnder = under; // (no lens drops under water, D217)
         _underwater.SetShaderParameter("active", under ? 1f : 0f);
         if (!under) return;
         _underwater.SetShaderParameter("surface_depth", depth);
@@ -795,6 +837,7 @@ public partial class Atmosphere : Node3D
         Sun.LightColor = light.SunColor;
         UpdateMoonRays(sunDir);
         if (Life != null) Life.Tint = Sun.LightColor.Lerp(Environment.FogLightColor, .4f); // (wisps take the light's colour)
+        UpdateLens((float)delta);
         Life?.Tick(delta, Wind.Direction, Wind.Speed, Wind.Gust, _daylight, Mathf.Clamp(Precip, 0, 1), Canopy);
         var toSun = Sun.GlobalTransform.Basis.Z.Normalized(); // a directional light shines along -Z
 
@@ -1047,6 +1090,7 @@ public partial class Atmosphere : Node3D
         var v = new Vector3(drift.X, -fall, drift.Y);
         float speed = v.Length();
         var dir = v / speed;
+        _rainDir = dir;
         // (each drop drawn along its own velocity, D208: a little spread in direction and speed so the lines are not parallel)
         pm.ParticleFlagAlignY = true;
         pm.Direction = dir; pm.Spread = 5; pm.Gravity = Vector3.Zero;

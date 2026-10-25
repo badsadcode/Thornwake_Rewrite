@@ -66,6 +66,11 @@ public sealed class Wildlife
 
     /// <summary>How many animals (sandbox: 0 none … 1 normal … 2 many).</summary>
     public double Density { get; set; } = 1;
+    /// <summary>
+    /// How hard it rains where the animals are (0 … 1; the host's weather, D217): in heavy rain the grazers seek the
+    /// trees and stand under them, the predators mostly lie low (Noor's Weather 2.0 notes §9). 0 = as before.
+    /// </summary>
+    public double Storm { get; set; }
     /// <summary>Animals per player's surroundings at density 1.</summary>
     public const int PerArea = 12;
 
@@ -241,6 +246,18 @@ public sealed class Wildlife
     private void NextCalm(Animal a)
     {
         double r = _rng.NextDouble();
+        if (Storm > .55)
+        {
+            // Heavy rain (D217): under a tree (a trunk within ~3 m) a grazer stands still a while, heads down; out in the
+            // open it walks to the nearest trees it finds (up to ~35 m) and huddles there. Predators lie low.
+            if (a.Def.Predator) { if (r < .75) { a.State = AnimalState.Idle; a.Timer = 8 + _rng.NextDouble() * 12; return; } }
+            else if (_world.Obstacle(a.X, a.Z, 3)) { a.State = r < .7 ? AnimalState.Idle : AnimalState.Graze; a.Timer = 10 + _rng.NextDouble() * 15; return; }
+            else if (r < .85 && ShelterNear(a) is var (gx, gz) && !double.IsNaN(gx))
+            {
+                a.State = AnimalState.Walk; a.Timer = 25; a.GoalX = gx; a.GoalZ = gz; a.HomeX = gx; a.HomeZ = gz;
+                return;
+            }
+        }
         if (r < .45) { a.State = AnimalState.Graze; a.Timer = 4 + _rng.NextDouble() * 8; }
         else if (r < .7) { a.State = AnimalState.Idle; a.Timer = 2 + _rng.NextDouble() * 4; }
         else
@@ -249,6 +266,21 @@ public sealed class Wildlife
             double ang = _rng.NextDouble() * Math.Tau, d = 4 + _rng.NextDouble() * 14;
             a.GoalX = a.HomeX + Math.Cos(ang) * d; a.GoalZ = a.HomeZ + Math.Sin(ang) * d;
         }
+    }
+
+    /// <summary>A spot beside the nearest trunk (or rock) within ~35 m, or NaN: rings of 12 directions, nearest first.</summary>
+    private (double X, double Z) ShelterNear(Animal a)
+    {
+        for (double d = 6; d <= 35; d += 6)
+            for (int i = 0; i < 12; i++)
+            {
+                double ang = i * Math.Tau / 12 + d * .13;
+                double x = a.X + Math.Sin(ang) * d, z = a.Z + Math.Cos(ang) * d;
+                if (!_world.Obstacle(x, z, 2.2) || !Walkable(x, z)) continue;
+                // (stand short of it, on the animal's side)
+                return (x - Math.Sin(ang) * 2.2, z - Math.Cos(ang) * 2.2);
+            }
+        return (double.NaN, double.NaN);
     }
 
     private void Scare(Animal a, double fromX, double fromZ, double seconds)

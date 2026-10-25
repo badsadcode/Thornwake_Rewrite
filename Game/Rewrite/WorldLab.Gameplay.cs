@@ -246,6 +246,8 @@ public partial class WorldLab : IWorldQuery
             _rules.Step(dh * 60);
             _rules.Testing = _testingOverride ?? GameSettings.TestingTools.On;
             _rules.Wildlife.Density = _animalsOverride ?? GameSettings.Animals.Index switch { 0 => 0, 1 => .5, 2 => 1, _ => 2 };
+            // (heavy rain sends the grazers under the trees, D217; snow too, a little; the host's own weather)
+            _rules.Wildlife.Storm = GameSettings.RainTrees.Index == 1 ? Math.Clamp(_atmosphere.Precipitation, 0, 1) * (_atmosphere.Thunder ? 1.2 : 1) : 0;
         }
         _seenObjects.Step(dh * 60); _seenObjects.TakeChanged(); // (the copy burns down too, for the fires drawn here)
 

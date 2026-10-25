@@ -25,7 +25,7 @@ a switchable draft when it is picked up. Source notes: `DOCS/Thornwake_Visual At
 * "Shaving foam" clouds: finer detail noise; Tom's dumps when it happens (D177).
 
 ## Rain (Tom, 2026-10-25)
-* **Raindrops on the camera lens** (Tom: "a spray, maybe optional, kind of like a screen effect of raindrops on the
+* (done, D217) **Raindrops on the camera lens** (Tom: "a spray, maybe optional, kind of like a screen effect of raindrops on the
   camera lens — not too big"): an optional screen effect in heavy rain, small drops that bead, slide and fade; more
   when facing into the wind, none under shelter. A player setting (off by default). Not in Noor's Weather 2.0 notes;
   after them.
