@@ -78,6 +78,14 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 100 — colour grading presets (draft), leaves in flurries
+**Host and everyone joining need build 100** (versions must match to connect).
+* **Settings → Lighting and effects → Colour grading (draft)**: Natural (as before), Cinematic, Fantasy, Dreamy, Rustic,
+  Dark fantasy, Vintage, Vibrant, and **Colour grading strength** to blend any of them toward Natural. Only the colours
+  change, not the lighting. Switch them live and compare.
+* **Leaves (Living air) come in flurries**: about 40 % of the time, quiet otherwise, stronger in gusts — no longer
+  always there. Dust unchanged.
+
 ## New in build 99 — Living air (draft), patchy cirrus, calmer moon glow
 **Host and everyone joining need build 99** (versions must match to connect).
 * **Settings → Lighting and effects → Living air → subtle / more (draft)**: when the wind blows (from ~4 m/s), a few
