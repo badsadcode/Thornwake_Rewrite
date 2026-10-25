@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 96 — moon shafts, no cloud grain with SMAA
+**Host and everyone joining need build 96** (versions must match to connect).
+* **Moonlight (draft) tuned**: with *Moonlight → rays and shadows* the air now grows damp through calm nights, so the
+  moon has haze to light: silver shafts between the trees when you face the moon, and layered moonlit ranges with
+  shafts from high ground. The forest haze takes more moonlight than open air.
+* **Cloud grain with SMAA fixed** (your dump 23:53): thin cloud no longer shows a fixed diagonal grain. New setting
+  **Sky → Cloud grain without TAA**: *smoothed* (default) or *build 95 (grain)*. It costs a few FPS where clouds fill
+  the view (60 → 50–57 in my captures); tell me how it feels. With TAA nothing changes.
+* To try: **Go to - forest under the moon (draft), day 9 00-30** and **Go to - mountain ridges under the moon (draft)**.
+
 ## New in build 95 — ground fixes, moonlight with shadows (draft)
 **Host and everyone joining need build 95** (versions must match to connect).
 * **Straight stripes across the ground** (your volcanic dumps 00:13–00:14): the ground's fine noise lost precision far
