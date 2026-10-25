@@ -109,6 +109,8 @@ Build 53 (v0.9.53, commit 987890d; packaged on Tom's PC, `dist/Preview-53`). Sin
   **Build 95** (`c927386`, `dist/Preview-95`): ground noise precision (D180) and the 4 km UV-fold strips (D181) fixed;
   draft *Moonlight → rays and shadows* (D182): the main light follows the moon; haze boost ×2, open air ×1.5. Open:
   forest shafts by moonlight, the look of nights (Tom's call), the sky pass's cloud grain with SMAA.
+  **Build 96** (`b4b624c`, `dist/Preview-96`): damp nights + canopy boost give moon shafts (D183); SMAA cloud grain fixed
+  with two samples per step (D184). Next: cloud layers (low / middle / high by the weather), captures first.
 * **Multiplayer spike (2026-10-13, D101, D102)**: checkpoints 1 (two windows see each other move — Tom) and 2 (digging
   and late joining — automated test) done and merged into `main`; **build 55** (`d2b59b9`, `dist/Preview-55`) has the
   launcher's Multiplayer page and the network log. Checkpoint 3: Tom's line is DS-Lite (D104); first internet test done
