@@ -2944,6 +2944,16 @@ flat shapes; cost up to ~30 % near and inside clouds (Tom's ridge 58 → 40 FPS)
 billows are carved by a 64³ noise, too coarse to shade within a lobe — a finer or procedural detail noise is the bigger
 fix (with Tom's say on the look).
 
+## D199 — Finer cloud detail noise: no visible change; the flat look is the lighting (2026-10-25)
+Tom: "try the finer cloud detail noise as a switchable draft". Draft **Cloud detail → fine** (`sky.cloud_fine`): a 128³
+detail noise (Worley fbm at 8 / 16 / 32 cells and a value fbm, built on start-up only when on) carving the billows, its
+finest layer within ~3–9 km. Suite **cloudfine** (A-B-A-B): no measurable cost, and no visible change
+(`artifacts/cloud-fine-detail.jpg`): the cumulus Tom sees are 5–15 km away, where detail that fine is below a pixel.
+**So the flat, "posterized" look is the lighting**: the shaded parts are too bright and even (strong sky light, short
+self-shadow), lit and shaded areas meeting in a sharp line. Test with the existing dev switch `--cloud-dev=1,y`
+(deeper self-shadow, darker bases; `artifacts/cloud-self-shadow-test.jpg`, noon cumulus: y = 0 / 1 / 2): y = 1 gives lit
+sides against darker shaded masses — the lobes read as volumes; y = 2 too dark. A look choice: asked Tom.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

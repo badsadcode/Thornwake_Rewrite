@@ -427,6 +427,8 @@ public partial class Atmosphere : Node3D
         SkyParam("cloud_cost", GameSettings.CloudCost.Index);
         SkyParam("cloud_soft", GameSettings.CloudSoft.Index);
         SkyParam("cloud_shading", GameSettings.CloudShading.Index);
+        if (GameSettings.CloudFine.Index == 1 && _cloudFineNoise == null) { _cloudFineNoise = CloudNoise3D.CreateDetail(); SkyParam("cloud_fine_noise", _cloudFineNoise); }
+        SkyParam("cloud_fine", _cloudFineNoise != null ? GameSettings.CloudFine.Index : 0);
         SkyParam("sea_tune", new Vector4(Dev("seahole", .5f), 0, 0, 0));
         SkyParam("cloud_turbulence", GameSettings.CloudTurbulence.Index);
         SkyParam("lens_style", GameSettings.LensStyle.Index);
@@ -1302,7 +1304,7 @@ public partial class Atmosphere : Node3D
 
     /// <summary>The light state of the last frame, for logs (benchmark A/B stills).</summary>
     public string LightInfo { get; private set; } = "";
-    private ImageTexture3D? _cloudNoise;
+    private ImageTexture3D? _cloudNoise, _cloudFineNoise;
     private ShaderMaterial? _mistMaterial;
 
     /// <summary>From the player's surroundings: ground height (scene y), biome mist (0..1), water nearby (0..1).</summary>

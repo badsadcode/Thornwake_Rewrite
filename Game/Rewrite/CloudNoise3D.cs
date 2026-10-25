@@ -50,6 +50,40 @@ public partial class CloudNoise3D : RefCounted
         return tex;
     }
 
+    /// <summary>
+    /// Finer detail noise (D199, Tom: the clouds "look posterized", flat lobes): 128³, channels R/G/B = inverted Worley fbm
+    /// at 8, 16 and 32 cells per side (lumps on lumps, four times finer than <see cref="Create"/>'s detail), A = a value
+    /// fbm for soft variation. ~1–2 s on start-up, only while the Cloud detail setting asks for it.
+    /// </summary>
+    public static ImageTexture3D CreateDetail(int size = 128, uint seed = 5521)
+    {
+        var data = new byte[size * size * size * 4];
+        Parallel.For(0, size, z =>
+        {
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float u = x / (float)size, v = y / (float)size, w = z / (float)size;
+                    int i = ((z * size + y) * size + x) * 4;
+                    data[i] = (byte)(WorleyFbm(u, v, w, 8, seed) * 255);
+                    data[i + 1] = (byte)(WorleyFbm(u, v, w, 16, seed + 11) * 255);
+                    data[i + 2] = (byte)(Worley(u, v, w, 32, seed + 23) * 255);
+                    data[i + 3] = (byte)(ValueFbm(u, v, w, 8, 4, seed + 31) * 255);
+                }
+        });
+        var slices = new Godot.Collections.Array<Image>();
+        int slice = size * size * 4;
+        for (int z = 0; z < size; z++)
+        {
+            var bytes = new byte[slice];
+            Array.Copy(data, z * slice, bytes, 0, slice);
+            slices.Add(Image.CreateFromData(size, size, false, Image.Format.Rgba8, bytes));
+        }
+        var tex = new ImageTexture3D();
+        tex.Create(Image.Format.Rgba8, size, size, size, false, slices);
+        return tex;
+    }
+
     private static float Remap(float v, float a, float b, float c, float d) => c + (v - a) / Math.Max(b - a, 1e-4f) * (d - c);
 
     private static uint Hash(int x, int y, int z, uint salt)

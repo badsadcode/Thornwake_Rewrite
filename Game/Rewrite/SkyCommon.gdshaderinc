@@ -318,6 +318,10 @@ vec4 layer(vec3 dir, vec2 origin, float h, float d, vec3 sun_dir, vec3 sun_col, 
 // multiple scattering so thick cloud is not black), blue sky light from above and the sunlit ground from below, sunset
 // colours on the bases, aerial perspective with distance.
 uniform sampler3D cloud_noise : filter_linear, repeat_enable;
+// Cloud detail (setting, D199): 0 = build 101; 1 = fine: the billows carved by a 128³ noise four times finer (lumps on
+// lumps on lumps), so a lobe has smaller lobes and creases to shade instead of a smooth, flat-lit face.
+uniform sampler3D cloud_fine_noise : filter_linear, repeat_enable;
+uniform int cloud_fine = 0;
 global uniform vec4 wind; // dir.x, speed/8, dir.z, gust
 // The volume's base: ~1.5 km above the sea (cloud_more.w = base above the camera, Atmosphere), lower over mountains, but
 // never within ~0.8 km of the camera — the sky is drawn behind the terrain and cannot wrap clouds around it.
@@ -545,6 +549,14 @@ float vdens(vec3 p, bool detail) {
 	vec3 dp = vec3(along.x / mix(1.0, 3.5, windy), p.y - cloud_more.z * 2.0, along.y);
 	vec4 m = texture(cloud_noise, dp / 700.0);
 	float df = m.g * 0.75 + m.b * 0.25; // (the finest octave would only sparkle at sky distances)
+	if (cloud_fine == 1) {
+		// (fine: the big billows from the 64³ noise, then two finer layers fading in toward the camera)
+		float dist_f = length(vec3(p.x - cloud_state.x, p.y, p.z - cloud_state.y));
+		vec4 f = texture(cloud_fine_noise, dp / 520.0 + vec3(0.29, 0.61, 0.17));
+		float fine_k = 1.0 - smoothstep(3000.0, 9000.0, dist_f);
+		df = mix(df, m.g * 0.45 + f.r * 0.3 + f.g * 0.25, 0.85);
+		df = mix(df, df * 0.7 + f.b * 0.3, fine_k);
+	}
 	if (cloud_shape == 1 && cloud_state.w < 0.5) {
 		// Sharper billows (Tom): a second, finer octave of cauliflower near enough to show it (within ~4 km).
 		float near = 1.0 - smoothstep(1500.0, 4000.0, length(vec3(p.x - cloud_state.x, p.y, p.z - cloud_state.y)));

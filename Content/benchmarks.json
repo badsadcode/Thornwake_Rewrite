@@ -252,6 +252,12 @@
       "variants": [{ "sky.cloud_shading": 0 }, { "sky.cloud_shading": 1 }],
       "ablate": false, "capture": true, "stills": 1
     },
+    "cloudfine": {
+      "name": "Cloud detail (D199): build 101 vs fine, A-B-A-B",
+      "scenarios": ["cloud-cumulus-close", "cloud-horizon-noon", "cloud-broken-up", "cloud-mountain-deck"],
+      "variants": [{ "sky.cloud_fine": 0 }, { "sky.cloud_fine": 1 }, { "sky.cloud_fine": 0 }, { "sky.cloud_fine": 1 }],
+      "ablate": false, "capture": true, "stills": 1
+    },
     "cloudcost": {
       "name": "Atmosphere 2.0 M3: what the clouds cost (volumetric v2, volumetric v1 sky only, flat) at the cloud scenes and Tom's spots",
       "scenarios": ["cloud-horizon-noon", "cloud-broken-up", "cloud-summit", "cloud-mountain-deck", "cloud-valley-peaks", "cloud-sea-valley", "cloud-sea-ridge", "swamp-sunrise"],
