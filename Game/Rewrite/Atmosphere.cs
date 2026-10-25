@@ -416,6 +416,7 @@ public partial class Atmosphere : Node3D
         SkyParam("cloud_body", GameSettings.CloudBody.Index);
         SkyParam("cloud_one_pass", GameSettings.CloudOnePass.Index);
         SkyParam("cloud_smooth", GameSettings.CloudSmooth.Index);
+        SkyParam("layers_mode", GameSettings.CloudLayers.Index);
         SkyParam("sea_tune", new Vector4(Dev("seahole", .5f), 0, 0, 0));
         SkyParam("cloud_turbulence", GameSettings.CloudTurbulence.Index);
         SkyParam("lens_style", GameSettings.LensStyle.Index);

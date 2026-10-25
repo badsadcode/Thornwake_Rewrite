@@ -72,17 +72,39 @@ void sky() {
 			// High cirrus (7 km): thin, bright, slow, on its own heading.
 			if (layered) {
 				float t = 7000.0 / max(up, 0.015);
-				float d = cirrus_density(cloud_layers.xy + dir.xz * t, coverage) * smoothstep(0.02, 0.15, up) * (1.0 - storm);
+				float d = cirrus_density(cloud_layers.xy + dir.xz * t, coverage, cloud_front.w) * smoothstep(0.02, 0.15, up) * (1.0 - storm);
 				cirrus_here = d;
 				vec3 c = vec3(1.0, 0.99, 0.97) * (0.3 + 0.8 * day) * mix(vec3(1.0), LIGHT0_COLOR, 0.6) + sun_col * pow(max(mu, 0.0), 8.0) * 0.5
 					+ underlight(dir) * 1.1; // high cirrus stays lit longest after sunset
+				c *= mix(1.0, 0.06 + 0.1 * sky_extra.w, sky_night_k()); // (D187: dark at night, faintly moonlit)
 				col = mix(col, c, d);
+			}
+			// Middle grey sheet (altostratus, ~5 km; D187, layered draft): a front's leading cloud, spreading over the sky
+			// as it comes; the sun shows through it as through frosted glass (no disc, a soft bright patch).
+			if (layered && layers_mode == 1 && cloud_front.w > 0.01) {
+				float t = 5000.0 / max(up, 0.015);
+				vec2 xz = cloud_layers.zw * 0.6 + dir.xz * t;
+				float near_front = cloud_front.w * smoothstep(70000.0, 15000.0, cloud_front.z);
+				// thicker toward the front's side of the sky, patchy over tens of km
+				float side = 0.6 + 0.4 * dot(normalize(dir.xz + vec2(1e-4)), cloud_front.xy);
+				float n = texture(cloud_tex, xz / 36000.0 + vec2(0.17, 0.59)).r * 0.7 + texture(cloud_tex, xz / 9000.0).g * 0.3;
+				float d = clamp(near_front * side * 1.4 - (0.6 - n) * 0.9, 0.0, 0.92) * smoothstep(0.01, 0.12, up);
+				if (d > 0.0) {
+					// (a flat grey-blue, darker toward the thick parts; the horizon colour made a pale glare)
+					vec3 grey = vec3(0.56, 0.58, 0.63) * mix(1.05, 0.8, d) * mix(vec3(1.0), sky_mood.rgb, 0.3) * (0.25 + 0.75 * day);
+					grey *= mix(1.0, 0.06 + 0.06 * sky_extra.w, sky_night_k());
+					grey += sun_col * (pow(max(mu, 0.0), 60.0) * 0.35 + pow(max(mu, 0.0), 6.0) * 0.04) * (1.0 - d * 0.6) * (1.0 - sky_night_k());
+					col = mix(col, grey, d);
+					disc *= 1.0 - d;
+					clear *= 1.0 - d;
+				}
 			}
 			// Mackerel sky before a front (4.5 km): rows of small cloudlets, lit like the main deck.
 			if (layered && cloud_more.x > 0.001) {
 				float t = 4500.0 / max(up, 0.015);
 				vec2 xz = cloud_state.xy * 0.75 + dir.xz * t;
 				float d = ct_mackerel_f(xz, t, up, cloud_shape == 1 ? 3.0 : 1.0) * smoothstep(0.06, 0.3, up) * (1.0 - storm);
+				d *= mix(1.0, 0.55, sky_night_k()); // (D187: softer at night, no hard cut-outs)
 				if (d > 0.0) {
 					vec4 c = layer(dir, xz, 4500.0, d, sun_dir, sun_col, day, mu, d * 0.5, 1.04);
 					col = mix(col, c.rgb, d);

@@ -2825,6 +2825,20 @@ the streaks take the scene's light (`_daylight`, ×0.35 at night). Now: pitch bl
 than clear, as it should be); daytime rain unchanged (`artifacts/night-rain-fix.jpg`). Bug fix; build 96 the return
 point. (Captures in rain show FPS 6–7 on the HUD in build 96 too — the capture's forced rain; to check in play.)
 
+## D187 — Cloud layers: dark high layers at night, cirrus and a middle grey sheet (draft) (2026-10-25)
+Tom: "softer mackerel at night, visible cirrus, then the middle grey sheet before fronts". Survey of today's layers
+(`artifacts/cloud-layers-today.jpg`).
+* **Night** (fix, always on): the sky reads its "night" from the light, which is held at −4°, so it stopped at ~0.6 and the
+  flat high layers stayed ~40 % daylit — bright mackerel cut-outs on a black sky. `sky_night_k()` from the real sun
+  (2° → −10°): mackerel and cirrus go dark and faintly moonlit, mackerel ×0.55 at night.
+* **Cloud layers → layered (draft)** (`sky.cloud_layers`): cirrus also in fair weather (edge 0.3 + cover × 0.25, more
+  with a front, opacity 0.45–0.65); and a **middle grey sheet** (altostratus, 5 km, flat sampled layer, cheap) from
+  ~70 km before a front, thicker on the front's side, grey-blue, the sun a soft patch with no disc.
+* Captures (`artifacts/cloud-layers-draft.jpg`, alpine valley, clear air): fair cirrus visible; front at 45 km a pale
+  streaky veil over the sky; at 20 km the sky toward the sun dims behind it. In the dusty badlands (strong biome
+  mood) both barely show and the sheet read as a pale glare (first try, then made grey). Known: near the horizon the
+  sheet's texture stretches into fine horizontal stripes. Look choices are Tom's.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

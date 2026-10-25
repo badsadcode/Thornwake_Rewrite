@@ -377,6 +377,10 @@ public static class GameSettings
         "one pass, so a cloud in front of you hides the mountains behind it instead of showing their outlines (the clouds " +
         "looked see-through). Costs more GPU time, only then. Build 91: two passes always.",
         options: new[] { "build 91", "one pass in the layer (draft)" }));
+    public static readonly Setting CloudLayers = Add(new("sky.cloud_layers", "Sky", "Cloud layers", 0, 1, 1, 0,
+        "Draft (D187). Layered: high cirrus in fair weather too, thicker as a front comes, and a middle grey sheet that " +
+        "spreads over the sky before a front, the sun dimmed behind it. Build 97: cirrus only with more cloud, no sheet.",
+        options: new[] { "build 97", "layered (draft)" }));
     public static readonly Setting CloudSmooth = Add(new("sky.cloud_smooth", "Sky", "Cloud grain without TAA", 0, 1, 1, 1,
         "Volumetric clouds with SMAA, FXAA or no anti-aliasing: smoothed averages each cloud sample over its step, so thin " +
         "cloud shows no fixed grain (a little more GPU time). With TAA the grain averages out anyway. Build 95: as before.",

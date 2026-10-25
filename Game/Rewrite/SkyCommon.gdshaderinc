@@ -143,11 +143,19 @@ float cloud_density(vec2 xz, float coverage) {
 
 // High cirrus: thin streaks stretched along a slanted axis. All texture scales are integers after the 3-4-5 rotation,
 // so the pattern repeats exactly every 25 cloud periods (150 km) and Atmosphere.cs can wrap its drift there.
-float cirrus_density(vec2 xz, float coverage) {
+// Cloud layers (setting, D187): 0 = build 97; 1 = cirrus in fair weather too and thicker before a front, and a middle grey
+// sheet (altostratus, ~5 km) spreading over the sky as a front comes.
+uniform int layers_mode = 0;
+float cirrus_density(vec2 xz, float coverage, float front) {
 	vec2 uv = xz / (cloud_period * 2.5);
 	uv = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8)) * uv;
 	float n = texture(cloud_tex, uv * vec2(1.0, 4.5)).g * 0.7 + texture(cloud_tex, uv * vec2(3.0, 9.0) + 0.37).r * 0.3;
 	float edge = 1.0 - (0.1 + coverage * 0.45);
+	if (layers_mode == 1) {
+		// (layered: fair-weather cirrus at any cover, more and denser as a front comes; front = its strength 0..1)
+		edge = 1.0 - (0.3 + coverage * 0.25 + front * 0.3);
+		return smoothstep(edge, edge + 0.3, n) * (0.45 + 0.2 * front);
+	}
 	return smoothstep(edge, edge + 0.3, n) * 0.35;
 }
 
@@ -271,12 +279,15 @@ vec3 sky_colour(vec3 dir, vec3 sun_dir, vec3 sun_col, float day, float mu) {
 }
 
 // A flat cloud layer at height h: the colour over the sky and the opacity.
+// How far into the night the real sun is (D187): the sky's light is held at −4°, so its own "night" stopped at ~0.6 and
+// the high layers stayed ~40 % daylit at night (bright mackerel cut-outs on a black sky).
+float sky_night_k() { return smoothstep(2.0, -10.0, sun_true.w); }
 vec4 layer(vec3 dir, vec2 origin, float h, float d, vec3 sun_dir, vec3 sun_col, float day, float mu, float toward, float bright) {
 	float lit = clamp(1.0 - toward * 0.65, 0.0, 1.0);
 	vec3 shade = mix(vec3(0.46, 0.5, 0.56), vec3(1.0, 0.99, 0.97), lit);
 	vec3 cloud = shade * (0.25 + 0.85 * day) * mix(vec3(1.0), SKY_LIGHT0_COLOR, 0.5) * bright;
 	// Night: clouds go dark, faintly lit by the moon (brighter toward it).
-	float night = 1.0 - smoothstep(-0.16, 0.04, sun_dir.y);
+	float night = max(1.0 - smoothstep(-0.16, 0.04, sun_dir.y), sky_night_k());
 	vec3 moonlit = vec3(0.07, 0.08, 0.11) * (0.4 + 0.6 * sky_extra.w) * (1.0 + 2.0 * pow(max(dot(dir, night_sky.xyz), 0.0), 8.0));
 	cloud = mix(cloud, moonlit * shade, night);
 	// Sunset and twilight: clouds glow from below, toward the sun most (their white daylight shading gives way, so
