@@ -389,6 +389,14 @@ public static class GameSettings
         "one pass, so a cloud in front of you hides the mountains behind it instead of showing their outlines (the clouds " +
         "looked see-through). Costs more GPU time, only then. Build 91: two passes always.",
         options: new[] { "build 91", "one pass in the layer (draft)" }));
+    public static readonly Setting CloudSoft = Add(new("sky.cloud_soft", "Sky", "Cloud softness", 0, 1, 1, 0,
+        "Volumetric v2 (draft, D197). Soft: thin, translucent edges and wisps and light reaching deeper into the cloud, " +
+        "instead of a hard, foam-like surface. Build 101: as before.",
+        options: new[] { "build 101", "soft (draft)" }));
+    public static readonly Setting CloudCost = Add(new("sky.cloud_cost", "Sky", "Cloud quality level", 0, 2, 1, 0,
+        "Volumetric v2 clouds (D196). High: as before. Medium and Low: the fine billow detail only nearer to you and fewer, " +
+        "longer steps through the clouds — for more frame rate on slower PCs, a little softer far away.",
+        options: new[] { "High", "Medium", "Low" }));
     public static readonly Setting CloudLayers = Add(new("sky.cloud_layers", "Sky", "Cloud layers", 0, 1, 1, 0,
         "Draft (D187). Layered: high cirrus in fair weather too, thicker as a front comes, and a middle grey sheet that " +
         "spreads over the sky before a front, the sun dimmed behind it. Build 97: cirrus only with more cloud, no sheet.",

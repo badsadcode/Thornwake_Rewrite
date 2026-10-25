@@ -619,6 +619,14 @@ global uniform vec4 cloud_dev;
 
 // Cloud grain without TAA (setting, D184): 1 = each cloud sample averages two densities over its step; 0 = build 95.
 uniform int cloud_smooth = 1;
+// Cloud quality level (setting, D196; Tom's rule: today's look stays the top level): 0 = High (as before); 1 = Medium:
+// the fine billow detail only within 8 km (was 18), steps ×1.3 longer and ×0.77 fewer (the same reach); 2 = Low: detail
+// within 4 km, steps ×1.6 / ×0.62.
+uniform int cloud_cost = 0;
+// Cloud softness (setting, D197; Tom: "they still look like foam … almost a solid object"): 0 = build 101; 1 = soft: the
+// thin outer parts of a cloud thinner (density^1.7, the cores unchanged), light reaching deeper (extinction ×0.7) and the
+// inside shaded by its own thickness more gradually — translucent edges and wisps instead of a hard opaque skin.
+uniform int cloud_soft = 0;
 // The march through the volume from t0 to t1 along dir (camera-relative): premultiplied light, opacity.
 vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, float min_step, vec3 sun_dir, vec3 sun_col, float day, float mu, float storm) {
 	vec2 cam = cloud_state.xy;
@@ -642,7 +650,7 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 	vec3 hdir = normalize(vec3(dir.x, max(dir.y, 0.0), dir.z));
 	vec3 haze = sky_colour(hdir, sun_dir, sun_col, day, dot(hdir, sun_dir));
 	float calm = 1.0 - cloud_windy();
-	float sigma_k = mix(0.011, 0.019, calm) * (1.0 + storm) * (cloud_look == 1 ? 1.25 : 1.0) * (cloud_body == 1 ? 1.6 : 1.0); // (reference: denser, crisper) // calm cumulus: denser, crisper edges; real cloud is opaque within ~100 m
+	float sigma_k = mix(0.011, 0.019, calm) * (1.0 + storm) * (cloud_look == 1 ? 1.25 : 1.0) * (cloud_body == 1 ? 1.6 : 1.0) * (cloud_soft == 1 ? 0.7 : 1.0); // (reference: denser, crisper; soft D197: light reaches deeper) // calm cumulus: denser, crisper edges; real cloud is opaque within ~100 m
 	float trans = 1.0;
 	vec3 light = vec3(0.0);
 	float phase_f = mix(vhg(lmu, 0.6), vhg(lmu, -0.25), 0.4);
@@ -652,6 +660,9 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 	// or none — a fixed grain without TAA. Now the last segment ends at the scene and the dither only moves the sample
 	// within its segment.
 	float s0 = t0;
+	float cost_k = cloud_cost == 2 ? 1.6 : cloud_cost == 1 ? 1.3 : 1.0;
+	float detail_far = cloud_cost == 2 ? 4000.0 : cloud_cost == 1 ? 8000.0 : 18000.0;
+	max_steps = int(float(max_steps) / cost_k);
 	bool smooth2 = cloud_smooth == 1 && cloud_v2 < 1.5;
 	// (D184: without TAA two samples per step at ¼ and ¾, no per-pixel offset: no grain on broken cloud. D185: in a thick
 	// overcast deck that banded into contour lines — the "marble" sky in build 96; there the full offset comes back with
@@ -663,12 +674,12 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 	}
 	for (int i = 0; i < max_steps; i++) {
 		if (s0 >= t1) break;
-		float step_len = clamp(s0 * 0.005, min_step, 450.0);
+		float step_len = clamp(s0 * 0.005 * cost_k, min_step * cost_k, 450.0 * cost_k);
 		float seg = min(step_len, t1 - s0);
 		float t = s0 + jitter * seg;
 		vec3 p = vec3(cam.x, 0.0, cam.y) + dir * t;
 		s0 += seg;
-		bool near = s0 < 18000.0;
+		bool near = s0 < detail_far;
 		float d = vdens(p, near);
 		if (d < 0.0) { s0 += step_len * 0.5; continue; } // empty column: stride a little (cheaper; more would chip the edges)
 		// (D184: without TAA the per-pixel ray offset stays still, and at a sharp cloud edge a pixel's sample fell just
@@ -676,6 +687,7 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		// offset, two density samples per step (¼ and ¾), one more density sample per cloud sample; the six light
 		// samples stay one each. A second sample with the offset kept left the wisps speckled.)
 		if (smooth2 && d >= 0.0) d = 0.5 * (d + max(vdens(p + dir * seg * strat_b, near), 0.0));
+		if (cloud_soft == 1 && d > 0.0) d = min(pow(d, 1.7) * 1.15, d); // (D197: thin parts thinner, cores as before)
 		if (d <= 0.002) continue;
 		// Toward the light: six steps, longer and longer (≈3 km), cheap density.
 		float od = 0.0, sl = 60.0;

@@ -2913,6 +2913,24 @@ one kind at a time, with Living air on and no rain:
   ~1 m cloud hovering 3.5–7.5 m off, moving to another spot every 20–45 s.
 First render: all three sub-pixel or too sparse; made bigger, denser and closer. `artifacts/living-air-accents.jpg`.
 
+## D196 — Cloud quality level: High (today), Medium, Low (2026-10-25)
+From the plan (cheaper clouds only as extra options; Tom: "I just hope I can use at least the quality as we have now").
+Setting **Cloud quality level** (`sky.cloud_cost`): High = as before; Medium = the fine
+billow detail within 8 km (was 18), steps ×1.3 longer and ×0.77 fewer (same reach); Low = detail within 4 km, steps
+×1.6 / ×0.62. Suite **cloudlevels** (A-B-C ×2, Tom's settings): High → Medium → Low, horizon 45 → 49 → 50 FPS, broken
+cover 63 → 71 → 76, summit 57 → 59 → 61, Tom's ridge 42 → 50 → 53, valley 59 → 61 → 63. Look
+(`artifacts/cloud-quality-levels.jpg`): broken cover and noon nearly identical; on the ridge Medium and Low lose some of
+the thinner clouds.
+
+## D197 — Cloud softness (draft): little effect; the "foam" look is not the edges (2026-10-25)
+Tom: "about the clouds, they still look like foam. They look like almost a solid object." Draft **Cloud softness**
+(`sky.cloud_soft`): density^1.7 in the thin parts (cores unchanged), extinction ×0.7. Paired captures
+(`artifacts/cloud-softness-draft.jpg`, suite cloudsoft): edges slightly softer in broken cover, noon cumulus nearly the
+same, inside the summit cloud grey instead of deep blue. It does not change what reads as foam. Remaining suspects for
+"solid object": flat, even shading of the lit sides (the multiple-scattering and ambient terms flatten the inside), the
+reference look's denser, crisper setting (`cloud_look`, sigma ×1.25), dense caps (Tom has *Cloud caps → dense*, ×3.5),
+the strong biome mood tinting the clouds. Needs Tom's dump of a foam moment (or a reference photo of what he expects).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

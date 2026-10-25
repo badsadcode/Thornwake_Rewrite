@@ -234,6 +234,18 @@
         { "fx.ambient_life": 0, "sky.cloud_layers": 0, "sky.cloud_one_pass": 0 }, { "fx.ambient_life": 2, "sky.cloud_layers": 1, "sky.cloud_one_pass": 1 }],
       "ablate": false, "capture": false, "stills": 0
     },
+    "cloudlevels": {
+      "name": "Cloud quality levels (D196): High / Medium / Low, A-B-C-A-B-C, the cloud scenes",
+      "scenarios": ["cloud-horizon-noon", "cloud-broken-up", "cloud-summit", "cloud-mountain-deck", "cloud-valley-peaks"],
+      "variants": [{ "sky.cloud_cost": 0 }, { "sky.cloud_cost": 1 }, { "sky.cloud_cost": 2 }, { "sky.cloud_cost": 0 }, { "sky.cloud_cost": 1 }, { "sky.cloud_cost": 2 }],
+      "ablate": false, "capture": true, "stills": 1
+    },
+    "cloudsoft": {
+      "name": "Cloud softness (D197): build 101 vs soft, close cumulus, broken, noon, summit, Tom's ridge",
+      "scenarios": ["cloud-cumulus-close", "cloud-broken-up", "cloud-horizon-noon", "cloud-summit", "cloud-mountain-deck"],
+      "variants": [{ "sky.cloud_soft": 0 }, { "sky.cloud_soft": 1 }],
+      "ablate": false, "capture": true, "stills": 1
+    },
     "cloudcost": {
       "name": "Atmosphere 2.0 M3: what the clouds cost (volumetric v2, volumetric v1 sky only, flat) at the cloud scenes and Tom's spots",
       "scenarios": ["cloud-horizon-noon", "cloud-broken-up", "cloud-summit", "cloud-mountain-deck", "cloud-valley-peaks", "cloud-sea-valley", "cloud-sea-ridge", "swamp-sunrise"],
