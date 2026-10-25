@@ -101,6 +101,9 @@ public partial class AmbientLife : Node3D
         if (_devilAge > _devilLife) { _devilAge = -1; _devilWait = 25 + 60 * (float)_rng.NextDouble(); }
     }
 
+    /// <summary>Tests only (<c>--wisp-test</c>): every swoosh slot busy, in front of the camera at 10–25 m, for close captures.</summary>
+    private static readonly bool WispTest = Array.IndexOf(OS.GetCmdlineUserArgs(), "--wisp-test") >= 0;
+
     /// <summary>The light's colour around the player (Atmosphere: the sun's, toward the fog's): the swooshes take it.</summary>
     public Color Tint { get; set; } = Colors.White;
 
@@ -190,18 +193,28 @@ public partial class AmbientLife : Node3D
         // Wind wisps: from ~4 m/s, more with the gusts; almost none in the rain (the rain shows the wind) or under a canopy.
         float windy = Mathf.SmoothStep(3.5f, 11, windSpeed) * (.45f + .55f * gust) * (1 - .8f * rain) * (1 - .7f * Mathf.Clamp(canopy, 0, 1));
         float wispK = windy * Math.Min(_amount, 1.5f);
-        bool swoosh = GameSettings.WindWisps.Index == 1;
+        bool swoosh = GameSettings.WindWisps.Index >= 1;
         _wisps.Emitting = wispK > .03f && !swoosh;
         _swooshes.Emitting = wispK > .03f && swoosh;
         if (_swooshes.Emitting)
         {
-            _swooshes.AmountRatio = Mathf.Clamp(wispK * .7f, 0, 1);
+            _swooshes.AmountRatio = WispTest ? 1 : Mathf.Clamp(wispK * .7f, 0, 1);
             // (the stroke draws itself at about the wind's speed; the particle only drifts a little)
             _swooshPm.Direction = dir;
             _swooshPm.InitialVelocityMin = windSpeed * .15f; _swooshPm.InitialVelocityMax = windSpeed * .3f;
             _swooshes.Position = -dir * 8 + new Vector3(0, .8f, 0);
+            if (WispTest)
+            {
+                var cam = GetParent<Node3D>().GlobalTransform;
+                var fwd = -cam.Basis.Z; fwd.Y = 0; fwd = fwd.Normalized();
+                _swooshPm.EmissionBoxExtents = new Vector3(6, 1.5f, 6);
+                _swooshes.GlobalPosition = cam.Origin + fwd * 16 - dir * 5 + new Vector3(0, 1.5f, 0);
+            }
             _swooshMat.SetShaderParameter("wind_dir", dir);
             _swooshMat.SetShaderParameter("stroke_len", Mathf.Clamp(windSpeed * .9f, 5, 13));
+            bool strands = GameSettings.WindWisps.Index == 2;
+            _swooshMat.SetShaderParameter("strands", strands ? 1 : 0);
+            _swooshMat.SetShaderParameter("width", strands ? .65f : .3f); // (room for the haze and the strands around it)
             // (unshaded, tinted by the light: lit by the scene they did not draw at all, and plain white was a cool grey in an
             // orange evening)
             _swooshMat.SetShaderParameter("colour", new Color(Tint.R * light, Tint.G * light, Tint.B * light, .24f + .1f * gust));

@@ -3031,6 +3031,15 @@ lines; near the camera a scratch across the screen, edge-on a wire, nothing like
   read as cool grey in an orange evening; lit by the scene (camera-facing normal) they did not draw at all.
 Close-ups old vs new: `artifacts/wind-wisps-swooshes.jpg`. Motion is the point: Tom to judge in play.
 
+## D205 — Wind wisps with strands (2026-10-25)
+Tom, with a reference (a soft blue-white haze band with fine bright threads braided through it): "can we make the wisp wind
+trails a little bit more detailed … very subtle, but still. I like how they behave." *Wind wisps* gains a third option,
+**swooshes with strands** (the new default; *swooshes* = D204, *build 104* = the old trails): the stroke is 0.65 m wide, a
+faint haze mottled along it, and three or four fine strands, each on its own wave across the stroke so they cross and
+part, brighter and dimmer along their length, gathered where the stroke tapers. First try: strands under a pixel wide
+sparkled into grain (with TAA) — now never thinner than ~1.3 pixels, fainter instead when far. Test flag
+`--wisp-test` (every swoosh slot busy, 10–25 m in front of the camera). Close-up: `artifacts/wisps/strand-2b/z.jpg`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -271,10 +271,11 @@ public static class GameSettings
         "particles — dust in deserts and badlands, ash in volcanic land, blown snow in the cold, leaves in forests in gusts, " +
         "pollen, spores over swamps. Cheap and only near you. Off: build 98.",
         options: new[] { "off (build 98)", "subtle (draft)", "more (draft)" }));
-    public static readonly Setting WindWisps = Add(new("fx.wind_wisps", "Lighting and effects", "Wind wisps", 0, 1, 1, 1,
-        "With Living air (D204). Swooshes: short, soft strokes that draw themselves along the wind and fade, some ending in a " +
-        "curl, never right in front of you. Build 104: long, thin straight trails (they read as scratches across the screen).",
-        options: new[] { "build 104 (straight trails)", "swooshes" }));
+    public static readonly Setting WindWisps = Add(new("fx.wind_wisps", "Lighting and effects", "Wind wisps", 0, 2, 1, 2,
+        "With Living air (D204, D205). Swooshes: short, soft strokes that draw themselves along the wind and fade, some ending " +
+        "in a curl, never right in front of you. With strands: the same, a faint mottled haze with fine bright strands " +
+        "braided through it. Build 104: long, thin straight trails (they read as scratches across the screen).",
+        options: new[] { "build 104 (straight trails)", "swooshes", "swooshes with strands" }));
     public static readonly Setting MoonRays = Add(new("fx.moon_rays", "Lighting and effects", "Moonlight", 0, 1, 1, 0,
         "Draft (D182). Rays and shadows: at night the moon casts shadows like the sun — trees and mountains shade the " +
         "moonlit ground, and the forest rays and rays in open air come from the moon. Build 94: soft moonlight without " +
