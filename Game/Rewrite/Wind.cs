@@ -40,7 +40,13 @@ public sealed class Wind
 
     /// <summary>Tests only (<c>--wind=m/s</c>, D190): the wind's speed fixed for captures (gusts still vary). Never a setting.</summary>
     public static float? ForceSpeed { get; set; }
-    private void Forced() { if (ForceSpeed is { } f) { SteadySpeed = f; Speed = f * (.85f + .35f * Gust); } }
+    /// <summary>Tests only (Esc → Weather test, D206): the direction it blows toward, fixed.</summary>
+    public static Vector2? ForceDirection { get; set; }
+    private void Forced()
+    {
+        if (ForceSpeed is { } f) { SteadySpeed = f; Speed = f * (.85f + .35f * Gust); }
+        if (ForceDirection is { } d) Direction = d;
+    }
 
     /// <summary>The speed without gusts (m/s): what builds the sea and bends the plants.</summary>
     public float SteadySpeed { get; private set; } = 6;

@@ -176,7 +176,7 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--front=")) { var v = arg[8..].Split(','); _atmosphere.ForceFront = new Vector2(float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture)); }
             if (arg == "--shot-live") _atmosphere.LiveFog = true;
             if (arg == "--dust-devil") AmbientLife.ForceDevil = true;
-            if (arg.StartsWith("--wind=")) Wind.ForceSpeed = float.Parse(arg[7..], CultureInfo.InvariantCulture);
+            if (arg.StartsWith("--wind=")) _cmdWindSpeed = Wind.ForceSpeed = float.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--ray-dev="))
                 foreach (var kv in arg[10..].Split(',').Select(t => t.Split('=')).Where(t => t.Length == 2))
                 {
@@ -849,6 +849,7 @@ public partial class WorldLab : Node3D
         var sky = _clock.Advance(delta, latitude, run: _shotPath == null || _shotClock);
         _hitch.Mark("ground snap, camera, others");
         UpdateWeather(delta, sky);
+        WeatherTestApply();
         _hitch.Mark("weather");
         UpdatePeak(delta);
         UpdateRelief();
@@ -867,7 +868,8 @@ public partial class WorldLab : Node3D
             _lightning.Step(delta, sky.Day * 24 + sky.Hour, _atmosphere.Cells, false, _atmosphere.Snowing, cam, _originX, _originZ,
                 _atmosphere.Precipitation, _atmosphere.Wind.Speed, _atmosphere.Wind.Gust);
         }
-        else if (_lightning != null) { _lightning.QueueFree(); _lightning = null; RenderingServer.GlobalShaderParameterSet("lightning", Vector4.Zero); }
+        else if (_lightning != null && !_testLightning) { _lightning.QueueFree(); _lightning = null; RenderingServer.GlobalShaderParameterSet("lightning", Vector4.Zero); }
+        WeatherTestStep(delta, sky, cam);
         if (GameSettings.GroundFog.Index > 0)
             _mist.Update(_sampler, PlayerX, PlayerZ, _originX, _originZ, _atmosphere.MistAmount, (float)_sampler.Height(PlayerX, PlayerZ, 8), _atmosphere.MistColour);
         else _mist.Visible = false;
@@ -1207,6 +1209,14 @@ public partial class WorldLab : Node3D
         _atmosphere.SetBiomeMood(Mood(biomes.Pool[ba]) * (float)share + Mood(biomes.Pool[bb]) * (float)(1 - share));
         _atmosphere.Life?.SetBiome(biomes.Pool[ba].Def.Id, (float)share);
         if (_atmosphere.Life is { GroundY: null } life) life.GroundY = (x, z) => (float)_sampler.Height(x + _originX, z + _originZ);
+        // Rain splashes (D207): the first surface straight down — terrain, rocks, logs, objects, roofs — else the terrain.
+        _atmosphere.SurfaceY ??= (x, z) =>
+        {
+            var from = new Vector3(x, _camera.GlobalPosition.Y + 40, z);
+            var q = PhysicsRayQueryParameters3D.Create(from, from + Vector3.Down * 120, 1, new Godot.Collections.Array<Rid> { _player.GetRid() });
+            var hit = _player.GetWorld3D().DirectSpaceState.IntersectRay(q);
+            return hit.Count > 0 ? ((Vector3)hit["position"]).Y : (float)(_sampler?.Height(x + _originX, z + _originZ) ?? from.Y - 40);
+        };
         LightProfiles.SetTarget(LightProfiles.For(biomes.Pool[ba].Def.Id), LightProfiles.For(biomes.Pool[bb].Def.Id), (float)share);
         static float MistOf(ResolvedBiome b) => (float)Math.Clamp(b.Def.Atmosphere.Mist + .5 * b.Def.Atmosphere.Fog, 0, 1);
         float nearWater = t.Water != WaterKind.None ? 1 : _sampler.Plan.Hydrology.NearestRiver(PlayerX, PlayerZ, 300, out var near) ? 1 - (float)(near.Distance / 300) : 0;
@@ -1591,6 +1601,9 @@ public partial class WorldLab : Node3D
 
         // ---- Display (Tom, 2026-10-11: native resolution, window modes, aspect ratios, UI scale; saved)
         tabs.AddChild(BuildDisplayTab());
+
+        // ---- Weather test (D206): rain strength, wind, lightning by hand
+        tabs.AddChild(BuildWeatherTestTab());
 
         // ---- Audio (round 29, Tom)
         var audio = new VBoxContainer { Name = "Audio" };

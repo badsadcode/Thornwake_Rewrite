@@ -45,6 +45,18 @@ public partial class Atmosphere : Node3D
     private readonly ShaderMaterial _underwater = new() { Shader = GD.Load<Shader>("res://Game/Rewrite/Underwater.gdshader"), RenderPriority = 127 };
     private float _daylight = 1;
     private GpuParticles3D? _rainParticles;
+    // Rain look by strength (D207): the streak shader, and splashes on the surfaces around the camera — spawned on a pool of
+    // points on the ground, rocks, roofs and logs (SurfaceY), a few of them moved each frame.
+    private ShaderMaterial? _rainStreakMat;
+    private GpuParticles3D? _groundSplashes;
+    private Image? _splashPointsImage;
+    private ImageTexture? _splashPoints;
+    private int _splashPointNext;
+    private readonly Random _splashRandom = new(77);
+    private const int SplashPointCount = 1024;
+    private int _particlesLook = -1;
+    /// <summary>The first surface straight down at a scene x, z (WorldLab: terrain, rocks, objects, buildings), for splashes.</summary>
+    public Func<float, float, float>? SurfaceY { get; set; }
     private byte[] _noiseBase = Array.Empty<byte>();
     /// <summary>Rain on (the water simulation's rain): the sky clouds over, light dims, haze thickens, rain falls.</summary>
     public bool Raining { get; set; }
@@ -302,6 +314,25 @@ public partial class Atmosphere : Node3D
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         AddChild(_splashes);
+        _rainStreakMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/RainStreak.gdshader") };
+        var groundSplash = (ShaderMaterial)_splashMaterial.Duplicate();
+        groundSplash.SetShaderParameter("ring_k", .45f);
+        // (a first try let the drops collide with a height field and spawn splashes as a sub-emitter: none appeared)
+        _splashPointsImage = Image.CreateEmpty(SplashPointCount, 1, false, Image.Format.Rgbf);
+        _splashPoints = ImageTexture.CreateFromImage(_splashPointsImage);
+        _groundSplashes = new GpuParticles3D
+        {
+            Amount = 3000, Lifetime = .3, Emitting = false, LocalCoords = false,
+            VisibilityAabb = new Aabb(new Vector3(-1e5f, -1e4f, -1e5f), new Vector3(2e5f, 2e4f, 2e5f)), // (points in scene space)
+            DrawPass1 = new QuadMesh { Size = new Vector2(.26f, .2f), Material = groundSplash },
+            ProcessMaterial = new ParticleProcessMaterial
+            {
+                EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Points, EmissionPointTexture = _splashPoints, EmissionPointCount = SplashPointCount,
+                Gravity = Vector3.Zero, InitialVelocityMin = 0, InitialVelocityMax = 0, Spread = 0, ScaleMin = .6f, ScaleMax = 1.2f,
+            },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        AddChild(_groundSplashes);
         ApplyAll();
     }
 
@@ -596,7 +627,7 @@ public partial class Atmosphere : Node3D
         UpdateCoverage();
         if (_rainParticles != null)
         {
-            if (Snowing != _particlesSnow) SetParticleKind(Snowing);
+            if (Snowing != _particlesSnow || GameSettings.RainLook.Index != _particlesLook) SetParticleKind(Snowing);
             float p = Precip;
             _rainParticles.Emitting = p > .05f;
             // (D186: the streaks are unshaded — at night they stood out bright white; they take the scene's light)
@@ -623,12 +654,15 @@ public partial class Atmosphere : Node3D
             }
             else
             {
-                if (_rainParticles.Amount != 9000) { _rainParticles.Amount = 9000; SetParticleKind(Snowing); }
+                int want = GameSettings.RainLook.Index == 1 && !Snowing ? 24000 : 9000; // (D207: by strength, as many as the simulated model)
+                if (_rainParticles.Amount != want) { _rainParticles.Amount = want; SetParticleKind(Snowing); }
                 _rainParticles.AmountRatio = Mathf.Clamp(p * 1.1f, 0, 1) * Math.Clamp(GameSettings.RainStrength.F, .2f, 1);
             }
             // Rain slants with the wind; snow drifts with it.
             if (_rainParticles.ProcessMaterial is ParticleProcessMaterial pm)
                 pm.Direction = new Vector3(Wind.Direction.X * Wind.Speed * slant, -1, Wind.Direction.Y * Wind.Speed * slant);
+            if (!Snowing && _particlesLook == 1) RainByStrength(p, cameraLocal);
+            else if (_groundSplashes != null) _groundSplashes.Emitting = false;
         }
         // Raindrop splashes (round 28): only in the simulated model, raining, over water close below the camera, and
         // fewer on rough water (a still crown would float over the troughs).
@@ -852,12 +886,72 @@ public partial class Atmosphere : Node3D
 
     private Color? _rainTint;
 
+    /// <summary>
+    /// Rain look by strength (D207, Tom: "the direction of raindrops should be determined by the wind … raindrops splashing
+    /// on surfaces during heavy rain … small rain should look different"). From drizzle to a downpour: the fall speed
+    /// (~3 m/s for drizzle drops, ~9.5 m/s for big ones), the drift with the wind (small drops follow it more), the streak's
+    /// length (its movement in ~1/18 s), width and opacity, and how many; from moderate rain on, drops that hit the ground,
+    /// rocks, roofs or leaves within ~28 m splash (a sub-emitter at the collision with a height field around the camera).
+    /// </summary>
+    private void RainByStrength(float p, Vector3 camera)
+    {
+        if (_rainParticles?.ProcessMaterial is not ParticleProcessMaterial pm || _rainStreakMat == null) return;
+        float k = Mathf.SmoothStep(.05f, .75f, p); // 0 drizzle … 1 downpour
+        // (with TAA or FSR 2 the hashed streak, which writes motion vectors: the transparent one faded to ~10 % — RainStreakTaa)
+        bool temporal = GameSettings.AntiAliasing.Index is 2 or 4;
+        var want = GD.Load<Shader>(temporal ? "res://Game/Rewrite/RainStreakTaa.gdshader" : "res://Game/Rewrite/RainStreak.gdshader");
+        if (_rainStreakMat.Shader != want) _rainStreakMat.Shader = want;
+        float fall = Mathf.Lerp(3.2f, 9.5f, k);
+        var drift = Wind.Direction * Wind.Speed * Mathf.Lerp(.85f, .65f, k);
+        var v = new Vector3(drift.X, -fall, drift.Y);
+        float speed = v.Length();
+        var dir = v / speed;
+        pm.Direction = dir; pm.Spread = 2; pm.Gravity = Vector3.Zero;
+        pm.InitialVelocityMin = speed * .92f; pm.InitialVelocityMax = speed * 1.08f;
+        // (drops are born through the whole volume, the volume upwind so the drifting drops fill the view; only ~16 m around
+        // the camera — farther a drop is under a pixel, and spread over 52 m the near rain was too sparse to read)
+        pm.EmissionBoxExtents = new Vector3(16, 7, 16);
+        _rainParticles.GlobalPosition = camera + new Vector3(-dir.X, 0, -dir.Z) * 4 + new Vector3(0, 2, 0);
+        float sheets = .7f + .45f * Wind.Gust;
+        _rainParticles.AmountRatio = Mathf.Clamp(Mathf.Pow(p, .45f) * sheets, 0, 1) * Math.Clamp(GameSettings.RainStrength.F / 1.6f, .12f, 1);
+        float l = Mathf.Clamp(_daylight * 1.1f, .06f, 1) * Mathf.Lerp(1, .35f, _night);
+        _rainStreakMat.SetShaderParameter("fall_dir", dir);
+        _rainStreakMat.SetShaderParameter("streak_len", speed * .055f);
+        // (wide and opaque enough to survive TAA, which smeared build 104's 1 cm, 20 % streaks to almost nothing)
+        _rainStreakMat.SetShaderParameter("width", Mathf.Lerp(.008f, .022f, k));
+        _rainStreakMat.SetShaderParameter("tint", new Color(.82f * l, .86f * l, .92f * l, Mathf.Lerp(.28f, .55f, k)));
+        bool splash = p > .3f && _groundSplashes != null && SurfaceY != null;
+        if (_groundSplashes == null) return;
+        _groundSplashes.Emitting = splash;
+        if (!splash) { _splashPointNext = 0; return; }
+        // Splash points: 2–16 m around the camera (even over the area), on the first surface below; 96 of the 1,024 moved per
+        // frame (all within ~0.2 s), the first time all at once. A splash every ~0.6 s per point in a downpour.
+        int n = _splashPointNext == 0 ? SplashPointCount : 96;
+        for (int i = 0; i < n; i++)
+        {
+            int at = _splashPointNext++ % SplashPointCount;
+            double r = Math.Sqrt(4 + _splashRandom.NextDouble() * (16 * 16 - 4)), a = _splashRandom.NextDouble() * Math.Tau;
+            float x = camera.X + (float)(Math.Cos(a) * r), z = camera.Z + (float)(Math.Sin(a) * r);
+            _splashPointsImage!.SetPixel(at, 0, new Color(x, SurfaceY!(x, z) + .01f, z));
+        }
+        if (_splashPointNext >= SplashPointCount * 1000) _splashPointNext = SplashPointCount;
+        _splashPoints!.Update(_splashPointsImage);
+        _groundSplashes.AmountRatio = Mathf.Clamp(Mathf.SmoothStep(.3f, 1f, p) * Math.Clamp(GameSettings.RainStrength.F / 1.6f, .3f, 1), .05f, 1);
+        if (_groundSplashes.DrawPass1 is QuadMesh { Material: ShaderMaterial sm })
+            sm.SetShaderParameter("tint", new Color(.8f * l, .84f * l, .88f * l));
+    }
+
     private void SetParticleKind(bool snow)
     {
         _particlesSnow = snow;
+        _particlesLook = GameSettings.RainLook.Index;
         _rainTint = null;
         if (_rainParticles == null) return;
         var pm = (ParticleProcessMaterial)_rainParticles.ProcessMaterial;
+        // (back to build 104's emitter; the rain look by strength sets its own each frame, D207)
+        _rainParticles.MaterialOverride = null;
+        _rainParticles.Position = new Vector3(0, 14, 0);
+        pm.EmissionBoxExtents = new Vector3(28, 3, 28);
         if (snow)
         {
             _rainParticles.DrawPass1 = new QuadMesh { Size = new Vector2(.07f, .07f), Material = new StandardMaterial3D
@@ -889,6 +983,11 @@ public partial class Atmosphere : Node3D
             _rainParticles.Lifetime = 1.4;
             pm.InitialVelocityMin = 13; pm.InitialVelocityMax = 17; pm.Gravity = new Vector3(0, -9.8f, 0); pm.Spread = 3;
             pm.TurbulenceEnabled = false;
+            if (_particlesLook == 1 && _rainStreakMat != null)
+            {
+                _rainParticles.DrawPass1 = new QuadMesh { Size = Vector2.One };
+                _rainParticles.MaterialOverride = _rainStreakMat;
+            }
         }
     }
 

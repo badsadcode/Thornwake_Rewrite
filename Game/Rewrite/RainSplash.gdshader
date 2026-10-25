@@ -5,6 +5,8 @@ shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
 
 uniform vec3 tint : source_color = vec3(0.75, 0.8, 0.85);
+// (D207: splashes on the ground, roofs and leaves: a weaker ring — spray, not a ring spreading on water — and smaller)
+uniform float ring_k = 1.0;
 varying float age;
 varying float seed;
 
@@ -36,7 +38,7 @@ void fragment() {
 		vec2 d = uv - p;
 		drops += exp(-dot(d, d) * (380.0 - 120.0 * h)) * step(0.0, up);
 	}
-	float alpha = clamp(ring * 0.8 + drops * 1.3, 0.0, 1.0) * (1.0 - smoothstep(0.7, 1.0, a));
+	float alpha = clamp(ring * 0.8 * ring_k + drops * 1.3, 0.0, 1.0) * (1.0 - smoothstep(0.7, 1.0, a));
 	if (alpha < 0.02) discard;
 	ALBEDO = tint * (1.15 + drops * 0.5);
 	ALPHA = alpha * 0.85;

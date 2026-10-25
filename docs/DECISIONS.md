@@ -3040,6 +3040,41 @@ part, brighter and dimmer along their length, gathered where the stroke tapers. 
 sparkled into grain (with TAA) — now never thinner than ~1.3 pixels, fainter instead when far. Test flag
 `--wisp-test` (every swoosh slot busy, 10–25 m in front of the camera). Close-up: `artifacts/wisps/strand-2b/z.jpg`.
 
+## D206 — Esc → Weather test: rain strength, wind and lightning by hand (2026-10-25)
+Tom: "for the rain effect and storm effect, I need proper tools to test lightnings and rain intensity". Before: H (rain on
+at one strength), L (one strike ahead, simulated weather only), `--rain-here` (ignored with the weather off — Tom plays
+with it off). New tab **Weather test** in the Esc menu (`WorldLab.WeatherTest.cs`), test overrides only, nothing saved:
+* **Rain here**: on/off, strength 0–1 with a readout (drizzle … downpour) and buttons Drizzle / Light / Moderate / Heavy /
+  Downpour; works with the weather off too (and so does `--rain-here`);
+* **Wind**: on/off, speed 0–30 m/s, the direction it blows from (compass); `Wind.ForceDirection` beside `ForceSpeed`;
+* **Lightning**: strike ahead at 150 m, 400 m, 1, 3, 8 or 20 km; a **test storm** striking all around every ~1–30 s
+  (mostly 1–8 km, now and then within 1 km); thunder at the speed of sound as before. With the classic weather model the
+  test makes its own Lightning node and steps it;
+* a live line: rain, wind and the weather model in use.
+
+## D207 — Rain by strength: slanted by the wind, drizzle to downpour, splashes on the ground (2026-10-25)
+Tom: "the direction of raindrops should be determined by the wind direction. Maybe the raindrops splashing on surfaces
+during the heavy storm … Also, small rain should look different." Build 104's rain: upright billboards (the drops moved
+slanted but stood vertical, slant 0.04 per m/s), the same 0.55 m streak in any rain, splashes only on water. And with TAA
+(Tom's AA) the 1 cm, 20 % streaks were blended away to ~10 %: rain hardly showed at all. New setting **Rain look**
+(`sim.rain_look`, default *by strength*; *build 104* the old):
+* each drop a streak along its own velocity (`RainStreak.gdshaderinc`): fall 3.2 m/s (drizzle) … 9.5 m/s (downpour) plus
+  the wind's drift (0.85 … 0.65 of the wind speed: small drops follow it more), so in 10 m/s of wind a downpour leans
+  ~35°; length = its movement in ~1/18 s; width 0.8 … 2.2 cm and opacity 0.28 … 0.55 by strength; never under ~1.2 px;
+  fading in and out over its life, near the camera and beyond ~20 m;
+* drops born through a 32 × 14 × 32 m volume around and upwind of the camera (was 56 m wide, 6 m deep, from 14 m up:
+  spread over 52 m the near rain was too sparse to read); up to 24 000 (also with the classic model);
+* with TAA or FSR 2 the streak is drawn in the opaque pass with hashed transparency (`RainStreakTaa.gdshader`), so it
+  writes motion vectors and survives the temporal filter; its core near solid (a low hashed alpha left dotted lines);
+  other AA modes keep the transparent streak;
+* splashes from moderate rain on (> 0.3): crowns (`RainSplash`, ring weakened) on the first surface straight down —
+  terrain, rocks, logs, objects, roofs — 2–16 m around the camera, from a pool of 1,024 points (96 moved a frame,
+  `Atmosphere.SurfaceY` from WorldLab, a physics ray). Tried first: the drops colliding with a height field and splashing
+  through a sub-emitter — nothing appeared.
+Captures (`artifacts/rain-by-strength.jpg`: drizzle, moderate, downpour vs build 104; `artifacts/rain-splashes.jpg`).
+Not yet (Tom and Noor's Weather 2.0 notes, `docs/Thornwake_Weather_2_0_Suggestions.md`): rain stopping under shelter,
+wetness by material and over time, dripping trees, splash kinds by surface.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -535,6 +535,11 @@ public static class GameSettings
         "Grey curtains of rain under distant showers and storms (simulated weather model). 0 = off.", "×"));
     public static readonly Setting RainFrequency = Add(new("sim.rain_frequency", "Simulation", "Rain frequency", .3, 2.5, .05, 1,
         "How often weather fronts bring rain (1 = as the climate says).", "×"));
+    public static readonly Setting RainLook = Add(new("sim.rain_look", "Simulation", "Rain look", 0, 1, 1, 1,
+        "By strength (D207): each drop a streak along its fall, slanted by the wind; drizzle fine, short and slow, a downpour " +
+        "long, heavy and fast; in heavy rain the drops splash on the ground, rocks, roofs and leaves around you. Build 104: " +
+        "upright streaks the same in any rain, splashes only on water.",
+        options: new[] { "build 104", "by strength" }));
     public static readonly Setting RainStrength = Add(new("sim.rain", "Simulation", "Rain strength", .1, 4, .1, 1,
         "How hard it rains when rain is on (H). 1 = a heavy storm, exaggerated so runoff shows within a minute.", "×"));
 
