@@ -2776,7 +2776,8 @@ sky-only copy of the real sun keeps the sky (LIGHT0) and the clouds get the real
 amount and A2 boost follow the main light's elevation (`LightElevation`), so they work by moonlight.
 * Moonlight is ~6× weaker than daylight and the night exposure barely makes up for it: the shafts existed but were
   invisible. The haze takes more of the moon than the ground does (film-like, not physical): Godot's volumetric fog
-  ×6 (`--ray-dev=moonfog=`), the rays in open air ×1.5 (`moonair`; ×3 lit a night valley like dusk, ×8 blew it out).
+  ×2 (`--ray-dev=moonfog=`; ×6 in the first captures, but through Tom's own saved settings — stronger rays, god ray
+  contrast — the build's launcher showed a blue wall toward the moon; ×1–3 compared there, ×2 keeps the ridges), the rays in open air ×1.5 (`moonair`; ×3 lit a night valley like dusk, ×8 blew it out).
 * Captures (`artifacts/moonlight-rays-draft.jpg`, day 9 00:30, moon ~47° up, Normal night darkness): from Tom's ridge the
   valleys fill with moonlit haze cut by the mountains' shadows and the moon glows in the sky; in a dense forest the
   canopy's moon shadows make it darker than build 94, with no visible shafts yet (a forest needs gaps and mist). With

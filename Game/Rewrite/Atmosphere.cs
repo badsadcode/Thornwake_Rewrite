@@ -1205,7 +1205,7 @@ public partial class Atmosphere : Node3D
     /// <summary>The haze's light while the moon is the light (D182): moonlight is ~6× weaker than daylight but the night
     /// exposure barely brightens, so its shafts were there but invisible; the haze takes this much more of it (the
     /// ground keeps the plain moonlight). Like a film's moonlight: shafts readable, not realistic.</summary>
-    private float MoonRayBoost => MoonLit ? Dev("moonfog", 6) : 1;
+    private float MoonRayBoost => MoonLit ? Dev("moonfog", 2) : 1; // (×6 made a blue wall with Tom's own ray settings)
     /// <summary>The same for the rays in open air (D182): ×3 lit the whole night valley like dusk, ×8 blew it out.</summary>
     private float MoonAirBoost => MoonLit ? Dev("moonair", 1.5f) : 1;
     /// <summary>How high the main light stands: the moon's elevation while it is the light (D182), else the sun's.</summary>

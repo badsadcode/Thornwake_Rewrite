@@ -89,7 +89,8 @@ milestone M6), caves.
   by mountain shadows. In dense forest it is darker under the canopy and forest shafts by moonlight barely show yet.
   With *Night darkness → pitch black* the moon itself is dim, so little changes. Best around the full moon (day ~9 of
   the game's calendar).
-* To try: **Go to - mountain ridges under the moon (draft), day 9 00-30**.
+* To try: **Go to - mountain ridges under the moon (draft), day 9 00-30** (it also sets Night darkness to Normal for
+  that run, so the moon is bright enough to see it).
 
 ## New in build 94 — no jump at the cloud base, no curtains
 **Host and everyone joining need build 94** (versions must match to connect).
