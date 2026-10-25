@@ -5,7 +5,7 @@ Written for the next conversation (the previous one ran out of context). Everyth
 ## Where things stand
 * **Last build Tom has: 103** (v0.9.103, return point `1a75bac`, `dist/Preview-103`). Builds 76–103 this session:
   Atmosphere 2.0 M2 (rays) and M3 (clouds), moonlight, Living air, colour grading, many fixes. Decisions D143–D202 in
-  `docs/DECISIONS.md` (next: **D203**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
+  `docs/DECISIONS.md` (next: **D204**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
 * **Tom's settings were reset to a clean baseline** (D200, D201; `tools/settings_baseline.py`; backup
   `%APPDATA%/Thornwake/rewrite_settings.before-baseline-20261025.cfg`). Since then he chose Colour grading *Fantasy* and
   Rays strength 2.5 himself. Earlier his "hazy, bland, constantly in fog" look came from Wind strength 3.9 (a 20 m/s gale
@@ -15,7 +15,9 @@ Written for the next conversation (the previous one ran out of context). Everyth
   `Reproduce:` line.
 
 ## Tom's open point (his last message): the bottoms of the clouds look flat, without details
-Not looked at yet. Where it comes from in `Game/Rewrite/SkyCommon.gdshaderinc` (Tom plays with Cloud look = reference,
+**Draft done (D203, not yet in a build):** *Sky → Cloud bases → shaped* (`sky.cloud_bases`, off by default), suite
+`cloudbases`, captures `artifacts/cloud-bases-draft.jpg`. Waiting for Tom's look; next ideas if he wants more: a darker
+core / brighter edge contrast, rolls stronger in wind, sunset tuning. Notes from before the draft — where it comes from in `Game/Rewrite/SkyCommon.gdshaderinc` (Tom plays with Cloud look = reference,
 Cloud shape = rounded):
 * `vdens`: the base is a near-level plane (`h = (p.y - wx.z) / wx.y`, cut at h ≤ 0 with a short `smoothstep(0, 0.06–0.1, h)`
   onset); the rounded shape only moves the base by ±150–300 m per cloud (`big.g`, `n.b`), so each cloud's underside is

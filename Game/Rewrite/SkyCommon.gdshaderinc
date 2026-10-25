@@ -417,7 +417,12 @@ uniform int cloud_shape = 0;
 #define SHAPE_K0 (cloud_shape == 1 ? 1.0 - smoothstep(0.6, 0.85, cloud_state.z) : 0.0)
 #define SHAPE_TALL (1.0 + 0.4 * SHAPE_K0)
 #define SHAPE_TOP_EXTRA (200.0 * SHAPE_K0)
-#define SHAPE_LOW_EXTRA (250.0 * SHAPE_K0)
+#define SHAPE_LOW_EXTRA (250.0 * SHAPE_K0 + (cloud_bases == 1 ? 50.0 : 0.0))
+// Cloud bases (setting, draft D203; Tom: "the bottoms of the clouds look flat, without details"): 0 = build 103 (each
+// cloud's underside one flat sheet, one flat blue-grey); 1 = shaped: the base in lumps (rolls along the wind) and sagging
+// under thick cores, lobes hanging up to ~150 m below it, and the sky light from above taken by the cloud overhead
+// (darker centres, thin edges keep the light) with less of the flat blue-grey.
+uniform int cloud_bases = 0;
 float cloud_windy() { return cloud_look == 1 ? smoothstep(1.5, 2.5, wind.y) : smoothstep(0.5, 1.6, wind.y); }
 float cloud_map(vec2 uv, float lod, int ch) {
 	vec4 c = lod >= 0.0 ? textureLod(cloud_tex, uv, lod) : texture(cloud_tex, uv);
@@ -483,6 +488,18 @@ float vdens(vec3 p, bool detail) {
 		wx.x = min(wx.x * mix(1.0, 1.5, shape_k), 1.0);
 		wx.z += ((big.g - 0.5) * 300.0 + (n.b - 0.5) * 140.0) * shape_k;
 	}
+	if (cloud_bases == 1) {
+		// (D203) The base in lumps ~0.5–1.5 km across, stretched along the wind into rolls in a breeze, and rising toward
+		// each cloud's thin edges (a rounded underside, lowest under the core); only the base moves, the top stays.
+		// (lifted, not lowered: a first try hung the cores ~250 m lower, into the seam between the two passes at the
+		// horizon, and the wider one-pass margin it needed doubled the cost flying under the layer)
+		vec2 wd2 = normalize(vec2(wind.x, wind.z) + vec2(1e-4));
+		vec2 q = vec2(dot(p.xz, wd2) / mix(1.0, 2.2, smoothstep(0.3, 1.2, wind.y)), dot(p.xz, vec2(-wd2.y, wd2.x)));
+		float l1 = texture(cloud_noise, vec3(q / 1500.0, 0.43)).g, l2 = texture(cloud_noise, vec3(q / 560.0, 0.19)).b;
+		float bo = l1 * 160.0 + (l2 - 0.5) * 90.0 + 170.0 * (1.0 - wx.x) * (1.0 - wx.x);
+		wx.z += bo;
+		wx.y = max(wx.y - bo, 150.0);
+	}
 	float h = (p.y - wx.z) / wx.y;
 	if (h <= 0.0 || h >= 1.0) return 0.0;
 	float clear_k = 1.0;
@@ -511,7 +528,7 @@ float vdens(vec3 p, bool detail) {
 	}
 	// (rounded: the threshold passes 1 before the ceiling, so even the densest cloud closes its dome)
 	float cov = clamp(vremap(wx.x, smoothstep(dome, 1.0, hs) * mix(0.95, 1.03, shape_k), 1.0, 0.0, 1.0), 0.0, 1.0)
-		* smoothstep(0.0, mix(0.06, 0.1, shape_k), h) * mix(wx.x, 1.0, 0.25) * mix(0.8, 0.95, shape_k);
+		* smoothstep(0.0, cloud_bases == 1 ? 0.025 : mix(0.06, 0.1, shape_k), h) * mix(wx.x, 1.0, 0.25) * mix(0.8, 0.95, shape_k);
 	float wf = n.g * 0.7 + n.b * 0.3;
 	float base = clamp(vremap(n.r, wf - 1.0, 1.0, 0.0, 1.0), 0.0, 1.0);
 	base = base * base * (3.0 - 2.0 * base); // rounder lumps
@@ -564,6 +581,16 @@ float vdens(vec3 p, bool detail) {
 	}
 	// (reference: billowy almost to the base, which stays flat, and cut deeper: cauliflower edges)
 	df = cloud_look == 1 ? mix(1.0 - df, df, smoothstep(0.0, 0.1, h)) : mix(1.0 - df, df, smoothstep(0.1, 0.45, h));
+	if (cloud_bases == 1) {
+		// (D203) Lobes hanging from the base: over its lowest ~160 m the billow noise decides how far down the cloud
+		// reaches, so the underside has relief to shade instead of one sheet.
+		// (coarser lobes ~300–600 m and gentler than the billows: the billow noise alone crinkled the base like foil)
+		float hm = h * wx.y;
+		if (hm < 200.0) {
+			float lobe = texture(cloud_noise, dp / 1500.0 + vec3(0.53, 0.29, 0.71)).g * 0.65 + m.g * 0.35;
+			d *= smoothstep(-0.1, 0.3, hm / 180.0 + (lobe - 0.5) * 0.9);
+		}
+	}
 	// (rounded: the finer octave above gives the sharper billows; the erosion itself stays, it took the mass away)
 	return body_k(clamp(vremap(d, df * mix(cloud_look == 1 || cloud_shape == 1 ? 0.52 : 0.42, 0.25, windy), 1.0, 0.0, 1.0), 0.0, 1.0));
 }
@@ -749,6 +776,16 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 			// (at golden hour the bases stay as before: warm-lit edges, dark-grey cores)
 			float gl = dot(amb, vec3(0.2126, 0.7152, 0.0722));
 			amb = mix(amb, gl * vec3(0.88, 0.94, 1.12) * 1.3, (1.0 - hb) * 0.75 * smoothstep(0.1, 0.45, sun_dir.y));
+		}
+		if (cloud_bases == 1 && hb < 1.0 && d > 0.02) {
+			// (D203) On the underside (no cloud just below) the sky light from above is taken by the cloud overhead: under
+			// thick cores the base darkens, under thin edges it keeps the light; after the flat blue-grey, so the base keeps
+			// that colour but is shaded. (A first try on every low sample also greyed the sunlit sides of far cumulus.)
+			float under = 1.0 - smoothstep(0.0, 0.15, max(vdens(p - vec3(0.0, 70.0, 0.0), false), 0.0));
+			if (under > 0.0) {
+				float oc = max(vdens(p + vec3(0.0, 130.0, 0.0), false), 0.0) * 130.0 + max(vdens(p + vec3(0.0, 400.0, 0.0), false), 0.0) * 270.0;
+				amb *= mix(1.0, mix(0.5, 1.15, exp(-oc * sigma_k * 0.35)), under * (1.0 - hb));
+			}
 		}
 		// Mountains shade the clouds (D167): a peak between this point and the sun takes its direct light, so ranges cast
 		// long shadows and lanes of light across a cloud sea at sunrise; the sky's light stays.

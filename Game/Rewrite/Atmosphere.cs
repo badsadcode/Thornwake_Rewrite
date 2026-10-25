@@ -427,6 +427,7 @@ public partial class Atmosphere : Node3D
         SkyParam("cloud_cost", GameSettings.CloudCost.Index);
         SkyParam("cloud_soft", GameSettings.CloudSoft.Index);
         SkyParam("cloud_shading", GameSettings.CloudShading.Index);
+        SkyParam("cloud_bases", GameSettings.CloudBases.Index);
         if (GameSettings.CloudFine.Index == 1 && _cloudFineNoise == null) { _cloudFineNoise = CloudNoise3D.CreateDetail(); SkyParam("cloud_fine_noise", _cloudFineNoise); }
         SkyParam("cloud_fine", _cloudFineNoise != null ? GameSettings.CloudFine.Index : 0);
         SkyParam("sea_tune", new Vector4(Dev("seahole", .5f), 0, 0, 0));

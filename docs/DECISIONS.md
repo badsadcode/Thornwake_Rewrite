@@ -2996,6 +2996,27 @@ round the sun** (`sky.sky_glow`, default *by the haze*; *build 102* the old glow
 (0.08–0.6) and falls off as pow 10. His dump: blue sky and sunlit clouds; a damp sunrise (air load 0.35) keeps its glow
 (`artifacts/sun-glow-fix.jpg`). Note: captures add new settings' default lines to the player's settings file (nothing else).
 
+## D203 — Flat cloud bottoms: draft *Cloud bases → shaped* (2026-10-25)
+Tom (after build 103): "the bottoms of the clouds look flat, without details". Three causes in `SkyCommon.gdshaderinc`:
+each cloud's base is one near-level plane (the rounded shape only shifts it per cloud), the reference look keeps the
+base flat on purpose, and its light pulls every underside to one flat blue-grey. New setting **Cloud bases**
+(`sky.cloud_bases`, default *build 103*; *shaped (draft)*):
+* the base in lumps (~0.5–1.5 km, stretched into rolls along the wind in a breeze) and rising toward each cloud's thin
+  edges, lowest under the core — a rounded underside; only the base moves, the top stays;
+* over its lowest ~150 m a coarse 3D noise decides how far down the cloud reaches: lobes with relief to shade; a quicker
+  density onset at the base;
+* on the underside only (no cloud 70 m below the sample) the sky light from above is taken by the cloud overhead (two
+  cheap density samples 130 / 400 m up): darker under thick cores, a little lighter under thin edges; applied after the
+  reference blue-grey, so the colour stays and the base is shaded.
+Tried and changed on the way (suite **cloudbases**: under the bases from 400 m, close cumulus, broken cover looking up,
+late afternoon, horizon noon; A-B each): (1) the occlusion on every low sample greyed the sunlit sides of far cumulus,
+and weakening the blue-grey made the bases dull — now underside-only, after the colour; (2) cores hanging 250 m lower
+reached the gap between the two cloud passes at the horizon (a hard line flying under the layer), and widening the
+one-pass margin for it doubled the cost there (14 → 27 ms) — now the edges rise instead; (3) lobes from the billow noise
+alone crinkled the base like foil at sunset — now a coarser noise, gentler. Result (`artifacts/cloud-bases-draft.jpg`):
+relief, darker cores and lighter edges under overhead cloud, the white sunlit cumulus unchanged; cost +0.1–0.8 ms GPU.
+Off by default: a look decision for Tom.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
