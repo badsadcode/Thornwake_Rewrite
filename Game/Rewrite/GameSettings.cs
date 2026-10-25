@@ -540,6 +540,12 @@ public static class GameSettings
         "light, and as the rain grows a grey veil swallows the distance (a downpour leaves the near hills as shapes), colours " +
         "and contrast mute. Build 107: the light changes only from moderate rain on, the distance stays clear.",
         options: new[] { "build 107", "by strength (draft)" }));
+    public static readonly Setting WetLook = Add(new("sim.wet_look", "Simulation", "Wet look", 0, 1, 1, 1,
+        "By material (D212): rain soaks in over time (hours of drizzle wet everything, a short shower less) and dries in the " +
+        "sun and wind, slowly at night and under cloud. Rock turns dark and glossy and dries first, earth and paths go darkest " +
+        "and stay wet longest, drying in patches, grass turns a richer green without shine, sand darkens; boulders, bark and " +
+        "built wood and thatch darken too. Build 107: the ground evenly darker and glossier, drying in ~6 minutes.",
+        options: new[] { "build 107 (even)", "by material" }));
     public static readonly Setting RainShelter = Add(new("sim.rain_shelter", "Simulation", "Rain under cover", 0, 1, 1, 1,
         "With Rain look by strength (D211). Stops: no rain falls under roofs, floors, rock overhangs and ledges (blown in " +
         "under the windward edge in wind), drops splash on the roof instead, and the rain sounds muffled while you are under " +

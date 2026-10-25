@@ -588,9 +588,24 @@ public partial class Atmosphere : Node3D
         OceanTime += delta;
         // Wet look: the ground darkens within ~30 s of rain and dries over ~6 min; puddles fill over ~2 min, last ~15 min.
         float dt = (float)delta;
-        bool wetting = Precip > .1f && !Snowing;
-        _wetness = wetting ? Mathf.Min(1, _wetness + dt / 30 * Precip * 1.5f) : Mathf.Max(0, _wetness - dt / 360);
-        _puddles = wetting && Precip > .3f ? Mathf.Min(1, _puddles + dt / 120 * Precip * 1.5f) : Mathf.Max(0, _puddles - dt / 900);
+        if (GameSettings.WetLook.Index == 1)
+        {
+            // Wet look by material (D212, Noor's Weather 2.0 notes §2, §10: wetness builds up over time and dries by sun,
+            // wind and shade): drizzle wets too, slowly (full in ~4 min of drizzle, ~30 s of a downpour); drying ~3 min in
+            // a sunny breeze, ~6 under cloud, ~15 at night (the materials then dry in turn: TerrainBody, Rock, ...).
+            bool wets = Precip > .02f && !Snowing;
+            float sunOnGround = Mathf.Clamp(_daylight, 0, 1) * (1 - _gloom);
+            float dryK = .4f + 1.3f * sunOnGround + .05f * Math.Min(Wind.Speed, 20);
+            _wetness = wets ? Mathf.Min(1, _wetness + dt / 40 * Precip * 1.6f) : Mathf.Max(0, _wetness - dt / 360 * dryK);
+            _puddles = wets && Precip > .3f ? Mathf.Min(1, _puddles + dt / 120 * Precip * 1.5f) : Mathf.Max(0, _puddles - dt / 900 * dryK);
+        }
+        else
+        {
+            bool wetting = Precip > .1f && !Snowing;
+            _wetness = wetting ? Mathf.Min(1, _wetness + dt / 30 * Precip * 1.5f) : Mathf.Max(0, _wetness - dt / 360);
+            _puddles = wetting && Precip > .3f ? Mathf.Min(1, _puddles + dt / 120 * Precip * 1.5f) : Mathf.Max(0, _puddles - dt / 900);
+        }
+        GameplayModels.SetWetness(GameSettings.WetLook.Index == 1 ? Mathf.SmoothStep(.15f, .45f, _wetness) : 0);
         RenderingServer.GlobalShaderParameterSet("rain_wetness", new Vector2(_wetness, _puddles));
         RenderingServer.GlobalShaderParameterSet("ocean_time", (float)(OceanTime % 100000));
         double seaState = Math.Clamp(GameSettings.SeaState.Value + _storm * .45, 0, 1);
@@ -699,7 +714,8 @@ public partial class Atmosphere : Node3D
             }
         }
         // Raindrops ringing on water (round 27): how hard it rains here (not snow), for the water shader.
-        RenderingServer.GlobalShaderParameterSet("rain_now", new Vector4(Snowing ? 0 : Mathf.Clamp(Precip, 0, 1), 0, 0, 0));
+        // (y: the wet look by material, D212)
+        RenderingServer.GlobalShaderParameterSet("rain_now", new Vector4(Snowing ? 0 : Mathf.Clamp(Precip, 0, 1), GameSettings.WetLook.Index, 0, 0));
         if (_steer == null) UpdateLightning(delta); // classic model; the simulated one has Lightning.cs
         else if (_flash != null) _flash.Visible = false;
         // Warmer light at a low sun (AtmosphereLight: build 47's single warm factor, or the colour curve by phase).

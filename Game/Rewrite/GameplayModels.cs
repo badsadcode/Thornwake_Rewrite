@@ -76,6 +76,28 @@ public static class GameplayModels
         return mat;
     }
 
+    private static readonly Dictionary<string, float> DryRough = new();
+    private static float _wet = -1;
+
+    /// <summary>
+    /// Built pieces in the rain (D212): wood, thatch and stone darken and (wood, stone) turn a little glossy as they get
+    /// wet (0 dry ... 1 soaked, Atmosphere), back as they dry.
+    /// </summary>
+    public static void SetWetness(float wet)
+    {
+        if (Mathf.Abs(wet - _wet) < .01f) return;
+        _wet = wet;
+        foreach (var (key, m) in Named)
+        {
+            if (m is not StandardMaterial3D s) continue;
+            if (!DryRough.TryGetValue(key, out float dry)) DryRough[key] = dry = s.Roughness;
+            bool thatch = key == "Thatch" || key == "Fibre";
+            float dark = 1 - wet * (thatch ? .3f : .35f);
+            s.AlbedoColor = new Color(dark, dark, dark);
+            s.Roughness = Mathf.Lerp(dry, thatch ? dry : .45f, wet);
+        }
+    }
+
     private static StandardMaterial3D SeeThrough(Color c) => new()
     {
         AlbedoColor = c, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,

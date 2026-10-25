@@ -8,6 +8,7 @@ uniform float snow_line = 2700.0;
 uniform bool show_grid = false;
 // x: surface wetness (rain darkens and glosses the ground), y: cosmetic puddles in flat hollows (Atmosphere.cs).
 global uniform vec2 rain_wetness;
+global uniform vec4 rain_now; // y: the wet look by material (D212)
 global uniform vec4 wind;
 global uniform float wind_waves; // the setting Wind waves on grass (D163)
 #include "res://Game/Rewrite/WindSway.gdshaderinc"
@@ -322,7 +323,28 @@ void fragment() {
 	float flat_ground = 1.0 - smoothstep(0.03, 0.1, slope);
 	float puddle_noise = vnoise(p * 0.21) * 0.65 + vnoise(p * 0.93 + 7.1) * 0.35;
 	float puddle = smoothstep(0.64, 0.7, puddle_noise) * flat_ground * rain_wetness.y * (1.0 - submerged) * (1.0 - snow) * (1.0 - 0.6 * forest);
-	c *= mix(1.0, 0.7, wetness);
+	float wet_rough = 0.45, wet_rough_k = wetness * 0.7;
+	if (rain_now.y > 0.5) {
+		// Wet look by material (D212, Noor's Weather 2.0 notes §2): each ground holds water its own way, and as the
+		// wetness falls they dry in turn - rock first (it sheds water), then grass, sand, and earth last, in patches.
+		float w = wetness * (1.0 - 0.3 * smoothstep(0.3, 0.8, forest)); // (the canopy keeps some rain off)
+		float patches = vnoise(p * 0.35 + 11.0) * 0.6 + vnoise(p * 1.7 + 3.0) * 0.4 - 0.5;
+		float m_rock = rocky, m_sand = wet * (1.0 - rocky), m_dirt = max(bare, damp) * (1.0 - rocky) * (1.0 - m_sand);
+		float m_grass = max(1.0 - m_rock - m_sand - m_dirt, 0.0);
+		float a_rock = smoothstep(0.35, 0.65, w + patches * 0.3) * m_rock;
+		float a_grass = smoothstep(0.2, 0.5, w + patches * 0.35) * m_grass;
+		float a_sand = smoothstep(0.15, 0.4, w + patches * 0.3) * m_sand;
+		float a_dirt = smoothstep(0.03, 0.3, w + patches * 0.35) * m_dirt;
+		float lum = dot(c, vec3(0.3, 0.59, 0.11));
+		vec3 richer = max(mix(vec3(lum), c, 1.15), vec3(0.0));
+		c = c * (1.0 - a_rock - a_grass - a_sand - a_dirt) + c * 0.6 * a_rock + richer * 0.8 * a_grass + richer * 0.66 * a_sand + c * 0.56 * a_dirt;
+		// gloss by material: rock and wet earth shine, sand a little, grass hardly (no plastic look)
+		float sum = a_rock + a_grass + a_sand + a_dirt;
+		wet_rough = (0.28 * a_rock + 0.8 * a_grass + 0.6 * a_sand + 0.48 * a_dirt) / max(sum, 1e-3);
+		wet_rough_k = min(sum, 1.0);
+	} else {
+		c *= mix(1.0, 0.7, wetness);
+	}
 	// Ground relief (round 25): the textures' light and dark read as small bumps up close (derivative bump mapping on
 	// a smooth copy of the textures), each ground its own roughness, crevices a little darker.
 	float base_rough = 0.95;
@@ -351,7 +373,7 @@ void fragment() {
 		base_rough = mix(0.95, base_rough, ground_relief);
 	}
 	ALBEDO = mix(pow(c, vec3(2.2)), vec3(0.025, 0.03, 0.035), puddle * 0.85);
-	ROUGHNESS = mix(mix(mix(base_rough, 0.55, snow), 0.45, wetness * 0.7), 0.04, puddle);
+	ROUGHNESS = mix(mix(mix(base_rough, 0.55, snow), wet_rough, wet_rough_k), 0.04, puddle);
 	ROUGHNESS = mix(ROUGHNESS, 0.55, damp * wetland * 0.7); // glistening mud at wetland pool margins
 	SPECULAR = mix(0.5, 0.9, puddle);
 #ifdef AIR_SHADOW

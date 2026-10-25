@@ -5,6 +5,9 @@ shader_type spatial;
 render_mode diffuse_burley;
 
 uniform sampler2DArray rock_tex : source_color, filter_nearest_mipmap, repeat_enable;
+// Rain (D212, Wet look by material): wet rock dark and glossy, the tops most; it sheds water and dries first.
+global uniform vec2 rain_wetness;
+global uniform vec4 rain_now;
 varying flat float look;
 varying vec3 world_pos;
 varying vec3 world_n;
@@ -26,4 +29,9 @@ void fragment() {
 	// Colours are sRGB like the terrain palette (which converts at the end too).
 	ALBEDO = pow(clamp(COLOR.rgb * t, 0.0, 1.0), vec3(2.2));
 	ROUGHNESS = 0.9;
+	if (rain_now.y > 0.5) {
+		float k = smoothstep(0.35, 0.65, rain_wetness.x + (t.r - 0.5) * 0.25) * mix(0.55, 1.0, max(world_n.y, 0.0));
+		ALBEDO *= 1.0 - 0.45 * k;
+		ROUGHNESS = mix(0.9, 0.3, k);
+	}
 }

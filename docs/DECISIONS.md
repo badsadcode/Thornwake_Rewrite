@@ -3136,6 +3136,23 @@ build test's hut in a downpour with wind (`artifacts/rain-shelter.jpg`): rain in
 Not yet: canopies (trees let the rain through), the lean-to and campfire (their collision is an aiming box on the
 blueprint layer), rock overhangs seen only in principle (no test spot), sheltered ground staying dry.
 
+## D212 — Wet look by material, soaking and drying over time (2026-10-25)
+Tom: "go on with wetness over time by material" (Noor's Weather 2.0 notes §2 and §10). Before: one wetness value, soaked in
+~30 s of rain (only from 0.1 of rain: drizzle never wetted), dried in a fixed ~6 min, and the terrain alone reacted —
+evenly ×0.7 darker and equally glossy; boulders, bark, grass blades and built pieces stayed dry-looking. New setting
+**Wet look** (`sim.wet_look`, Simulation; default *by material*; *build 107 (even)*; the shaders read it as `rain_now.y`):
+* **over time**: drizzle wets too (full in ~4 min of drizzle, ~30 s of a downpour); drying by the sun on the ground, the
+  wind and the hour — ~3 min in a sunny breeze, ~6 under cloud, ~15 at night (puddles the same factor);
+* **terrain by material** (TerrainBody): as the wetness falls each ground dries in turn, in patches — rock first (×0.6
+  darker, glossy, roughness 0.28), grass (a richer green ×0.8, roughness 0.8: no plastic shine), sand (×0.66, richer),
+  earth and paths last (×0.56, roughness 0.48); the canopy keeps ~30 % of the rain off the forest floor;
+* **boulders** (Rock): dark and glossy, the tops most, drying first; **bark** darker (its shader has no specular);
+  **grass blades** a richer, darker green; **built pieces** (GameplayModels): wood and stone ×0.65 and a little glossy,
+  thatch ×0.7.
+Captures with `--wet` (`artifacts/wet-by-material.jpg`, `artifacts/wet-ground-zoom.jpg`, `artifacts/wet-hut.jpg`): soaked,
+the path dark with a sheen and the grass richer; half dried, the grass back and the path still wet; a boulder catches the
+sun when wet. Not yet: sheltered ground staying dry (the cover map is not in the terrain shader), wet characters, drips.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

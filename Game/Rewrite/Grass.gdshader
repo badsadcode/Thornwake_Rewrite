@@ -4,6 +4,9 @@ shader_type spatial;
 render_mode cull_disabled, specular_disabled, diffuse_burley;
 
 global uniform float leaf_translucency;
+// Rain (D212, Wet look by material): wet blades a richer, darker green - no shine (no plastic leaves).
+global uniform vec2 rain_wetness;
+global uniform vec4 rain_now;
 global uniform vec4 sun_glow;
 global uniform vec3 sun_dir_world;
 varying vec3 world_position;
@@ -36,6 +39,11 @@ void fragment() {
 	vec3 c = COLOR.rgb;
 	ALBEDO = mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
 	ALBEDO *= 1.0 + sheen * vec3(0.16, 0.15, 0.08); // bent blades show their paler sides: the gusts read as waves
+	if (rain_now.y > 0.5) {
+		float wg = smoothstep(0.2, 0.5, rain_wetness.x);
+		float l = dot(ALBEDO, vec3(0.2126, 0.7152, 0.0722));
+		ALBEDO = mix(ALBEDO, max(mix(vec3(l), ALBEDO, 1.18), vec3(0.0)) * 0.8, wg);
+	}
 	ROUGHNESS = 1.0;
 	if (!FRONT_FACING) { NORMAL = -NORMAL; }
 	BACKLIGHT = ALBEDO * vec3(0.9, 1.08, 0.55) * leaf_translucency;
