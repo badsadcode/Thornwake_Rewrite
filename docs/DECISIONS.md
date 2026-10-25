@@ -2987,6 +2987,15 @@ toward the sun crosses the mid deck; covered, the sun's direct light ×0.22 (sha
 (no glare), eased over ~1.5 s. Captured at his grassland dump (`artifacts/sun-behind-clouds.jpg`): glare gone, soft
 light. Note: a capture with `--dump` saves the settings file (it only added the new setting's default here).
 
+## D202 — The cream-white sky near the sun: the air pass's glow, now by the haze (2026-10-25)
+Tom (build 102, dump 173946, badlands 10:43, looking up toward the sun): "am I looking at the sun through the cloud?"
+No: sun behind clouds 0, and with the clouds off the sky was the same cream-white. Switching effects off one at a time:
+only *Rays in open air* removes it — its sky term adds a broad glow toward the sun (pow 3, ~45° wide) at full gain
+(× Rays strength, Tom 2.5), whatever the haze: in clear, dry air (air load 0.07) half the sky glared. New setting **Glow
+round the sun** (`sky.sky_glow`, default *by the haze*; *build 102* the old glow): the sky term × 0.12–1 by the air load
+(0.08–0.6) and falls off as pow 10. His dump: blue sky and sunlit clouds; a damp sunrise (air load 0.35) keeps its glow
+(`artifacts/sun-glow-fix.jpg`). Note: captures add new settings' default lines to the player's settings file (nothing else).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -1146,6 +1146,10 @@ public partial class Atmosphere : Node3D
         _air.SetShaderParameter("ray_size", Dev("airlane", 70));
         _air.SetShaderParameter("shadow_edge", Dev("airedge", 8));
         _air.SetShaderParameter("shaft_glow", Dev("airglow", .6f));
+        // (D202: the sky's glow toward the sun by the air's haze; build 102 = full, broad)
+        bool hazeGlow = GameSettings.SkyGlow.Index == 1;
+        _air.SetShaderParameter("sky_glow", hazeGlow ? Mathf.Lerp(.12f, 1, Mathf.SmoothStep(.08f, .6f, _airLoad)) : 1f);
+        _air.SetShaderParameter("sky_glow_pow", hazeGlow ? 10f : 3f);
         _air.SetShaderParameter("world_origin", new Vector2((float)originX, (float)originZ));
         UpdateLanePivot(toSun, cameraWorldX, cameraWorldZ, originX, originZ);
         _air.SetShaderParameter("cloud_base", SeaLevel + CloudBaseAboveSea);

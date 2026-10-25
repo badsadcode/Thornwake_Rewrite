@@ -49,6 +49,9 @@ uniform float ray_noise = 150.0;   // how far (m) the shadow edge is moved up an
 uniform float ray_size = 70.0;     // the lanes' width (m, across the sun's direction)
 uniform float shadow_edge = 8.0;   // the shadow edge's softness (m)
 uniform float shaft_glow = 0.6;    // a broad glow of sunlit haze toward the sun (the shafts' brightness looking at them)
+// (D202) How much of the glow the open sky gets: by the haze in the air (clear, dry air: little), and a tighter falloff.
+uniform float sky_glow = 1.0;
+uniform float sky_glow_pow = 3.0;
 uniform vec2 world_origin = vec2(0.0); // the scene origin's world position (the lanes stay put when the origin moves)
 // The lanes turn with the sun about a point near the player (scene xz), not the world's centre (D170: hundreds of
 // kilometres out, the sun's slow turn swept the whole comb through the haze at a few lane widths a second — Tom's "fast
@@ -174,7 +177,9 @@ void fragment() {
 	// which this pass took over: it comes back by how much of the air toward that point of the sky is sunlit, so a
 	// peak's shadow runs through the glow as a darker ray (Tom's reference 2).
 	if (depth < 1e-6) {
-		light += light_color * (sun_scatter * pow(toward, 8.0) + shaft_glow * pow(toward, 3.0)) * gain * sun_up * sky_affect * (lit / max(all_haze, 1e-6));
+		// (D202, Tom: looking up near the sun the whole sky was a cream-white glare even in clear, dry air — air load 0.07:
+		// this broad pow-3 glow at full gain over ~45°. Now it follows the haze and is tighter round the sun.)
+		light += light_color * (sun_scatter * pow(toward, 8.0) + shaft_glow * pow(toward, sky_glow_pow)) * gain * sun_up * sky_affect * sky_glow * (lit / max(all_haze, 1e-6));
 	}
 	// scene × (1 − a) + light: the shadowed haze's share darkened, the sunlit haze's light added.
 	float alpha = clamp(shade * shadowed, 1e-3, 1.0);

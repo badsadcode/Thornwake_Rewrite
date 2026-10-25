@@ -389,6 +389,10 @@ public static class GameSettings
         "one pass, so a cloud in front of you hides the mountains behind it instead of showing their outlines (the clouds " +
         "looked see-through). Costs more GPU time, only then. Build 91: two passes always.",
         options: new[] { "build 91", "one pass in the layer (draft)" }));
+    public static readonly Setting SkyGlow = Add(new("sky.sky_glow", "Sky", "Glow round the sun", 0, 1, 1, 1,
+        "The sky's glow toward the sun from the rays in open air (D202). By the haze: in clear, dry air a blue sky and a " +
+        "tight halo; a broad glow only in hazy, damp or dusty air. Build 102: a broad cream glare over half the sky always.",
+        options: new[] { "build 102", "by the haze" }));
     public static readonly Setting SunClouds = Add(new("sky.sun_clouds", "Sky", "Sun behind clouds", 0, 1, 1, 1,
         "When a cloud passes in front of the sun, the sunlight on you and around you drops, shadows fade and the glare in " +
         "the air goes (D201). Build 101: the sun shone at full strength whatever the clouds (only the ground darkened).",
