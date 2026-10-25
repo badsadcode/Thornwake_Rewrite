@@ -78,6 +78,14 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 106 — each raindrop along its own path
+**Host and everyone joining need build 106** (versions must match to connect).
+* Your note on 105 ("the lines are always oriented the same way"): every rain streak took one shared angle from the wind
+  of that moment, so all lines were parallel and turned together with each gust, not with their own drops. Now each
+  streak lies along its own drop's movement: the same overall lean, a little variety between drops, and when the wind
+  turns the rain swings over within a second or two. Try it in Esc → Weather test: Downpour, Wind on, then move
+  *Blowing from*.
+
 ## New in build 105 — wind wisps with strands, a weather test tab, rain by strength
 **Host and everyone joining need build 105** (versions must match to connect).
 * **Wind wisps** (Lighting and effects → Wind wisps, with Living air): no more straight scratch lines. **Swooshes with
