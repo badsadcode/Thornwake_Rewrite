@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 110** (lens drops D217–D220, animals take cover D217) | `da955fd` | Thornwake-Rewrite-Preview-110 (v0.9.110) | Versions must match to connect; Lens drops is off by default, Trees in the rain → build 108 also turns off the animals sheltering; build 109 = `dc501e5` |
 | **Build 109** (trees in the rain D213, dry under cover and mist after rain D214, wet characters D215, sun showers and roof drips D216) | `dc501e5` | Thornwake-Rewrite-Preview-109 (v0.9.109) | Versions must match to connect; Trees in the rain / Mist after rain → build 108 and Wet look → build 107 give the old behaviour; build 108 = `c320f05` |
 | **Build 108** (rain light D210, shelter D211, wet look by material D212) | `c320f05` | Thornwake-Rewrite-Preview-108 (v0.9.108) | Versions must match to connect; Rain light, Rain under cover and Wet look → build 107 give the old look; build 107 = `9933046` |
 | **Build 107** (rain and wind swooshes fixed in the world D209) | `9933046` | Thornwake-Rewrite-Preview-107 (v0.9.107) | Versions must match to connect; Rain look → build 104 = old rain; build 106 = `f848430` (rain turning with the camera) |
