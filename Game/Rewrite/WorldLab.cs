@@ -77,6 +77,8 @@ public partial class WorldLab : Node3D
     private double _originX, _originZ;
     private float _yaw = .6f, _pitch = -.32f, _zoom = 6.5f;
     private bool _fly, _noclip, _holding = true, _showHud = true, _swimming;
+    private float _footWater; // shallow water at the feet (0..1): footstep splashes (D215)
+    private readonly bool _walkTest = OS.GetCmdlineUserArgs().Contains("--walk-test");
     private double _hudTimer, _generationStarted;
     private string _status = "";
 
@@ -994,6 +996,8 @@ public partial class WorldLab : Node3D
         }
         if (_smokeDirectory != null && _shotPath == null && _smokeStage == 2) input = new Vector2(0, -1);
         if (CollisionTestActive) { CollisionTestStep(delta); input = _testInput; }
+        // (tests: --walk-test walks forward once the world has settled — footsteps, splashes, D215)
+        if (_walkTest && !_holding && _generation == null) input = new Vector2(0, -1);
         input = input.LimitLength(1);
         var forward = new Vector3(-Mathf.Sin(_yaw), 0, -Mathf.Cos(_yaw));
         var right = new Vector3(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));
@@ -1007,6 +1011,7 @@ public partial class WorldLab : Node3D
         // Swim on the waves (the same waves the water shader draws).
         double level = WaterSurface(PlayerX, PlayerZ, out _);
         _swimming = !_fly && !double.IsNaN(level) && level - feet > 1.25;
+        _footWater = !double.IsNaN(level) && level - feet > -.05 ? 1 : _atmosphere.PuddleAt * .6f;
 
         if (_fly)
         {
@@ -1074,6 +1079,17 @@ public partial class WorldLab : Node3D
 
         // Character: face the direction of travel, swing limbs.
         _me.Animate(dt, _player.Velocity, _fly, holdFacing: FirstPerson);
+        // Wet in the rain (D215): out in it the clothes soak in ~40 s of a downpour (a few minutes of drizzle), under cover
+        // or a thick canopy much slower; swimming soaks at once; drying ~4 min, a little faster under cover.
+        if (GameSettings.WetLook.Index == 1)
+        {
+            float rain = _atmosphere.Snowing ? 0 : Mathf.Clamp(_atmosphere.Precipitation, 0, 1);
+            float exposed = (1 - _atmosphere.Sheltered) * (1 - .6f * Mathf.Clamp(_atmosphere.Canopy, 0, 1));
+            if (_swimming) _me.Wet = 1;
+            else if (rain > .02f && exposed > .2f) _me.Wet = Mathf.Min(1, _me.Wet + dt / 60 * (.3f + rain * 1.7f) * exposed);
+            else _me.Wet = Mathf.Max(0, _me.Wet - dt / 240 * (1 + _atmosphere.Sheltered * .5f));
+        }
+        else _me.Wet = 0;
         _physicsHitch.End($"at {PlayerX:0}, {PlayerZ:0}");
     }
 
@@ -1471,7 +1487,9 @@ public partial class WorldLab : Node3D
         _player = new CharacterBody3D { Name = "AldenWayfarer", // the first explorer (docs/HALL_OF_FAME.md)
              CollisionLayer = 2, CollisionMask = 1, FloorSnapLength = .6f, FloorMaxAngle = Mathf.DegToRad(50) };
         _player.AddChild(new CollisionShape3D { Position = Vector3.Up * .9f, Shape = new CapsuleShape3D { Radius = .3f, Height = 1.8f } });
-        _me = new Character(new Color("526b61"), _atmosphere.Wind);
+        _me = new Character(new Color("526b61"), _atmosphere.Wind) { OwnWet = true };
+        // (footstep splashes on wet ground and in shallow water, D215)
+        _me.Footfall += foot => _atmosphere.FootSplash(foot, _footWater);
         _player.AddChild(_me);
         _me.Torch.Lit = OS.GetCmdlineUserArgs().Contains("--torch");
         if (_shotPath != null && DisplayServer.GetName() != "headless") DisplayServer.WindowSetFlag(DisplayServer.WindowFlags.NoFocus, true);

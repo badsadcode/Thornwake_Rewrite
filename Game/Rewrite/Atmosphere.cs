@@ -666,6 +666,8 @@ public partial class Atmosphere : Node3D
             _puddles = wetting && Precip > .3f ? Mathf.Min(1, _puddles + dt / 120 * Precip * 1.5f) : Mathf.Max(0, _puddles - dt / 900);
         }
         _dripSound = GameSettings.RainTrees.Index == 1 ? _leafWet * Mathf.Clamp(Canopy * 1.5f, 0, 1) : 0;
+        // (figures out in the weather: soak with the rain, dry like the leaves, D215)
+        Character.AmbientWet = GameSettings.WetLook.Index == 1 ? _leafWet : 0;
         GameplayModels.SetWetness(GameSettings.WetLook.Index == 1 ? Mathf.SmoothStep(.15f, .45f, _wetness) : 0);
         RenderingServer.GlobalShaderParameterSet("rain_wetness", new Vector2(_wetness, _puddles));
         RenderingServer.GlobalShaderParameterSet("ocean_time", (float)(OceanTime % 100000));
@@ -1151,6 +1153,53 @@ public partial class Atmosphere : Node3D
     /// dries). The leaves' wetness soaks up in ~1 min of rain and dries over ~2-6 min after it (sun and wind faster); the
     /// drips: larger, slower drops from random points under the crowns, more in gusts.
     /// </summary>
+    // ---- footstep splashes (D215)
+    private GpuParticles3D[]? _footSplashes;
+    private int _footNext;
+
+    /// <summary>
+    /// A footfall at <paramref name="foot"/> (scene) (D215; Noor's notes §9: small splashes when moving through wet or
+    /// shallow-water surfaces): on wet ground a little spray, in puddles and rain-soaked earth a proper crown; none on
+    /// dry ground, under cover or in snow. <paramref name="puddleHere"/>: standing water under the foot (0..1).
+    /// </summary>
+    public void FootSplash(Vector3 foot, float puddleHere)
+    {
+        if (GameSettings.WetLook.Index != 1 || Snowing || _splashMaterial == null) return;
+        float k = Math.Max(Mathf.SmoothStep(.35f, .8f, _wetness) * .55f, puddleHere);
+        if (k < .1f) return;
+        // (two one-shot emitters, one per foot, each restarted at its step: a manual emit from an idle emitter drew nothing)
+        if (_footSplashes == null)
+        {
+            var mat = (ShaderMaterial)_splashMaterial.Duplicate();
+            mat.SetShaderParameter("ring_k", .6f);
+            _footSplashes = new GpuParticles3D[2];
+            for (int f = 0; f < 2; f++)
+            {
+                _footSplashes[f] = new GpuParticles3D
+                {
+                    Amount = 1, Lifetime = .4, OneShot = true, Explosiveness = 1, Emitting = false, LocalCoords = false, TopLevel = true,
+                    VisibilityAabb = new Aabb(new Vector3(-2, -1, -2), new Vector3(4, 2, 4)),
+                    DrawPass1 = new QuadMesh { Size = new Vector2(.75f, .55f), Material = mat }, // (at 0.42 m they did not read)
+                    ProcessMaterial = new ParticleProcessMaterial { Gravity = Vector3.Zero, InitialVelocityMin = 0, InitialVelocityMax = 0, Spread = 0 },
+                    CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                };
+                AddChild(_footSplashes[f]);
+            }
+        }
+        float l = Mathf.Clamp(_daylight * 1.1f, .08f, 1);
+        var e = _footSplashes[_footNext++ & 1];
+        ((ShaderMaterial)((QuadMesh)e.DrawPass1).Material).SetShaderParameter("tint", new Color(.8f * l, .84f * l, .88f * l));
+        var pm = (ParticleProcessMaterial)e.ProcessMaterial;
+        float s = .6f + .6f * k;
+        pm.ScaleMin = pm.ScaleMax = s;
+        pm.Color = new Color(k > .5f ? 1 : .75f, 1, 1, 1); // (r: how hard the splash, RainSplash)
+        e.GlobalTransform = new Transform3D(Basis.Identity, foot);
+        e.Restart();
+    }
+
+    /// <summary>Standing water at a scene x, z on the land (0..1), approximate: the rain's puddles on flat ground.</summary>
+    public float PuddleAt => _puddles;
+
     private void UpdateTrees(float p, Vector3 camera)
     {
         float dt = (float)GetProcessDeltaTime();

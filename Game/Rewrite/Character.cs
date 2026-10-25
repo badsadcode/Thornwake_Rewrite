@@ -24,6 +24,48 @@ public sealed partial class Character : Node3D
     private Color _tunic;
     public Torch Torch { get; }
     private float _walkPhase, _lean;
+
+    // ---- wet in the rain (D215)
+    /// <summary>How wet this figure is (0 dry … 1 soaked). The player's own is set from their exposure (WorldLab); the
+    /// others take <see cref="AmbientWet"/> (the rain where you are).</summary>
+    public float Wet { get; set; }
+    /// <summary>True for the player's own figure (WorldLab sets <see cref="Wet"/>); others follow <see cref="AmbientWet"/>.</summary>
+    public bool OwnWet { get; set; }
+    /// <summary>The wetness of figures out in the weather here (Atmosphere: soaks and dries like the ground).</summary>
+    public static float AmbientWet { get; set; }
+    private float _appliedWet = -1;
+    private static ShaderMaterial? _wetCloth, _wetSkin;
+    private static readonly Color Skin = new("be9877");
+
+    /// <summary>A footfall (the walk's swing passing a step): the foot's position, for splashes on wet ground.</summary>
+    public event Action<Vector3>? Footfall;
+
+    public override void _Process(double delta)
+    {
+        if (!OwnWet) Wet = AmbientWet;
+        ApplyWet();
+    }
+
+    /// <summary>The wet overlay on every part (cloth and hair darken, skin barely); only when the wetness has changed.</summary>
+    private void ApplyWet()
+    {
+        if (Mathf.Abs(Wet - _appliedWet) < .01f) return;
+        bool was = _appliedWet > .005f, now = Wet > .005f;
+        _appliedWet = Wet;
+        var shader = GD.Load<Shader>("res://Game/Rewrite/WetOverlay.gdshader");
+        if (_wetCloth == null)
+        {
+            _wetCloth = new ShaderMaterial { Shader = shader }; _wetCloth.SetShaderParameter("darken", .38f);
+            _wetSkin = new ShaderMaterial { Shader = shader }; _wetSkin.SetShaderParameter("darken", .08f);
+        }
+        foreach (var mi in Body.FindChildren("*", "MeshInstance3D", true, false).OfType<MeshInstance3D>())
+        {
+            if (mi.MaterialOverride is not StandardMaterial3D m || m.Transparency != BaseMaterial3D.TransparencyEnum.Disabled) continue; // (not the torch's flame)
+            if (now != was || mi.MaterialOverlay == null)
+                mi.MaterialOverlay = now ? (m.AlbedoColor.IsEqualApprox(Skin) || m.AlbedoColor.IsEqualApprox(Skin.Lightened(.08f)) ? _wetSkin : _wetCloth) : null;
+            if (now) mi.SetInstanceShaderParameter("wet", Wet);
+        }
+    }
     private bool _bodyHidden;
 
     public Character(Color tunic, Wind wind)
@@ -111,7 +153,15 @@ public sealed partial class Character : Node3D
         {
             float target = Mathf.Atan2(flat.X, flat.Z);
             if (!holdFacing) Facing = Mathf.LerpAngle(Facing, target, 1 - Mathf.Exp(-12 * dt));
+            float before = _walkPhase;
             _walkPhase += flat.Length() * dt * 1.6f;
+            // (a step each time the swing passes its middle: the feet pass each other)
+            if (!flying && Footfall != null && Mathf.Floor(before / Mathf.Pi) != Mathf.Floor(_walkPhase / Mathf.Pi))
+            {
+                bool left = ((int)Mathf.Floor(_walkPhase / Mathf.Pi) & 1) == 0;
+                var foot = Body.GlobalTransform * new Vector3(left ? -.13f : .13f, .02f, .1f);
+                Footfall(foot);
+            }
         }
         else _walkPhase = Mathf.Lerp(_walkPhase, Mathf.Round(_walkPhase / Mathf.Pi) * Mathf.Pi, 1 - Mathf.Exp(-10 * dt));
         float swing = Mathf.Sin(_walkPhase) * (flying ? 0 : .55f);

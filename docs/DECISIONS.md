@@ -3190,6 +3190,21 @@ Tom: "keep going with Noor's list: dry ground under shelter and after-rain mist"
   after rain 0.29 → 0.42 mist, a windy noon 0.24 → 0.07; a calm dawn unchanged (the dawn mist is already at its cap).
   Subtle on open plains, where the mist lies in the valleys below; the lift not yet seen in motion.
 
+## D215 — Wet characters and footstep splashes (2026-10-25)
+Tom: "keep going with Noor's list" (notes §9: players look progressively wet, clothing darkens, fading after shelter;
+small splashes when moving through wet or shallow-water surfaces). Part of *Wet look → by material* (build 107 = off):
+* **wet figures** (`Character.Wet`, `WetOverlay.gdshader`): an overlay multiplying each part — cloth, trousers, boots and
+  hair up to ×0.62, skin ×0.92 (a per-figure instance uniform). Alden's own: out in the rain soaks in ~40 s of a downpour
+  (minutes of drizzle), much slower under cover or a thick canopy; swimming soaks at once; dries over ~4 min. Other
+  players (`Character.AmbientWet`) take the leaves' wetness (soak with the rain, dry after it) — there is no shelter
+  information for them. Capture (`artifacts/wet-character.jpg`): the same downpour, the tunic's pixels 54,69,65 → 33,44,42,
+  skin unchanged;
+* **footstep splashes**: the walk animation raises a footfall each time the legs pass (~3.5 a second walking); on wet
+  ground a crown of droplets at the foot (stronger with more wetness), in puddles and shallow water a full one; two
+  one-shot emitters, one per foot (a manual emit from an idle emitter drew nothing; at 0.42 m they did not read, now
+  0.75 m). Test flag `--walk-test` (walks forward). Capture (`artifacts/foot-splash.jpg`): a splash behind the foot.
+Rain on water (§7) not changed: the water already rings with the rain (`rain_now`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
