@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 98 — cloud layers (draft)
+**Host and everyone joining need build 98** (versions must match to connect).
+* **High clouds dark at night** (always on): the mackerel and cirrus layers stayed half lit at night (bright cut-outs on a
+  black sky); now they go dark, faintly moonlit, and the mackerel is softer.
+* **Settings → Sky → Cloud layers → layered (draft)**: thin high cirrus in fair weather too, thicker as a front comes;
+  and a middle grey sheet that spreads over the sky from ~70 km before a front, thicker on the front's side, the sun
+  dimmed behind it. Best seen in clear air (the dusty badlands haze hides them). Known: faint horizontal stripes in the
+  sheet near the horizon.
+* To try: **Go to - valley, a front coming (cloud layers draft), 11-00** (the front forced at 30 km for that run).
+
 ## New in build 97 — overcast without the marble, darker rainy nights
 **Host and everyone joining need build 97** (versions must match to connect).
 * **Overcast without the "marble" pattern**: build 96's grain fix banded a thick overcast deck into contour lines (my
