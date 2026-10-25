@@ -78,6 +78,14 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 107 — the rain stays put when you turn
+**Host and everyone joining need build 107** (versions must match to connect).
+* Your note on 106 ("the rain's direction shouldn't matter to where the camera is looking"): the rain turned with the
+  camera — its emitter hung on the camera and took the camera's rotation, so the drops always leaned the same way on
+  screen. Now the rain is fixed in the world: turn around in a windy downpour and it leans the other way on screen,
+  always blowing with the wind. The wind swooshes had the same fault and are fixed too.
+* Try it: Esc → Weather test → Downpour, Wind on 15 m/s, then turn the camera in a full circle.
+
 ## New in build 106 — each raindrop along its own path
 **Host and everyone joining need build 106** (versions must match to connect).
 * Your note on 105 ("the lines are always oriented the same way"): every rain streak took one shared angle from the wind
