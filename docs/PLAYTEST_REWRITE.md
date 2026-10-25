@@ -78,6 +78,18 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 99 — Living air (draft), patchy cirrus, calmer moon glow
+**Host and everyone joining need build 99** (versions must match to connect).
+* **Settings → Lighting and effects → Living air → subtle / more (draft)**: when the wind blows (from ~4 m/s), a few
+  faint curving wind trails glide past along the wind, more in gusts (Noor's reference). And each biome's own particles
+  around you: dust in deserts and badlands, ash in volcanic land, blown snow in the cold, leaves in broadleaf forests in
+  gusts, pollen, spores over swamps. Cheap, only near you. These are motion effects: walk around in a wind.
+* **Cirrus** (Cloud layers draft) now comes in patches and wisps instead of regular parallel bands.
+* **Moon glow** (your dump 13:53): after rain the moonlit haze glowed white round the moon; the moonlight boost now backs
+  off in dense air.
+* To try: **Go to - badlands in the wind (Living air), 16-00**, **Go to - forest in the wind (Living air), 10-00**
+  (wind fixed at ~11 m/s for that run).
+
 ## New in build 98 — cloud layers (draft)
 **Host and everyone joining need build 98** (versions must match to connect).
 * **High clouds dark at night** (always on): the mackerel and cirrus layers stayed half lit at night (bright cut-outs on a
