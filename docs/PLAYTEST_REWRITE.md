@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 95 — ground fixes, moonlight with shadows (draft)
+**Host and everyone joining need build 95** (versions must match to connect).
+* **Straight stripes across the ground** (your volcanic dumps 00:13–00:14): the ground's fine noise lost precision far
+  out in the world and broke along straight lines. Fixed everywhere.
+* **Long stretched strips** (your dump 13:33, every 4 km across the world): the ground pattern was squeezed into one
+  long strip along a line. Fixed. Side effect: the ground's patches lie in other places than before (same look).
+* **Settings → Lighting and effects → Moonlight → rays and shadows (draft)**: at night the moon casts shadows like the sun
+  (trees and mountains shade the moonlit land) and lights the haze, so from a ridge the valleys fill with moonlit haze cut
+  by mountain shadows. In dense forest it is darker under the canopy and forest shafts by moonlight barely show yet.
+  With *Night darkness → pitch black* the moon itself is dim, so little changes. Best around the full moon (day ~9 of
+  the game's calendar).
+* To try: **Go to - mountain ridges under the moon (draft), day 9 00-30**.
+
 ## New in build 94 — no jump at the cloud base, no curtains
 **Host and everyone joining need build 94** (versions must match to connect).
 * Your dumps 23:55: flying up through the cloud base, the clouds jumped from see-through to tall curtains. With
