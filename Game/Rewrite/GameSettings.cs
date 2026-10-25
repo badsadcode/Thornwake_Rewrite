@@ -259,6 +259,13 @@ public static class GameSettings
         options: new[] { "build 89 (fast waves)", "steady" }));
     public static readonly Setting RayStrength = Add(new("fx.ray_strength", "Lighting and effects", "Rays strength", .5, 2.5, .05, 1,
         "How bright the shafts are, for the forest rays (A, A2) and the rays in open air. 1 = build 82.", "×"));
+    public static readonly Setting Grading = Add(new("fx.grading", "Lighting and effects", "Colour grading", 0, 7, 1, 0,
+        "Draft (D192). The overall colour look: Natural (as before), Cinematic (teal shadows, warm light), Fantasy (rich, " +
+        "golden), Dreamy (soft, pastel), Rustic (warm, earthy greens), Dark fantasy (cold, muted), Vintage (faded, " +
+        "yellowed), Vibrant (saturated). It changes only the colours, not the lighting.",
+        options: ColorGrading.Names));
+    public static readonly Setting GradingStrength = Add(new("fx.grading_strength", "Lighting and effects", "Colour grading strength", 0, 1, .1, 1,
+        "How strongly the colour grading preset is applied (0 = Natural)."));
     public static readonly Setting AmbientLife = Add(new("fx.ambient_life", "Lighting and effects", "Living air", 0, 2, 1, 0,
         "Draft (D190). Small effects around you: faint wind trails gliding along the wind when it blows, and the biome's own " +
         "particles — dust in deserts and badlands, ash in volcanic land, blown snow in the cold, leaves in forests in gusts, " +

@@ -2876,6 +2876,16 @@ otherwise, each flurry building and fading, stronger in gusts (×1.6 at the peak
 Burst capture over 96 s at the windy-forest launcher (`artifacts/leaf-flurries.jpg`): leaves at 0, 36 and 48 s, none at
 12, 24 and 60–96 s. Wind trails not judged yet (Tom).
 
+## D192 — Colour grading presets (draft) (2026-10-25)
+Tom: "start colour grading presets as a setting, and show me captures of each preset" (Noor's list, ideas backlog). New
+`ColorGrading`: each preset is a 32³ colour lookup table built in code from a few controls (temperature, tint,
+saturation, contrast, lift, gain, split toning of shadows and highlights, greens toward brown) and applied as the
+environment's colour correction after tone mapping. Settings **Colour grading** (`fx.grading`): Natural (default, no
+table: as before), Cinematic, Fantasy, Dreamy, Rustic, Dark fantasy, Vintage, Vibrant; **Colour grading strength**
+(`fx.grading_strength`, 0–1, tables cached per tenth). Colours only, lighting untouched. Captures
+(`artifacts/grading-forest.jpg`, `artifacts/grading-ridge.jpg`; the ridge with Tom's own hazy settings). First guesses
+at each look: Tom picks and tunes. Not yet: vignette, film grain, custom sliders, grading by weather or biome.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

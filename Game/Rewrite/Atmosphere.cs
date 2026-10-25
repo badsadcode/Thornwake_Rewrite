@@ -409,6 +409,8 @@ public partial class Atmosphere : Node3D
         e.AdjustmentContrast = natural ? 1.06f : 1;
         e.FogAerialPerspective = Math.Clamp((natural ? .26f : .35f) * GameSettings.Haze.F, 0, 1);
         e.AdjustmentSaturation = GameSettings.Saturation.F * (natural ? 1.08f : 1);
+        // Colour grading presets (D192): a lookup table after tone mapping; Natural = none (as before).
+        e.AdjustmentColorCorrection = ColorGrading.Lut(GameSettings.Grading.Index, GameSettings.GradingStrength.F);
         RenderingServer.GlobalShaderParameterSet("leaf_translucency", GameSettings.LeafTranslucency.F);
         RenderingServer.CameraAttributesSetDofBlurQuality(RenderingServer.DofBlurQuality.Medium, true);
         SkyParam("quality", GameSettings.CloudQuality.Index);
