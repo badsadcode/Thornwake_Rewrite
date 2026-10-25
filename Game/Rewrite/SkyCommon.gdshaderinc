@@ -602,6 +602,8 @@ float vhg(float c, float g) { float g2 = g * g; return (1.0 - g2) / pow(max(1.0 
 // sunlit tops; z > 0 replaces CloudsNear's step budget (max_steps). Not a setting; play always runs with (1, 0, 0, 0).
 global uniform vec4 cloud_dev;
 
+// Cloud grain without TAA (setting, D184): 1 = each cloud sample averages two densities over its step; 0 = build 95.
+uniform int cloud_smooth = 1;
 // The march through the volume from t0 to t1 along dir (camera-relative): premultiplied light, opacity.
 vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, float min_step, vec3 sun_dir, vec3 sun_col, float day, float mu, float storm) {
 	vec2 cam = cloud_state.xy;
@@ -635,6 +637,8 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 	// or none — a fixed grain without TAA. Now the last segment ends at the scene and the dither only moves the sample
 	// within its segment.
 	float s0 = t0;
+	bool smooth2 = cloud_smooth == 1 && cloud_v2 < 1.5;
+	if (smooth2) jitter = 0.25; // (D184: no per-pixel offset without TAA; two samples per step at ¼ and ¾ instead)
 	for (int i = 0; i < max_steps; i++) {
 		if (s0 >= t1) break;
 		float step_len = clamp(s0 * 0.005, min_step, 450.0);
@@ -645,6 +649,11 @@ vec4 cloud_march(vec3 dir, float t0, float t1, float jitter, int max_steps, floa
 		bool near = s0 < 18000.0;
 		float d = vdens(p, near);
 		if (d < 0.0) { s0 += step_len * 0.5; continue; } // empty column: stride a little (cheaper; more would chip the edges)
+		// (D184: without TAA the per-pixel ray offset stays still, and at a sharp cloud edge a pixel's sample fell just
+		// inside or just outside: a fixed diagonal grain over thin cloud, Tom's dump 235339 with SMAA. Without TAA: no
+		// offset, two density samples per step (¼ and ¾), one more density sample per cloud sample; the six light
+		// samples stay one each. A second sample with the offset kept left the wisps speckled.)
+		if (smooth2 && d >= 0.0) d = 0.5 * (d + max(vdens(p + dir * seg * 0.5, near), 0.0));
 		if (d <= 0.002) continue;
 		// Toward the light: six steps, longer and longer (≈3 km), cheap density.
 		float od = 0.0, sl = 60.0;

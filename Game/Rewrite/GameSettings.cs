@@ -377,6 +377,10 @@ public static class GameSettings
         "one pass, so a cloud in front of you hides the mountains behind it instead of showing their outlines (the clouds " +
         "looked see-through). Costs more GPU time, only then. Build 91: two passes always.",
         options: new[] { "build 91", "one pass in the layer (draft)" }));
+    public static readonly Setting CloudSmooth = Add(new("sky.cloud_smooth", "Sky", "Cloud grain without TAA", 0, 1, 1, 1,
+        "Volumetric clouds with SMAA, FXAA or no anti-aliasing: smoothed averages each cloud sample over its step, so thin " +
+        "cloud shows no fixed grain (a little more GPU time). With TAA the grain averages out anyway. Build 95: as before.",
+        options: new[] { "build 95 (grain)", "smoothed" }));
     public static readonly Setting CloudSea = Add(new("sky.cloud_sea", "Sky", "Cloud sea", 0, 2, 1, 0,
         "Volumetric v2 (M3 draft, with Cloud base above the land). Under the high ridges: in high country the clouds form a " +
         "lower, thinner layer, below the ridges and summits, so from up high you look down onto a cloud sea (lit tops, " +

@@ -2796,6 +2796,16 @@ the moon to light; with a forced mist bank the shafts appeared at once. With *Mo
   silver shafts between the trunks (build 94: black); from Tom's ridge, layered moonlit ranges with shafts through the
   haze (before: one flat blue haze).
 
+## D184 — Cloud grain with SMAA: two samples per step instead of a still dither (2026-10-25)
+Back to clouds after the moonlight. Tom's dump 235339 (SMAA): a fixed diagonal grain over thin cloud in the sky. The
+cloud march offsets each pixel's ray by a dither (interleaved gradient noise) meant for TAA to average; without TAA it
+stays still, and where a cloud edge is sharper than a step a pixel is just in or just out. New setting **Cloud grain
+without TAA** (`sky.cloud_smooth`, Sky): *smoothed* (default) or *build 95 (grain)*. Without TAA the march takes no
+offset and two density samples per step (¼ and ¾); with TAA nothing changes. First try (a second sample, offset kept):
+less grain inside clouds, wisps still speckled. Result (`artifacts/cloud-grain-smaa-fix.jpg`): no grain, no visible
+banding, clouds a little crisper; cost on the HUD 60 → 50–57 FPS in those views (one more density sample per cloud
+sample). A visual default changed, so the old way is the other option (return point build 95 `c927386`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
