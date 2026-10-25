@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 105** (wind wisps with strands D204–D205, Weather test tab D206, rain by strength D207) | `5008995` | Thornwake-Rewrite-Preview-105 (v0.9.105) | Versions must match to connect; Wind wisps → build 104 and Rain look → build 104 give the old effects; build 104 = `98ec6a9` |
 | **Build 104** (cloud bases shaped — draft D203) | `98ec6a9` | Thornwake-Rewrite-Preview-104 (v0.9.104) | Versions must match to connect; Cloud bases → build 103 = old flat bases (the default); build 103 = `1a75bac` |
 | **Build 103** (glow round the sun by the haze D202) | `1a75bac` | Thornwake-Rewrite-Preview-103 (v0.9.103) | Versions must match to connect; Glow round the sun → build 102 = old glow; build 102 = `cc79355` |
 | **Build 102** (sun behind clouds D201, cloud quality levels D196, cloud drafts D197-D199) | `cc79355` | Thornwake-Rewrite-Preview-102 (v0.9.102) | Versions must match to connect; Sun behind clouds → build 101 = old sun; build 101 = `8a97481` |

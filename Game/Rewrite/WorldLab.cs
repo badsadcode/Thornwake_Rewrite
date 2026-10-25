@@ -203,7 +203,7 @@ public partial class WorldLab : Node3D
             if (arg == "--open-map") _openMap = true;
             if (arg.StartsWith("--day=")) _clock.SetDay(int.Parse(arg[6..], CultureInfo.InvariantCulture));
             if (arg.StartsWith("--hour=")) _pendingHour = double.Parse(arg[7..], CultureInfo.InvariantCulture);
-            if (arg.StartsWith("--menu=")) { _menu.Visible = true; _menu.GetChild<TabContainer>(0).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); }
+            if (arg.StartsWith("--menu=")) { _menu.Visible = true; ((TabContainer)_menu.FindChildren("*", "TabContainer", true, false)[0]).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); } // (the menu is no longer a TabContainer itself)
         }
         int index = Math.Max(0, _recipes.ToList().FindIndex(r => r.Id == preset));
         _profileList.Select(index);
