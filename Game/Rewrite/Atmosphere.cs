@@ -455,14 +455,16 @@ public partial class Atmosphere : Node3D
         var layerShader = GD.Load<Shader>("res://Game/Rewrite/RainLayers.gdshader");
         for (int i = 0; i < 2; i++)
         {
-            float r = i == 0 ? 22 : 45;
+            float r = i == 0 ? 16 : 40; // (D222: the near one just past the drops' fade, ~16–22 m: no gap)
             var m = new ShaderMaterial { Shader = layerShader };
             m.SetShaderParameter("radius", r);
             m.SetShaderParameter("cell", i == 0 ? .1f : .085f); // (D221: denser — at .16 / .12 the layers hardly showed)
             m.SetShaderParameter("seed", 3.7f + i * 5.1f);
+            m.SetShaderParameter("depth_scale", i == 0 ? 20f : 60f);
             _rainLayers[i] = new MeshInstance3D
             {
-                Mesh = new CylinderMesh { TopRadius = r, BottomRadius = r, Height = 50, RadialSegments = 48, Rings = 1, CapTop = false, CapBottom = false },
+                // (tall: looking down a slope the 50 m one's bottom showed as an edge)
+                Mesh = new CylinderMesh { TopRadius = r, BottomRadius = r, Height = 160, RadialSegments = 64, Rings = 1, CapTop = false, CapBottom = false },
                 MaterialOverride = m, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, TopLevel = true, Visible = false,
                 ExtraCullMargin = 100, GIMode = GeometryInstance3D.GIModeEnum.Disabled,
             };
@@ -1212,7 +1214,9 @@ public partial class Atmosphere : Node3D
         _rainMistMat.SetShaderParameter("drift", _rainMistDrift);
         _rainMistMat.SetShaderParameter("wind_dir", Wind.Direction.Normalized());
         _rainMistMat.SetShaderParameter("tint", new Color(.86f * l + .1f, .88f * l + .1f, .9f * l + .1f));
-        _rainMistMat.SetShaderParameter("glow", Environment.FogLightColor);
+        // (D222: in grey rain the haze light is dim and the mist vanished — Tom saw it only in sun showers; the overcast
+        // lifts it to the brightness of the grey veil around it)
+        _rainMistMat.SetShaderParameter("glow", Environment.FogLightColor * (1 + 3.5f * _gloom * (1 - _sunShower)));
     }
 
     // ---- rain in depth (D221)

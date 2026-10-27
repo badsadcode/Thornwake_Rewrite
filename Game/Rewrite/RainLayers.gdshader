@@ -15,6 +15,8 @@ uniform vec2 drift = vec2(0.0);      // the wind's drift (m/s, world x, z)
 uniform float clock = 0.0;           // s
 uniform vec4 tint : source_color = vec4(0.8, 0.84, 0.9, 0.12);
 uniform float seed = 1.0;
+uniform float depth_scale = 25.0;    // m of rain behind the layer that make it full (D222)
+uniform sampler2D depth_tex : hint_depth_texture, filter_nearest, repeat_disable;
 
 varying vec3 world_pos;
 varying vec3 centre;
@@ -26,6 +28,23 @@ void vertex() {
 	centre = MODEL_MATRIX[3].xyz;
 }
 
+// One octave of streaks: columns `c` m apart, streaks `len` m long; `width` of a column; returns coverage.
+float streaks(float u, float v, float c, float len, float width, float amt, float salt) {
+	float col = floor(u / c);
+	float f = fract(u / c);
+	float h1 = hash(vec2(col, 1.0 + salt)), h2 = hash(vec2(col, 2.0 + salt));
+	float rep = len * (1.6 + 2.4 * h2);
+	float vv = fract((v + h1 * rep) / rep) * rep;
+	float along = smoothstep(0.0, len * 0.3, vv) * smoothstep(len, len * 0.7, vv);
+	float on = step(hash(vec2(col, floor((v + h1 * rep) / rep) + salt)), amt);
+	float x = abs(f - (0.3 + 0.4 * h1));
+	float aa = fwidth(u / c);
+	float line = 1.0 - smoothstep(width, width + aa * 1.5, x);
+	// (D222: columns closer than ~5 px fade out — packed thinner, the lines beat against the pixel grid in curved
+	// moiré bands, Tom's dumps 184925 / 185035)
+	return line * along * on * (1.0 - smoothstep(0.15, 0.3, aa));
+}
+
 void fragment() {
 	if (amount <= 0.001) discard;
 	vec2 rel = world_pos.xz - centre.xz;
@@ -34,26 +53,25 @@ void fragment() {
 	// arc length (m) and the height, sheared by the wind's drift along the cylinder on this side
 	float lean = dot(drift, tangent) / max(fall, 0.5);
 	// (a drop moves along the cylinder by lean per metre it falls: s + lean·y stays the same along its streak)
-	float u = ang * radius + world_pos.y * lean;
+	// (the shear from the camera's height: from the world's zero, high up the columns were sheared tens of metres and
+	// drew long arcs over the sky, Tom's dumps 184925 / 185035)
+	float yrel = world_pos.y - centre.y;
+	float u = ang * radius + yrel * lean;
 	float v = world_pos.y + clock * fall;
-	float col = floor(u / cell);
-	float f = fract(u / cell);
-	// each column: a few streaks at their own heights, only `amount` of them
-	float h1 = hash(vec2(col, 1.0)), h2 = hash(vec2(col, 2.0));
-	float rep = streak_len * (1.6 + 2.4 * h2); // (streaks closer together along a column: denser rain)
-	float vv = fract((v + h1 * rep) / rep) * rep;
-	float along = smoothstep(0.0, streak_len * 0.3, vv) * smoothstep(streak_len, streak_len * 0.7, vv);
-	float on = step(hash(vec2(col, floor((v + h1 * rep) / rep))), amount);
-	// across: a thin line at the column's own place, anti-aliased by its screen width
-	float x = abs(f - (0.3 + 0.4 * h1));
-	float aa = fwidth(u / cell);
-	// (at least ~1 px wide: thinner, the temporal filter blended them away)
-	float line = 1.0 - smoothstep(0.04, 0.04 + aa * 1.5, x);
-	float a = line * along * on;
-	// fade where the view is steep (looking up or down the cylinder) and at its top and bottom
+	// fine streaks, and coarse soft ones (a rain curtain) that stay where the fine ones are too dense to draw
+	float a = max(streaks(u, v, cell, streak_len, 0.04, amount, 0.0), 0.35 * streaks(u, v, cell * 6.0, streak_len * 1.2, 0.25, amount, 5.0));
+	// (D222, Tom: "the border of the background rain is kind of abrupt … the circle is visible"): the layer stands for
+	// the rain between it and what is behind — none against the ground just past it, more the further the land, full
+	// against the sky; no edge where the ground crosses the cylinder
+	float depth = textureLod(depth_tex, SCREEN_UV, 0.0).r;
+	vec4 sv = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, depth, 1.0);
+	float scene = depth <= 0.0 ? 1e6 : length(sv.xyz / sv.w);
+	a *= 1.0 - exp(-max(scene - length(VERTEX), 0.0) / depth_scale);
+	// fade where the view is steep (looking up or down the cylinder)
 	vec3 view = normalize(world_pos - CAMERA_POSITION_WORLD);
-	a *= 1.0 - smoothstep(0.6, 0.9, abs(view.y));
-	a *= smoothstep(-18.0, -8.0, world_pos.y - centre.y) * (1.0 - smoothstep(18.0, 28.0, world_pos.y - centre.y));
+	a *= 1.0 - smoothstep(0.65, 0.92, abs(view.y));
+	// and above ~10–25 m over the eye: the sky's own rain veil takes over (looking down a slope the layer goes on)
+	a *= 1.0 - smoothstep(10.0, 25.0, yrel);
 	if (a <= 0.002) discard;
 	ALBEDO = tint.rgb;
 	ALPHA = a * tint.a;

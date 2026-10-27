@@ -3304,6 +3304,23 @@ TAA-stable, settings for testing).
   (`fog()` takes no `return` either: the first version failed to compile and greyed the whole view.) Subtle in stills
   (`artifacts/rain-mist-gusts.jpg`); to judge in motion. Cost not measured.
 
+## D222 — Rain in depth without arcs or a circle; mist gusts in grey rain (2026-10-27)
+Tom on build 111 (dumps 184925, 185035, 185055, badlands, downpour, wind 10): "this weird curvy pattern in the rain",
+"the border of the background rain is kind of abrupt … the circle is visible", and the mist gusts only showed with the
+sun shower on. Note: his *Rain look* was still *by strength (build 110, dithered)* — the saved value stayed when D221
+changed the default — and Rain strength 3.6.
+* **Arcs**: the layers' columns, packed closer than a pixel, beat against the pixel grid in curved moiré bands, and the
+  wind shear counted from the world's zero height sheared columns tens of metres high up into long arcs. Now columns
+  under ~5 px apart fade out (`streaks`, by fwidth), a coarser soft octave (6 × the spacing, short) stands in for the
+  unresolved rain, the shear counts from the camera's height, and the layers fade out 10–25 m above the eye.
+* **Circle**: each layer now stands for the rain between it and what is behind (depth buffer): its coverage
+  1 − exp(−(scene − layer) / 20 m, 60 m) — nothing on the ground just past it, more on far land, full against the sky.
+  Layers at 16 m (just past the drops' fade) and 40 m; 160 m tall (the 50 m one's bottom showed looking down a slope).
+* **Mist gusts in grey rain**: their glow is the haze light × (1 + 3.5 × gloom) outside sun showers (the dim rain light
+  made them vanish).
+Rebuilt from his dumps (`artifacts/rain-depth-fixed.jpg`: his 185035 vs now; `artifacts/rain-mist-grey.jpg`: mist sheets
+in ordinary rain and in sun showers).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
