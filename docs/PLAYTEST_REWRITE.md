@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 113 — rain tuned from your notes on 112
+**Host and everyone joining need build 113** (versions must match to connect).
+* **Denser rain around you** in heavy rain (up to 40 000 drops).
+* **Heavy rain veils the sky too**: distant mountains and land merge into the rain instead of standing out as grey shapes
+  against a lighter sky; a downpour is thicker; drizzle stays almost clear. (Your dump 19:23 was a sun shower, which keeps
+  the veil lighter on purpose — a little thicker now too.)
+* **More refraction, less white** in the refractive streaks: they bend more of the picture behind them, with a slight
+  colour split and only a thin glint.
+* **Splashes** bigger in harder rain, smaller in drizzle, and more varied (mostly small, now and then a big one).
+* **Mist gusts** lower (mostly within ~3 m of the ground), each sheet slightly different in colour; no more bright
+  orange band in the badlands.
+* **Lens-drop trails** start softly, are uneven and broken in places, dry in patches, and are thinner and see-through.
+
 ## New in build 112 — softer rain, the far rain fixed
 **Host and everyone joining need build 112** (versions must match to connect).
 * **Refractive rain streaks** (Simulation → Rain look → by strength, refractive — the new default): your note that the
