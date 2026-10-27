@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 113** (rain tuning D224: denser drops, veil over the sky, splashes by rain size, refraction, lower mist, irregular lens trails) | `9948255` | Thornwake-Rewrite-Preview-113 (v0.9.113) | Versions must match to connect; the tuning is not switchable — build 112 = `c6b7cdd` |
 | **Build 112** (refractive rain streaks D223, rain in depth fixed and mist gusts in grey rain D222) | `c6b7cdd` | Thornwake-Rewrite-Preview-112 (v0.9.112) | Versions must match to connect; Rain look → smooth / dithered / build 104 give the earlier streaks; build 111 = `9572e13` (arcs and circle in the far rain) |
 | **Build 111** (Rain 2.1: smooth streaks, rain in depth, rain-mist gusts D221) | `9572e13` | Thornwake-Rewrite-Preview-111 (v0.9.111) | Versions must match to connect; Rain look → by strength (build 110, dithered), Rain in depth → build 110, Rain-mist gusts → off give build 110; build 110 = `da955fd` |
 | **Build 110** (lens drops D217–D220, animals take cover D217) | `da955fd` | Thornwake-Rewrite-Preview-110 (v0.9.110) | Versions must match to connect; Lens drops is off by default, Trees in the rain → build 108 also turns off the animals sheltering; build 109 = `dc501e5` |
