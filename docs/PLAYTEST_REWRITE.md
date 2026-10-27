@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 112 — softer rain, the far rain fixed
+**Host and everyone joining need build 112** (versions must match to connect).
+* **Refractive rain streaks** (Simulation → Rain look → by strength, refractive — the new default): your note that the
+  streaks were too sharp. Each streak is a thin, soft-edged water lens that bends what is behind it, with a bright head
+  and a tail that fades out. **Your saved Rain look is still "by strength (build 110, dithered)"** — switch it to
+  *refractive* to see this. *Smooth*, *dithered* and *build 104* stay as options.
+* **Rain in depth fixed** (your dumps 18:49–18:50): no more curvy swirl pattern over the sky, and no visible circle where
+  the far rain started — it now builds up gradually with distance.
+* **Rain-mist gusts** now show in ordinary grey rain too, not only in sun showers.
+
 ## New in build 111 — Rain 2.1 (your and Noor's suggestions)
 **Host and everyone joining need build 111** (versions must match to connect). All in Settings → Simulation, each with
 the old look as another option.
