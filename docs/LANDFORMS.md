@@ -58,8 +58,9 @@ Then the fantasy landforms Tom picks (section at the end).
 * **Play**: lookouts, routes up (ramps, ravines), natural walls; castle and watchtower sites on the edge (site hints).
 * **Build**: a plan module raising a band of the macro raster with a sharp edge before erosion; rivers then cross it
   (and fall: no. 2) or run along its foot. The cliff face gets rock detail at walking scale.
-* **Water**: rivers are routed after it; a lake never straddles the edge.
-* **Status**: next.
+* **Water**: rivers are routed after it; the face looks downhill so the lowland drains away from the foot.
+* **Status**: built, terrain revision 18 (D232), not in a build yet; waiting for Tom's look verdict (the face reads as
+  an even wall: ravines, buttresses and scree could break it up).
 
 ### 2. Waterfalls and rapids
 * **What**: a river drops over a rock step into a plunge pool; white water over a steep, rocky stretch.

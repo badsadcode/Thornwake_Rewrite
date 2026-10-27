@@ -3479,6 +3479,28 @@ no. 6 fjords (after the U-shaped valleys they need) and no. 7 volcanoes and cald
 lakes); passes back as no. 17 (with the roads stage); karst moves to no. 18. A *Fantasy landforms* section lists
 ideas for Tom and Noor to pick (floating islands, giant's stairs, crystal fields, titan bones, the great rift…).
 
+## D232 — Terrain revision 18: escarpments and plateaus, the first big landform (2026-10-27)
+Tom: "just let's do this" (landform no. 1 of `docs/LANDFORMS.md`). `Game/WorldGen/Escarpments.cs`, a `PlanLandform`:
+* **Placement**: wandering lines (2 km steps, gentle bends) 20–70 km long, started on inland land off the mountain
+  cores (land ≥ 0.6, mountain ≤ 0.3), kept inland on both sides, the plateau land for 60 % of its depth, 15 km from
+  other escarpments; about one per 100 km × 100 km of land at *normal*, at least one per world. The face looks
+  downhill (the plateau on the side the land already rises toward): facing uphill, a plateau dammed the land's water
+  into deep lakes against the cliff and the lake fade erased the cliff (seen in the first tests).
+* **Shape**: height 60–180 m × size, varying along; flat top for 55 % of an 8–20 km depth, then a gentle fall; ends
+  ramp down over 18 % of the length (the ways up); the edge wobbles (90 m at 700 m, 260 m at 4 km).
+* **Two parts**: the plan adds the step to the macro height *before erosion*, its face spread over 2.5 raster cells
+  (a sharper raster step rang under the bicubic filter and left a trench along the foot); at walking scale
+  `Ground` adds the difference to a steep face (~65°, 12 m + 0.45 × height wide), within 2.25 cells of the edge,
+  scaled by how much of the step the eroded raster still holds there (valleys cut through the edge keep their floor).
+  The sampler fades only *lowering* near lakes (a lake may end at the cliff's foot).
+* **Revision 18**: revision 17 is frozen as *Build 115* (fingerprints `terrain-build115.json`, all 120 older
+  sample-hash cases unchanged); *Terrain version* gains *Build 115*; switched off (amount *off*), revision 18 gives
+  revision 17's ground. New test: 24 escarpments in 4 test worlds, 20 with a face steeper than 50°, 21 rising over
+  30 % of their height, water stays above its ground; the existing lake-edge and water tests pass at revision 18.
+  Speed 1 171 ns per sample (1 164 before). `--landform-probes` lists where they are.
+* Seen in captures: the face reads as a long, even wall (straight top, uniform rock); ravines, buttresses and a scree
+  apron would break it up — Tom's call.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

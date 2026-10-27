@@ -43,11 +43,18 @@ public static class LandformCatalog
     public static readonly LandformInfo Mesas = new("mesas", "Mesas and buttes", "in badlands", LandformKind.Ground, LandformRule.Biome, 12);
     public static readonly LandformInfo Spires = new("spires", "Needle spires", "in needle rocks and badlands", LandformKind.Ground, LandformRule.Biome, 12);
 
-    public static readonly IReadOnlyList<LandformInfo> All = new[] { Dunes, Mesas, Spires };
+    public static readonly LandformInfo Escarpments = new("escarpments", "Escarpments and plateaus", "inland, away from mountains", LandformKind.Plan, LandformRule.Terrain, 18);
 
-    /// <summary>The big landforms of a world, in order, run on the macro raster before erosion. None yet: the first
-    /// comes with its own terrain revision.</summary>
-    public static IReadOnlyList<PlanLandform> PlanModules(WorldManifest manifest, TerrainStyle style) => Array.Empty<PlanLandform>();
+    public static readonly IReadOnlyList<LandformInfo> All = new[] { Escarpments, Dunes, Mesas, Spires };
+
+    /// <summary>The big landforms of a world, in order, run on the macro raster before erosion (each from the terrain
+    /// revision that brought it, unless switched off).</summary>
+    public static IReadOnlyList<PlanLandform> PlanModules(WorldManifest manifest, TerrainStyle style)
+    {
+        var list = new List<PlanLandform>();
+        if (style.Revision >= Escarpments.Since && !style.Landform(Escarpments.Id).Off) list.Add(new Escarpments());
+        return list;
+    }
 
     /// <summary>The random stream of a module (new modules; the revision-12 three keep their old streams).</summary>
     public static ulong Seed(WorldManifest manifest, LandformInfo info) => Hashing.FeatureSeed(manifest.Seed, 5, manifest.ProfileDigest, "landform." + info.Id);
@@ -58,6 +65,8 @@ public abstract class PlanLandform
 {
     public abstract LandformInfo Info { get; }
     public abstract void Shape(MacroRaster macro, WorldManifest manifest, LandformSetting setting);
+    /// <summary>Walking-scale relief it adds at a point (m), on top of what the raster holds; 0 by default.</summary>
+    public virtual double Ground(double x, double z, double minWavelength) => 0;
 }
 
 /// <summary>A local landform: adds to the walking-scale relief where its rule allows, before the water stages.</summary>

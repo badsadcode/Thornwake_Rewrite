@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
@@ -27,7 +28,7 @@ public readonly record struct TerrainSample(
 /// 1a Coast                   TerrainSampler.cs          -
 /// 1b Sea (ends the walk)     TerrainSampler.cs          16 (a sea pocket inside a lake's reach is lake)
 /// 1c Continent               TerrainSampler.cs          -  (ShoreSlope, MouthBlend: build 5 / preview 7 options)
-/// 2  Detail                  TerrainSampler.cs          -
+/// 2  Detail                  TerrainSampler.cs          18 (big landforms' walking-scale part: escarpment faces)
 /// 3  BiomeTerrain            TerrainSampler.cs          11 (wetlands), 12 (all biomes; landforms: BiomeLandforms.cs),
 ///                                                       17 (landform module settings, LandformModules.cs)
 /// 3b Sites, 3c Roads         (none yet)                 17 (the plan's lists exist, still empty: docs/WORLDGEN_PLAN.md step 3)
@@ -56,6 +57,7 @@ public sealed partial class TerrainSampler
     private readonly ulong _detailSeed, _rockSeed, _coastSeed, _regionSeed, _bankSeed, _poolSeed, _landformSeed;
     private readonly double _duneAngle;
     private readonly BiomeLandforms _landforms;
+    private readonly PlanLandform[] _planForms;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
     private readonly double[] _poolQuantiles, _channelQuantiles;
@@ -73,10 +75,22 @@ public sealed partial class TerrainSampler
         _landformSeed = Seed("landforms");
         _duneAngle = Hashing.Unit(Hashing.Mix(_landformSeed)) * Math.Tau; // prevailing sand-moving wind of this world
         _landforms = new BiomeLandforms(_hydrology, _landformSeed, _duneAngle, _style);
+        _planForms = plan.PlanLandforms.ToArray();
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
         _coastBand = .25;
+    }
+
+    /// <summary>The big landforms' walking-scale relief (revision 18). Ground they lower is faded at lake shores (lowered
+    /// ground just outside a lake's reach would lie dry below its surface); ground they raise may end a lake at a cliff.</summary>
+    private double PlanGround(double x, double z, double minWavelength)
+    {
+        double g = 0;
+        foreach (var form in _planForms) g += form.Ground(x, z, minWavelength);
+        if (g >= 0) return g;
+        int lake = _hydrology.LakeDistance(x, z, out double cells);
+        return lake >= 0 ? g * DetMath.Smooth((cells - 1.6) / .38) : g;
     }
 
     public double Height(double x, double z, double minWavelength = 2) => Sample(x, z, minWavelength).Height;
@@ -91,6 +105,7 @@ public sealed partial class TerrainSampler
         if (land <= 0) return Sea(x, z, land, coastDistance);
         double baseHeight = Continent(land, rasterLand, macroHeight, coastDistance, ref mountainShare);
         Detail(lx, lz, minWavelength, land, mountainShare, out double inland, out double detail, out double roughness);
+        if (_planForms.Length > 0) detail += PlanGround(x, z, minWavelength);
         BiomeTerrain(x, z, lx, lz, minWavelength, baseHeight, inland, ref detail, out bool wetland, out double poolCover, out double poolDepth,
             out double poolSize, out double poolChannels, out double flatten);
         // (3b sites and 3c roads come here once the plan has any: pads and corridors after the landforms, before the

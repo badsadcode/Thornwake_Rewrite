@@ -14,6 +14,7 @@ internal static class SimulationTests
         T.Run("Landforms: dunes, mesas and needle spires where their biomes are (revision 12)", Landforms, filter);
         T.Run("Landforms: each module's switch changes only its own landform (revision 17)", LandformSwitches, filter);
         T.Run("Landforms: water wins with every module at its largest (revision 17)", LandformWater, filter);
+        T.Run("Landforms: escarpments and plateaus — cliffs inland, water keeps its place (revision 18)", EscarpmentForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -817,7 +818,8 @@ internal static class SimulationTests
         T.Check(dunesBig > dunesNormal * 1.3, "bigger dunes give more relief");
         // Older revisions ignore the settings (their worlds never change).
         var old = WithLandforms(16, (LandformCatalog.Dunes, 0, 1), (LandformCatalog.Mesas, 2.5, 2), (LandformCatalog.Spires, 0, 1));
-        T.Check(Enumerable.Range(0, lines.Length).All(k => Changed(designed[k], Line(old, k)) == 0), "revision 16 ignores the landform settings");
+        var old16 = WithLandforms(16);
+        T.Check(Enumerable.Range(0, lines.Length).All(k => Changed(Line(old16, k), Line(old, k)) == 0), "revision 16 ignores the landform settings");
     }
 
     private static void LandformWater()
@@ -854,6 +856,57 @@ internal static class SimulationTests
         T.Check(changed > 1000, $"the largest settings change the ground ({changed})");
         T.Check(water > 100, $"water points among the landforms ({water})");
         T.Check(lost == 0, $"every water point keeps its water and level ({lost} lost)");
+    }
+
+    private static void EscarpmentForms()
+    {
+        int lines = 0, cliffs = 0, steps = 0, probes = 0, wet = 0, badWater = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("continental", 42), ("mountainous", 7319), ("vast-world", 7319) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            var forms = s.Plan.PlanLandforms.OfType<Escarpments>().ToList();
+            T.Check(forms.Count == 1, $"{id}: the escarpment module runs in revision 18");
+            int count = forms.Sum(f => f.Count);
+            lines += count;
+            T.Note($"{id}/{seed}: {count} escarpments");
+            foreach (var (x, z, nx, nz, height) in forms.SelectMany(f => f.Probes()))
+            {
+                // A transect across the edge, 2 m apart: the steepest step, and the rise from foot to top.
+                double steepest = 0, prev = double.NaN, foot = double.MaxValue, top = double.MinValue;
+                for (double d = -700; d <= 700; d += 2)
+                {
+                    var t = s.Sample(x + nx * d, z + nz * d);
+                    if (t.Water != WaterKind.None) { wet++; if (!(t.Height < t.WaterLevel)) badWater++; }
+                    if (!double.IsNaN(prev)) steepest = Math.Max(steepest, Math.Abs(t.Height - prev) / 2);
+                    prev = t.Height;
+                    if (d < -400) foot = Math.Min(foot, t.Height);
+                    if (d > 400) top = Math.Max(top, t.Height);
+                }
+                probes++;
+                if (steepest > 1.2) cliffs++;
+                if (top - foot > .3 * height) steps++;
+            }
+            // Revision 17 has no escarpments; switched off, revision 18 is revision 17's ground.
+            var r17 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 17 }));
+            var off = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with
+            {
+                Landforms = new Dictionary<string, LandformSetting> { [LandformCatalog.Escarpments.Id] = new(0, 1) },
+            }));
+            T.Check(r17.Plan.PlanLandforms.Count == 0 && off.Plan.PlanLandforms.Count == 0, $"{id}: none in revision 17 or when off");
+            var f0 = s.Plan.Layout.Land[0];
+            int same = 0;
+            for (int i = 0; i < 200; i++)
+            {
+                double px = f0.Center.X + (i % 20 - 10) * 1733.3, pz = f0.Center.Z + (i / 20 - 5) * 2711.7;
+                if (off.Height(px, pz) == r17.Height(px, pz)) same++;
+            }
+            T.Check(same == 200, $"{id}: switched off gives revision 17's ground ({same}/200)");
+        }
+        T.Note($"{lines} escarpments, {probes} probed: {cliffs} with a face steeper than 50°, {steps} rising over 30 % of their height; {wet} water points on the transects");
+        T.Check(lines >= 4, $"escarpments are placed ({lines})");
+        T.Check(cliffs >= probes * .7, $"most have a cliff face ({cliffs}/{probes})");
+        T.Check(steps >= probes * .7, $"most raise a plateau ({steps}/{probes})");
+        T.Check(badWater == 0, $"water stays above its ground ({badWater} of {wet})");
     }
 
     private static void Wetlands()

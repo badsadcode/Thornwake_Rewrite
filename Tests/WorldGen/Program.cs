@@ -17,6 +17,19 @@ bool record = args.Contains("--record");
 
 // Refactor guards (D227): --sample-hash prints a hash of everything TerrainSampler.Sample returns (all fields) over grids
 // at several detail levels, per profile, seed and terrain revision; --speed times single-threaded sampling.
+// --landform-probes: where the big landforms are in each test world (for captures and Go to spots).
+if (args.Contains("--landform-probes"))
+{
+    foreach (var profile in CoreTests.Profiles)
+        foreach (int seed in new[] { 42, 7319 })
+        {
+            var s = CoreTests.Sampler(profile.Id, seed);
+            foreach (var e in s.Plan.PlanLandforms.OfType<Escarpments>())
+                foreach (var (x, z, nx, nz, h) in e.Probes())
+                    Console.WriteLine($"{profile.Id}/{seed} escarpment at {x:0},{z:0} toward plateau {nx:0.00},{nz:0.00} height {h:0} m, ground {s.Height(x, z):0}");
+        }
+    return 0;
+}
 if (args.Contains("--sample-hash"))
 {
     foreach (var profile in CoreTests.Profiles)

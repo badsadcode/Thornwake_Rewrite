@@ -140,12 +140,13 @@ public sealed record TerrainStyle
     /// lower valley floor flows at that floor instead of perching above it (round 14); 14 = wetland water follows the
     /// pool mask, not the ground's gullies (no straight parallel channels; round 20); 15 = a lake's outlet keeps the
     /// lake's level inside the lake; 16 = a sea pocket inside a lake's reach is lake; 17 = landform modules with their
-    /// own settings (<see cref="Landforms"/>), the same ground as 16 at the designed settings (D229).</summary>
+    /// own settings (<see cref="Landforms"/>), the same ground as 16 at the designed settings (D229); 18 = escarpments and
+    /// plateaus (D232).</summary>
     public int Revision { get; init; } = CurrentRevision;
 
     /// <summary>The terrain revision new worlds get. Worlds record theirs (<c>--revision=</c>), so a new revision never
     /// changes an existing world (D229).</summary>
-    public const int CurrentRevision = 17;
+    public const int CurrentRevision = 18;
 
     /// <summary>Landform module settings by module id (revision 17 on; missing = as designed). See <see cref="LandformCatalog"/>.</summary>
     public IReadOnlyDictionary<string, LandformSetting>? Landforms { get; init; }
