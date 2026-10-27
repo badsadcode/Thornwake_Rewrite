@@ -3373,6 +3373,16 @@ over everything".
 Rebuilt from his dumps with their winds (`artifacts/rain-gale-fixes.jpg`; `artifacts/rain-visible-under-taa.jpg`: gale
 and wind 10, before vs now).
 
+## D226 — World generation plan: tidy-up, modules, settlement and road stages (2026-10-27)
+Tom: "read the terrain landforms plan against the code and bring me a short world-generation plan". Written as
+`docs/WORLDGEN_PLAN.md`: `TerrainSampler.Sample` is one ~230-line function with 20 revision branches (9–16) and the
+revision-12 landforms inside it; the plan side (`WorldPlan`: layout, macro raster with erosion, hydrology, climate,
+biomes) is already split. Order of stages kept as the code has it — water last, so it carves through everything and
+"water always wins" (the brainstorm put landforms after water). Steps: (1) tidy-up with no output change (fingerprints
+bit for bit, speed measured); (2) module design shown to Tom first; (3) revision 17 = modules (dunes, mesas, spires the
+first) + empty site and road stages, proved identical; (4) landforms one at a time, Tom's picks; then settlements and
+roads as placeholders. Nothing built yet; questions for Tom in the plan.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
