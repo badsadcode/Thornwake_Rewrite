@@ -84,7 +84,25 @@ that would add most to play: **waterfalls and rapids**, **gorges / canyons**, **
 4. You choose the first landforms → one per build.
 5. Settlement sites, then roads, as placeholders.
 
-## Questions for you
+## Tom's answers (2026-10-27)
+
+* **Landforms before settlements** — sites will be chosen partly by landforms (a village on a plateau, a castle on an
+  escarpment, a harbour in a fjord), roads route round gorges and through passes.
+* **Switches in New world, for every world type** — "high customization": each landform's switch and strength in
+  *New world* before generating. **World types get reworked too** (Azgaar's map generator as a reference): a world
+  type becomes a starting preset of those switches and of its landform template. A step of its own, with step 2.
+* **Which landforms first** — open. I bring a short illustrated menu (captures or reference images) when we get there.
+
+## Step 1 — done (D227)
+
+`TerrainSampler.Sample` now walks nine short stages (coast, sea, continent, detail, biome terrain, rivers, lakes, pools,
+player edits), each taking and giving plain values; the water stages and their helpers live in
+`TerrainSampler.Water.cs`, the revision-12 landforms in `BiomeLandforms.cs`; a table at the top of `TerrainSampler.cs`
+says which terrain revision changed which stage. Proof: every field of every sample identical over 110 cases (5 world
+types × 2 seeds × 11 terrain versions, 4 detail levels, `--sample-hash`), all 11 frozen fingerprint sets and the full
+suite pass. Speed: 1 172 ns per sample vs 1 158 before (~1 %, `--speed`).
+
+## Questions for you (answered above)
 
 * Is this order right (landforms before settlements), or should sites and roads come first?
 * Should the module switches show in **New world** (a *Landforms* section), or only per world type?

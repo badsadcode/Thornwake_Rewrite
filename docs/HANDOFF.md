@@ -16,7 +16,7 @@ Written for the next conversation (the previous one ran out of context). Everyth
   (`98ec6a9`): draft *Cloud bases → shaped* (D203, off by default). Note: Tom's settings file has `fx.wind_wisps=1`
   (plain swooshes, written by a capture while that was the default) — the strands need option 2. Builds 76–103 in the previous session:
   Atmosphere 2.0 M2 (rays) and M3 (clouds), moonlight, Living air, colour grading, many fixes. Decisions D143–D202 in
-  `docs/DECISIONS.md` (next: **D227**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
+  `docs/DECISIONS.md` (next: **D228**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
 * **Tom's settings were reset to a clean baseline** (D200, D201; `tools/settings_baseline.py`; backup
   `%APPDATA%/Thornwake/rewrite_settings.before-baseline-20261025.cfg`). Since then he chose Colour grading *Fantasy* and
   Rays strength 2.5 himself. Earlier his "hazy, bland, constantly in fog" look came from Wind strength 3.9 (a 20 m/s gale
@@ -60,8 +60,8 @@ Cloud shape = rounded):
   High/Medium/Low (D196). Sun behind clouds (D201) and glow by the haze (D202) are on.
 * Faint stripes low in the sky with a front coming (cloud layers draft, D189); cloud grain with SMAA fixed (D184/D185).
 * The agreed overall order (below): after Atmosphere 2.0, world generation tidy-up, settlements and roads.
-  **World generation plan written** (`docs/WORLDGEN_PLAN.md`, D226): waiting for Tom's go on step 1 (tidy-up, no
-  visible change) and his answers to its questions.
+  **World generation**: plan `docs/WORLDGEN_PLAN.md` (D226), Tom's answers in it; step 1 done (D227: stages, all
+  outputs identical, ~1 % slower). Next: step 2, the module design on paper for Tom's approval (and world types).
 
 ---
 

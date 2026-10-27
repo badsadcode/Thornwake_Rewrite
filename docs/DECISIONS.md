@@ -3383,6 +3383,25 @@ bit for bit, speed measured); (2) module design shown to Tom first; (3) revision
 first) + empty site and road stages, proved identical; (4) landforms one at a time, Tom's picks; then settlements and
 roads as placeholders. Nothing built yet; questions for Tom in the plan.
 
+## D227 — World generation step 1: the height pipeline split into stages, no visible change (2026-10-27)
+Tom: "start step 1: tidy up the terrain code with no visible change, and show me the stages, tests and speed".
+`TerrainSampler.Sample` (one ~230-line function with 20 revision branches) now walks nine stages: **Coast** (macro
+raster, coastline wiggle) → **Sea** (ends the walk at sea; revision 16) → **Continent** (base height, shore ramp) →
+**Detail** → **BiomeTerrain** (wetlands r11, landforms r12) → **Rivers** (r9, r13) → **Lakes** (r10, r15) → **Pools** (r11,
+r12, r14) → **PlayerEdits**. Water stages and their helpers moved to `TerrainSampler.Water.cs`; dunes, mesas and spires
+to `BiomeLandforms.cs` (the first of the landform modules to come); a table of stages and revisions at the top of
+`TerrainSampler.cs`. Code moved, not rewritten: every expression in its old order.
+* **Proof**: a new probe `--sample-hash` (Tests/WorldGen) hashes every field of `Sample` (height, land, mountain, detail,
+  water kind, level, body, plume) over 5 grids × 4 detail levels for 5 world types × 2 seeds × 11 terrain versions
+  (build-5 and preview-7 options, revisions 8–16): all 110 identical before and after. The 11 frozen fingerprint sets
+  and the full suite pass (75 tests, 4.5 M checks).
+* **Speed** (new probe `--speed`: 5 world types × 6 tiles of 128 × 128 at 1 m, one thread, best of 5): 1 158 ns per
+  sample before, 1 172 after (~1 %). A first split passing one shared struct between stages cost ~2.5 %; plain values
+  per stage, the stages marked for inlining and the sea path split out brought it to ~1 %; the rest is the river stage
+  (it cannot be inlined: it uses stack memory).
+Tom's answers to the plan's questions are in `docs/WORLDGEN_PLAN.md` (landforms before settlements; landform switches in
+New world for every world type; world types reworked too, Azgaar's generator as a reference).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

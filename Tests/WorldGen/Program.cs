@@ -15,6 +15,60 @@ string? filter = args.FirstOrDefault(a => a.StartsWith("--filter="))?[9..];
 string? maps = args.FirstOrDefault(a => a.StartsWith("--maps="))?[7..];
 bool record = args.Contains("--record");
 
+// Refactor guards (D227): --sample-hash prints a hash of everything TerrainSampler.Sample returns (all fields) over grids
+// at several detail levels, per profile, seed and terrain revision; --speed times single-threaded sampling.
+if (args.Contains("--sample-hash"))
+{
+    foreach (var profile in CoreTests.Profiles)
+        foreach (int seed in new[] { 42, -9 })
+        {
+            var baseSampler = CoreTests.Sampler(profile.Id, seed);
+            var variants = new List<(string Name, TerrainStyle Style)> { ("classic8", baseSampler.Plan.Style with { BankVariation = 0, ShoreSlope = 0, MouthBlend = 0, Revision = 8 }),
+                ("nomouth8", baseSampler.Plan.Style with { MouthBlend = 0, Revision = 8 }) };
+            for (int rev = 8; rev <= 16; rev++) variants.Add(($"r{rev}", baseSampler.Plan.Style with { Revision = rev }));
+            foreach (var (name, style) in variants)
+            {
+                var s = rev16(name) ? baseSampler : new TerrainSampler(new WorldPlan(baseSampler.Plan.Manifest, style: style));
+                using var sha = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+                var f = s.Plan.Layout.Land[0];
+                var bytes = new List<byte>();
+                foreach (var (cx, cz, spacing) in new[] { (profile.WorldSize * -.5, profile.WorldSize * -.5, profile.WorldSize / 48),
+                    (f.Center.X, f.Center.Z, 1.0), (f.Center.X + f.RadiusX * .5, f.Center.Z, 37.0), (f.Center.X - f.RadiusX * 1.1, f.Center.Z, 7.0),
+                    (f.Center.X - f.RadiusX * .3, f.Center.Z + f.RadiusZ * .2, 211.0) })
+                    foreach (double mw in new[] { 2.0, 8.0, 64.0, double.PositiveInfinity })
+                        for (int j = 0; j < 41; j++)
+                            for (int i = 0; i < 41; i++)
+                            {
+                                var t = s.Sample(cx + i * spacing, cz + j * spacing, mw);
+                                foreach (double d in new[] { t.Height, t.Land, t.Mountain, t.Detail, t.WaterLevel, t.Plume, (double)t.Water, t.WaterBody })
+                                    sha.AppendData(BitConverter.GetBytes(d));
+                            }
+                Console.WriteLine($"{profile.Id}/{seed}/{name} {Convert.ToHexString(sha.GetHashAndReset()).ToLowerInvariant()[..16]}");
+            }
+        }
+    return 0;
+    static bool rev16(string n) => n == "r16";
+}
+if (args.Contains("--speed"))
+{
+    var samplers = CoreTests.Profiles.Select(p => CoreTests.Sampler(p.Id, 42)).ToList();
+    var buffer = new double[128 * 128];
+    double best = double.MaxValue;
+    for (int round = 0; round < 5; round++)
+    {
+        var sw = Stopwatch.StartNew();
+        foreach (var s in samplers)
+        {
+            var f = s.Plan.Layout.Land[0];
+            for (int k = 0; k < 6; k++)
+                s.HeightGrid(f.Center.X + (k - 3) * f.RadiusX * .15, f.Center.Z + (k % 3 - 1) * f.RadiusZ * .15, 1, 128, 128, buffer);
+        }
+        best = Math.Min(best, sw.Elapsed.TotalMilliseconds);
+    }
+    Console.WriteLine($"SPEED {samplers.Count} profiles x 6 tiles of 128x128 at 1 m, single thread: best of 5 = {best:0.0} ms ({best * 1e6 / (samplers.Count * 6 * 128 * 128):0} ns per sample)");
+    return 0;
+}
+
 // Peak probe (screenshots of mountain skies): --peaks=<profile>,<seed>,<count> prints the highest points on a 4 km grid
 string? peaks = args.FirstOrDefault(a => a.StartsWith("--peaks="))?[8..];
 if (peaks != null)
