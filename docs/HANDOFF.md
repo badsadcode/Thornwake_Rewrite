@@ -1,9 +1,11 @@
-# Handoff — START HERE (2026-10-27, after build 111)
+# Handoff — START HERE (2026-10-27, after build 112)
 
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 111** (v0.9.111, return point `9572e13`, `dist/Preview-111`): Rain 2.1 (D221) — smooth streaks,
+* **Last build Tom has: 112** (v0.9.112, return point `c6b7cdd`, `dist/Preview-112`): refractive rain streaks (D223),
+  rain in depth without arcs or a circle, mist gusts in grey rain (D222). Tom's saved Rain look is still 1 (dithered).
+  Build 111 (`9572e13`, `dist/Preview-111`): Rain 2.1 (D221) — smooth streaks,
   rain in depth, rain-mist gusts (draft); launcher "Go to - windy downpour (Rain 2.1)". Build 110 (`da955fd`, `dist/Preview-110`): lens drops (D217–D220, off by
   default; launcher "Go to - lens drops in a downpour"), animals take cover (D217). Build 109 (`dc501e5`, `dist/Preview-109`): trees in the rain (D213), dry
   under cover and mist after rain (D214), wet characters and footstep splashes (D215), sun showers, roof-edge drips, lit
