@@ -11,7 +11,7 @@ Written for the next conversation (the previous one ran out of context). Everyth
   (`98ec6a9`): draft *Cloud bases → shaped* (D203, off by default). Note: Tom's settings file has `fx.wind_wisps=1`
   (plain swooshes, written by a capture while that was the default) — the strands need option 2. Builds 76–103 in the previous session:
   Atmosphere 2.0 M2 (rays) and M3 (clouds), moonlight, Living air, colour grading, many fixes. Decisions D143–D202 in
-  `docs/DECISIONS.md` (next: **D221**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
+  `docs/DECISIONS.md` (next: **D222**). Ideas not yet scheduled: `docs/ATMOSPHERE_IDEAS_BACKLOG.md`.
 * **Tom's settings were reset to a clean baseline** (D200, D201; `tools/settings_baseline.py`; backup
   `%APPDATA%/Thornwake/rewrite_settings.before-baseline-20261025.cfg`). Since then he chose Colour grading *Fantasy* and
   Rays strength 2.5 himself. Earlier his "hazy, bland, constantly in fog" look came from Wind strength 3.9 (a 20 m/s gale
@@ -48,7 +48,8 @@ Cloud shape = rounded):
   After build 108: trees in the rain, splash kinds, sound under leaves (D213). Next from Tom and Noor's
   `docs/Thornwake_Weather_2_0_Suggestions.md`: dry ground under shelter and mist after rain done (D214), wet characters and footstep
   splashes (D215), sun showers, roof-edge drips, lit rain (D216), animals seek cover and lens drops (D217) — Noor's list done.
-  Open from Tom: "the darkness" (not started; ask what he means, a dump would help).
+  "The darkness": Tom likes nights as they are (2026-10-27). Rain 2.1 (D221, after build 110): smooth streaks, rain in
+  depth, rain-mist gusts (draft).
 * Colour grading presets (D192): Tom will judge them in play.
 * Cloud drafts off by default: softness (D197), smooth shading (D198, costly), fine detail (D199). Cloud quality levels
   High/Medium/Low (D196). Sun behind clouds (D201) and glow by the haze (D202) are on.

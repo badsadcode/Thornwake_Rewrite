@@ -3280,6 +3280,30 @@ the drops melted into the picture and the runners crawled evenly from above the 
   stronger sideways lens (×3.2).
 Captures: `artifacts/lens-drops-bead.jpg`, `artifacts/lens-drops-runner.jpg`. Still off by default (Lens drops).
 
+## D221 — Rain 2.1: smooth streaks, rain in depth, rain-mist gusts (2026-10-27)
+Tom on build 110: nights stay as they are ("pitch black should be pitch black … I kind of like how it is"; the darkness
+captures: day rain and forest readable, very dark nights near black, as chosen); "the raindrops … are a little bit
+grainy"; and his and Noor's "Rain 2.1" suggestions (depth and density, visibility by rain, local rain-mist gusts,
+TAA-stable, settings for testing).
+* **Smooth streaks**: *Rain look* gains *by strength, smooth* (the new default; *by strength (build 110, dithered)* and
+  *build 104* stay). With TAA or FSR 2 the streak is drawn in the opaque pass cut by a scissor (`RainStreakSolid`), no
+  dither: thin solid lines (≥ ~2 px) whose edges the temporal filter softens; a fainter drop is thinner and shorter.
+  The hashed ones sparkled into broken dotted lines (`artifacts/rain-smooth-streaks.jpg`).
+* **Rain in depth** (`sim.rain_depth`, default *layers*): two cylinders of procedural rain around the camera at ~22 m
+  and ~45 m (`RainLayers.gdshader`), beyond the particle rain; a streak's place is its world angle and height, so turning
+  the view never moves it; it leans by the wind's drift along the cylinder on each side (consistent with the near drops
+  when facing across the wind both ways, `artifacts/rain-in-depth.jpg`), falls at the rain's speed, hidden by the scene,
+  fogged like it. First version too sparse to see; columns 10 / 8.5 cm, 70 / 90 % of them in a downpour, alpha up to
+  0.34, lines ≥ ~1 px (thinner, TAA blended them away).
+* **Visibility**: D210's rain veil already matches Noor's table (drizzle almost none … downpour: hills to silhouettes,
+  near things readable); unchanged.
+* **Rain-mist gusts** (`sim.rain_mist`, draft, default on; needs volumetric fog): a fog volume around the player
+  (80 × 24 × 80 m, `RainMist.gdshader`) of sheets stretched ×3.2 along the wind, carried at its speed, shredded by finer
+  noise, low (first ~14 m), in ~40 m patches; from rain ~0.4, full in a downpour, stronger in gusts, halved under cover.
+  First lit only by the (rain-dimmed) sun it read as a darkening veil — now it glows with the haze's own light.
+  (`fog()` takes no `return` either: the first version failed to compile and greyed the whole view.) Subtle in stills
+  (`artifacts/rain-mist-gusts.jpg`); to judge in motion. Cost not measured.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

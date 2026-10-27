@@ -60,7 +60,11 @@ void vertex() {
 	axis = dot(axis, axis) > 1e-8 ? normalize(axis) : fall_dir;
 	vec3 side = normalize(cross(axis, to_cam / max(d, 1e-3)) + vec3(1e-5));
 	// (a pixel is ~d × 0.0014 at 1080p: never thinner than ~1.2 pixels — thinner, they flickered; fainter instead)
+#ifdef RAIN_SOLID
+	float w0 = width * (0.7 + 0.6 * h), w = max(w0, d * 0.0026); // (a solid line needs ~2 px to stay unbroken)
+#else
 	float w0 = width * (0.7 + 0.6 * h), w = max(w0, d * 0.0017);
+#endif
 	float len = streak_len * (0.75 + 0.5 * hash(id + 3.7));
 	VERTEX = o + axis * len * (0.5 - UV.y) + side * w * (UV.x - 0.5);
 	bool hidden = cover_on == 1 && sheltered(o, axis);
@@ -79,6 +83,11 @@ void fragment() {
 	// (toward the flash's own blue-white, not a multiple of the night tint: multiplied they stayed dark lines in the flash)
 	ALBEDO = mix(tint.rgb, vec3(0.8, 0.86, 1.0), clamp(lightning.z * exp(-lightning.w / 4.0), 0.0, 1.0));
 	ALPHA = tint.a * v_alpha * across * along;
+#ifdef RAIN_SOLID
+	ALPHA = clamp(ALPHA * 2.6, 0.0, 1.0);
+	ALBEDO *= 0.9;
+	ALPHA_SCISSOR_THRESHOLD = 0.4;
+#endif
 #ifdef RAIN_HASHED
 	// (the core near-solid: at a streak's low alpha the dither left dotted lines that TAA could not fill on drops this fast;
 	// a thin solid line with dithered edges reads as rain, and TAA softens the edges)

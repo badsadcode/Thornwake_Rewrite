@@ -158,7 +158,7 @@ public partial class Atmosphere : Node3D
     }
 
     /// <summary>Whether the crown map is wanted (WorldLab asks before gathering the trees).</summary>
-    public bool WantsCrowns => GameSettings.RainTrees.Index == 1 && GameSettings.RainLook.Index == 1 && (Precip > .02f || _leafWet > .01f) && !Snowing;
+    public bool WantsCrowns => GameSettings.RainTrees.Index == 1 && GameSettings.RainLook.Index >= 1 && (Precip > .02f || _leafWet > .01f) && !Snowing;
     /// <summary>The first surface straight down at a scene x, z (WorldLab: terrain, rocks, objects, buildings), for splashes.</summary>
     public Func<float, float, float>? SurfaceY { get; set; }
     /// <summary>The terrain's own height at a scene x, z (WorldLab): a surface above it is a roof, a rock, a log (D213:
@@ -451,6 +451,23 @@ public partial class Atmosphere : Node3D
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         AddChild(_groundSplashes);
+        // Rain in depth (D221): two cylinders of procedural rain around the camera, ~22 m and ~45 m out.
+        var layerShader = GD.Load<Shader>("res://Game/Rewrite/RainLayers.gdshader");
+        for (int i = 0; i < 2; i++)
+        {
+            float r = i == 0 ? 22 : 45;
+            var m = new ShaderMaterial { Shader = layerShader };
+            m.SetShaderParameter("radius", r);
+            m.SetShaderParameter("cell", i == 0 ? .1f : .085f); // (D221: denser — at .16 / .12 the layers hardly showed)
+            m.SetShaderParameter("seed", 3.7f + i * 5.1f);
+            _rainLayers[i] = new MeshInstance3D
+            {
+                Mesh = new CylinderMesh { TopRadius = r, BottomRadius = r, Height = 50, RadialSegments = 48, Rings = 1, CapTop = false, CapBottom = false },
+                MaterialOverride = m, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, TopLevel = true, Visible = false,
+                ExtraCullMargin = 100, GIMode = GeometryInstance3D.GIModeEnum.Disabled,
+            };
+            AddChild(_rainLayers[i]);
+        }
         ApplyAll();
     }
 
@@ -800,15 +817,16 @@ public partial class Atmosphere : Node3D
             }
             else
             {
-                int want = GameSettings.RainLook.Index == 1 && !Snowing ? 24000 : 9000; // (D207: by strength, as many as the simulated model)
+                int want = GameSettings.RainLook.Index >= 1 && !Snowing ? 24000 : 9000; // (D207: by strength, as many as the simulated model)
                 if (_rainParticles.Amount != want) { _rainParticles.Amount = want; SetParticleKind(Snowing); }
                 _rainParticles.AmountRatio = Mathf.Clamp(p * 1.1f, 0, 1) * Math.Clamp(GameSettings.RainStrength.F, .2f, 1);
             }
             // Rain slants with the wind; snow drifts with it.
             if (_rainParticles.ProcessMaterial is ParticleProcessMaterial pm)
                 pm.Direction = new Vector3(Wind.Direction.X * Wind.Speed * slant, -1, Wind.Direction.Y * Wind.Speed * slant);
-            if (!Snowing && _particlesLook == 1) RainByStrength(p, cameraLocal);
+            if (!Snowing && _particlesLook >= 1) RainByStrength(p, cameraLocal);
             else if (_groundSplashes != null) _groundSplashes.Emitting = false;
+            if (Snowing || _particlesLook < 1) foreach (var layer in _rainLayers) if (layer != null) layer.Visible = false;
         }
         // Raindrop splashes (round 28): only in the simulated model, raining, over water close below the camera, and
         // fewer on rough water (a still crown would float over the troughs).
@@ -874,6 +892,7 @@ public partial class Atmosphere : Node3D
         RenderingServer.GlobalShaderParameterSet("cloud_region", GameSettings.CloudBase.Index == 1 && !float.IsNaN(_regionalGround) ? _regionalGround : 0f);
         RenderingServer.GlobalShaderParameterSet("cloud_sea", CloudSea);
         UpdateMist(delta, hour, originX, originZ);
+        UpdateRainMist((float)delta, originX, originZ);
         UpdateAirLoad(delta, hour);
         UpdateForestRays(delta);
         RenderingServer.GlobalShaderParameterSet("sun_dir_world", toSun);
@@ -1083,7 +1102,9 @@ public partial class Atmosphere : Node3D
         float k = Mathf.SmoothStep(.05f, .75f, p); // 0 drizzle … 1 downpour
         // (with TAA or FSR 2 the hashed streak, which writes motion vectors: the transparent one faded to ~10 % — RainStreakTaa)
         bool temporal = GameSettings.AntiAliasing.Index is 2 or 4;
-        var want = GD.Load<Shader>(temporal ? "res://Game/Rewrite/RainStreakTaa.gdshader" : "res://Game/Rewrite/RainStreak.gdshader");
+        // (D221: smooth — thin solid lines cut by a scissor, no dither grain; build 110 the hashed one)
+        var want = GD.Load<Shader>(!temporal ? "res://Game/Rewrite/RainStreak.gdshader"
+            : GameSettings.RainLook.Index == 2 ? "res://Game/Rewrite/RainStreakSolid.gdshader" : "res://Game/Rewrite/RainStreakTaa.gdshader");
         if (_rainStreakMat.Shader != want) _rainStreakMat.Shader = want;
         float fall = Mathf.Lerp(3.2f, 9.5f, k);
         var drift = Wind.Direction * Wind.Speed * Mathf.Lerp(.85f, .65f, k);
@@ -1115,6 +1136,7 @@ public partial class Atmosphere : Node3D
         if (p > .02f || _leafWet > .01f) UpdateCover(camera, dir);
         UpdateTrees(p, camera);
         bool splash = p > .3f && _groundSplashes != null && SurfaceY != null;
+        UpdateRainLayers(p, k, fall, drift, l, camera);
         if (_groundSplashes == null) return;
         _groundSplashes.Emitting = splash;
         if (!splash) { _splashPointNext = 0; return; }
@@ -1151,6 +1173,78 @@ public partial class Atmosphere : Node3D
     /// A first version cast 100 rays a frame and the splash points 96 more: ~3 ms of CPU a frame in a downpour.
     /// Also feeds the splash points (<see cref="SurfaceAt"/>), the streaks' shelter test and <see cref="Sheltered"/>.
     /// </summary>
+    // ---- rain-mist gusts (D221)
+    private FogVolume? _rainMist;
+    private ShaderMaterial? _rainMistMat;
+    private Vector2 _rainMistDrift;
+    private float _rainMistAmount;
+
+    /// <summary>
+    /// Rain-mist gusts (setting, draft): a fog volume around the player (80 × 24 × 80 m) whose sheets of wet air move with
+    /// the wind; from heavy rain on (≥ ~0.4, full in a downpour), stronger in gusts, halved under cover; eased over ~4 s.
+    /// </summary>
+    private void UpdateRainMist(float dt, double originX, double originZ)
+    {
+        float target = 0;
+        if (GameSettings.RainMist.Index == 1 && Environment.VolumetricFogEnabled && !Snowing)
+            target = Mathf.SmoothStep(.4f, .95f, Mathf.Clamp(Precip, 0, 1)) * (.45f + .55f * Wind.Gust) * (1 - .5f * Sheltered);
+        _rainMistAmount = Mathf.MoveToward(_rainMistAmount, target, dt / 4);
+        if (_rainMistAmount <= .002f) { if (_rainMist != null) _rainMist.Visible = false; return; }
+        if (_rainMist == null)
+        {
+            _rainMistMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/RainMist.gdshader") };
+            _rainMistMat.SetShaderParameter("noise3d", _cloudNoise);
+            _rainMist = new FogVolume { Size = new Vector3(80, 24, 80), Material = _rainMistMat, Shape = RenderingServer.FogVolumeShape.Box };
+            AddChild(_rainMist);
+        }
+        var cam = GetViewport()?.GetCamera3D();
+        if (cam == null) return;
+        _rainMist.Visible = true;
+        _rainMistDrift += Wind.Direction * Wind.Speed * dt;
+        if (_rainMistDrift.LengthSquared() > 8192f * 8192f) _rainMistDrift = Vector2.Zero;
+        var c = cam.GlobalPosition;
+        float ground = GroundY?.Invoke(c.X, c.Z) ?? c.Y - 1.7f;
+        _rainMist.GlobalPosition = new Vector3(c.X, ground + 10, c.Z);
+        float l = Mathf.Clamp(_daylight * 1.1f, .06f, 1);
+        _rainMistMat!.SetShaderParameter("amount", _rainMistAmount);
+        _rainMistMat.SetShaderParameter("ground", ground);
+        _rainMistMat.SetShaderParameter("origin", new Vector2((float)(originX % 8192), (float)(originZ % 8192)));
+        _rainMistMat.SetShaderParameter("drift", _rainMistDrift);
+        _rainMistMat.SetShaderParameter("wind_dir", Wind.Direction.Normalized());
+        _rainMistMat.SetShaderParameter("tint", new Color(.86f * l + .1f, .88f * l + .1f, .9f * l + .1f));
+        _rainMistMat.SetShaderParameter("glow", Environment.FogLightColor);
+    }
+
+    // ---- rain in depth (D221)
+    private readonly MeshInstance3D?[] _rainLayers = new MeshInstance3D?[2];
+    private float _rainClock;
+
+    /// <summary>
+    /// The two rain layers (setting Rain in depth): at the camera, world-fixed (no rotation), their streaks falling at
+    /// the rain's speed and leaning with the wind; the near one shows ~45 % of a downpour's columns, the far one finer and
+    /// denser (~70 %), both fainter in drizzle and none below ~0.08 of rain.
+    /// </summary>
+    private void UpdateRainLayers(float p, float k, float fall, Vector2 drift, float light, Vector3 camera)
+    {
+        bool on = GameSettings.RainDepth.Index == 1 && p > .08f;
+        _rainClock += (float)GetProcessDeltaTime();
+        for (int i = 0; i < 2; i++)
+        {
+            if (_rainLayers[i] is not { } layer) continue;
+            layer.Visible = on;
+            if (!on) continue;
+            layer.GlobalTransform = new Transform3D(Basis.Identity, camera);
+            var m = (ShaderMaterial)layer.MaterialOverride;
+            float amount = Mathf.SmoothStep(.08f, .9f, p) * (i == 0 ? .7f : .9f);
+            m.SetShaderParameter("amount", amount);
+            m.SetShaderParameter("fall", fall);
+            m.SetShaderParameter("drift", drift);
+            m.SetShaderParameter("clock", _rainClock);
+            m.SetShaderParameter("streak_len", Mathf.Lerp(.5f, 1.4f, k) * (i == 0 ? 1 : 1.3f));
+            m.SetShaderParameter("tint", new Color(.85f * light, .88f * light, .94f * light, Mathf.Lerp(.12f, .34f, k) * (i == 0 ? 1 : .8f)));
+        }
+    }
+
     private void UpdateCover(Vector3 camera, Vector3 dir)
     {
         bool on = GameSettings.RainShelter.Index == 1 && SurfaceY != null;
@@ -1430,7 +1524,7 @@ public partial class Atmosphere : Node3D
             _rainParticles.Lifetime = 1.4;
             pm.InitialVelocityMin = 13; pm.InitialVelocityMax = 17; pm.Gravity = new Vector3(0, -9.8f, 0); pm.Spread = 3;
             pm.TurbulenceEnabled = false;
-            if (_particlesLook == 1 && _rainStreakMat != null)
+            if (_particlesLook >= 1 && _rainStreakMat != null)
             {
                 _rainParticles.DrawPass1 = new QuadMesh { Size = Vector2.One };
                 _rainParticles.MaterialOverride = _rainStreakMat;

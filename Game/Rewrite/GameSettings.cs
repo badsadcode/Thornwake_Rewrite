@@ -566,11 +566,21 @@ public static class GameSettings
         "under the windward edge in wind), drops splash on the roof instead, and the rain sounds muffled while you are under " +
         "cover. Build 107: the rain falls through everything.",
         options: new[] { "build 107 (falls through)", "stops under cover" }));
-    public static readonly Setting RainLook = Add(new("sim.rain_look", "Simulation", "Rain look", 0, 1, 1, 1,
+    public static readonly Setting RainMist = Add(new("sim.rain_mist", "Simulation", "Rain-mist gusts", 0, 1, 1, 1,
+        "Draft (D221). In heavy rain, now and then soft sheets of wet air blow past you with the wind — shredded rain haze, " +
+        "low, more in gusts, none under cover. Needs Volumetric fog. Off: build 110.",
+        options: new[] { "off (build 110)", "on (draft)" }));
+    public static readonly Setting RainDepth = Add(new("sim.rain_depth", "Simulation", "Rain in depth", 0, 1, 1, 1,
+        "With Rain look by strength (D221). Layers: beyond the drops around you, finer and denser rain further out (two " +
+        "light shader layers, no extra particles), so a downpour fills the view rather than falling only near you. " +
+        "Build 110: the drops around you only.",
+        options: new[] { "build 110", "layers" }));
+    public static readonly Setting RainLook = Add(new("sim.rain_look", "Simulation", "Rain look", 0, 2, 1, 2,
         "By strength (D207): each drop a streak along its fall, slanted by the wind; drizzle fine, short and slow, a downpour " +
         "long, heavy and fast; in heavy rain the drops splash on the ground, rocks, roofs and leaves around you. Build 104: " +
-        "upright streaks the same in any rain, splashes only on water.",
-        options: new[] { "build 104", "by strength" }));
+        "upright streaks the same in any rain, splashes only on water. Smooth (D221): with TAA or FSR 2 the streaks are thin solid " +
+        "lines instead of dithered ones (build 110 looked a little grainy).",
+        options: new[] { "build 104", "by strength (build 110, dithered)", "by strength, smooth" }));
     public static readonly Setting RainStrength = Add(new("sim.rain", "Simulation", "Rain strength", .1, 4, .1, 1,
         "How hard it rains when rain is on (H). 1 = a heavy storm, exaggerated so runoff shows within a minute.", "×"));
 
