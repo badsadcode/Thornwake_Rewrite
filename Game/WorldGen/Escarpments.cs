@@ -58,7 +58,7 @@ public sealed class Escarpments : PlanLandform
             double x = _profile.CellX(i), z = _profile.CellZ(j), v = 0;
             foreach (var l in _lines)
                 if (x >= l.MinX - l.Depth && x <= l.MaxX + l.Depth && z >= l.MinZ - l.Depth && z <= l.MaxZ + l.Depth)
-                    v = Math.Max(v, Profile(l, x, z, face, mw, out _, out _, out _));
+                    v = Math.Max(v, Profile(l, x, z, face, mw, false, out _, out _, out _));
             channels[0][j * macro.Size + i] = (float)v;
         });
         var raised = _profile.Channel(0);
@@ -183,7 +183,7 @@ public sealed class Escarpments : PlanLandform
         for (int n = from; n < to; n++)
         {
             var l = _lines[_gridLines[n]];
-            double v = Profile(l, x, z, Math.Max(Face(l), minWavelength * .6), minWavelength, out double s, out double ux, out double uz);
+            double v = Profile(l, x, z, Math.Max(Face(l), minWavelength * .6), minWavelength, true, out double s, out double ux, out double uz);
             if (Math.Abs(s) < bestAbs) { bestAbs = Math.Abs(s); nx = ux; nz = uz; }
             best = Math.Max(best, v);
         }
@@ -206,20 +206,66 @@ public sealed class Escarpments : PlanLandform
     /// <summary>
     /// Raised height (m) of one escarpment at a point: the face of width <paramref name="face"/> centred on the
     /// (wobbling) edge, a flat top for 55 % of the depth, then a gentle fall behind; ends ramp down, height varies along.
+    /// With <paramref name="detail"/> (walking scale; the raster form has none of it, D233) the face is broken up:
+    /// ravines cut back into the plateau, buttresses jut out, the face is steeper or gentler along its length, the rim
+    /// is uneven, and a scree apron lies along the foot with bigger fans below the ravines.
     /// Also gives the signed distance to the edge and the unit normal toward the plateau.
     /// </summary>
-    private double Profile(Line l, double x, double z, double face, double minWavelength, out double s, out double nx, out double nz)
+    private double Profile(Line l, double x, double z, double face, double minWavelength, bool detail, out double s, out double nx, out double nz)
     {
         Nearest(l, x, z, out s, out double t, out nx, out nz);
         double lx = x - _ox, lz = z - _oz;
         s += 90 * Noise.Fbm(lx, lz, 700, 3, minWavelength, l.Seed) + 260 * Noise.Fbm(lx, lz, 4000, 2, minWavelength, l.Seed + 1);
         double ramp = l.Length * .18;
         double taper = DetMath.Smooth(t / ramp) * DetMath.Smooth((l.Length - t) / ramp);
-        if (taper <= 0 || s < -face) return 0;
+        // (features fade out on coarse tiles: they are tens of metres wide)
+        double feat = detail ? 1 - DetMath.Smooth((minWavelength - 40) / 120) : 0;
+        if (taper <= 0 || s < -face - feat * (l.Height * .95 + 130)) return 0;
         double h = l.Height * taper * (.7 + .6 * DetMath.Smooth(.5 + Noise.Fbm(t, 0, 9000, 2, 0, l.Seed + 2)));
-        double edge = DetMath.Smooth((s + face * .5) / face);
         double back = s <= l.Depth * .55 ? 1 : 1 - DetMath.Smooth((s - l.Depth * .55) / (l.Depth * .45));
-        return h * edge * back;
+        if (feat <= 0) return h * DetMath.Smooth((s + face * .5) / face) * back;
+
+        // Face steepness along the cliff (sheer walls and broken, gentler stretches) and an uneven rim.
+        double fw = face * (.6 + 1.1 * DetMath.Smooth(.5 + 1.4 * Noise.Fbm(t, 1, 900, 2, 0, l.Seed + 3)));
+        double rim = h * (1 + .06 * feat * Noise.Fbm(lx, lz, 160, 2, minWavelength, l.Seed + 4));
+        // Ravines and buttresses: one feature (or none) per 260 m of edge.
+        const double Spacing = 260;
+        long c0 = (long)Math.Floor(t / Spacing);
+        double shift = 0, ravine = 0, floor = 0, fan = 0;
+        for (long c = c0 - 1; c <= c0 + 1; c++)
+        {
+            ulong hash = Hashing.Lattice(c, 7, l.Seed + 5);
+            double kind = Hashing.Unit(hash), tc = (c + .2 + .6 * Hashing.Unit(Hashing.Mix(hash + 1))) * Spacing;
+            double width = Hashing.Unit(Hashing.Mix(hash + 2)), size = Hashing.Unit(Hashing.Mix(hash + 3)), a = Math.Abs(t - tc);
+            if (kind < .4)
+            {
+                // Ravine: a V-shaped notch narrowing back into the plateau, its floor rising from the foot to the rim.
+                double depth = (70 + 190 * size) * Math.Sqrt(Math.Min(1, h / 100)), w0 = 22 + 40 * width;
+                double into = Math.Clamp(s / depth, 0, 1), half = w0 * (1 - .75 * into);
+                double inside = DetMath.Smooth((half - a) / (half * .6 + 4)) * DetMath.Smooth((depth - s) / (depth * .25 + 8));
+                if (inside > ravine) { ravine = inside; floor = .85 * DetMath.Smooth(into); }
+                fan = Math.Max(fan, DetMath.Smooth((w0 * 1.8 - a) / (w0 * 1.2)));
+            }
+            else if (kind < .75)
+            {
+                // Buttress: the edge juts out toward the lowland.
+                double jut = (25 + 85 * size) * Math.Min(1, h / 80), half = 35 + 70 * width;
+                shift = Math.Min(shift, -jut * DetMath.Smooth((half - a) / (half * .6)));
+            }
+        }
+        double e = s - shift * feat;
+        double v = rim * DetMath.Smooth((e + fw * .5) / fw) * back;
+        if (ravine > 0) v += (h * floor * back - v) * ravine * feat;
+        // Scree apron: rock fallen from the face, ~22 % of the height at the foot, thinning out over 0.7 × the height;
+        // fans below ravines are higher and reach further.
+        double foot = e + fw * .5;
+        if (foot < fw)
+        {
+            double apron = h * (.7 + .5 * fan), top = h * (.22 + .12 * fan);
+            double scree = foot >= 0 ? top : top * Math.Pow(Math.Max(0, 1 + foot / apron), 2);
+            v = Math.Max(v, scree * feat);
+        }
+        return v;
     }
 
     /// <summary>Nearest point of the line: signed distance (positive on the plateau side, left of the line), position

@@ -3501,6 +3501,20 @@ Tom: "just let's do this" (landform no. 1 of `docs/LANDFORMS.md`). `Game/WorldGe
 * Seen in captures: the face reads as a long, even wall (straight top, uniform rock); ravines, buttresses and a scree
   apron would break it up — Tom's call.
 
+## D233 — Escarpments broken up: ravines, buttresses, scree, varied face (2026-10-27)
+Tom, on the even walls of D232: "add ravines, buttresses and scree to break up the wall, then show me again". All at
+walking scale only (the plan's raster form has none of it, so rivers and erosion are as in D232):
+* **Ravines and buttresses**: one feature (or none) per 260 m of edge, from the line's own seed: 40 % ravines — V-shaped
+  notches 70–260 m back into the plateau (shallower for low faces), narrowing inland, their floor rising from the
+  foot to 85 % of the height; 35 % buttresses — the edge juts 25–110 m toward the lowland over 70–210 m.
+* **Face**: steepness varies along the cliff (0.6–1.7 × the face width over ~900 m), the rim varies by ±6 %.
+* **Scree**: an apron along the foot, 22 % of the height at the cliff thinning out over 0.7 × the height; fans below
+  ravine mouths reach 34 % and 1.2 × the height.
+* Features fade out on coarse tiles (minimum wavelength 40–160 m). Tests unchanged and passing (19 of 24 faces
+  steeper than 50°); current fingerprints unchanged (their grids do not touch a face).
+* Seen in captures: buttresses and ravines read from the ground and from the air; the face itself is still sheer,
+  evenly textured rock, ravines look like slots, the scree hardly shows against the grass — next tuning is Tom's call.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
