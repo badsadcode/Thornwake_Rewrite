@@ -27,9 +27,9 @@ public sealed class WorldGenOptions
     public WorldGenOptions()
     {
         const string S = "World shape", T = "Terrain", W = "Rivers and lakes";
-        Classic = Add(new("gen.version", S, "Terrain version", 0, 6, 1, 0,
-            "Generate the world as in an earlier build, to compare or go back: Build 9 (before biomes), Build 8 (before estuaries and gentler bulging banks), Preview 7 (before smooth river mouths), Build 5 (before natural banks and steeper shores), Build 51 (before rivers inside lakes took the lake's level), Build 52 (before sea pockets inside lakes became lake).",
-            options: new[] { "current", "Build 9", "Build 8", "Preview 7", "Build 5", "Build 51", "Build 52" }));
+        Classic = Add(new("gen.version", S, "Terrain version", 0, 7, 1, 0,
+            "Generate the world as in an earlier build, to compare or go back: Build 9 (before biomes), Build 8 (before estuaries and gentler bulging banks), Preview 7 (before smooth river mouths), Build 5 (before natural banks and steeper shores), Build 51 (before rivers inside lakes took the lake's level), Build 52 (before sea pockets inside lakes became lake), Build 114 (before the Landforms settings; the same ground as current with them as designed).",
+            options: new[] { "current", "Build 9", "Build 8", "Preview 7", "Build 5", "Build 51", "Build 52", "Build 114" }));
         Size = Add(new("gen.size", S, "World size", 0, WorldRecipe.Sizes.Length - 1, 1, 4, "Width and length of the world. The world type adapts to any size.",
             options: Array.ConvertAll(WorldRecipe.Sizes, k => $"{k:0} km × {k:0} km")));
         var counts = new string[WorldRecipe.MaxContinents + 1];
@@ -78,6 +78,15 @@ public sealed class WorldGenOptions
             "of random biomes repeated all over the land, ignoring the climate (mountain biomes stay on mountains).",
             options: new[] { "realistic", "patchwork" }));
         PatchSize = Add(new("gen.patch_size", C, "Patch size", 2, 60, 1, 12, "Patchwork layout: typical size of a biome patch.", "km"));
+        // Landform modules (revision 17, D229): how often and how big, for every world type.
+        const string L = "Landforms";
+        foreach (var info in LandformCatalog.All)
+            _landforms.Add((info,
+                Add(new($"gen.landform.{info.Id}.amount", L, info.Name, 0, LandformCatalog.AmountNames.Length - 1, 1, LandformCatalog.DesignedAmount,
+                    $"How often {info.Name.ToLowerInvariant()} appear {info.Where} (off removes them). Current terrain version only.",
+                    options: LandformCatalog.AmountNames)),
+                Add(new($"gen.landform.{info.Id}.size", L, info.Name + " size", .5, 2, .05, 1,
+                    $"How big and high {info.Name.ToLowerInvariant()} are. Current terrain version only.", "×"))));
         // One toggle per built-in biome (custom biomes from the user folder are always included).
         const string B = "Biomes in this world";
         foreach (var (id, name) in BuiltInBiomes())
@@ -86,6 +95,7 @@ public sealed class WorldGenOptions
 
     public readonly Setting Latitude, LatitudeSpan, Warmth, Wetness, BiomePlacement, PatchSize;
     private readonly List<(string Id, Setting Toggle)> _biomeToggles = new();
+    private readonly List<(LandformInfo Info, Setting Amount, Setting Size)> _landforms = new();
 
     private static IEnumerable<(string, string)> BuiltInBiomes()
     {
@@ -111,6 +121,7 @@ public sealed class WorldGenOptions
         Set(ForestCover, 1.15); Set(ForestDensity, 1.2); Set(Rocks, 1); Set(Props, 1);
         Set(Latitude, 45); Set(LatitudeSpan, 0); Set(Warmth, 0); Set(Wetness, 1);
         foreach (var s in new[] { Hills, Rock, CoastDetail, Erosion, Shores, Rivers, RiverWidth, Meanders, Wander, WidthVariation, Banks, Lakes, Deltas }) Set(s, 1);
+        foreach (var (_, amount, size) in _landforms) { Set(amount, LandformCatalog.DesignedAmount); Set(size, 1); }
         // A world type may start from its own parameter values (saved custom types).
         foreach (var (key, value) in recipe.Settings)
             if (All.Find(x => x.Key == key) is { } setting && !ShapeKeys.Contains(key)) Set(setting, value);
@@ -133,8 +144,8 @@ public sealed class WorldGenOptions
 
     public WorldChoices Choices => ChoicesBase with { ScaleRevision = Era >= 2 ? 8 : 9 };
 
-    /// <summary>The terrain version as an age: 0 = current, Build 51 or Build 52 (the same apart from <see cref="WorldStyle.Revision"/>),
-    /// 1 = Build 9, 2 = Build 8, 3 = Preview 7, 4 = Build 5 (Builds 51 and 52 were added after them, at indices 5 and 6).</summary>
+    /// <summary>The terrain version as an age: 0 = current, Build 51, 52 or 114 (the same apart from <see cref="TerrainStyle.Revision"/>),
+    /// 1 = Build 9, 2 = Build 8, 3 = Preview 7, 4 = Build 5 (Builds 51, 52 and 114 were added after them, at indices 5–7).</summary>
     private int Era => Classic.Index >= 5 ? 0 : Classic.Index;
 
     private WorldChoices ChoicesBase => new()
@@ -152,9 +163,13 @@ public sealed class WorldGenOptions
     /// <summary>True when every parameter equals the preset (the world is then exactly the preset world).</summary>
     public bool IsPreset => All.TrueForAll(s => s.Value == s.Default);
 
-    /// <summary>The profile and terrain style these parameters describe, starting from <paramref name="preset"/>.</summary>
-    public (WorldProfile Profile, TerrainStyle Style) Build(WorldRecipe recipe)
+    /// <summary>The profile and terrain style these parameters describe, starting from <paramref name="recipe"/>.</summary>
+    /// <param name="pinnedRevision">The terrain revision a world recorded (its <c>--revision=</c>), used for the
+    /// "current" terrain version so a world never changes when a new revision ships (D229); null = the newest.</param>
+    public (WorldProfile Profile, TerrainStyle Style) Build(WorldRecipe recipe, int? pinnedRevision = null)
     {
+        // (revisions 14 and 15 are "current" with an older revision, as Builds 51 and 52; older ones differ in more)
+        int current = pinnedRevision is >= 14 and <= TerrainStyle.CurrentRevision ? pinnedRevision.Value : TerrainStyle.CurrentRevision;
         var profile = recipe.Resolve(Choices);
         var b = TerrainStyle.For(profile);
         var style = b with
@@ -172,7 +187,8 @@ public sealed class WorldGenOptions
             BankVariation = Era == 4 ? 0 : Banks.Value,
             ShoreSlope = Era == 4 ? 0 : Shores.Value,
             MouthBlend = Era >= 3 ? 0 : 1,
-            Revision = Era >= 2 ? 8 : Era == 1 ? 9 : Classic.Index == 5 ? 14 : Classic.Index == 6 ? 15 : 16,
+            Revision = Era >= 2 ? 8 : Era == 1 ? 9 : Classic.Index == 5 ? 14 : Classic.Index == 6 ? 15 : Classic.Index == 7 ? 16 : current,
+            Landforms = _landforms.ToDictionary(l => l.Info.Id, l => new LandformSetting(LandformCatalog.AmountValues[l.Amount.Index], l.Size.Value)),
             ForestCover = ForestCover.Value, ForestDensity = ForestDensity.Value, RockAmount = Rocks.Value, PropAmount = Props.Value,
             LakeShare = b.LakeShare * Lakes.Value,
             DeltaMinCatchmentKm2 = Deltas.Value <= 0 ? double.PositiveInfinity : b.DeltaMinCatchmentKm2 / Deltas.Value,

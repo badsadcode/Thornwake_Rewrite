@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Thornwake.WorldGen;
@@ -30,6 +31,14 @@ public sealed class WorldPlan
     public int LandformShapes { get; }
     /// <summary>Land share of the heightmap template's grid (0 = no heightmap).</summary>
     public double HeightmapLandShare { get; }
+    /// <summary>Big landform modules applied before erosion (revision 17 on; none exist yet).</summary>
+    public IReadOnlyList<PlanLandform> PlanLandforms { get; }
+    /// <summary>Settlement sites and the roads between them (docs/WORLDGEN_PLAN.md step 3): empty in revision 17.</summary>
+    public IReadOnlyList<WorldSite> Sites { get; } = Array.Empty<WorldSite>();
+    public IReadOnlyList<WorldRoad> Roads { get; } = Array.Empty<WorldRoad>();
+
+    /// <summary>The stages of planning a world, in order, as reported to <c>stage</c> (loading screen messages).</summary>
+    public static readonly string[] StageNames = { "land shape", "big landforms", "erosion, rivers and lakes", "climate", "biomes" };
 
     /// <summary>Raster resolution: cells of at most ~750 m, between 512 and 2048 cells across.</summary>
     public static int RasterSizeFor(WorldProfile profile)
@@ -38,9 +47,11 @@ public sealed class WorldPlan
         return Math.Clamp(size, 512, 2048);
     }
 
-    public WorldPlan(WorldManifest manifest, int? rasterSize = null, TerrainStyle? style = null, BiomeRegistry? biomes = null)
+    /// <param name="stage">Told the index in <see cref="StageNames"/> of each stage as it starts (from this thread).</param>
+    public WorldPlan(WorldManifest manifest, int? rasterSize = null, TerrainStyle? style = null, BiomeRegistry? biomes = null, Action<int>? stage = null)
     {
         var timer = Stopwatch.StartNew();
+        stage?.Invoke(0);
         Manifest = manifest;
         Layout = new WorldLayout(manifest);
         Style = style ?? TerrainStyle.For(manifest.Profile);
@@ -121,6 +132,10 @@ public sealed class WorldPlan
             }
         }
         LandformShapes = forms.ShapeCount;
+        // Big landforms (revision 17 on), before erosion, so rivers flow round, cut through or fill them.
+        PlanLandforms = Style.Revision >= LandformCatalog.SettingsSince ? LandformCatalog.PlanModules(manifest, Style) : Array.Empty<PlanLandform>();
+        if (PlanLandforms.Count > 0) stage?.Invoke(1);
+        foreach (var form in PlanLandforms) form.Shape(Macro, manifest, Style.Landform(form.Info.Id));
         RasterMilliseconds = timer.Elapsed.TotalMilliseconds;
 
         // Macro height above sea level: the A4 lowland ramp from the coast plus faded relief; sea floor below 0.
@@ -134,13 +149,16 @@ public sealed class WorldPlan
             h = Math.Max(p.LowlandHeight * DetMath.Smooth(land / .08) * .05, h);
             height[k] = Math.Max(h, .5); // every land cell stays above the sea for routing
         }
+        stage?.Invoke(2);
         var hydroTimer = Stopwatch.StartNew();
         ulong riverSeed = Hashing.FeatureSeed(manifest.Seed, 100 + WorldManifest.CurrentGenerator, manifest.ProfileDigest, "rivers");
         Hydrology = new Hydrology(Macro, height, p, Style, riverSeed);
         Hydrology.BuildMilliseconds = hydroTimer.Elapsed.TotalMilliseconds;
         for (int k = 0; k < height.Length; k++) heightRaster[k] = (float)height[k];
         Hydrology.RefineSurfaces(Style);
+        stage?.Invoke(3);
         Climate = new Climate(this, Style.Climate);
+        stage?.Invoke(4);
         Biomes = new BiomeMap(this, Climate, Style.Climate.Biomes ? biomes ?? BiomeRegistry.Current ?? BiomeRegistry.ClassicOnly : BiomeRegistry.ClassicOnly);
         BuildMilliseconds = timer.Elapsed.TotalMilliseconds;
     }

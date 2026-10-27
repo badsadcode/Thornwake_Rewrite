@@ -28,7 +28,9 @@ public readonly record struct TerrainSample(
 /// 1b Sea (ends the walk)     TerrainSampler.cs          16 (a sea pocket inside a lake's reach is lake)
 /// 1c Continent               TerrainSampler.cs          -  (ShoreSlope, MouthBlend: build 5 / preview 7 options)
 /// 2  Detail                  TerrainSampler.cs          -
-/// 3  BiomeTerrain            TerrainSampler.cs          11 (wetlands), 12 (all biomes; landforms: BiomeLandforms.cs)
+/// 3  BiomeTerrain            TerrainSampler.cs          11 (wetlands), 12 (all biomes; landforms: BiomeLandforms.cs),
+///                                                       17 (landform module settings, LandformModules.cs)
+/// 3b Sites, 3c Roads         (none yet)                 17 (the plan's lists exist, still empty: docs/WORLDGEN_PLAN.md step 3)
 /// 4  Rivers                  TerrainSampler.Water.cs    9 (blended along, river profiles), 13 (tributaries on floodplains)
 /// 5  Lakes                   TerrainSampler.Water.cs    10 (fill within reach, low shore), 15 (a river in a lake is lake)
 /// 6  Pools                   TerrainSampler.Water.cs    11, 12 (shore stretch, seam fade, grow), 14 (mask is water, size ladder)
@@ -70,7 +72,7 @@ public sealed partial class TerrainSampler
         _poolSeed = Seed("pools");
         _landformSeed = Seed("landforms");
         _duneAngle = Hashing.Unit(Hashing.Mix(_landformSeed)) * Math.Tau; // prevailing sand-moving wind of this world
-        _landforms = new BiomeLandforms(_hydrology, _landformSeed, _duneAngle);
+        _landforms = new BiomeLandforms(_hydrology, _landformSeed, _duneAngle, _style);
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
@@ -91,6 +93,8 @@ public sealed partial class TerrainSampler
         Detail(lx, lz, minWavelength, land, mountainShare, out double inland, out double detail, out double roughness);
         BiomeTerrain(x, z, lx, lz, minWavelength, baseHeight, inland, ref detail, out bool wetland, out double poolCover, out double poolDepth,
             out double poolSize, out double poolChannels, out double flatten);
+        // (3b sites and 3c roads come here once the plan has any: pads and corridors after the landforms, before the
+        // water, so rivers and lakes still win. Plan.Sites and Plan.Roads are empty in revision 17.)
         var water = WaterKind.None; double level = double.NaN; int body = -1; double riverDamp = 1;
         double height = Rivers(x, z, minWavelength, baseHeight, inland, detail, ref riverDamp, ref water, ref level, ref body);
         double lakePlume = 0, lakeCells = double.PositiveInfinity;

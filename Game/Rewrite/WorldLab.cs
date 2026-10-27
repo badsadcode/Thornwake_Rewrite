@@ -147,6 +147,7 @@ public partial class WorldLab : Node3D
                 foreach (var r in _recipes) _profileList.AddItem(r.Name);
             }
             if (arg.StartsWith("--seed=")) seed = int.Parse(arg[7..], CultureInfo.InvariantCulture);
+            if (arg.StartsWith("--revision=")) _pinnedRevision = int.Parse(arg[11..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--world-smoke=")) _smokeDirectory = arg[14..];
             // Single screenshot: --world-shot=<png> --at=x,z [--view=yaw,pitch,zoom] [--msaa=0|2|4] [--fly-height=m] [--hour=h] [--menu=tab]
             if (arg.StartsWith("--world-shot=")) { _shotPath = arg[13..]; _smokeDirectory = Path.GetDirectoryName(_shotPath) ?? "."; _atmosphere.StillShot = true; }
@@ -248,17 +249,22 @@ public partial class WorldLab : Node3D
         if (!int.TryParse(_seedEdit.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seed)) { _status = "Seed must be a whole number."; return; }
         var recipe = _recipes[Math.Max(0, _profileList.Selected)];
         WorldProfile profile; TerrainStyle style;
-        try { (profile, style) = _gen.Build(recipe); }
+        try { (profile, style) = _gen.Build(recipe, _pinnedRevision); }
         catch (Exception error) { _status = "These world parameters are not valid: " + error.Message; return; }
+        _pinnedRevision = null; // (a world loaded from its arguments keeps its revision; the next new world is current)
         _custom = !_gen.IsPreset;
         _worldTypeJson = recipe.Custom ? recipe.ToJson() : null; // (the world built, not whatever the list shows later)
-        _worldArgs = $"--preset={recipe.Id} --seed={seed}" + (_custom ? " " + string.Join(" ", _gen.All.Select(g => $"--set={g.Key}={g.Value.ToString("R", CultureInfo.InvariantCulture)}")) : "");
-        _overlay.Text = $"Generating {profile.Name}{(_custom ? " (custom)" : "")}, seed {seed}…\ncontinents → erosion → rivers and lakes";
+        // The terrain revision is recorded, so the world is the same after a newer revision ships (D229).
+        _worldArgs = $"--preset={recipe.Id} --seed={seed} --revision={style.Revision}" +
+            (_custom ? " " + string.Join(" ", _gen.All.Select(g => $"--set={g.Key}={g.Value.ToString("R", CultureInfo.InvariantCulture)}")) : "");
+        _overlayHead = $"Generating {profile.Name}{(_custom ? " (custom)" : "")}, seed {seed}…";
+        _generationStage = 0;
+        _overlay.Text = _overlayHead;
         _overlay.Visible = true;
         _generationStarted = Time.GetTicksMsec();
         // The previewed world is exactly this one: reuse its plan instead of generating it again.
-        var reuse = _previewPlan != null && _previewKey == PlanKey(seed) ? _previewPlan : null;
-        _generation = Task.Run(() => new TerrainSampler(reuse ?? new WorldPlan(WorldManifest.Create(seed, profile), style: style)));
+        var reuse = _previewPlan != null && _previewKey == PlanKey(seed) && _previewPlan.Style.Revision == style.Revision ? _previewPlan : null;
+        _generation = Task.Run(() => new TerrainSampler(reuse ?? new WorldPlan(WorldManifest.Create(seed, profile), style: style, stage: i => _generationStage = i)));
     }
 
     private const string CustomTypes = "user://world_types";
@@ -816,6 +822,7 @@ public partial class WorldLab : Node3D
         _processStartUs = Time.GetTicksUsec();
         _hitch.Begin("process");
         if (_generation is { IsCompleted: true }) FinishGeneration();
+        else if (_generation != null) _overlay.Text = $"{_overlayHead}\n{WorldPlan.StageNames[Math.Clamp(_generationStage, 0, WorldPlan.StageNames.Length - 1)]}";
         if (_preview is { IsCompleted: true }) FinishPreview();
         StepJoining(delta);
         TeleportTest(delta);
@@ -1405,6 +1412,11 @@ public partial class WorldLab : Node3D
     }
 
     private string _worldArgs = "";
+    /// <summary>The terrain revision the next generated world keeps (from its arguments: a save, the host, a Reproduce
+    /// line); null = the newest.</summary>
+    private int? _pinnedRevision;
+    private string _overlayHead = "";
+    private volatile int _generationStage;
     private string? _worldTypeJson;
 
     /// <summary>

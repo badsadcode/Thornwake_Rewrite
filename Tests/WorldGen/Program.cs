@@ -25,10 +25,10 @@ if (args.Contains("--sample-hash"))
             var baseSampler = CoreTests.Sampler(profile.Id, seed);
             var variants = new List<(string Name, TerrainStyle Style)> { ("classic8", baseSampler.Plan.Style with { BankVariation = 0, ShoreSlope = 0, MouthBlend = 0, Revision = 8 }),
                 ("nomouth8", baseSampler.Plan.Style with { MouthBlend = 0, Revision = 8 }) };
-            for (int rev = 8; rev <= 16; rev++) variants.Add(($"r{rev}", baseSampler.Plan.Style with { Revision = rev }));
+            for (int rev = 8; rev <= TerrainStyle.CurrentRevision; rev++) variants.Add(($"r{rev}", baseSampler.Plan.Style with { Revision = rev }));
             foreach (var (name, style) in variants)
             {
-                var s = rev16(name) ? baseSampler : new TerrainSampler(new WorldPlan(baseSampler.Plan.Manifest, style: style));
+                var s = current(name) ? baseSampler : new TerrainSampler(new WorldPlan(baseSampler.Plan.Manifest, style: style));
                 using var sha = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
                 var f = s.Plan.Layout.Land[0];
                 var bytes = new List<byte>();
@@ -47,7 +47,7 @@ if (args.Contains("--sample-hash"))
             }
         }
     return 0;
-    static bool rev16(string n) => n == "r16";
+    static bool current(string n) => n == "r" + TerrainStyle.CurrentRevision;
 }
 if (args.Contains("--speed"))
 {

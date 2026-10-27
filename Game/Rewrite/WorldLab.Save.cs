@@ -74,7 +74,9 @@ public partial class WorldLab
             if (GameSettings.All.FirstOrDefault(s => s.Key == key) is { } s && GameSettings.AffectsWorld(s)) s.Value = value;
         _pendingSave = save;
         StopFishing(null);
-        ((IClientGame)this).LoadWorld(save.WorldArgs, save.WorldTypeJson, null);
+        // Saves before build 115 did not record the terrain revision: they were made with revision 16 or older (D229).
+        string args = save.WorldArgs.Contains("--revision=") ? save.WorldArgs : save.WorldArgs + " --revision=16";
+        ((IClientGame)this).LoadWorld(args, save.WorldTypeJson, null);
         _status = "Loading " + Path.GetFileNameWithoutExtension(path) + "…";
         GD.Print("LOADING " + path);
     }

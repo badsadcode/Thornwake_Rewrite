@@ -120,6 +120,13 @@ On paper in `docs/WORLDGEN_MODULES_DESIGN.md`: big and local landform modules, p
 in New world, world types split into land shape + landforms + climate + parameters, revision pinning in saves, and the
 hooks for loading messages, sea and lake beds, sites and roads. Waiting for Tom's approval.
 
+## Revision 17 — done (D229)
+
+The module frame with nothing visible: dunes, mesas and spires as modules with amount and size in *New world →
+Landforms*, the plan hook for big landforms, empty site and road lists, stage names on the loading overlay, and worlds
+that record their terrain revision (saves before it load as 16; *Terrain version* has *Build 114*). Proved identical to
+16 at the designed settings.
+
 ## Questions for you (answered above)
 
 * Is this order right (landforms before settlements), or should sites and roads come first?

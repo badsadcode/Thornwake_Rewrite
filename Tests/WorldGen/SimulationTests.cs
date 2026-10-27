@@ -12,6 +12,8 @@ internal static class SimulationTests
         T.Run("Lakes: no sea pocket inside a lake (revision 16)", LakeSeaPockets, filter);
         T.Run("Wetlands: real pools, never dry ground below a pool surface (revision 11)", Wetlands, filter);
         T.Run("Landforms: dunes, mesas and needle spires where their biomes are (revision 12)", Landforms, filter);
+        T.Run("Landforms: each module's switch changes only its own landform (revision 17)", LandformSwitches, filter);
+        T.Run("Landforms: water wins with every module at its largest (revision 17)", LandformWater, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -755,6 +757,103 @@ internal static class SimulationTests
         for (int i = 0; i < 50; i++) if (s.Height(-558000 + i * 7, -398000) == s11.Height(-558000 + i * 7, -398000)) same++;
         T.Check(plan.Biomes.Pool[a].Def.Id == "temperate-forest" && same == 50, $"no landforms in {plan.Biomes.Pool[a].Def.Id} ({same}/50 unchanged)");
         T.Check(s.Height(x0 + 123.4, z0 - 56.7) == new TerrainSampler(plan).Height(x0 + 123.4, z0 - 56.7), "deterministic");
+    }
+
+    /// <summary>A sampler of the vast test world with these landform settings (others as designed).</summary>
+    private static TerrainSampler WithLandforms(int revision = TerrainStyle.CurrentRevision, params (LandformInfo Info, double Amount, double Size)[] settings)
+    {
+        var plan = Vast.Value;
+        return new TerrainSampler(new WorldPlan(plan.Manifest, style: plan.Style with
+        {
+            Revision = revision, Landforms = settings.ToDictionary(t => t.Info.Id, t => new LandformSetting(t.Amount, t.Size)),
+        }));
+    }
+
+    private static void LandformSwitches()
+    {
+        var s = new TerrainSampler(Vast.Value);
+        // Probe lines in the desert, the badlands and the needle rocks (see Landforms above).
+        var lines = new (string Name, double X, double Z, double Dx, double Dz)[]
+            { ("desert", 330000, -170000, .7, .7), ("badlands", -531000, -250000, 10, 0), ("needle rocks", -410000, 350000, 2, 0) };
+        double[] Line(TerrainSampler t, int k) { var l = lines[k]; return Enumerable.Range(0, 400).Select(i => t.Height(l.X + i * l.Dx, l.Z + i * l.Dz)).ToArray(); }
+        var designed = Enumerable.Range(0, lines.Length).Select(k => Line(s, k)).ToArray();
+        int Changed(double[] a, double[] b) => a.Where((v, i) => v != b[i]).Count();
+        // Each module off: its own landform changes; every point where its biome strength is 0 stays bit for bit the same
+        // (biomes blend at their edges, so a trace of dunes may reach the needle rocks: those points may change).
+        var plan = Vast.Value;
+        double Strength(LandformInfo info, int k, int i)
+        {
+            var l = lines[k];
+            if (!plan.Biomes.TerrainAt(l.X + i * l.Dx, l.Z + i * l.Dz, out var mods, allBiomes: true)) return 0;
+            return info == LandformCatalog.Dunes ? mods.Dunes : info == LandformCatalog.Mesas ? mods.Mesas : mods.Spires;
+        }
+        foreach (var (info, own) in new[] { (LandformCatalog.Dunes, 0), (LandformCatalog.Mesas, 1), (LandformCatalog.Spires, 2) })
+        {
+            var off = WithLandforms(settings: (info, 0, 1));
+            var lineOff = Enumerable.Range(0, lines.Length).Select(k => Line(off, k)).ToArray();
+            int ownChanged = Changed(designed[own], lineOff[own]), outside = 0, wrong = 0;
+            for (int k = 0; k < lines.Length; k++)
+                for (int i = 0; i < 400; i++)
+                    if (Strength(info, k, i) <= 0) { outside++; if (designed[k][i] != lineOff[k][i]) wrong++; }
+            T.Note($"{info.Name} off: {ownChanged}/400 heights changed in the {lines[own].Name}; {outside} points outside its biomes, {wrong} changed");
+            T.Check(ownChanged > 40, $"{info.Name} off changes the {lines[own].Name} ({ownChanged}/400)");
+            T.Check(outside > 300 && wrong == 0, $"{info.Name} off leaves ground outside its biomes unchanged ({wrong} of {outside} changed)");
+        }
+        // Mesas only add ground: off is never higher; common raises more of the badlands than designed, rare less.
+        var mesasOff = Line(WithLandforms(settings: (LandformCatalog.Mesas, 0, 1)), 1);
+        int Raised(double[] l) => l.Where((v, i) => v - mesasOff[i] > 5).Count();
+        int rare = Raised(Line(WithLandforms(settings: (LandformCatalog.Mesas, .4, 1)), 1)), normal = Raised(designed[1]),
+            common = Raised(Line(WithLandforms(settings: (LandformCatalog.Mesas, 1.6, 1)), 1)),
+            everywhere = Raised(Line(WithLandforms(settings: (LandformCatalog.Mesas, 2.5, 1)), 1));
+        T.Note($"badlands raised > 5 m by mesas: rare {rare}, normal {normal}, common {common}, everywhere {everywhere} of 400");
+        T.Check(designed[1].Where((v, i) => v < mesasOff[i] - 1e-9).Count() == 0, "mesas only add ground");
+        T.Check(rare < normal * .7 && common > normal * 1.15 && everywhere > common, $"mesa amount orders the raised share ({rare} < {normal} < {common} < {everywhere})");
+        // Spires: bigger size gives taller needles; dunes: bigger size gives more relief.
+        double Relief(double[] l) => l.Max() - l.Min();
+        double spiresBig = Relief(Line(WithLandforms(settings: (LandformCatalog.Spires, 1, 2)), 2)), spiresNormal = Relief(designed[2]);
+        double dunesBig = Relief(Line(WithLandforms(settings: (LandformCatalog.Dunes, 1, 2)), 0)), dunesNormal = Relief(designed[0]);
+        T.Note($"relief: needle rocks {spiresNormal:0} m → {spiresBig:0} m at size 2, desert {dunesNormal:0.0} m → {dunesBig:0.0} m");
+        T.Check(spiresBig > spiresNormal * 1.3, "bigger spires stand taller");
+        T.Check(dunesBig > dunesNormal * 1.3, "bigger dunes give more relief");
+        // Older revisions ignore the settings (their worlds never change).
+        var old = WithLandforms(16, (LandformCatalog.Dunes, 0, 1), (LandformCatalog.Mesas, 2.5, 2), (LandformCatalog.Spires, 0, 1));
+        T.Check(Enumerable.Range(0, lines.Length).All(k => Changed(designed[k], Line(old, k)) == 0), "revision 16 ignores the landform settings");
+    }
+
+    private static void LandformWater()
+    {
+        // Every water point of the designed world among the landforms keeps its water and level with every module at
+        // its largest: rivers carve through, lakes keep their basins, the sea is never touched.
+        var plan = Vast.Value;
+        var s = new TerrainSampler(plan);
+        var big = WithLandforms(settings: new[] { LandformCatalog.Dunes, LandformCatalog.Mesas, LandformCatalog.Spires }.Select(i => (i, 2.5, 2.0)).ToArray());
+        double half = plan.Profile.WorldSize * .5;
+        int water = 0, lost = 0, dryCells = 0, changed = 0;
+        for (double z = -half; z < half; z += 1500)
+            for (double x = -half; x < half; x += 1500)
+            {
+                if (!plan.Biomes.TerrainAt(x, z, out var mods, allBiomes: true) || mods.Dunes + mods.Mesas + mods.Spires <= 0) continue;
+                // A small patch at each spot, so river channels and lake shores are met, not only open ground.
+                for (int j = 0; j < 6; j++)
+                    for (int i = 0; i < 6; i++)
+                    {
+                        double px = x + i * 9, pz = z + j * 9;
+                        var a = s.Sample(px, pz);
+                        var b = big.Sample(px, pz);
+                        if (a.Height != b.Height) changed++;
+                        if (a.Water == WaterKind.None) { dryCells++; continue; }
+                        water++;
+                        // (a river crossing another's valley floor flows at that floor, which follows the ground: its
+                        // level may move by a hair, revision 13; lakes and the sea keep theirs exactly)
+                        double slack = a.Water == WaterKind.River ? .01 : 0;
+                        if (b.Water != a.Water || Math.Abs(b.WaterLevel - a.WaterLevel) > slack || !(b.Height < b.WaterLevel))
+                            if (lost++ < 3) Console.WriteLine($"       {a.Water} at {px:0},{pz:0}: level {a.WaterLevel:R} → {b.Water} {b.WaterLevel:R}, ground {a.Height:R} → {b.Height:R}");
+                    }
+            }
+        T.Note($"landform ground: {dryCells} dry and {water} water points sampled, {changed} heights changed by the largest settings");
+        T.Check(changed > 1000, $"the largest settings change the ground ({changed})");
+        T.Check(water > 100, $"water points among the landforms ({water})");
+        T.Check(lost == 0, $"every water point keeps its water and level ({lost} lost)");
     }
 
     private static void Wetlands()

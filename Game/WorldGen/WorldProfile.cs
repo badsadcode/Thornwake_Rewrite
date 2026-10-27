@@ -138,8 +138,21 @@ public sealed record TerrainStyle
     /// ending on straight cell lines (round 7); 11 = wetland biomes carve real standing-water pools and flatten their
     /// ground (round 8); 12 = biome landforms: dunes, mesas, needle spires (round 9); 13 = a river crossing another river's
     /// lower valley floor flows at that floor instead of perching above it (round 14); 14 = wetland water follows the
-    /// pool mask, not the ground's gullies (no straight parallel channels; round 20).</summary>
-    public int Revision { get; init; } = 16;
+    /// pool mask, not the ground's gullies (no straight parallel channels; round 20); 15 = a lake's outlet keeps the
+    /// lake's level inside the lake; 16 = a sea pocket inside a lake's reach is lake; 17 = landform modules with their
+    /// own settings (<see cref="Landforms"/>), the same ground as 16 at the designed settings (D229).</summary>
+    public int Revision { get; init; } = CurrentRevision;
+
+    /// <summary>The terrain revision new worlds get. Worlds record theirs (<c>--revision=</c>), so a new revision never
+    /// changes an existing world (D229).</summary>
+    public const int CurrentRevision = 17;
+
+    /// <summary>Landform module settings by module id (revision 17 on; missing = as designed). See <see cref="LandformCatalog"/>.</summary>
+    public IReadOnlyDictionary<string, LandformSetting>? Landforms { get; init; }
+
+    /// <summary>This world's setting for a landform module (as designed before revision 17).</summary>
+    public LandformSetting Landform(string id) =>
+        Revision >= LandformCatalog.SettingsSince && Landforms != null && Landforms.TryGetValue(id, out var s) ? s : LandformSetting.Designed;
 
     /// <summary>Climate of the world (latitudes, warmer/colder, wetter/drier): drives biomes (D42).</summary>
     public ClimateSettings Climate { get; init; } = new();

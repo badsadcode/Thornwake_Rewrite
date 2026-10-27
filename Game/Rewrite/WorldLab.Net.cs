@@ -269,10 +269,12 @@ public partial class WorldLab : IWorldHost, IClientGame
         }
         string preset = "mountainous"; int seed = 42;
         var parts = worldArgs.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        _pinnedRevision = null;
         foreach (var a in parts)
         {
             if (a.StartsWith("--preset=")) preset = a[9..];
             if (a.StartsWith("--seed=")) seed = int.Parse(a[7..], CultureInfo.InvariantCulture);
+            if (a.StartsWith("--revision=")) _pinnedRevision = int.Parse(a[11..], CultureInfo.InvariantCulture);
         }
         int index = Math.Max(0, _recipes.ToList().FindIndex(r => r.Id == preset));
         _profileList.Select(index);

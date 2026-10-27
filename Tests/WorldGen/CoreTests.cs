@@ -52,6 +52,7 @@ internal static class CoreTests
         T.Run("Build 25 terrain still reproducible", () => Fingerprints(false, "terrain-build25.json", build25: true), filter);
         T.Run("Build 51 terrain still reproducible", () => Fingerprints(false, "terrain-build51.json", build51: true), filter);
         T.Run("Build 52 terrain still reproducible", () => Fingerprints(false, "terrain-build52.json", build52: true), filter);
+        T.Run("Build 114 terrain still reproducible", () => Fingerprints(false, "terrain-build114.json", build114: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -308,7 +309,7 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false, bool build25 = false, bool build51 = false, bool build52 = false)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false, bool build25 = false, bool build51 = false, bool build52 = false, bool build114 = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
         string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
@@ -339,6 +340,9 @@ internal static class CoreTests
                 // Build 52 (commit 06a7650, v0.9.52): terrain revision 15, before sea pockets inside lakes became lake.
                 // The biome catalogue has not changed since build 51.
                 if (build52) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 15 }, biomes: Build51Biomes.Value));
+                // Build 114 (commit 6473368, v0.9.114): terrain revision 16, before the landform module settings. (Its ground is
+                // also revision 17's at the designed settings: the current fingerprints were recorded with revision 16.)
+                if (build114) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 16 }));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];

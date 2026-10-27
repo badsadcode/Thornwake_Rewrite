@@ -3423,6 +3423,33 @@ building". Design in `docs/WORLDGEN_MODULES_DESIGN.md`, nothing built:
 * Revision 17 = the frame only (dunes, mesas, spires as modules, empty sites/roads stages, plan hook, revision pinning,
   stage names on the loading overlay), proven identical to 16. Three questions for Tom at the end of the design.
 
+## D229 — Terrain revision 17: the landform module frame and revision pinning, nothing visible (2026-10-27)
+Tom approved the design (D228): "build revision 17 as designed: the module frame and revision pinning, nothing visible".
+* **Revision pinning.** World arguments now carry `--revision=N` (new worlds, dumps' Reproduce lines, saves, the host's
+  world sent to players); a save without it is read as revision 16 (every save before build 115 was made with 16 or
+  older). Reason: "current" followed the game, so a new revision silently changed saved worlds. *Terrain version* gains
+  **Build 114** (revision 16); a world loaded from its arguments keeps its revision, the next new world is current.
+* **Modules.** `LandformModules.cs`: `LandformCatalog` (id, name, where, kind Plan/Ground, rule Biome/Terrain/Water/
+  Coast/ShapeStep, revision), `LandformSetting` (amount, size), base classes `GroundLandform` and `PlanLandform`.
+  Dunes, mesas and spires are now `DuneField`, `MesaLands`, `SpireRocks` (`BiomeLandforms.cs`), each reading its setting
+  from `TerrainStyle.Landform(id)` (as designed below revision 17). Amount: dunes = share of dune fields among sand
+  sheets; mesas = share of the land raised into table-lands (threshold moves .5 per unit: rare ≈ 0.6×, common ≈ 1.6×,
+  everywhere = all of it on the test line); spires = cells holding a needle. Size scales spacing and height. At (1, 1)
+  every expression adds 0 or multiplies by 1, so the ground is bit-identical.
+* **Plan hook** before erosion (`WorldPlan.PlanLandforms`, empty: the first big landform brings its own revision);
+  **sites and roads** as empty plan lists (`WorldSite`, `WorldRoad`) with their place in the pipeline marked (3b, 3c);
+  **stage names**: `WorldPlan` reports its stages (land shape, big landforms, erosion/rivers/lakes, climate, biomes) and
+  the generation overlay shows the current one (the hook for Tom's loading messages).
+* **New world → Landforms**: amount (off, rare, normal, common, everywhere) and size (0.5–2×) per module, for every world
+  type; ordinary `gen.landform.<id>.amount/.size` values (custom types, saves, multiplayer).
+* **Proof**: `--sample-hash` — revision 17 equals 16 in all 10 cases, the 110 older cases unchanged; current
+  fingerprints pass at 17 and are frozen again as *Build 114* (`terrain-build114.json`). New tests: each module off
+  changes its own landform and no point outside its biomes (bit for bit); mesa amount orders the raised share; bigger
+  dunes and spires give more relief; revision 16 ignores the settings; **water wins** with all three at everywhere and
+  2× size (158 610 water points among the landforms keep their water; lakes and sea their exact level, rivers within
+  1 cm — a tributary crossing another river's floor follows the ground, revision 13, here by 0.3 µm). Speed: 1 164 ns
+  per sample (1 172 before, `--speed`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
