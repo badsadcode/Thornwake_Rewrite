@@ -3321,6 +3321,16 @@ changed the default — and Rain strength 3.6.
 Rebuilt from his dumps (`artifacts/rain-depth-fixed.jpg`: his 185035 vs now; `artifacts/rain-mist-grey.jpg`: mist sheets
 in ordinary rain and in sun showers).
 
+## D223 — Refractive rain streaks: soft water lenses with fading tails (2026-10-27)
+Tom: "these rain streaks are too sharp. The edges cannot stand out too much; maybe adding refraction … and smoothing
+the trail a little". *Rain look* gains **by strength, refractive** (the new default; *smooth* D221, *dithered* build 110
+and *build 104* stay): each streak a thin falling water lens (`RainStreakRefract.gdshader`, transparent, any AA) — the
+picture behind it flipped across its width and a little magnified, a soft highlight down its middle, a gaussian profile
+across (no edge), a bright head and a tail fading out (∝ (1 − t)^1.6). Width ≥ ~3–4 px (a lens needs room to show what it
+bends). First try at ~0.3 coverage all but vanished under TAA (transparent, no motion vectors, as build 104's rain);
+now coverage up to ~2× and a brighter highlight. At Tom's dump 185055 (`artifacts/rain-refractive.jpg`): soft glassy
+streaks vs the smooth version's hard, slightly stepped lines.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

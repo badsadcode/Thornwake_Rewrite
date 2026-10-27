@@ -575,12 +575,13 @@ public static class GameSettings
         "light shader layers, no extra particles), so a downpour fills the view rather than falling only near you. " +
         "Build 110: the drops around you only.",
         options: new[] { "build 110", "layers" }));
-    public static readonly Setting RainLook = Add(new("sim.rain_look", "Simulation", "Rain look", 0, 2, 1, 2,
+    public static readonly Setting RainLook = Add(new("sim.rain_look", "Simulation", "Rain look", 0, 3, 1, 3,
         "By strength (D207): each drop a streak along its fall, slanted by the wind; drizzle fine, short and slow, a downpour " +
         "long, heavy and fast; in heavy rain the drops splash on the ground, rocks, roofs and leaves around you. Build 104: " +
         "upright streaks the same in any rain, splashes only on water. Smooth (D221): with TAA or FSR 2 the streaks are thin solid " +
-        "lines instead of dithered ones (build 110 looked a little grainy).",
-        options: new[] { "build 104", "by strength (build 110, dithered)", "by strength, smooth" }));
+        "lines instead of dithered ones (build 110 looked a little grainy). Refractive (D223): each streak a thin, soft-edged " +
+        "water lens bending what is behind it, with a bright head and a fading tail.",
+        options: new[] { "build 104", "by strength (build 110, dithered)", "by strength, smooth", "by strength, refractive" }));
     public static readonly Setting RainStrength = Add(new("sim.rain", "Simulation", "Rain strength", .1, 4, .1, 1,
         "How hard it rains when rain is on (H). 1 = a heavy storm, exaggerated so runoff shows within a minute.", "×"));
 

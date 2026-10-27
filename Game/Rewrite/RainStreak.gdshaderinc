@@ -62,6 +62,8 @@ void vertex() {
 	// (a pixel is ~d × 0.0014 at 1080p: never thinner than ~1.2 pixels — thinner, they flickered; fainter instead)
 #ifdef RAIN_SOLID
 	float w0 = width * (0.7 + 0.6 * h), w = max(w0, d * 0.0026); // (a solid line needs ~2 px to stay unbroken)
+#elif defined(RAIN_REFRACT)
+	float w0 = width * (1.4 + 0.8 * h), w = max(w0, d * 0.005); // (a lens needs ~3–4 px to show what it bends)
 #else
 	float w0 = width * (0.7 + 0.6 * h), w = max(w0, d * 0.0017);
 #endif
@@ -77,7 +79,28 @@ void vertex() {
 		* (0.6 + 0.4 * hash(id + 9.1)) * (hidden ? 0.0 : 1.0);
 }
 
+#ifdef RAIN_REFRACT
+uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap, repeat_disable;
+#endif
+
 void fragment() {
+#ifdef RAIN_REFRACT
+	// (D223, Tom: "these rain streaks are too sharp … maybe adding refraction … and smoothing the trail"): each streak a
+	// thin falling water lens — the picture behind it bent and flipped across its width, a soft highlight down its middle,
+	// a brighter head (UV.y 0, the leading end) and a tail fading out smoothly; soft edges, no outline.
+	float xc = UV.x * 2.0 - 1.0;
+	float body = exp(-xc * xc * 3.0);
+	float tail = smoothstep(0.0, 0.1, UV.y) * pow(1.0 - smoothstep(0.08, 1.0, UV.y), 1.6);
+	vec2 g = vec2(dFdx(UV.x), dFdy(UV.x));
+	vec2 dir = g / max(dot(g, g), 1e-8); // (screen pixels per unit of UV.x, across the streak)
+	vec2 px = 1.0 / VIEWPORT_SIZE;
+	vec2 off = -dir * xc * 0.5 * 1.6 * px; // (flipped across, a little magnified)
+	vec3 behind = textureLod(screen_tex, SCREEN_UV + off, 0.0).rgb;
+	vec3 lit = mix(tint.rgb, vec3(0.8, 0.86, 1.0), clamp(lightning.z * exp(-lightning.w / 4.0), 0.0, 1.0));
+	// (strong enough to survive TAA's blending: at ~0.3 coverage the first try all but vanished)
+	ALBEDO = behind * 1.12 + lit * (0.55 * exp(-xc * xc * 10.0) + 0.18);
+	ALPHA = clamp(body * tail * v_alpha * (1.3 + 2.0 * tint.a), 0.0, 1.0);
+#else
 	float across = 1.0 - abs(UV.x * 2.0 - 1.0);
 	float along = smoothstep(0.0, 0.3, UV.y) * smoothstep(1.0, 0.7, UV.y);
 	// (toward the flash's own blue-white, not a multiple of the night tint: multiplied they stayed dark lines in the flash)
@@ -94,5 +117,6 @@ void fragment() {
 	ALPHA = clamp(ALPHA * 3.0, 0.0, 1.0);
 	ALBEDO *= 0.85;
 	ALPHA_HASH_SCALE = 1.0;
+#endif
 #endif
 }

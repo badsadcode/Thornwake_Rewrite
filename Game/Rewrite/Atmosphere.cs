@@ -1105,7 +1105,8 @@ public partial class Atmosphere : Node3D
         // (with TAA or FSR 2 the hashed streak, which writes motion vectors: the transparent one faded to ~10 % — RainStreakTaa)
         bool temporal = GameSettings.AntiAliasing.Index is 2 or 4;
         // (D221: smooth — thin solid lines cut by a scissor, no dither grain; build 110 the hashed one)
-        var want = GD.Load<Shader>(!temporal ? "res://Game/Rewrite/RainStreak.gdshader"
+        // (D223: refractive — a transparent water lens, with any anti-aliasing)
+        var want = GD.Load<Shader>(GameSettings.RainLook.Index == 3 ? "res://Game/Rewrite/RainStreakRefract.gdshader" : !temporal ? "res://Game/Rewrite/RainStreak.gdshader"
             : GameSettings.RainLook.Index == 2 ? "res://Game/Rewrite/RainStreakSolid.gdshader" : "res://Game/Rewrite/RainStreakTaa.gdshader");
         if (_rainStreakMat.Shader != want) _rainStreakMat.Shader = want;
         float fall = Mathf.Lerp(3.2f, 9.5f, k);
