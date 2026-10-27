@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 116 — escarpments and plateaus (terrain revision 18), Land shape
+**Host and everyone joining need build 116** (versions must match to connect).
+* **Escarpments and plateaus**, the first landform from your list: long cliffs inland with a raised table-land behind
+  them — a short caprock cliff over gullied slopes of fallen rock (scree), ravines of every size cutting back into the
+  plateau, spurs between them, ends that ramp down (the ways up). Rivers flow off the plateaus or cut notches through
+  the edge. About one per 100 × 100 km of land, at least one per world.
+* **New world → Landforms → Escarpments and plateaus**: amount (off … everywhere) and size. *Off* gives exactly the
+  build 115 ground. *Terrain version → Build 115* also keeps the old terrain.
+* **New world → Land shape**: any world type's layout of land and sea under another type; the World type list is
+  grouped (Natural, Classic, Your types).
+* Try *Go to - escarpment in the badlands (Mountain kingdoms)* and *Go to - escarpment in the forest (Balanced)*.
+* Worlds you made in build 115 keep their terrain (they recorded revision 17); new worlds get escarpments.
+
 ## New in build 115 — terrain revision 17: landform settings, worlds keep their terrain version
 **Host and everyone joining need build 115** (versions must match to connect).
 * **Nothing looks different** at the usual settings: the ground is exactly as in build 114 (proved by the tests).
