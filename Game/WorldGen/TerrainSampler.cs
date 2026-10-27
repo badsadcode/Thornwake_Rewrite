@@ -83,11 +83,14 @@ public sealed partial class TerrainSampler
     }
 
     /// <summary>The big landforms' walking-scale relief (revision 18). Ground they lower is faded at lake shores (lowered
-    /// ground just outside a lake's reach would lie dry below its surface); ground they raise may end a lake at a cliff.</summary>
-    private double PlanGround(double x, double z, double minWavelength)
+    /// ground just outside a lake's reach would lie dry below its surface); ground they raise may end a lake at a cliff.
+    /// <paramref name="bare"/>: how bare their rock and scree is (reported as mountain ground, so it gets rock and scree
+    /// textures and no forest).</summary>
+    private double PlanGround(double x, double z, double minWavelength, out double bare)
     {
         double g = 0;
-        foreach (var form in _planForms) g += form.Ground(x, z, minWavelength);
+        bare = 0;
+        foreach (var form in _planForms) { g += form.Ground(x, z, minWavelength, out double rock); bare = Math.Max(bare, rock); }
         if (g >= 0) return g;
         int lake = _hydrology.LakeDistance(x, z, out double cells);
         return lake >= 0 ? g * DetMath.Smooth((cells - 1.6) / .38) : g;
@@ -105,7 +108,8 @@ public sealed partial class TerrainSampler
         if (land <= 0) return Sea(x, z, land, coastDistance);
         double baseHeight = Continent(land, rasterLand, macroHeight, coastDistance, ref mountainShare);
         Detail(lx, lz, minWavelength, land, mountainShare, out double inland, out double detail, out double roughness);
-        if (_planForms.Length > 0) detail += PlanGround(x, z, minWavelength);
+        double bare = 0;
+        if (_planForms.Length > 0) detail += PlanGround(x, z, minWavelength, out bare);
         BiomeTerrain(x, z, lx, lz, minWavelength, baseHeight, inland, ref detail, out bool wetland, out double poolCover, out double poolDepth,
             out double poolSize, out double poolChannels, out double flatten);
         // (3b sites and 3c roads come here once the plan has any: pads and corridors after the landforms, before the
@@ -118,7 +122,7 @@ public sealed partial class TerrainSampler
             Pools(lx, lz, x, z, minWavelength, baseHeight, roughness, mountainShare, inland, flatten, land, riverDamp, lakeCells, poolCover,
                 poolDepth, poolSize, poolChannels, ref height, ref water, ref level);
         PlayerEdits(x, z, ref height, ref water, ref level, ref body);
-        return new(_p.SeaLevel + height, land, mountainShare, detail, water, level, body, lakePlume);
+        return new(_p.SeaLevel + height, land, bare > 0 ? Math.Max(mountainShare, bare) : mountainShare, detail, water, level, body, lakePlume);
     }
 
     /// <summary>Stage 1a, coast: the macro raster (land, eroded height, mountain share) and the sub-raster coastline wiggle.</summary>

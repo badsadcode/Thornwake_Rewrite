@@ -65,8 +65,9 @@ public abstract class PlanLandform
 {
     public abstract LandformInfo Info { get; }
     public abstract void Shape(MacroRaster macro, WorldManifest manifest, LandformSetting setting);
-    /// <summary>Walking-scale relief it adds at a point (m), on top of what the raster holds; 0 by default.</summary>
-    public virtual double Ground(double x, double z, double minWavelength) => 0;
+    /// <summary>Walking-scale relief it adds at a point (m), on top of what the raster holds; 0 by default.
+    /// <paramref name="rock"/>: how bare the ground is there (0 none … 1 cliff rock), for the ground's look.</summary>
+    public virtual double Ground(double x, double z, double minWavelength, out double rock) { rock = 0; return 0; }
 }
 
 /// <summary>A local landform: adds to the walking-scale relief where its rule allows, before the water stages.</summary>

@@ -59,8 +59,9 @@ Then the fantasy landforms Tom picks (section at the end).
 * **Build**: a plan module raising a band of the macro raster with a sharp edge before erosion; rivers then cross it
   (and fall: no. 2) or run along its foot. The cliff face gets rock detail at walking scale.
 * **Water**: rivers are routed after it; the face looks downhill so the lowland drains away from the foot.
-* **Status**: built, terrain revision 18 (D232); broken up with ravines, buttresses and scree (D233); not in a build
-  yet; waiting for Tom's look verdict.
+* **Status**: built, terrain revision 18 (D232); broken up with ravines, buttresses and scree (D233); rebuilt like
+  real escarpments — caprock cliff over gullied debris slopes, ravines of every size, scree texture (D234); not in a
+  build yet; waiting for Tom's look verdict.
 
 ### 2. Waterfalls and rapids
 * **What**: a river drops over a rock step into a plunge pool; white water over a steep, rocky stretch.

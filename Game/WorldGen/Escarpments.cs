@@ -58,7 +58,7 @@ public sealed class Escarpments : PlanLandform
             double x = _profile.CellX(i), z = _profile.CellZ(j), v = 0;
             foreach (var l in _lines)
                 if (x >= l.MinX - l.Depth && x <= l.MaxX + l.Depth && z >= l.MinZ - l.Depth && z <= l.MaxZ + l.Depth)
-                    v = Math.Max(v, Profile(l, x, z, face, mw, false, out _, out _, out _));
+                    v = Math.Max(v, Profile(l, x, z, face, mw, false, out _, out _, out _, out _));
             channels[0][j * macro.Size + i] = (float)v;
         });
         var raised = _profile.Channel(0);
@@ -170,49 +170,62 @@ public sealed class Escarpments : PlanLandform
     private int Cell(double v, double min) => Math.Clamp((int)Math.Floor((v - min) / GridCell), 0, _gridSize - 1);
 
     /// <summary>
-    /// Walking-scale correction (metres): the sharp face minus the ramp the raster holds, near the edge only. Scaled by
-    /// how much of the step the eroded raster still has there, so valleys cut through the edge keep their floors.
+    /// Walking-scale correction (metres): the detailed face minus the ramp the raster holds, near the edge only. Scaled
+    /// by how much of the step the eroded raster still has there, so valleys cut through the edge keep their floors.
+    /// <paramref name="rock"/> is how bare the ground is there (1 = cliff rock, about 0.65 = scree), for the ground's look.
     /// </summary>
-    public override double Ground(double x, double z, double minWavelength)
+    public override double Ground(double x, double z, double minWavelength, out double rock)
     {
+        rock = 0;
         if (_lines.Count == 0) return 0;
         int c = Cell(z, _gridMinZ) * _gridSize + Cell(x, _gridMinX);
         int from = _gridStart[c], to = _gridStart[c + 1];
         if (from == to) return 0;
-        double cell = _macro.Cell, best = 0, bestAbs = double.MaxValue, nx = 0, nz = 0;
+        double cell = _macro.Cell, best = 0, bestAbs = double.MaxValue, nx = 0, nz = 0, bare = 0;
         for (int n = from; n < to; n++)
         {
             var l = _lines[_gridLines[n]];
-            double v = Profile(l, x, z, Math.Max(Face(l), minWavelength * .6), minWavelength, true, out double s, out double ux, out double uz);
+            double v = Profile(l, x, z, Math.Max(Face(l), minWavelength * .6), minWavelength, true, out double s, out double ux, out double uz, out double r);
             if (Math.Abs(s) < bestAbs) { bestAbs = Math.Abs(s); nx = ux; nz = uz; }
-            best = Math.Max(best, v);
+            if (v > best) { best = v; }
+            bare = Math.Max(bare, r);
         }
         double reach = DetMath.Smooth((cell * 2.25 - bestAbs) / (cell * .5));
         if (reach <= 0) return 0;
         double correction = best - _profile.Sample(0, x, z);
-        if (correction == 0) return 0;
         // How much of the step survives erosion here: the eroded height across the edge against the step put in.
         double d = cell * 1.5;
         double topX = x + nx * d, topZ = z + nz * d, footX = x - nx * d, footZ = z - nz * d;
         double put = _profile.Sample(0, topX, topZ) - _profile.Sample(0, footX, footZ);
         double kept = _macro.Sample(WorldPlan.HeightChannel, topX, topZ) - _macro.Sample(WorldPlan.HeightChannel, footX, footZ);
         double survive = put > 1 ? DetMath.Smooth((kept / put - .3) / .5) : 0;
+        rock = bare * reach * survive;
         return correction * reach * survive;
     }
 
-    /// <summary>Face width at walking scale: steep (about 65°) rock, a little wider for taller faces.</summary>
+    /// <summary>Face width of the raster-scale profile and of coarse tiles: steep (about 65°), wider for taller faces.</summary>
     private static double Face(Line l) => 12 + l.Height * .45;
 
     /// <summary>
-    /// Raised height (m) of one escarpment at a point: the face of width <paramref name="face"/> centred on the
-    /// (wobbling) edge, a flat top for 55 % of the depth, then a gentle fall behind; ends ramp down, height varies along.
-    /// With <paramref name="detail"/> (walking scale; the raster form has none of it, D233) the face is broken up:
-    /// ravines cut back into the plateau, buttresses jut out, the face is steeper or gentler along its length, the rim
-    /// is uneven, and a scree apron lies along the foot with bigger fans below the ravines.
-    /// Also gives the signed distance to the edge and the unit normal toward the plateau.
+    /// Raised height (m) of one escarpment at a point: a flat top for 55 % of the depth, then a gentle fall behind;
+    /// ends ramp down, height varies along. Coarse (the raster form, far tiles): a plain face of width
+    /// <paramref name="face"/> centred on the (wobbling) edge. With <paramref name="detail"/> at walking scale
+    /// (D233, D234), the face is built like a real escarpment, irregular at every scale:
+    /// <list type="bullet">
+    /// <item>a hard caprock breaking off as a short sheer cliff (25–50 % of the height, more or less along the edge),
+    /// over a long concave debris slope (scree, ~40° under the cliff easing out to the plain) furrowed by small
+    /// gullies running downhill;</item>
+    /// <item>a rim line warped at several scales (no straight runs);</item>
+    /// <item>ravines of every size (many small, few big), cutting back into the plateau and bending as they go, V-shaped
+    /// with a floor rising to the rim, each with a debris fan at its mouth; spurs and buttresses jutting out between
+    /// them.</item>
+    /// </list>
+    /// Also gives the signed distance to the edge, the unit normal toward the plateau and how bare the ground is.
     /// </summary>
-    private double Profile(Line l, double x, double z, double face, double minWavelength, bool detail, out double s, out double nx, out double nz)
+    private double Profile(Line l, double x, double z, double face, double minWavelength, bool detail, out double s, out double nx, out double nz,
+        out double rock)
     {
+        rock = 0;
         Nearest(l, x, z, out s, out double t, out nx, out nz);
         double lx = x - _ox, lz = z - _oz;
         s += 90 * Noise.Fbm(lx, lz, 700, 3, minWavelength, l.Seed) + 260 * Noise.Fbm(lx, lz, 4000, 2, minWavelength, l.Seed + 1);
@@ -220,52 +233,84 @@ public sealed class Escarpments : PlanLandform
         double taper = DetMath.Smooth(t / ramp) * DetMath.Smooth((l.Length - t) / ramp);
         // (features fade out on coarse tiles: they are tens of metres wide)
         double feat = detail ? 1 - DetMath.Smooth((minWavelength - 40) / 120) : 0;
-        if (taper <= 0 || s < -face - feat * (l.Height * .95 + 130)) return 0;
+        if (taper <= 0 || s < -face - feat * (l.Height * 2.6 + 200)) return 0;
         double h = l.Height * taper * (.7 + .6 * DetMath.Smooth(.5 + Noise.Fbm(t, 0, 9000, 2, 0, l.Seed + 2)));
         double back = s <= l.Depth * .55 ? 1 : 1 - DetMath.Smooth((s - l.Depth * .55) / (l.Depth * .45));
-        if (feat <= 0) return h * DetMath.Smooth((s + face * .5) / face) * back;
+        double plain = h * DetMath.Smooth((s + face * .5) / face) * back;
+        if (feat <= 0) return plain;
 
-        // Face steepness along the cliff (sheer walls and broken, gentler stretches) and an uneven rim.
-        double fw = face * (.6 + 1.1 * DetMath.Smooth(.5 + 1.4 * Noise.Fbm(t, 1, 900, 2, 0, l.Seed + 3)));
-        double rim = h * (1 + .06 * feat * Noise.Fbm(lx, lz, 160, 2, minWavelength, l.Seed + 4));
-        // Ravines and buttresses: one feature (or none) per 260 m of edge.
-        const double Spacing = 260;
+        // The rim, warped at several scales (a domain-warped wiggle on top of the line's own wobble).
+        double wx = 70 * Noise.Fbm(lx, lz, 320, 2, minWavelength, l.Seed + 8);
+        double e = s + 38 * Noise.Fbm(lx + wx, lz - wx, 190, 3, minWavelength, l.Seed + 7);
+        // Ravines and spurs, one candidate per 200 m of edge; sizes skewed (many small, a few big).
+        const double Spacing = 200;
         long c0 = (long)Math.Floor(t / Spacing);
         double shift = 0, ravine = 0, floor = 0, fan = 0;
-        for (long c = c0 - 1; c <= c0 + 1; c++)
+        for (long c = c0 - 2; c <= c0 + 2; c++)
         {
             ulong hash = Hashing.Lattice(c, 7, l.Seed + 5);
-            double kind = Hashing.Unit(hash), tc = (c + .2 + .6 * Hashing.Unit(Hashing.Mix(hash + 1))) * Spacing;
-            double width = Hashing.Unit(Hashing.Mix(hash + 2)), size = Hashing.Unit(Hashing.Mix(hash + 3)), a = Math.Abs(t - tc);
-            if (kind < .4)
+            double kind = Hashing.Unit(hash), size = Hashing.Unit(Hashing.Mix(hash + 3)), width = Hashing.Unit(Hashing.Mix(hash + 2));
+            double tc = (c + .5 * Hashing.Unit(Hashing.Mix(hash + 1)) + .25) * Spacing;
+            if (kind < .5)
             {
-                // Ravine: a V-shaped notch narrowing back into the plateau, its floor rising from the foot to the rim.
-                double depth = (70 + 190 * size) * Math.Sqrt(Math.Min(1, h / 100)), w0 = 22 + 40 * width;
-                double into = Math.Clamp(s / depth, 0, 1), half = w0 * (1 - .75 * into);
-                double inside = DetMath.Smooth((half - a) / (half * .6 + 4)) * DetMath.Smooth((depth - s) / (depth * .25 + 8));
-                if (inside > ravine) { ravine = inside; floor = .85 * DetMath.Smooth(into); }
-                fan = Math.Max(fan, DetMath.Smooth((w0 * 1.8 - a) / (w0 * 1.2)));
+                double depth = (50 + 420 * size * size) * Math.Sqrt(Math.Min(1, h / 90)), w0 = 18 + .42 * depth * (.6 + .8 * width);
+                // The ravine bends as it cuts back (its line wanders with the distance into the plateau).
+                double bend = .35 * depth * Noise.Fbm(Math.Max(s, 0), c * 31.7, depth * .8 + 40, 2, 0, l.Seed + 11);
+                double a = Math.Abs(t - tc - bend), into = Math.Clamp(e / depth, 0, 1), half = w0 * (1 - .65 * into) + 5;
+                if (e > -10 && a < half)
+                {
+                    double inside = Math.Pow(DetMath.Smooth((1 - a / half) * 1.25), .8) * DetMath.Smooth((depth - e) / (depth * .3 + 10));
+                    if (inside > ravine) { ravine = inside; floor = .92 * Math.Pow(into, 1.25); }
+                }
+                fan = Math.Max(fan, DetMath.Smooth((w0 * 1.6 - Math.Abs(t - tc)) / (w0 * 1.1)) * Math.Min(1, depth / 200));
             }
-            else if (kind < .75)
+            else if (kind < .78)
             {
-                // Buttress: the edge juts out toward the lowland.
-                double jut = (25 + 85 * size) * Math.Min(1, h / 80), half = 35 + 70 * width;
-                shift = Math.Min(shift, -jut * DetMath.Smooth((half - a) / (half * .6)));
+                // Spur or buttress: the rim juts toward the lowland, rounded, its size skewed like the ravines'.
+                double jut = (15 + 120 * Math.Pow(size, 1.6)) * Math.Min(1, h / 80), half = 30 + 110 * width;
+                double a = Math.Abs(t - tc);
+                shift = Math.Max(shift, jut * DetMath.Smooth((half - a) / (half * .7)));
             }
         }
-        double e = s - shift * feat;
-        double v = rim * DetMath.Smooth((e + fw * .5) / fw) * back;
-        if (ravine > 0) v += (h * floor * back - v) * ravine * feat;
-        // Scree apron: rock fallen from the face, ~22 % of the height at the foot, thinning out over 0.7 × the height;
-        // fans below ravines are higher and reach further.
-        double foot = e + fw * .5;
-        if (foot < fw)
+        e += shift;
+        double rim = h * (1 + .05 * Noise.Fbm(lx, lz, 140, 2, minWavelength, l.Seed + 4));
+        // Caprock cliff: its share of the height and its sheerness vary along the edge.
+        double cap = h * (.25 + .25 * DetMath.Smooth(.5 + 1.3 * Noise.Fbm(t, 3, 650, 2, 0, l.Seed + 9)));
+        double cw = Math.Max(3, cap * (.08 + .14 * DetMath.Smooth(.5 + 1.3 * Noise.Fbm(t, 4, 380, 2, 0, l.Seed + 12))));
+        double debris = rim - cap * (1 + .12 * fan);
+        double dw = 1.75 * debris * (1 + .9 * fan) / .9;
+        double v;
+        if (e >= 0) v = rim * back;
+        else if (e >= -cw)
         {
-            double apron = h * (.7 + .5 * fan), top = h * (.22 + .12 * fan);
-            double scree = foot >= 0 ? top : top * Math.Pow(Math.Max(0, 1 + foot / apron), 2);
-            v = Math.Max(v, scree * feat);
+            double f = -e / cw;
+            v = (rim - (rim - debris) * Math.Pow(f, .85)) * back; // (the lip rounds a little)
+            rock = 1;
         }
-        return v;
+        else
+        {
+            double d = (-e - cw) / dw;
+            if (d >= 1) v = 0;
+            else
+            {
+                v = debris * Math.Pow(1 - d, 1.7) * back;
+                // Gullies down the debris slope: narrow furrows, elongated downhill, deepest mid-slope.
+                double g = Noise.Fbm(t + 25 * Noise.Fbm(lx, lz, 90, 1, minWavelength, l.Seed + 13), -e * .22, 34, 2, minWavelength, l.Seed + 10);
+                v -= debris * .14 * (1 - DetMath.Smooth(Math.Abs(g) / .12)) * Math.Sin(Math.PI * d);
+                // A little rubble on the slope.
+                v += 1.2 * Noise.Fbm(lx, lz, 7, 2, minWavelength, l.Seed + 6) * (1 - d);
+                rock = .65 * (1 - DetMath.Smooth((d - .55) / .4));
+            }
+        }
+        // Ravines: the ground falls to the floor, which rises from the cliff's foot to the rim.
+        if (ravine > 0)
+        {
+            double fl = (debris * (1 - .3 * ravine) + (rim - debris) * floor) * back;
+            if (e >= -cw && fl < v) { v += (fl - v) * ravine; rock = Math.Max(rock, .8 * ravine); }
+        }
+        v = Math.Max(v, 0);
+        rock *= feat;
+        return plain + (v - plain) * feat;
     }
 
     /// <summary>Nearest point of the line: signed distance (positive on the plateau side, left of the line), position

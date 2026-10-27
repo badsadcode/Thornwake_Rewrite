@@ -3515,6 +3515,24 @@ walking scale only (the plan's raster form has none of it, so rivers and erosion
 * Seen in captures: buttresses and ravines read from the ground and from the air; the face itself is still sheer,
   evenly textured rock, ravines look like slots, the scree hardly shows against the grass — next tuning is Tom's call.
 
+## D234 — Escarpments like real ones: caprock cliff over debris slopes, ravines of every size (2026-10-27)
+Tom, on D233: "gentler, wider ravines, a more broken face, and scree that shows… They shouldn't look generic and
+artificial". The even look came from one wall top to bottom and features at a steady rhythm. The walking-scale face
+(the plan's raster form is unchanged, so rivers and erosion are as in D232) is now built the way escarpments form:
+* **Caprock over a debris slope**: a short sheer cliff, 25–50 % of the height (varying along the edge, its sheerness
+  too), over a long concave slope of fallen rock — about 40° under the cliff, easing out to the plain — furrowed by
+  narrow gullies running downhill and roughened with rubble.
+* **Irregular at every scale**: the rim is domain-warped (190 m and 320 m) on top of the line's own wobble; ravines and
+  spurs are drawn per 200 m with skewed sizes (many small, few big: ravine depth 50–470 m), ravines bend as they cut
+  back, are V-shaped and wider for deeper ones (18 m + 0.25–0.6 × depth), their floor rising to the rim, with a
+  debris fan at the mouth; spurs jut 15–135 m.
+* **Scree that shows**: the cliff and its slopes report how bare they are (cliff 1, debris 0.65, fading out at the
+  foot); the sampler passes it on as mountain ground (`TerrainSample.Mountain`), so the existing shader gives the
+  cliff rock and the slopes Noor's scree, and forests thin out there. No shader change.
+* Tests pass (20 of 24 faces steeper than 50°, 22 rising over 30 %; water above its ground), full suite passes.
+* Seen in captures: much less artificial on the badlands escarpment (Mountain kingdoms 42); the caprock band itself is
+  still sheer, evenly textured rock, and in temperate forest the debris slopes stay mostly green.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
