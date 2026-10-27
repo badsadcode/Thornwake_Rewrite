@@ -93,6 +93,18 @@ that would add most to play: **waterfalls and rapids**, **gorges / canyons**, **
   type becomes a starting preset of those switches and of its landform template. A step of its own, with step 2.
 * **Which landforms first** — open. I bring a short illustrated menu (captures or reference images) when we get there.
 
+## Tom's ideas for later (2026-10-27)
+
+* **Speed is not critical**: ~1 % slower terrain sampling is fine (it only affects building terrain tiles on background
+  threads and loading, never the frame rate).
+* **Loading messages by stage**: while a world is planned, funny lines for the stage under way — debating where the
+  mountains go, flooding the valleys while rivers and lakes form — a few random sets per stage (layout, continents and
+  mountains, erosion, rivers and lakes, climate, biomes). Talked over with Noor; to design later. The plan already runs
+  in these stages, so each can report its name and progress.
+* **Interesting sea and lake beds**: not a smooth slope going deeper and deeper — underwater ravines and canyons,
+  ridges, shelves and drop-offs. A landform module of the sea and lake stages (same rules: its own switch, a new terrain
+  revision, old worlds unchanged). Later, after the first landforms.
+
 ## Step 1 — done (D227)
 
 `TerrainSampler.Sample` now walks nine short stages (coast, sea, continent, detail, biome terrain, rivers, lakes, pools,
