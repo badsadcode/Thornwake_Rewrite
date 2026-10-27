@@ -33,6 +33,11 @@ a switchable draft when it is picked up. Source notes: `DOCS/Thornwake_Visual At
   type of water — river, lake or ocean — left for later when we rework the water shaders"): rings and crowns on calm
   lakes and ponds, rings carried and stretched by a river's current, fine noise and few rings on the sea's swell
   (Noor's notes §7). With the water shader rework, not before.
+* **Far rain gone, near rain there** (Tom, 2026-10-27, playing build 115: "the rain further away from me disappeared…
+  the background rain disappeared. Not sure… we'll go back to rain a little bit later"): no dump yet. Build 115 changed
+  only the near particles' second draw pass (8ab5844), not the far layers, so suspects are the far layers' own fades
+  from D225 (out when the rain leans past 0.7 in a gale; scaled by *Rain strength*) or the depth fade (D222). First
+  step when rain resumes: ask Tom for a dump (F9) while it happens and check `UpdateRainLayers` there.
 * Weather 2.0 (Tom and Noor, `docs/Thornwake_Weather_2_0_Suggestions.md`): done — rain by strength, slanted by the
   wind, splashes, a test tab (D206–D209), rain light and veil (D210). Next: shelter, wetness over time by material,
   dripping trees, splash kinds by surface, sound layers.

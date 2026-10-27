@@ -9,6 +9,7 @@ internal static class RecipeTests
         T.Run("Recipes: every type gives a valid world at every size", AllSizes, filter);
         T.Run("Recipes: land share survives 128 km and 4096 km", Coverage, filter);
         T.Run("Recipes: a saved world type round-trips through JSON", CustomType, filter);
+        T.Run("Land shapes: every built-in type is one, the list only grows at the end", Shapes, filter);
         T.Run("Landforms: templates shape the world and stay valid", Templates, filter);
         T.Run("Natural types: heightmap templates make land at every size, deterministic", Natural, filter);
     }
@@ -59,6 +60,27 @@ internal static class RecipeTests
             T.Note($"{id}: land share at 128 km / native / 4096 km = {string.Join(" / ", shares.Select(v => (v * 100).ToString("0") + " %"))}");
             T.Check(shares.Max() / Math.Max(1e-6, shares.Min()) < 2.2, $"{id}: land share stays in the same range across sizes");
         }
+    }
+
+    private static void Shapes()
+    {
+        // Worlds store a land shape by its place in WorldRecipe.ShapeIds (New world -> Land shape, D230): these places
+        // must never move. Add new shapes at the end and extend this list.
+        string[] frozen =
+        {
+            "natural-continents", "natural-mainland", "natural-archipelago", "natural-mountains", "natural-many-continents",
+            "natural-islands-mainland", "natural-inland-sea", "natural-shattered", "natural-rift", "natural-twin-continents",
+            "natural-peninsula", "balanced", "continental", "archipelago", "mountainous", "many-continents", "islands-mainland",
+            "inland-sea", "shattered", "rift", "twin-continents", "peninsula", "vast-world",
+        };
+        T.Check(WorldRecipe.ShapeIds.Length >= frozen.Length && frozen.Select((id, i) => WorldRecipe.ShapeIds[i] == id).All(x => x),
+            "the first 23 land shapes keep their places");
+        T.Check(WorldRecipe.ShapeIds.Distinct().Count() == WorldRecipe.ShapeIds.Length, "no shape twice");
+        var catalog = Recipes;
+        T.Check(catalog.All(r => WorldRecipe.ShapeIds.Contains(r.Id)), "every built-in world type is a land shape");
+        T.Check(WorldRecipe.ShapeIds.All(id => catalog.Any(r => r.Id == id)), "every land shape is a built-in world type");
+        T.Check(catalog.All(r => r.Group == (r.Id.StartsWith("natural-") ? "Natural" : "Classic")), "built-in types are Natural or Classic");
+        T.Check(catalog.First(r => r.Id == "natural-rift").ShortName == "Rift continent", "short names drop the Natural prefix");
     }
 
     private static void CustomType()

@@ -79,6 +79,25 @@ public sealed class WorldRecipe
         return new WorldRecipe(id, p.Name, description, p, mainland, settings, custom: true);
     }
 
+    /// <summary>
+    /// The land shapes a world can take apart from its type (New world → Land shape, D230): the built-in types' layouts,
+    /// natural first. Worlds store a shape by its place in this list, so it only ever grows at the end.
+    /// </summary>
+    public static readonly string[] ShapeIds =
+    {
+        "natural-continents", "natural-mainland", "natural-archipelago", "natural-mountains", "natural-many-continents",
+        "natural-islands-mainland", "natural-inland-sea", "natural-shattered", "natural-rift", "natural-twin-continents",
+        "natural-peninsula",
+        "balanced", "continental", "archipelago", "mountainous", "many-continents", "islands-mainland",
+        "inland-sea", "shattered", "rift", "twin-continents", "peninsula", "vast-world",
+    };
+
+    /// <summary>Group of a type in the New world list: "Natural", "Classic" or "Your types".</summary>
+    public string Group => Custom ? "Your types" : Id.StartsWith("natural-", StringComparison.Ordinal) ? "Natural" : "Classic";
+
+    /// <summary>The name without its group's prefix ("Natural · Archipelago" → "Archipelago").</summary>
+    public string ShortName => Name.StartsWith("Natural · ", StringComparison.Ordinal) ? Name[10..] : Name;
+
     /// <summary>The world types: the catalogue's presets (unchanged) plus recipes defined here.</summary>
     public static IReadOnlyList<WorldRecipe> Catalog(IReadOnlyList<WorldProfile> profiles, IEnumerable<WorldRecipe>? custom = null)
     {

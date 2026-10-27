@@ -175,6 +175,12 @@ map preview updating as you edit; saved with a custom type. A step of its own af
 * **Sites and roads** — read the modules' site hints and avoid their hard areas (cliffs, gorges) unless a module offers
   a crossing.
 
+## Progress
+
+* Revision 17 frame — done, build 115 (D229).
+* World types rework, part 1 — done (D230): *Land shape* in New world, the type list grouped Natural / Classic / Your
+  types. Not in a build yet.
+
 ## Order of work (each step its own build and approval)
 
 1. **Revision 17 frame** (section 1, "nothing visible"): modules, Landforms group with the three existing landforms,

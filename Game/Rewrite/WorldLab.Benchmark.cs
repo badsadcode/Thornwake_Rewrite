@@ -220,9 +220,7 @@ public partial class WorldLab
                 {
                     _benchWorldKey = key;
                     BenchApplySettings(run, job);
-                    int index = Math.Max(0, _recipes.ToList().FindIndex(r => r.Id == world["preset"]!.GetValue<string>()));
-                    _profileList.Select(index);
-                    SelectType(index);
+                    ShowType(Math.Max(0, _recipes.ToList().FindIndex(r => r.Id == world["preset"]!.GetValue<string>())));
                     foreach (var (k, v) in world["gen"]!.AsObject())
                         if (_gen.All.FirstOrDefault(g => g.Key == k) is { } g) g.Value = v!.GetValue<double>();
                     _seedEdit.Text = world["seed"]!.GetValue<int>().ToString(CultureInfo.InvariantCulture);

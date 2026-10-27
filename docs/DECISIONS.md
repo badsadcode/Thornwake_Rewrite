@@ -3450,6 +3450,20 @@ Tom approved the design (D228): "build revision 17 as designed: the module frame
   1 cm — a tributary crossing another river's floor follows the ground, revision 13, here by 0.3 µm). Speed: 1 164 ns
   per sample (1 172 before, `--speed`).
 
+## D230 — World types rework, part 1: Land shape apart from the type, grouped type list (2026-10-27)
+Tom: "let's continue" after build 115, without answering whether the world types rework or the first new landforms
+come first. Chose the rework's part 1: it is structure, not looks (no artistic call), and the new landforms are his
+pick from an illustrated menu, which needs his answer anyway.
+* **New world → World shape → Land shape**: "the world type's" (default) or any built-in type's layout of land and
+  sea (`gen.shape`). The world keeps the rest of its type (parameters, climate, landforms; for saved custom types their
+  own values). Shapes are stored by their place in `WorldRecipe.ShapeIds` (natural first, then classic): an append-only
+  list, frozen by a test. A saved custom type bakes the shape into its profile (`gen.shape` is a shape key) and takes
+  the shape's mainland rule.
+* **The World type list is grouped**: Natural, Classic, Your types (separators; natural names without the
+  "Natural · " prefix). Types keep their ids, so every existing world, save and Reproduce line is the same; selection is
+  by type, not list position.
+* Not here yet (later parts): climate and landform defaults per type (with the new shapes, for Tom to tune), Edit steps.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -34,7 +34,7 @@ public partial class WorldLab : Node3D
     private LocalWaterView _water = null!;
     private Toolbox _tools = null!;
     private bool _rain;
-    private readonly WorldGenOptions _gen = new();
+    private WorldGenOptions _gen = new(); // (made again with the world types' names in _Ready)
     private Label _hud = null!, _overlay = null!, _help = null!;
     private PanelContainer _menu = null!;
     private Button _hostButton = null!;
@@ -114,6 +114,7 @@ public partial class WorldLab : Node3D
         _profiles = WorldProfile.ParseCatalog(Godot.FileAccess.GetFileAsString("res://Content/world_profiles.json"));
         LoadBiomes();
         _recipes = WorldRecipe.Catalog(_profiles, LoadCustomTypes());
+        _gen = new WorldGenOptions(_recipes);
         // The water shader reads the screen and depth textures; with MSAA those reads produce lines along the water
         // mesh's triangle edges (Tom's playtest) and wrong refraction. This scene uses FXAA or TAA instead (the valley
         // game keeps the project's MSAA setting); Atmosphere applies the anti-aliasing setting.
@@ -143,8 +144,7 @@ public partial class WorldLab : Node3D
             {
                 var type = WorldRecipe.FromJson(File.ReadAllText(arg[12..]));
                 _recipes = _recipes.Where(r => r.Id != type.Id).Append(type).ToList();
-                _profileList.Clear();
-                foreach (var r in _recipes) _profileList.AddItem(r.Name);
+                FillTypeList();
             }
             if (arg.StartsWith("--seed=")) seed = int.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--revision=")) _pinnedRevision = int.Parse(arg[11..], CultureInfo.InvariantCulture);
@@ -208,9 +208,7 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--hour=")) _pendingHour = double.Parse(arg[7..], CultureInfo.InvariantCulture);
             if (arg.StartsWith("--menu=")) { _menu.Visible = true; ((TabContainer)_menu.FindChildren("*", "TabContainer", true, false)[0]).CurrentTab = int.Parse(arg[7..], CultureInfo.InvariantCulture); } // (the menu is no longer a TabContainer itself)
         }
-        int index = Math.Max(0, _recipes.ToList().FindIndex(r => r.Id == preset));
-        _profileList.Select(index);
-        SelectType(index);
+        ShowType(Math.Max(0, _recipes.ToList().FindIndex(r => r.Id == preset)));
         // --set=gen.<key>=<value> also sets world-generation parameters (after the preset has loaded its values).
         foreach (string arg in OS.GetCmdlineUserArgs())
             if (arg.StartsWith("--set=gen."))
@@ -247,7 +245,7 @@ public partial class WorldLab : Node3D
         if (_generation != null) return;
         if (IsNetClient && !_netWorldLoading) { _status = "In a multiplayer game the world is the host's."; return; }
         if (!int.TryParse(_seedEdit.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seed)) { _status = "Seed must be a whole number."; return; }
-        var recipe = _recipes[Math.Max(0, _profileList.Selected)];
+        var recipe = SelectedType;
         WorldProfile profile; TerrainStyle style;
         try { (profile, style) = _gen.Build(recipe, _pinnedRevision); }
         catch (Exception error) { _status = "These world parameters are not valid: " + error.Message; return; }
@@ -314,23 +312,43 @@ public partial class WorldLab : Node3D
     {
         name = name.Trim();
         if (name.Length == 0) { _previewInfo.Text = "Give the new world type a name first."; return; }
-        var current = _recipes[Math.Max(0, _profileList.Selected)];
+        var current = SelectedType;
         try
         {
             var (profile, _) = _gen.Build(current);
             var recipe = WorldRecipe.Create(name, $"Custom world type based on {current.Name}, {profile.WorldSize / 1000:0} km.", profile,
-                current.Mainland, _gen.TypeSettings());
+                _gen.ShapeOf(current).Mainland, _gen.TypeSettings());
             DirAccess.MakeDirRecursiveAbsolute(CustomTypes);
             using (var f = Godot.FileAccess.Open($"{CustomTypes}/{recipe.Id}.json", Godot.FileAccess.ModeFlags.Write)) f.StoreString(recipe.ToJson());
             _recipes = WorldRecipe.Catalog(_profiles, LoadCustomTypes());
-            _profileList.Clear();
-            foreach (var r in _recipes) _profileList.AddItem(r.Name);
-            int index = _recipes.ToList().FindIndex(r => r.Id == recipe.Id);
-            _profileList.Select(index);
-            SelectType(index);
+            FillTypeList();
+            ShowType(_recipes.ToList().FindIndex(r => r.Id == recipe.Id));
             _previewInfo.Text = $"Saved world type \"{recipe.Name}\" ({ProjectSettings.GlobalizePath($"{CustomTypes}/{recipe.Id}.json")}). It adapts to any world size like the built-in types.";
         }
         catch (Exception error) { _previewInfo.Text = "Could not save the world type: " + error.Message; }
+    }
+
+    /// <summary>The world type list, grouped (Natural, Classic, Your types; D230). Each item's id is its index in
+    /// <see cref="_recipes"/>.</summary>
+    private void FillTypeList()
+    {
+        _profileList.Clear();
+        foreach (var group in new[] { "Natural", "Classic", "Your types" })
+        {
+            var items = _recipes.Select((r, i) => (r, i)).Where(t => t.r.Group == group).ToList();
+            if (items.Count == 0) continue;
+            _profileList.AddSeparator(group);
+            foreach (var (r, i) in items) _profileList.AddItem(r.ShortName, i);
+        }
+    }
+
+    private WorldRecipe SelectedType => _recipes[Math.Clamp(_profileList.GetSelectedId(), 0, _recipes.Count - 1)];
+
+    /// <summary>Show and load the world type at this index of <see cref="_recipes"/>.</summary>
+    private void ShowType(int index)
+    {
+        _profileList.Select(_profileList.GetItemIndex(Math.Clamp(index, 0, _recipes.Count - 1)));
+        SelectType(index);
     }
 
     private void SelectType(int index)
@@ -342,14 +360,14 @@ public partial class WorldLab : Node3D
 
     /// <summary>Identity of the world the creation screen describes (type, seed, every parameter).</summary>
     private string PlanKey(int seed) =>
-        $"{_recipes[Math.Max(0, _profileList.Selected)].Id}|{seed}|" + string.Join(",", _gen.All.Select(x => x.Value.ToString("R", CultureInfo.InvariantCulture)));
+        $"{SelectedType.Id}|{seed}|" + string.Join(",", _gen.All.Select(x => x.Value.ToString("R", CultureInfo.InvariantCulture)));
 
     private void StartPreview()
     {
         if (_preview != null) return;
         if (!int.TryParse(_seedEdit.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int seed)) { _previewInfo.Text = "Seed must be a whole number."; return; }
         WorldProfile profile; TerrainStyle style;
-        try { (profile, style) = _gen.Build(_recipes[Math.Max(0, _profileList.Selected)]); }
+        try { (profile, style) = _gen.Build(SelectedType); }
         catch (Exception error) { _previewInfo.Text = "Not valid: " + error.Message; return; }
         _pendingKey = PlanKey(seed);
         _previewInfo.Text = $"Generating the map of {profile.Name}…";
@@ -1444,7 +1462,7 @@ public partial class WorldLab : Node3D
         sb.AppendLine($"Version {ProjectSettings.GetSetting("application/config/version", "?")} · Godot {Engine.GetVersionInfo()["string"]} · {OS.GetName()} {OS.GetVersion()}");
         sb.AppendLine($"GPU {RenderingServer.GetVideoAdapterName()} ({RenderingServer.GetVideoAdapterVendor()}, {RenderingServer.GetVideoAdapterApiVersion()}) · window {DisplayServer.WindowGetSize()} · FPS {Engine.GetFramesPerSecond():0}");
         sb.AppendLine();
-        sb.AppendLine($"World: {plan.Profile.Name} (type {_recipes[Math.Max(0, _profileList.Selected)].Id}{(_custom ? ", custom parameters" : "")}), seed {plan.Manifest.Seed}, size {F(plan.Profile.WorldSize / 1000)} km, sea level {F(plan.Profile.SeaLevel)} m");
+        sb.AppendLine($"World: {plan.Profile.Name} (type {SelectedType.Id}{(_custom ? ", custom parameters" : "")}), seed {plan.Manifest.Seed}, size {F(plan.Profile.WorldSize / 1000)} km, sea level {F(plan.Profile.SeaLevel)} m");
         if (_custom) sb.AppendLine("World parameters: " + string.Join(", ", _gen.All.Select(g => $"{g.Key}={F(g.Value)}")));
         sb.AppendLine($"Player: x {F(PlayerX)}, z {F(PlayerZ)}, y {F(_player.Position.Y)} ({F(fly)} m above ground/water) · {(_fly ? (_noclip ? "fly+noclip" : "fly") : _swimming ? "swimming" : "walking")}");
         sb.AppendLine($"Ground {F(t.Height)} m · water {t.Water}{(double.IsNaN(t.WaterLevel) ? "" : $" surface {F(t.WaterLevel)} m, depth {F(t.WaterLevel - t.Height)} m")} · mountain {F(t.Mountain)}");
@@ -1462,7 +1480,7 @@ public partial class WorldLab : Node3D
         // The same scene for the developer's screenshot tool (view: yaw, pitch, zoom; weather follows day + hour).
         string settings = string.Join(" ", GameSettings.All.Select(g => $"--set={g.Key}={g.Value.ToString("R", c)}"));
         // A player's own world type is only on their PC: the dump carries it (replayed with --type-file).
-        var recipeNow = _recipes[Math.Max(0, _profileList.Selected)];
+        var recipeNow = SelectedType;
         if (recipeNow.Custom)
         {
             sb.AppendLine("World type file:");
@@ -1612,8 +1630,8 @@ public partial class WorldLab : Node3D
         var row = new HBoxContainer();
         row.AddChild(new Label { Text = "World type" });
         _profileList = new OptionButton { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        foreach (var r in _recipes) _profileList.AddItem(r.Name);
-        _profileList.ItemSelected += i => SelectType((int)i);
+        FillTypeList();
+        _profileList.ItemSelected += i => SelectType(_profileList.GetItemId((int)i));
         _seedEdit = new LineEdit { CustomMinimumSize = new Vector2(110, 0), PlaceholderText = "seed" };
         var random = new Button { Text = "Random seed" };
         random.Pressed += () => _seedEdit.Text = ((int)(GD.Randi() % 100000)).ToString(CultureInfo.InvariantCulture);

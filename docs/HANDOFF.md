@@ -64,7 +64,8 @@ Cloud shape = rounded):
   **World generation**: plan `docs/WORLDGEN_PLAN.md` (D226), Tom's answers in it; step 1 done (D227: stages, all
   outputs identical, ~1 % slower). Step 2 designed (`docs/WORLDGEN_MODULES_DESIGN.md`, D228) and approved;
   **revision 17 built (D229)**: module frame, New world → Landforms, revision pinning in world arguments and saves, all
-  proved identical to 16. In build 115. Open: Tom's three design questions (one or two sliders, rework or
+  proved identical to 16. In build 115. World types rework part 1
+  (D230): *Land shape* apart from the type, grouped type list (not in a build). Open: Tom's three design questions (one or two sliders, rework or
   landforms first, which new shapes).
 
 ---

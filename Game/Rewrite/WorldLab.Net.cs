@@ -264,8 +264,7 @@ public partial class WorldLab : IWorldHost, IClientGame
         {
             var type = WorldRecipe.FromJson(worldTypeJson);
             _recipes = _recipes.Where(r => r.Id != type.Id).Append(type).ToList();
-            _profileList.Clear();
-            foreach (var r in _recipes) _profileList.AddItem(r.Name);
+            FillTypeList();
         }
         string preset = "mountainous"; int seed = 42;
         var parts = worldArgs.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -276,9 +275,7 @@ public partial class WorldLab : IWorldHost, IClientGame
             if (a.StartsWith("--seed=")) seed = int.Parse(a[7..], CultureInfo.InvariantCulture);
             if (a.StartsWith("--revision=")) _pinnedRevision = int.Parse(a[11..], CultureInfo.InvariantCulture);
         }
-        int index = Math.Max(0, _recipes.ToList().FindIndex(r => r.Id == preset));
-        _profileList.Select(index);
-        SelectType(index);
+        ShowType(Math.Max(0, _recipes.ToList().FindIndex(r => r.Id == preset)));
         foreach (var a in parts)
             if (a.StartsWith("--set=gen.") && a[6..].Split('=') is [var key, var value] && _gen.All.FirstOrDefault(x => x.Key == key) is { } g)
                 g.Value = double.Parse(value, CultureInfo.InvariantCulture);

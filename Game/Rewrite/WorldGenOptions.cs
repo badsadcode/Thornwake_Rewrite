@@ -16,7 +16,7 @@ public sealed class WorldGenOptions
     private Setting Add(Setting s) { All.Add(s); return s; }
 
     // ---- world shape (profile)
-    public readonly Setting Size, Continents, Islands, ContinentSize, CoastRoughness, Ranges, MountainHeight, MountainWidth, HillHeight, Classic;
+    public readonly Setting Size, Shape, Continents, Islands, ContinentSize, CoastRoughness, Ranges, MountainHeight, MountainWidth, HillHeight, Classic;
     // ---- terrain
     public readonly Setting Hills, Plains, Rock, CoastDetail, Erosion, Shores;
     // ---- water
@@ -24,14 +24,19 @@ public sealed class WorldGenOptions
     // ---- vegetation and objects
     public readonly Setting ForestCover, ForestDensity, Rocks, Props;
 
-    public WorldGenOptions()
+    /// <param name="catalogue">The world types, for the land shapes' names (<see cref="WorldRecipe.ShapeIds"/>).</param>
+    public WorldGenOptions(IReadOnlyList<WorldRecipe>? catalogue = null)
     {
+        _shapes = Array.ConvertAll(WorldRecipe.ShapeIds, id => catalogue?.FirstOrDefault(r => r.Id == id));
         const string S = "World shape", T = "Terrain", W = "Rivers and lakes";
         Classic = Add(new("gen.version", S, "Terrain version", 0, 7, 1, 0,
             "Generate the world as in an earlier build, to compare or go back: Build 9 (before biomes), Build 8 (before estuaries and gentler bulging banks), Preview 7 (before smooth river mouths), Build 5 (before natural banks and steeper shores), Build 51 (before rivers inside lakes took the lake's level), Build 52 (before sea pockets inside lakes became lake), Build 114 (before the Landforms settings; the same ground as current with them as designed).",
             options: new[] { "current", "Build 9", "Build 8", "Preview 7", "Build 5", "Build 51", "Build 52", "Build 114" }));
         Size = Add(new("gen.size", S, "World size", 0, WorldRecipe.Sizes.Length - 1, 1, 4, "Width and length of the world. The world type adapts to any size.",
             options: Array.ConvertAll(WorldRecipe.Sizes, k => $"{k:0} km × {k:0} km")));
+        Shape = Add(new("gen.shape", S, "Land shape", 0, WorldRecipe.ShapeIds.Length, 1, 0,
+            "The layout of land and sea: the world type's own, or another type's (the rest of the world type stays: its parameters, climate and landforms).",
+            options: new[] { "the world type's" }.Concat(WorldRecipe.ShapeIds.Select((id, i) => _shapes[i] is { } r ? $"{r.ShortName} ({r.Group.ToLowerInvariant()})" : id)).ToArray()));
         var counts = new string[WorldRecipe.MaxContinents + 1];
         counts[0] = "auto";
         for (int i = 1; i <= WorldRecipe.MaxContinents; i++) counts[i] = i.ToString();
@@ -96,6 +101,10 @@ public sealed class WorldGenOptions
     public readonly Setting Latitude, LatitudeSpan, Warmth, Wetness, BiomePlacement, PatchSize;
     private readonly List<(string Id, Setting Toggle)> _biomeToggles = new();
     private readonly List<(LandformInfo Info, Setting Amount, Setting Size)> _landforms = new();
+    private readonly WorldRecipe?[] _shapes;
+
+    /// <summary>The recipe whose land shape the world takes: the chosen shape, else the world type itself.</summary>
+    public WorldRecipe ShapeOf(WorldRecipe type) => Shape.Index > 0 && _shapes[Shape.Index - 1] is { } shape ? shape : type;
 
     private static IEnumerable<(string, string)> BuiltInBiomes()
     {
@@ -113,7 +122,7 @@ public sealed class WorldGenOptions
         void Set(Setting s, double v) { s.Default = Math.Clamp(v, s.Min, s.Max); s.Value = s.Default; }
         int native = Array.IndexOf(WorldRecipe.Sizes, recipe.NativeKm);
         Set(Size, native >= 0 ? native : 4);
-        Set(Continents, 0); Set(Islands, -1); Set(Ranges, 0);
+        Set(Shape, 0); Set(Continents, 0); Set(Islands, -1); Set(Ranges, 0);
         foreach (var s in new[] { ContinentSize, CoastRoughness, MountainHeight, MountainWidth, HillHeight }) Set(s, 1);
         var style = TerrainStyle.For(recipe.Base);
         Set(Plains, 1 - style.PlainsRoughness);
@@ -130,7 +139,7 @@ public sealed class WorldGenOptions
     /// <summary>Keys baked into a world type's profile (or chosen per world) rather than stored as its parameters.</summary>
     private static readonly HashSet<string> ShapeKeys = new()
     {
-        "gen.version", "gen.size", "gen.continents", "gen.islands", "gen.continent_size", "gen.coast", "gen.ranges",
+        "gen.version", "gen.size", "gen.shape", "gen.continents", "gen.islands", "gen.continent_size", "gen.coast", "gen.ranges",
         "gen.mountain_height", "gen.mountain_width", "gen.hill_height",
     };
 
@@ -170,7 +179,7 @@ public sealed class WorldGenOptions
     {
         // (revisions 14 and 15 are "current" with an older revision, as Builds 51 and 52; older ones differ in more)
         int current = pinnedRevision is >= 14 and <= TerrainStyle.CurrentRevision ? pinnedRevision.Value : TerrainStyle.CurrentRevision;
-        var profile = recipe.Resolve(Choices);
+        var profile = ShapeOf(recipe).Resolve(Choices);
         var b = TerrainStyle.For(profile);
         var style = b with
         {
