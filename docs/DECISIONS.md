@@ -3474,6 +3474,10 @@ rock models) → headlands and coves → spits and lagoons → oxbows and terrac
 → salt flats → hoodoos and tors → karst sinkholes and springs. Caves are split off as their own later project (the
 ground is a height field; caves need their own geometry). Not picked: passes (the roads stage), volcanoes (with a
 *Volcanic island* shape), fjords (with sailing).
+Then Tom: "we need volcanoes and fjords… the more landforms, the better. Even some fictional, fantasy-like". Added as
+no. 6 fjords (after the U-shaped valleys they need) and no. 7 volcanoes and calderas (after small lakes, for crater
+lakes); passes back as no. 17 (with the roads stage); karst moves to no. 18. A *Fantasy landforms* section lists
+ideas for Tom and Noor to pick (floating islands, giant's stairs, crystal fields, titan bones, the great rift…).
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
