@@ -26,7 +26,11 @@ bool sheltered(vec3 o, vec3 axis) {
 	for (int i = 0; i < 4; i++) {
 		float rise = i == 0 ? 0.0 : i == 1 ? 1.0 : i == 2 ? 2.5 : 5.0;
 		vec3 q = o - axis * rise * k;
-		if (cover_at(q.xz) > o.y + rise + 0.05) return true;
+		// (only roofs, rocks and logs — a > 1.5 in the map — not the terrain: with near-horizontal rain in a gale the path back
+		// ran into the slope rising upwind, and every drop at its foot was hidden — a rainless patch, Tom's dump 195847, D225)
+		vec2 cc = floor(q.xz);
+		vec4 cv = texelFetch(cover_tex, ivec2(mod(cc, 40.0)), 0);
+		if (cv.a > 1.5 && cv.g == cc.x && cv.b == cc.y && cv.r > o.y + rise + 0.05) return true;
 	}
 	return false;
 }

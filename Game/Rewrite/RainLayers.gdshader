@@ -59,7 +59,10 @@ void fragment() {
 	float u = ang * radius + yrel * lean;
 	float v = world_pos.y + clock * fall;
 	// fine streaks, and coarse soft ones (a rain curtain) that stay where the fine ones are too dense to draw
-	float a = max(streaks(u, v, cell, streak_len, 0.04, amount, 0.0), 0.35 * streaks(u, v, cell * 6.0, streak_len * 1.2, 0.25, amount, 5.0));
+	float a = max(streaks(u, v, cell, streak_len, 0.04, amount, 0.0), 0.16 * streaks(u, v, cell * 6.0, streak_len * 1.2, 0.25, amount, 5.0));
+	// (D225: near-horizontal rain — a gale — cannot be drawn on the cylinder: its streaks wrapped into arcs over the sky,
+	// Tom's dump 195652 at 32 m/s; there the layer fades out, the veil and the near drops carry the rain)
+	a *= 1.0 - smoothstep(0.7, 1.4, abs(lean));
 	// (D222, Tom: "the border of the background rain is kind of abrupt … the circle is visible"): the layer stands for
 	// the rain between it and what is behind — none against the ground just past it, more the further the land, full
 	// against the sky; no edge where the ground crosses the cylinder

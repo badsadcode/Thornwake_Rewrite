@@ -1133,15 +1133,39 @@ public partial class Atmosphere : Node3D
         // and a particle's direction is in its emitter's frame — the drops' fall turned with the view. Now top level: it
         // follows the camera's position only, never its rotation.)
         _rainParticles.TopLevel = true;
-        _rainParticles.GlobalTransform = new Transform3D(Basis.Identity, camera + new Vector3(-dir.X, 0, -dir.Z) * 4 + new Vector3(0, 2, 0));
+        // (D225: upwind by how far the wind carries a drop in half its life — in a 30 m/s gale they crossed the box in a
+        // fraction of a second and the view downwind ran empty, Tom's dump 195847)
+        _rainParticles.GlobalTransform = new Transform3D(Basis.Identity, camera + new Vector3(-dir.X, 0, -dir.Z) * 4 - new Vector3(drift.X, 0, drift.Y) * .7f + new Vector3(0, 2, 0));
         float sheets = .7f + .45f * Wind.Gust;
         _rainParticles.AmountRatio = Mathf.Clamp(Mathf.Pow(p, .45f) * sheets, 0, 1) * Math.Clamp(GameSettings.RainStrength.F / 1.6f, .12f, 1);
         float l = Mathf.Clamp(_daylight * 1.1f, .06f, 1) * Mathf.Lerp(1, .35f, _night);
         _rainStreakMat.SetShaderParameter("fall_dir", dir);
-        _rainStreakMat.SetShaderParameter("streak_len", speed * .055f);
+        // (D225: under TAA the refractive streaks are longer — a drop's path over ~7 frames instead of ~3 — so the temporal
+        // filter builds them up instead of averaging them away; fastest in a gale, where they nearly vanished)
+        bool longer = GameSettings.RainLook.Index == 3 && temporal;
+        _rainStreakMat.SetShaderParameter("streak_len", speed * (longer ? .12f : .055f));
         // (wide and opaque enough to survive TAA, which smeared build 104's 1 cm, 20 % streaks to almost nothing)
         _rainStreakMat.SetShaderParameter("width", Mathf.Lerp(.008f, .022f, k));
         _rainStreakMat.SetShaderParameter("tint", new Color(.82f * l, .86f * l, .92f * l, Mathf.Lerp(.28f, .55f, k)));
+        // (D225: with TAA the refractive streak gets a second draw pass, a thin solid core in the opaque pass: it writes
+        // motion vectors, so TAA keeps it — the transparent lens alone faded to almost nothing in fast rain, at its worst
+        // in a gale, Tom's dumps 195652 / 195847; the lens around it keeps the soft, glassy look)
+        bool core = GameSettings.RainLook.Index == 3 && temporal;
+        if (core)
+        {
+            _rainCoreMat ??= new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/RainStreakSolid.gdshader") };
+            foreach (var pn in new[] { "fall_dir", "streak_len", "cover_on", "cover_tex", "canopy_on", "canopy_tex", "canopy_origin" })
+                _rainCoreMat.SetShaderParameter(pn, _rainStreakMat.GetShaderParameter(pn));
+            _rainCoreMat.SetShaderParameter("width", Mathf.Lerp(.003f, .007f, k));
+            _rainCoreMat.SetShaderParameter("tint", new Color(.7f * l, .74f * l, .8f * l, Mathf.Lerp(.42f, .62f, k))); // (at .2–.32 most cores fell under the scissor)
+        }
+        if (core != (_rainParticles.DrawPasses == 2))
+        {
+            _rainParticles.DrawPasses = core ? 2 : 1;
+            _rainParticles.MaterialOverride = core ? null : _rainStreakMat;
+            _rainParticles.DrawPass1 = new QuadMesh { Size = Vector2.One, Material = core ? _rainStreakMat : null };
+            _rainParticles.DrawPass2 = core ? new QuadMesh { Size = Vector2.One, Material = _rainCoreMat } : null;
+        }
         // (only while it rains or the leaves still drip: in dry weather the cover map cost ~0.2 ms a frame for nothing)
         if (p > .02f || _leafWet > .01f) UpdateCover(camera, dir);
         UpdateTrees(p, camera);
@@ -1240,6 +1264,7 @@ public partial class Atmosphere : Node3D
 
     // ---- rain in depth (D221)
     private readonly MeshInstance3D?[] _rainLayers = new MeshInstance3D?[2];
+    private ShaderMaterial? _rainCoreMat; // (the refractive streaks' solid core under TAA, D225)
     private float _rainClock;
 
     /// <summary>
@@ -1258,7 +1283,8 @@ public partial class Atmosphere : Node3D
             if (!on) continue;
             layer.GlobalTransform = new Transform3D(Basis.Identity, camera);
             var m = (ShaderMaterial)layer.MaterialOverride;
-            float amount = Mathf.SmoothStep(.08f, .9f, p) * (i == 0 ? .7f : .9f);
+            // (D225: thinned by Rain strength like the drops — at 0.1 the near rain was at 12 % and the layers at full)
+            float amount = Mathf.SmoothStep(.08f, .9f, p) * (i == 0 ? .7f : .9f) * Math.Clamp(GameSettings.RainStrength.F / 1.6f, .12f, 1);
             m.SetShaderParameter("amount", amount);
             m.SetShaderParameter("fall", fall);
             m.SetShaderParameter("drift", drift);
@@ -1557,6 +1583,8 @@ public partial class Atmosphere : Node3D
             pm.TurbulenceEnabled = false;
             if (_particlesLook >= 1 && _rainStreakMat != null)
             {
+                _rainParticles.DrawPasses = 1;
+                _rainParticles.DrawPass2 = null;
                 _rainParticles.DrawPass1 = new QuadMesh { Size = Vector2.One };
                 _rainParticles.MaterialOverride = _rainStreakMat;
             }

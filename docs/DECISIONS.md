@@ -3352,6 +3352,27 @@ refraction … still pretty much white"; "I still can see the mountain … more 
   each stretch drying at its own time (0.35–1.25 × the fade); thinner and partly clear with a gentler bend (they read as
   dark ropes) (`artifacts/lens-trails-irregular.jpg`).
 
+## D225 — Strong rain: no arcs in gales, no rainless patch, near rain visible under TAA (2026-10-27)
+Tom on build 113 (dumps 195652, 195841/195847, 200238: badlands, a downpour in 25–32 m/s of wind; the last with Rain
+strength 0.1): "still this visible weird pattern", "this weird cutoff of the rain … not rendered on the part of the
+screen on the mountain", "the main rain is not that visible, and those wider streaks … in the further background … take
+over everything".
+* **Arcs**: in a gale the rain is near horizontal; the depth layers lean their streaks along the cylinder and wrapped
+  them into arcs over the sky. The layers now fade out where |lean| > ~0.7–1.4 (the veil and the near drops carry it);
+  their coarse soft octave is fainter (×0.16, was 0.35).
+* **Rainless patch**: each drop's shelter test followed its path back up — and the terrain counted as cover: with
+  near-horizontal rain the path ran into the slope rising upwind and every drop at its foot was hidden. Only roofs,
+  rocks and logs (hard cells) shelter now. Also the drops are born upwind by 0.7 × the wind's drift (a gale carried
+  them out of the box in a fraction of a second).
+* **Layers vs Rain strength**: the depth layers now scale with Rain strength like the drops (at 0.1 the drops were at
+  12 % and the layers at full).
+* **Near rain under TAA**: transparent streaks write no motion vectors, so TAA averaged fast drops away — almost nothing
+  in a gale (compared with AA off). With TAA / FSR 2 the refractive streaks are now ~2.2× longer (a drop's path over ~7
+  frames, like motion blur) so the filter builds them up, and get a thin solid core in a second draw pass (opaque,
+  scissored: it writes motion vectors).
+Rebuilt from his dumps with their winds (`artifacts/rain-gale-fixes.jpg`; `artifacts/rain-visible-under-taa.jpg`: gale
+and wind 10, before vs now).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
