@@ -3,8 +3,9 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 114** (v0.9.114, return point `6473368`, `dist/Preview-114`): strong rain fixed (D225). Rain is
-  parked ("better than it was, maybe go back to it later"). Build 113 (`9948255`): rain tuning (D224).
+* **Last build Tom has: 115** (v0.9.115, return point `9377656`, `dist/Preview-115`): terrain revision 17 (D229) - New
+  world Landforms, worlds keep their terrain version, ground identical to 114. Build 114 (`6473368`): strong rain fixed
+  (D225). Rain is parked ("better than it was, maybe go back to it later"). Build 113 (`9948255`): rain tuning (D224).
   Build 112 (`c6b7cdd`, `dist/Preview-112`): refractive rain streaks (D223),
   rain in depth without arcs or a circle, mist gusts in grey rain (D222). Tom's saved Rain look is still 1 (dithered).
   Build 111 (`9572e13`, `dist/Preview-111`): Rain 2.1 (D221) — smooth streaks,
@@ -63,7 +64,7 @@ Cloud shape = rounded):
   **World generation**: plan `docs/WORLDGEN_PLAN.md` (D226), Tom's answers in it; step 1 done (D227: stages, all
   outputs identical, ~1 % slower). Step 2 designed (`docs/WORLDGEN_MODULES_DESIGN.md`, D228) and approved;
   **revision 17 built (D229)**: module frame, New world → Landforms, revision pinning in world arguments and saves, all
-  proved identical to 16. Not yet in a build. Open: Tom's three design questions (one or two sliders, rework or
+  proved identical to 16. In build 115. Open: Tom's three design questions (one or two sliders, rework or
   landforms first, which new shapes).
 
 ---

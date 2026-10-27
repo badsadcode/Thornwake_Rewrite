@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 115** (terrain revision 17: New world Landforms, worlds keep their terrain version D229) | `9377656` | Thornwake-Rewrite-Preview-115 (v0.9.115) | Versions must match to connect; ground identical to 114 at the designed settings, *Terrain version → Build 114* keeps revision 16 — build 114 = `6473368` |
 | **Build 114** (strong rain: no arcs in gales, no rainless patch, rain visible under TAA D225) | `6473368` | Thornwake-Rewrite-Preview-114 (v0.9.114) | Versions must match to connect; fixes, not switchable — build 113 = `9948255` |
 | **Build 113** (rain tuning D224: denser drops, veil over the sky, splashes by rain size, refraction, lower mist, irregular lens trails) | `9948255` | Thornwake-Rewrite-Preview-113 (v0.9.113) | Versions must match to connect; the tuning is not switchable — build 112 = `c6b7cdd` |
 | **Build 112** (refractive rain streaks D223, rain in depth fixed and mist gusts in grey rain D222) | `c6b7cdd` | Thornwake-Rewrite-Preview-112 (v0.9.112) | Versions must match to connect; Rain look → smooth / dithered / build 104 give the earlier streaks; build 111 = `9572e13` (arcs and circle in the far rain) |
