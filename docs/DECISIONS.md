@@ -3464,6 +3464,17 @@ pick from an illustrated menu, which needs his answer anyway.
   by type, not list position.
 * Not here yet (later parts): climate and landform defaults per type (with the new shapes, for Tom to tune), Edit steps.
 
+## D231 — The first 15 landforms and their order; docs/LANDFORMS.md (2026-10-27)
+Tom picked 15 landforms from the illustrated menu (after talking with Noor), asked for an MD file about the landforms
+and left the order to me ("the order I clicked is random, so feel free to choose your own order"). `docs/LANDFORMS.md`
+is the living catalogue (what, where, play, build, status). Order by dependency, most play first: escarpments and
+plateaus (the first big landform, proves the plan hook) → waterfalls and rapids → gorges and canyons → cirques with a
+tarn (brings small mountain lakes, Tom's question) → hanging valleys → scree and boulders → sea stacks and arches (first
+rock models) → headlands and coves → spits and lagoons → oxbows and terraces → alluvial fans → moraines and kettle lakes
+→ salt flats → hoodoos and tors → karst sinkholes and springs. Caves are split off as their own later project (the
+ground is a height field; caves need their own geometry). Not picked: passes (the roads stage), volcanoes (with a
+*Volcanic island* shape), fjords (with sailing).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

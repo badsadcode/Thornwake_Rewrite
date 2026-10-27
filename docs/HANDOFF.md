@@ -65,7 +65,8 @@ Cloud shape = rounded):
   outputs identical, ~1 % slower). Step 2 designed (`docs/WORLDGEN_MODULES_DESIGN.md`, D228) and approved;
   **revision 17 built (D229)**: module frame, New world → Landforms, revision pinning in world arguments and saves, all
   proved identical to 16. In build 115. World types rework part 1
-  (D230): *Land shape* apart from the type, grouped type list (not in a build). Open: Tom's three design questions (one or two sliders, rework or
+  (D230): *Land shape* apart from the type, grouped type list (not in a build). Tom picked 15 landforms; order and
+  catalogue in `docs/LANDFORMS.md` (D231); next: no. 1, escarpments and plateaus. Open: Tom's three design questions (one or two sliders, rework or
   landforms first, which new shapes).
 
 ---

@@ -127,6 +127,10 @@ Landforms*, the plan hook for big landforms, empty site and road lists, stage na
 that record their terrain revision (saves before it load as 16; *Terrain version* has *Build 114*). Proved identical to
 16 at the designed settings.
 
+## Step 4 — the first landforms picked (D231)
+
+Tom picked 15; the order and a section per landform are in `docs/LANDFORMS.md`. First: escarpments and plateaus.
+
 ## Questions for you (answered above)
 
 * Is this order right (landforms before settlements), or should sites and roads come first?
