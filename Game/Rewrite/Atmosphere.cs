@@ -1161,10 +1161,11 @@ public partial class Atmosphere : Node3D
         }
         if (core != (_rainParticles.DrawPasses == 2))
         {
+            if (!core) _rainParticles.DrawPass2 = null; // (before the count drops: setting pass 2 with one pass logged an error)
             _rainParticles.DrawPasses = core ? 2 : 1;
             _rainParticles.MaterialOverride = core ? null : _rainStreakMat;
             _rainParticles.DrawPass1 = new QuadMesh { Size = Vector2.One, Material = core ? _rainStreakMat : null };
-            _rainParticles.DrawPass2 = core ? new QuadMesh { Size = Vector2.One, Material = _rainCoreMat } : null;
+            if (core) _rainParticles.DrawPass2 = new QuadMesh { Size = Vector2.One, Material = _rainCoreMat };
         }
         // (only while it rains or the leaves still drip: in dry weather the cover map cost ~0.2 ms a frame for nothing)
         if (p > .02f || _leafWet > .01f) UpdateCover(camera, dir);
@@ -1583,8 +1584,8 @@ public partial class Atmosphere : Node3D
             pm.TurbulenceEnabled = false;
             if (_particlesLook >= 1 && _rainStreakMat != null)
             {
+                if (_rainParticles.DrawPasses > 1) _rainParticles.DrawPass2 = null; // (before the count: pass 2 must still exist)
                 _rainParticles.DrawPasses = 1;
-                _rainParticles.DrawPass2 = null;
                 _rainParticles.DrawPass1 = new QuadMesh { Size = Vector2.One };
                 _rainParticles.MaterialOverride = _rainStreakMat;
             }
