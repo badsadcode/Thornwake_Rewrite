@@ -446,7 +446,7 @@ public partial class Atmosphere : Node3D
             {
                 EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Points, EmissionPointTexture = _splashPoints, EmissionPointCount = SplashPointCount,
                 EmissionColorTexture = _splashColors,
-                Gravity = Vector3.Zero, InitialVelocityMin = 0, InitialVelocityMax = 0, Spread = 0, ScaleMin = .6f, ScaleMax = 1.2f,
+                Gravity = Vector3.Zero, InitialVelocityMin = 0, InitialVelocityMax = 0, Spread = 0, ScaleMin = .4f, ScaleMax = 1.6f,
             },
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
@@ -808,9 +808,11 @@ public partial class Atmosphere : Node3D
                 // Simulated weather (round 27, Tom: "rain should be denser… varying density"): up to 24 000 drops,
                 // Rain strength scales all of them (1 ≈ 15 000 in a downpour), and the rain comes in sheets with the
                 // gusts. (Changing Amount restarts the emitter: only when the model changes.)
-                if (_rainParticles.Amount != 24000)
+                // (D224: 40 000 with the rain look by strength — Tom: the near rain "not dense enough" in heavy rain)
+                int max = GameSettings.RainLook.Index >= 1 && !Snowing ? 40000 : 24000;
+                if (_rainParticles.Amount != max)
                 {
-                    _rainParticles.Amount = 24000;
+                    _rainParticles.Amount = max;
                     SetParticleKind(Snowing);
                 }
                 float sheets = .7f + .45f * Wind.Gust;
@@ -819,7 +821,7 @@ public partial class Atmosphere : Node3D
             }
             else
             {
-                int want = GameSettings.RainLook.Index >= 1 && !Snowing ? 24000 : 9000; // (D207: by strength, as many as the simulated model)
+                int want = GameSettings.RainLook.Index >= 1 && !Snowing ? 40000 : 9000; // (D207, D224: by strength, as many as the simulated model)
                 if (_rainParticles.Amount != want) { _rainParticles.Amount = want; SetParticleKind(Snowing); }
                 _rainParticles.AmountRatio = Mathf.Clamp(p * 1.1f, 0, 1) * Math.Clamp(GameSettings.RainStrength.F, .2f, 1);
             }
@@ -1081,12 +1083,17 @@ public partial class Atmosphere : Node3D
     {
         var e = Environment;
         bool on = GameSettings.RainLight.Index == 1;
-        float r = on ? _rainK * (1 - .65f * _sunShower) : 0; // (a sun shower: a light veil, the sun's glow kept)
+        float r = on ? _rainK * (1 - .45f * _sunShower) : 0; // (a sun shower: a lighter veil, the sun's glow kept; D224: was × 0.35)
         e.AdjustmentSaturation = _baseSaturation * (1 - .35f * r);
         e.AdjustmentContrast = _baseContrast * (1 - .1f * r);
         e.FogAerialPerspective = _baseAerial * (1 - .8f * r);
+        // (D224: in heavy rain the veil covers the sky too — at 0.25 the fully fogged mountains stood out as grey shapes
+        // against a lighter sky, Tom's dump 192318: "I still can see the mountain")
+        e.FogSkyAffect = .25f + .65f * Mathf.SmoothStep(.4f, 1f, r);
         if (r <= .001f) return;
-        e.FogDensity += .0023f * Mathf.Pow(r, 1.5f);
+        // (D224, Tom: "I still can see the mountain behind me … more fog if it's heavy rain": a downpour ~1.6× thicker)
+        // (measured at his dump 192318: 0.0026 in a downpour after the height haze — the mountain at ~600 m still clear)
+        e.FogDensity += .0026f * Mathf.Pow(r, 1.5f) + .0042f * Mathf.Pow(Mathf.SmoothStep(.55f, 1f, r), 2);
         e.FogEnabled = true;
         e.FogSunScatter *= 1 - .8f * r * (1 - _sunShower);
     }
@@ -1166,6 +1173,14 @@ public partial class Atmosphere : Node3D
         _splashPoints!.Update(_splashPointsImage);
         _splashColors!.Update(_splashColorImage);
         _groundSplashes.AmountRatio = Mathf.Clamp(Mathf.SmoothStep(.3f, 1f, p) * Math.Clamp(GameSettings.RainStrength.F / 1.6f, .3f, 1), .05f, 1);
+        // (D224, Tom: "the splash … bigger or smaller depending on the size … more variant": bigger drops in harder rain,
+        // and a wide spread — most small, now and then a big one)
+        if (_groundSplashes.ProcessMaterial is ParticleProcessMaterial spm)
+        {
+            float big = Mathf.Lerp(.55f, 1.35f, k);
+            spm.ScaleMin = .3f * big; spm.ScaleMax = 1.9f * big;
+            spm.ScaleCurve ??= new CurveTexture { Curve = SplashSizes() };
+        }
         if (_groundSplashes.DrawPass1 is QuadMesh { Material: ShaderMaterial sm })
             sm.SetShaderParameter("tint", new Color(.8f * l, .84f * l, .88f * l));
     }
@@ -1197,7 +1212,7 @@ public partial class Atmosphere : Node3D
         {
             _rainMistMat = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/RainMist.gdshader") };
             _rainMistMat.SetShaderParameter("noise3d", _cloudNoise);
-            _rainMist = new FogVolume { Size = new Vector3(80, 24, 80), Material = _rainMistMat, Shape = RenderingServer.FogVolumeShape.Box };
+            _rainMist = new FogVolume { Size = new Vector3(80, 16, 80), Material = _rainMistMat, Shape = RenderingServer.FogVolumeShape.Box };
             AddChild(_rainMist);
         }
         var cam = GetViewport()?.GetCamera3D();
@@ -1207,7 +1222,7 @@ public partial class Atmosphere : Node3D
         if (_rainMistDrift.LengthSquared() > 8192f * 8192f) _rainMistDrift = Vector2.Zero;
         var c = cam.GlobalPosition;
         float ground = GroundY?.Invoke(c.X, c.Z) ?? c.Y - 1.7f;
-        _rainMist.GlobalPosition = new Vector3(c.X, ground + 10, c.Z);
+        _rainMist.GlobalPosition = new Vector3(c.X, ground + 6, c.Z); // (D224: lower, hugging the ground)
         float l = Mathf.Clamp(_daylight * 1.1f, .06f, 1);
         _rainMistMat!.SetShaderParameter("amount", _rainMistAmount);
         _rainMistMat.SetShaderParameter("ground", ground);
@@ -1217,7 +1232,10 @@ public partial class Atmosphere : Node3D
         _rainMistMat.SetShaderParameter("tint", new Color(.86f * l + .1f, .88f * l + .1f, .9f * l + .1f));
         // (D222: in grey rain the haze light is dim and the mist vanished — Tom saw it only in sun showers; the overcast
         // lifts it to the brightness of the grey veil around it)
-        _rainMistMat.SetShaderParameter("glow", Environment.FogLightColor * (1 + 3.5f * _gloom * (1 - _sunShower)));
+        // (the haze light toward grey: in the badlands its warm tint lit a bright orange band near the ground, D224)
+        var hl = Environment.FogLightColor;
+        float hg = (hl.R + hl.G + hl.B) / 3;
+        _rainMistMat.SetShaderParameter("glow", hl.Lerp(new Color(hg, hg, hg * 1.04f), .6f) * (1 + 1.6f * _gloom * (1 - _sunShower)));
     }
 
     // ---- rain in depth (D221)
@@ -1248,6 +1266,14 @@ public partial class Atmosphere : Node3D
             m.SetShaderParameter("streak_len", Mathf.Lerp(.5f, 1.4f, k) * (i == 0 ? 1 : 1.3f));
             m.SetShaderParameter("tint", new Color(.85f * light, .88f * light, .94f * light, Mathf.Lerp(.12f, .34f, k) * (i == 0 ? 1 : .8f)));
         }
+    }
+
+    /// <summary>The splashes' size spread (D224): over a particle's random 0..1, mostly small, a few big.</summary>
+    private static Curve SplashSizes()
+    {
+        var c = new Curve();
+        c.AddPoint(new Vector2(0, .35f)); c.AddPoint(new Vector2(.7f, .55f)); c.AddPoint(new Vector2(.92f, .8f)); c.AddPoint(new Vector2(1, 1));
+        return c;
     }
 
     private void UpdateCover(Vector3 camera, Vector3 dir)

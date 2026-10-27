@@ -92,15 +92,23 @@ vec4 runner(vec2 q, float lane, float col, float cycle, float progress, float pe
 	float pq = wait + tq * (1.0 - wait);
 	float age = (progress - pq) * period;
 	float behind = y - q.y;
-	float fresh = smoothstep(-r * 0.5, r * 1.5, behind) * step(y0, q.y) * smoothstep(-0.02, 0.0, age) * (1.0 - smoothstep(0.0, trail_fade, age));
+	// (D224, Tom: the trails "should be a little bit more irregular and maybe disappear irregularly. They kind of just start
+	// sharp"): the trail starts softly below where the drop gathered; it is uneven — thicker and thinner along it, broken
+	// in places — and dries unevenly, some stretches gone while others still shine
+	float n1 = hash1(floor(q.y / (r * 2.5 + 1e-3)) + col * 7.3 + cycle), n2 = hash1(floor(q.y / (r * 0.9 + 1e-3)) * 1.7 + col + cycle * 3.1);
+	float uneven = 0.55 + 0.45 * sin(q.y / max(r, 1e-3) * 1.7 + h * 9.0) * 0.5 + 0.25 * n2;
+	float dryAt = trail_fade * (0.35 + 0.9 * n1);
+	float fresh = smoothstep(-r * 0.5, r * 1.5, behind) * smoothstep(y0, y0 + r * 4.0, q.y) * smoothstep(-0.02, 0.0, age)
+		* (1.0 - smoothstep(dryAt * 0.5, dryAt, age)) * step(0.12, n2 + 0.1);
 	float neck = 1.0 - smoothstep(r * 1.5, r * 3.5, behind);
-	float tw = max(r, 1e-4) * mix(0.2, 0.36, neck) * (0.6 + 0.4 * fresh);
+	float tw = max(r, 1e-4) * mix(0.12 * uneven, 0.3, neck) * (0.6 + 0.4 * fresh);
 	float dx = q.x - (cx + wander);
 	float onPath = exp(-dx * dx / (tw * tw));
 	smear = fresh * onPath * 0.5;
 	// (the trail a thin cylindrical lens: the picture from across it, flipped sideways, dispersed at its edges)
 	// (stronger bend than at first: over grass the trail barely showed)
-	vec4 line = vec4(-dx * 3.2, 0.0, fresh * onPath, abs(dx) / (tw * 1.6));
+	// (D224: thinner, a gentler bend and partly clear — at full coverage and ×3.2 they read as dark ropes)
+	vec4 line = vec4(-dx * 1.8, 0.0, fresh * onPath * 0.6, abs(dx) / (tw * 1.6));
 	vec4 trail = vec4(0.0, 0.0, 0.0, 9.0);
 	float bcell = max(r, 1e-3) * 1.1;
 	float bi = floor(q.y / bcell);

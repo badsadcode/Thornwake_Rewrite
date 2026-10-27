@@ -36,12 +36,17 @@ void fog() {
 			// shredded: finer, faster structure tearing the sheets into strands
 			float shred = tex(vec3(p.x / 9.0 + t * 0.05, p.y / 7.0, p.z / 6.0), 2) * 0.6 + tex(vec3(p.x / 3.5, p.y / 3.0 - t * 0.08, p.z / 2.5), 1) * 0.4;
 			shred = smoothstep(0.42, 0.62, shred);
-			float layer = smoothstep(-1.0, 1.5, h) * (1.0 - smoothstep(6.0, 14.0, h));
+			// (D224, Tom: "a little bit lower to the ground": mostly within ~3 m, thinning out by ~7 m)
+			float layer = smoothstep(-1.0, 0.5, h) * (1.0 - smoothstep(2.0, 7.0, h));
 			// only around the player: soft edges of the box
 			vec3 e = min(UVW, 1.0 - UVW);
 			float edge = smoothstep(0.0, 0.3, min(e.x, e.z));
 			DENSITY = amount * 0.3 * patch * shred * layer * edge; // (0.05 hardly showed in the volumetric grid)
-			EMISSION = glow * DENSITY * 6.0;
+			// (D224: a slight colour variation from sheet to sheet — warmer, cooler, a little brighter or duller)
+			float hue = tex(vec3(p.x / 70.0 + 0.4, 0.3 + t * 0.004, p.z / 50.0), 3);
+			vec3 tintv = mix(vec3(0.93, 0.96, 1.04), vec3(1.05, 1.0, 0.94), smoothstep(0.35, 0.62, hue)) * mix(0.92, 1.08, smoothstep(0.4, 0.6, shred));
+			ALBEDO = tint * tintv;
+			EMISSION = glow * tintv * DENSITY * 4.0;
 		}
 	}
 }

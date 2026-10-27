@@ -3331,6 +3331,27 @@ bends). First try at ~0.3 coverage all but vanished under TAA (transparent, no m
 now coverage up to ~2× and a brighter highlight. At Tom's dump 185055 (`artifacts/rain-refractive.jpg`): soft glassy
 streaks vs the smooth version's hard, slightly stepped lines.
 
+## D224 — Rain tuning: denser drops, veil over the sky, bigger splashes in harder rain, refraction, lower mist (2026-10-27)
+Tom on build 112 (dump 192318, badlands, a sun shower in a downpour, Rain strength 4): the near rain not dense enough;
+mist gusts lower and with slight colour variation; splashes sized by the rain, more varied; "I don't see that much of a
+refraction … still pretty much white"; "I still can see the mountain … more fog if it's heavy rain"; the lens-drop trails
+"start sharp … should be more irregular and disappear irregularly".
+* **Denser near rain**: up to 40 000 drops with *Rain look by strength* (was 24 000).
+* **Refraction**: the refractive streak shows the picture from ~5 widths around (was 1.6), with the colours split a
+  little, and the highlight a thin glint (no white fill: lift 0.04, was 0.18).
+* **Splashes**: their size scales with the rain (×0.55 in drizzle … ×1.35 in a downpour), spread 0.3–1.9 with a
+  curve (mostly small, now and then a big one).
+* **Mist gusts**: mostly within ~3 m of the ground (gone by ~7 m; the volume 16 m tall, 6 m up); sheet to sheet a
+  little warmer or cooler, brighter or duller; their glow toward grey and ×(1 + 1.6 gloom) (×4.5 with the badlands' warm
+  haze lit a bright orange band at ground level).
+* **Veil**: a downpour's added density 0.0026 r^1.5 + 0.0042 (smooth r)² (was 0.0023 + 0.0016); a sun shower keeps
+  55 % (was 35 %); and the fog's *sky affect* rises to 0.9 in heavy rain (0.25 otherwise). Measured at his dump the
+  mountain was already fully fogged — a flat grey shape — but the sky behind took a quarter of the fog, so it stood out;
+  now land and sky merge into the rain (`artifacts/rain-heavy-veil.jpg`).
+* **Lens-drop trails**: start softly below the gathering point, uneven in width along their length, broken in places,
+  each stretch drying at its own time (0.35–1.25 × the fade); thinner and partly clear with a gentler bend (they read as
+  dark ropes) (`artifacts/lens-trails-irregular.jpg`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

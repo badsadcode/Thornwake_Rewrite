@@ -94,11 +94,13 @@ void fragment() {
 	vec2 g = vec2(dFdx(UV.x), dFdy(UV.x));
 	vec2 dir = g / max(dot(g, g), 1e-8); // (screen pixels per unit of UV.x, across the streak)
 	vec2 px = 1.0 / VIEWPORT_SIZE;
-	vec2 off = -dir * xc * 0.5 * 1.6 * px; // (flipped across, a little magnified)
-	vec3 behind = textureLod(screen_tex, SCREEN_UV + off, 0.0).rgb;
+	// (D224, Tom: "I don't see that much of a refraction … still pretty much white": a wider view across — the picture from
+	// ~5 widths around, flipped — and a split of the colours; the highlight a thin glint, not a white fill)
+	vec2 off = -dir * xc * 0.5 * 5.0 * px;
+	vec3 behind = vec3(textureLod(screen_tex, SCREEN_UV + off * 0.92, 0.0).r, textureLod(screen_tex, SCREEN_UV + off, 0.0).g,
+		textureLod(screen_tex, SCREEN_UV + off * 1.1, 0.0).b);
 	vec3 lit = mix(tint.rgb, vec3(0.8, 0.86, 1.0), clamp(lightning.z * exp(-lightning.w / 4.0), 0.0, 1.0));
-	// (strong enough to survive TAA's blending: at ~0.3 coverage the first try all but vanished)
-	ALBEDO = behind * 1.12 + lit * (0.55 * exp(-xc * xc * 10.0) + 0.18);
+	ALBEDO = behind * 1.04 + lit * (0.3 * exp(-xc * xc * 30.0) + 0.04);
 	ALPHA = clamp(body * tail * v_alpha * (1.3 + 2.0 * tint.a), 0.0, 1.0);
 #else
 	float across = 1.0 - abs(UV.x * 2.0 - 1.0);
