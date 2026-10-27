@@ -3402,6 +3402,27 @@ to `BiomeLandforms.cs` (the first of the landform modules to come); a table of s
 Tom's answers to the plan's questions are in `docs/WORLDGEN_PLAN.md` (landforms before settlements; landform switches in
 New world for every world type; world types reworked too, Azgaar's generator as a reference).
 
+## D228 — Landform modules and the world types rework: design on paper (2026-10-27)
+Tom: "go on with step 2: design the landform modules and the world types rework on paper, and show me before
+building". Design in `docs/WORLDGEN_MODULES_DESIGN.md`, nothing built:
+* **Two kinds of modules**: big landforms (plateaus, escarpments, calderas, gorges) shape the plan's macro raster
+  *before* erosion and rivers, so rivers flow round, cut through or fill them; local landforms (dunes, mesas, spires,
+  hoodoos, sea stacks) shape the ground per point before the water stages, as today. Reason: the scale decides whether
+  water must react to the landform (big) or carve through it (local).
+* **Placement rules** by Biome, Terrain, Water, Coast or a land-shape step; areas placed once and kept in a coarse grid
+  so only modules present at a spot cost anything. Rock models for shapes a heightmap cannot hold; site hints (plateau
+  top, cove, gorge crossing) feed the sites stage, so landforms come before settlements as Tom asked.
+* **Settings** per module: amount (off … everywhere) and size, ordinary `gen.landform.<id>.*` parameters in a new
+  *Landforms* group of New world for every world type; they travel in world arguments, saves and custom types.
+* **World types** split into four parts the player can mix: land shape (heightmap template), landforms, climate,
+  parameters; a type is a starting preset of the four. Existing 23 types unchanged (grouped as Natural / Classic / Your
+  types); new shapes after Azgaar's list (volcanic island, atoll, Pangea, isthmus, old world, fractious, desert basin)
+  later, their looks for Tom to tune.
+* **Gap found**: world arguments never recorded the terrain revision ("current" follows the game), so saves already
+  change terrain when a revision ships. Revision 17 records it (`gen.revision`); saves without it read as 16.
+* Revision 17 = the frame only (dunes, mesas, spires as modules, empty sites/roads stages, plan hook, revision pinning,
+  stage names on the loading overlay), proven identical to 16. Three questions for Tom at the end of the design.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

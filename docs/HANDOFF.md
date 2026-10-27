@@ -61,7 +61,8 @@ Cloud shape = rounded):
 * Faint stripes low in the sky with a front coming (cloud layers draft, D189); cloud grain with SMAA fixed (D184/D185).
 * The agreed overall order (below): after Atmosphere 2.0, world generation tidy-up, settlements and roads.
   **World generation**: plan `docs/WORLDGEN_PLAN.md` (D226), Tom's answers in it; step 1 done (D227: stages, all
-  outputs identical, ~1 % slower). Next: step 2, the module design on paper for Tom's approval (and world types).
+  outputs identical, ~1 % slower). Step 2 designed on paper: `docs/WORLDGEN_MODULES_DESIGN.md` (D228), waiting for
+  Tom's approval and three answers; then revision 17 (the module frame, nothing visible).
 
 ---
 

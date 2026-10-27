@@ -114,6 +114,12 @@ says which terrain revision changed which stage. Proof: every field of every sam
 types × 2 seeds × 11 terrain versions, 4 detail levels, `--sample-hash`), all 11 frozen fingerprint sets and the full
 suite pass. Speed: 1 172 ns per sample vs 1 158 before (~1 %, `--speed`).
 
+## Step 2 — designed (D228)
+
+On paper in `docs/WORLDGEN_MODULES_DESIGN.md`: big and local landform modules, placement rules, the *Landforms* group
+in New world, world types split into land shape + landforms + climate + parameters, revision pinning in saves, and the
+hooks for loading messages, sea and lake beds, sites and roads. Waiting for Tom's approval.
+
 ## Questions for you (answered above)
 
 * Is this order right (landforms before settlements), or should sites and roads come first?
