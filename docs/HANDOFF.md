@@ -1,9 +1,10 @@
-# Handoff — START HERE (2026-10-27, after build 113)
+# Handoff — START HERE (2026-10-27, after build 114)
 
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 113** (v0.9.113, return point `9948255`, `dist/Preview-113`): rain tuning from his notes (D224).
+* **Last build Tom has: 114** (v0.9.114, return point `6473368`, `dist/Preview-114`): strong rain fixed (D225). Rain is
+  parked ("better than it was, maybe go back to it later"). Build 113 (`9948255`): rain tuning (D224).
   Build 112 (`c6b7cdd`, `dist/Preview-112`): refractive rain streaks (D223),
   rain in depth without arcs or a circle, mist gusts in grey rain (D222). Tom's saved Rain look is still 1 (dithered).
   Build 111 (`9572e13`, `dist/Preview-111`): Rain 2.1 (D221) — smooth streaks,
