@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 111 — Rain 2.1 (your and Noor's suggestions)
+**Host and everyone joining need build 111** (versions must match to connect). All in Settings → Simulation, each with
+the old look as another option.
+* **Smooth rain streaks** (Rain look → by strength, smooth, default): your note that the drops looked grainy — with TAA
+  they were dithered; now they are thin solid lines, soft at the edges. *by strength (build 110, dithered)* is the old.
+* **Rain in depth** (layers): beyond the drops around you, finer, denser rain further out (~20–50 m), so a downpour fills
+  the view. It stays put when you turn and leans with the wind.
+* **Rain-mist gusts** (draft, needs Volumetric fog): in heavy rain, soft sheets of wet air blow past you with the wind,
+  now and then, low, more in gusts. Watch it in motion: Weather test → Downpour, Wind 15 m/s.
+* Visibility by rain strength was already right (the rain light from build 108): unchanged.
+
 ## New in build 110 — raindrops on the lens, animals take cover
 **Host and everyone joining need build 110** (versions must match to connect).
 * **Lens drops** (Settings → Lighting and effects → Lens drops, **off by default**): raindrops on the camera lens in the
