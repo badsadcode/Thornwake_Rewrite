@@ -78,6 +78,15 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 114 — strong rain fixed (your gale dumps)
+**Host and everyone joining need build 114** (versions must match to connect).
+* **No more arcs over the sky** in a gale: the far rain layers fade out when the rain is nearly horizontal.
+* **No rainless patch** at the foot of a slope in strong wind: only roofs, rocks and logs shelter rain now, not the
+  ground itself.
+* **The near rain is visible with TAA**, also in a gale: the streaks are longer (like motion blur) and have a thin core
+  TAA can follow — before, TAA averaged fast drops away.
+* At a low *Rain strength* the far rain thins out with the near rain (it no longer takes over).
+
 ## New in build 113 — rain tuned from your notes on 112
 **Host and everyone joining need build 113** (versions must match to connect).
 * **Denser rain around you** in heavy rain (up to 40 000 drops).
