@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 115 — terrain revision 17: landform settings, worlds keep their terrain version
+**Host and everyone joining need build 115** (versions must match to connect).
+* **Nothing looks different** at the usual settings: the ground is exactly as in build 114 (proved by the tests).
+* **New world → Landforms** (every world type): *Dunes*, *Mesas and buttes* and *Needle spires*, each with an amount
+  (off, rare, normal, common, everywhere) and a size (0.5–2×). They show where their biomes are (sandy deserts,
+  badlands, needle rocks). Try *Go to - badlands, mesas everywhere (Landforms)*: the whole badlands raised into one
+  table-land, needles off.
+* **Your saved worlds keep their terrain** from now on: every world records its terrain version, so a later build
+  never changes it. Saves from earlier builds load as build 114's terrain. *Terrain version* has a new *Build 114* entry.
+* While a world is generated, the loading screen names the stage it is on (land shape, erosion, rivers and lakes,
+  climate, biomes) — the place your loading messages will go.
+* Also in this build: the error line some saw in the log when rain changed strength (build 114) is gone.
+
 ## New in build 114 — strong rain fixed (your gale dumps)
 **Host and everyone joining need build 114** (versions must match to connect).
 * **No more arcs over the sky** in a gale: the far rain layers fade out when the rain is nearly horizontal.
