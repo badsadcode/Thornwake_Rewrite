@@ -47,7 +47,9 @@ public static class LandformCatalog
 
     public static readonly LandformInfo Waterfalls = new("waterfalls", "Waterfalls", "where rivers drop over a step", LandformKind.Plan, LandformRule.Water, 20);
 
-    public static readonly IReadOnlyList<LandformInfo> All = new[] { Escarpments, Waterfalls, Dunes, Mesas, Spires };
+    public static readonly LandformInfo Canyons = new("canyons", "Gorges and canyons", "where rivers cross raised land", LandformKind.Plan, LandformRule.Water, 21);
+
+    public static readonly IReadOnlyList<LandformInfo> All = new[] { Escarpments, Waterfalls, Canyons, Dunes, Mesas, Spires };
 
     /// <summary>The big landforms of a world, in order, run on the macro raster before erosion (each from the terrain
     /// revision that brought it, unless switched off).</summary>

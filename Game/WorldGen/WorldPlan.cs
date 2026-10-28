@@ -33,6 +33,8 @@ public sealed class WorldPlan
     public double HeightmapLandShare { get; }
     /// <summary>Big landform modules applied before erosion (revision 17 on; none exist yet).</summary>
     public IReadOnlyList<PlanLandform> PlanLandforms { get; }
+    /// <summary>Canyons cut by rivers through raised land (revision 21, landform no. 3); null when off or older.</summary>
+    public Canyons? Canyons { get; }
     /// <summary>Settlement sites and the roads between them (docs/WORLDGEN_PLAN.md step 3): empty in revision 17.</summary>
     public IReadOnlyList<WorldSite> Sites { get; } = Array.Empty<WorldSite>();
     public IReadOnlyList<WorldRoad> Roads { get; } = Array.Empty<WorldRoad>();
@@ -156,6 +158,9 @@ public sealed class WorldPlan
         Hydrology.BuildMilliseconds = hydroTimer.Elapsed.TotalMilliseconds;
         for (int k = 0; k < height.Length; k++) heightRaster[k] = (float)height[k];
         Hydrology.RefineSurfaces(Style);
+        // Canyons (revision 21): placed on the final rivers, before climate (the raise is walking-scale ground only).
+        if (Style.Revision >= LandformCatalog.Canyons.Since && !Style.Landform(LandformCatalog.Canyons.Id).Off)
+            Canyons = new Canyons(this, Style.Landform(LandformCatalog.Canyons.Id));
         stage?.Invoke(3);
         Climate = new Climate(this, Style.Climate);
         stage?.Invoke(4);

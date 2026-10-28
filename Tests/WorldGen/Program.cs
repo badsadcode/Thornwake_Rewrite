@@ -105,6 +105,38 @@ if (args.FirstOrDefault(a => a.StartsWith("--find-biome=")) is { } fb)
     foreach (var f in found.OrderBy(f => f.D).Take(5)) Console.WriteLine($"{p[2]} at {f.X:0},{f.Z:0} ground {s.Height(f.X, f.Z):0}");
     return 0;
 }
+// --gorge-stats: how deep rivers run below the land beside them (raster, 1.5 and 3 cells out), per test world.
+if (args.Contains("--gorge-stats"))
+{
+    foreach (var (id, seed) in new[] { ("balanced", 42), ("mountainous", 42), ("continental", 42) })
+    {
+        var s = CoreTests.Sampler(id, seed);
+        var m = s.Plan.Macro; double cell = m.Cell, sea = s.Plan.Profile.SeaLevel;
+        int points = 0, deep = 0, flatTop = 0;
+        var runs = new List<double>();
+        foreach (var r in s.Plan.Hydrology.Reaches)
+        {
+            double run = 0;
+            for (int k = 1; k < r.Points.Length - 1; k++)
+            {
+                double tx = r.Points[k + 1].X - r.Points[k - 1].X, tz = r.Points[k + 1].Z - r.Points[k - 1].Z, len = Math.Sqrt(tx * tx + tz * tz);
+                double nx = -tz / len, nz = tx / len, x = r.Points[k].X, z = r.Points[k].Z, w = r.Surface[k] - sea;
+                double H(double d) => Math.Min(m.Sample(WorldPlan.HeightChannel, x + nx * d, z + nz * d), m.Sample(WorldPlan.HeightChannel, x - nx * d, z - nz * d));
+                double near = H(cell * 1.5) - w, far = H(cell * 3) - w;
+                points++;
+                bool g = near > 60 && far - near < .4 * near;
+                if (near > 60) deep++;
+                if (g) { flatTop++; run += r.Along[k] - r.Along[k - 1]; }
+                else if (run > 0) { runs.Add(run); run = 0; }
+            }
+            if (run > 0) runs.Add(run);
+        }
+        runs.Sort();
+        Console.WriteLine($"{id}/{seed}: cell {cell:0} m, {points} river points; {deep} over 60 m below the land 1.5 cells out, {flatTop} of them under flat high ground; " +
+            $"{runs.Count} such stretches, {runs.Count(r => r > 500)} over 500 m, longest {(runs.Count > 0 ? runs[^1] : 0):0} m");
+    }
+    return 0;
+}
 // --landform-probes: where the big landforms are in each test world (for captures and Go to spots).
 if (args.Contains("--landform-probes"))
 {
@@ -112,6 +144,11 @@ if (args.Contains("--landform-probes"))
         foreach (int seed in new[] { 42, 7319 })
         {
             var s = CoreTests.Sampler(profile.Id, seed);
+            if (s.Plan.Canyons is { } cy)
+            {
+                Console.WriteLine($"{profile.Id}/{seed}: {cy.Count} canyons");
+                foreach (var (cx, cz, depth) in cy.Probes()) Console.WriteLine($"{profile.Id}/{seed} canyon at {cx:0},{cz:0} depth {depth:0} m");
+            }
             var falls = s.Plan.Hydrology.Falls;
             if (falls.Count > 0) Console.WriteLine($"{profile.Id}/{seed}: {falls.Count} waterfalls, {falls.Count(f => f.Height >= 30)} over 30 m, median {falls[falls.Count / 2].Height:0} m");
             foreach (var f in falls.Where(f => f.Height is > 40 and < 90).Take(3).Concat(falls.Take(2)))

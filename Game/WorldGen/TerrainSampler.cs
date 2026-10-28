@@ -32,7 +32,8 @@ public readonly record struct TerrainSample(
 /// 3  BiomeTerrain            TerrainSampler.cs          11 (wetlands), 12 (all biomes; landforms: BiomeLandforms.cs),
 ///                                                       17 (landform module settings, LandformModules.cs)
 /// 3b Sites, 3c Roads         (none yet)                 17 (the plan's lists exist, still empty: docs/WORLDGEN_PLAN.md step 3)
-/// 4  Rivers                  TerrainSampler.Water.cs    9 (blended along, river profiles), 13 (tributaries on floodplains)
+/// 4  Rivers                  TerrainSampler.Water.cs    9 (blended along, river profiles), 13 (tributaries on floodplains),
+///                                                       20 (gorges below waterfalls), 21 (canyons, walls with ledges)
 /// 5  Lakes                   TerrainSampler.Water.cs    10 (fill within reach, low shore), 15 (a river in a lake is lake)
 /// 6  Pools                   TerrainSampler.Water.cs    11, 12 (shore stretch, seam fade, grow), 14 (mask is water, size ladder)
 /// 7  PlayerEdits             TerrainSampler.Water.cs    -
@@ -58,6 +59,7 @@ public sealed partial class TerrainSampler
     private readonly double _duneAngle;
     private readonly BiomeLandforms _landforms;
     private readonly PlanLandform[] _planForms;
+    private readonly Canyons? _canyons;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
     private readonly double[] _poolQuantiles, _channelQuantiles;
@@ -76,6 +78,7 @@ public sealed partial class TerrainSampler
         _duneAngle = Hashing.Unit(Hashing.Mix(_landformSeed)) * Math.Tau; // prevailing sand-moving wind of this world
         _landforms = new BiomeLandforms(_hydrology, _landformSeed, _duneAngle, _style);
         _planForms = plan.PlanLandforms.ToArray();
+        _canyons = plan.Canyons is { Count: > 0 } c ? c : null;
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
@@ -107,6 +110,8 @@ public sealed partial class TerrainSampler
         Coast(x, z, lx, lz, minWavelength, out double land, out double macroHeight, out double mountainShare, out double rasterLand, out double coastDistance);
         if (land <= 0) return Sea(x, z, land, coastDistance);
         double baseHeight = Continent(land, rasterLand, macroHeight, coastDistance, ref mountainShare);
+        double canyon = _canyons != null ? _canyons.Uplift(x, z) : 0; // (revision 21: raised land a river has cut through)
+        baseHeight += canyon;
         Detail(lx, lz, minWavelength, land, mountainShare, out double inland, out double detail, out double roughness);
         double bare = 0;
         if (_planForms.Length > 0) detail += PlanGround(x, z, minWavelength, out bare);
@@ -115,7 +120,7 @@ public sealed partial class TerrainSampler
         // (3b sites and 3c roads come here once the plan has any: pads and corridors after the landforms, before the
         // water, so rivers and lakes still win. Plan.Sites and Plan.Roads are empty in revision 17.)
         var water = WaterKind.None; double level = double.NaN; int body = -1; double riverDamp = 1;
-        double height = Rivers(x, z, minWavelength, baseHeight, inland, detail, ref riverDamp, ref water, ref level, ref body);
+        double height = Rivers(x, z, minWavelength, baseHeight, inland, detail, ref riverDamp, ref water, ref level, ref body, Canyons.Wall(canyon));
         double lakePlume = 0, lakeCells = double.PositiveInfinity;
         Lakes(x, z, ref height, ref water, ref level, ref body, ref lakePlume, ref lakeCells);
         if (wetland && poolCover > 0 && water == WaterKind.None)

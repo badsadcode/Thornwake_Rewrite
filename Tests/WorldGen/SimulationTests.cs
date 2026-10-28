@@ -17,6 +17,7 @@ internal static class SimulationTests
         T.Run("Landforms: escarpments and plateaus — cliffs inland, water keeps its place (revision 18)", EscarpmentForms, filter);
         T.Run("Landforms: no combs, fins or cracks at escarpments and mesas (revision 19)", NoCombs, filter);
         T.Run("Landforms: waterfalls drop the river at a step, water stays above its ground (revision 20)", Waterfalls, filter);
+        T.Run("Landforms: canyons — raised land beside rivers that keep their course and level (revision 21)", CanyonForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1017,6 +1018,45 @@ internal static class SimulationTests
         T.Check(notDescending == 0 && endsMoved == 0, $"rivers still descend, ends unchanged ({notDescending}, {endsMoved})");
         T.Check(dropped >= checkedFalls * .8, $"the water drops at the lip ({dropped}/{checkedFalls})");
         T.Check(wet > 300 && dry == 0, $"water above its ground below the falls ({dry} of {wet})");
+    }
+
+    private static void CanyonForms()
+    {
+        int canyons = 0, rivers = 0, raised = 0, walls = 0, wet = 0, dry = 0, levelMoved = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("continental", 42), ("mountainous", 42), ("archipelago", 7319), ("vast-world", 7319) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            var s20 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 20 }));
+            if (s.Plan.Canyons is not { } cy) continue;
+            foreach (var (x, z, depth) in cy.Probes())
+            {
+                canyons++;
+                var t = s.Sample(x, z); var t20 = s20.Sample(x, z);
+                if (t.Water == WaterKind.River) rivers++;
+                if (t.Water != t20.Water || t.WaterLevel != t20.WaterLevel) levelMoved++;
+                // Across the canyon (both ways, 400 m): the land beside is raised, the walls are steep, water lies above
+                // its ground.
+                bool steep = false, up = false;
+                foreach (var (dx, dz) in new[] { (1.0, 0.0), (0.0, 1.0) })
+                {
+                    double prev = double.NaN;
+                    for (double d = -400; d <= 400; d += 2)
+                    {
+                        var p = s.Sample(x + dx * d, z + dz * d);
+                        if (!double.IsNaN(prev) && Math.Abs(p.Height - prev) / 2 > 1.5) steep = true;
+                        prev = p.Height;
+                        if (p.Water != WaterKind.None) { wet++; if (!(p.Height < p.WaterLevel)) dry++; }
+                        if (Math.Abs(d) == 400 && p.Height - s20.Sample(x + dx * d, z + dz * d).Height > .4 * depth) up = true;
+                    }
+                }
+                if (steep) walls++;
+                if (up) raised++;
+            }
+        }
+        T.Note($"{canyons} canyons: river at the middle {rivers}, land raised 400 m out {raised}, steep walls {walls}; {wet} water points across them, {dry} with ground above the water; water level changed at {levelMoved}");
+        T.Check(canyons >= 8 && rivers == canyons && levelMoved == 0, $"canyons follow rivers that keep their level ({rivers}/{canyons}, {levelMoved} moved)");
+        T.Check(raised >= canyons * .8 && walls >= canyons * .8, $"raised land and steep walls ({raised}, {walls} of {canyons})");
+        T.Check(wet > 100 && dry == 0, $"water above its ground ({dry} of {wet})");
     }
 
     private static void Wetlands()

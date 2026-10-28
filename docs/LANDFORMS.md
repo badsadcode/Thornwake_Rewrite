@@ -74,6 +74,8 @@ Then the fantasy landforms Tom picks (section at the end).
 * **Water**: the river keeps flowing; the pool below is deeper, never dry.
 
 ### 3. Gorges and canyons
+* **Status**: built, terrain revision 21 (D239), not in a build yet: antecedent canyons (raised land beside a few
+  rivers), gorge walls with ledges for canyons and the gorges below waterfalls.
 * **What**: a river cut deep and narrow where it crosses high ground, walls of rock on both sides.
 * **Where**: where a river crosses a plateau or a range (it was there first and cut down as the land rose).
 * **Play**: obstacles and bridge sites; roads go round or across at a narrow point; climbing (GAMEPLAY_DESIGN §10).

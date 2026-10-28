@@ -9,7 +9,7 @@ public sealed partial class TerrainSampler
     /// <summary>Stage 4, rivers: channel, banks and slope-limited valley sides replace the terrain near a river.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)] // (the split must not cost speed, D227)
     private double Rivers(double x, double z, double minWavelength, double baseHeight, double inland, double detail, ref double riverDamp,
-        ref WaterKind water, ref double level, ref int body)
+        ref WaterKind water, ref double level, ref int body, double wall = 0)
     {
         // Rivers: channel, banks and slope-limited valley sides replace the terrain near a river; walking-scale detail
         // fades toward it. Two nearby rivers (a confluence) combine continuously: deepest carving wins (softly),
@@ -63,7 +63,7 @@ public sealed partial class TerrainSampler
             if (_style.Revision >= 13 && count > 1)
             {
                 Span<double> deltas = stackalloc double[16];
-                for (int i = 0; i < count; i++) deltas[i] = Profile(reaches[i], terrain, rise, minWavelength * .5, out _, out _) - terrain;
+                for (int i = 0; i < count; i++) deltas[i] = Profile(reaches[i], terrain, rise, minWavelength * .5, out _, out _, x, z, wall) - terrain;
                 for (int i = 0; i < count; i++)
                 {
                     double other = 0; int deepest = -1;
@@ -78,7 +78,7 @@ public sealed partial class TerrainSampler
             double carve = 0, raise = 0, wetInside = 0;
             for (int i = 0; i < count; i++)
             {
-                double delta = Profile(reaches[i], terrain, rise, minWavelength * .5, out _, out double inside) - terrain;
+                double delta = Profile(reaches[i], terrain, rise, minWavelength * .5, out _, out double inside, x, z, wall) - terrain;
                 if (delta > 0 && _style.MouthBlend > 0) delta *= LeveeFactor(reaches[i]);
                 carve = Math.Min(carve, delta);
                 raise = Math.Max(raise, delta);
@@ -457,7 +457,8 @@ public sealed partial class TerrainSampler
         return cache[index] = reach.Along[k];
     }
 
-    private double Profile(RiverHit r0, double terrain, double rise, double spacing, out double weight, out double inside)
+    private double Profile(RiverHit r0, double terrain, double rise, double spacing, out double weight, out double inside, double x = 0, double z = 0,
+        double wall = 0)
     {
         // Estuary: the water widens and the bank flattens; the outer blend shrinks to match (ChannelProfile), so the
         // river's footprint never exceeds what the spatial index returns hits for.
@@ -479,7 +480,7 @@ public sealed partial class TerrainSampler
         }
         // Revision 20: no bank irregularity in the gorge below a waterfall (on a wall tens of metres high each small
         // shift of the bank became a step: the walls looked dashed).
-        if (_style.Revision >= 20 && _hydrology.Gorge(r0.Reach, r0.Along) is > 0 and var inGorge)
+        if (_style.Revision >= 20 && Math.Max(_hydrology.Gorge(r0.Reach, r0.Along), wall) is > 0 and var inGorge)
         {
             shift *= 1 - inGorge; bulge *= 1 - inGorge;
         }
@@ -490,7 +491,7 @@ public sealed partial class TerrainSampler
         double beach = BeachWidth(r0);
         if (spacing <= 2.5 || spacing > 40)
         {
-            double h = ChannelProfile(r, half, terrain, rise, out weight, out inside, -1, beach, estuary);
+            double h = ChannelProfile(r, half, terrain, rise, out weight, out inside, -1, beach, estuary, x, z, wall);
             if (!rev9 && shelf > 0 && inside > 0 && shift > 0) h = Shelf(h, r0, nominal, nominal + shift, shelf);
             if (bulge > 0) h = Ledge(h, r, half, bulge, ref inside);
             return h;
@@ -501,12 +502,12 @@ public sealed partial class TerrainSampler
         // the spacing are drawn at least that wide so they stay continuous in the distance.
         half = Math.Max(half, spacing * .5);
         double band = spacing * 1.5, d = r.Distance, surface = r.Surface - _p.SeaLevel;
-        double outer = ChannelProfile(r, half, terrain, rise, out weight, out inside, half + band, beach, estuary);
+        double outer = ChannelProfile(r, half, terrain, rise, out weight, out inside, half + band, beach, estuary, x, z, wall);
         inside = (half - d) / half;
-        if (Math.Abs(d - half) >= band) return ChannelProfile(r, half, terrain, rise, out weight, out _, -1, beach, estuary);
+        if (Math.Abs(d - half) >= band) return ChannelProfile(r, half, terrain, rise, out weight, out _, -1, beach, estuary, x, z, wall);
         double g = Math.Max(.05, (outer - surface) / band);
         if (d >= half) return surface + g * (d - half);
-        double bed = ChannelProfile(r, half, terrain, rise, out _, out _);
+        double bed = ChannelProfile(r, half, terrain, rise, out _, out _, -1, 0, 0, x, z, wall);
         return Math.Max(bed, surface - g * (half - d));
     }
 
@@ -535,7 +536,7 @@ public sealed partial class TerrainSampler
     }
 
     private double ChannelProfile(in RiverHit r, double half, double terrain, double rise, out double weight, out double inside, double distance = -1,
-        double beach = 0, double estuary = 0)
+        double beach = 0, double estuary = 0, double x = 0, double z = 0, double wall = 0)
     {
         double bank = Hydrology.Bank(r.Width) * (1 + 2 * estuary), d = distance >= 0 ? distance : r.Distance, surface = r.Surface - _p.SeaLevel;
         double bankTop = surface + .6 + .15 * r.Depth; // (kept in this exact form: earlier terrain versions are bit-exact)
@@ -543,7 +544,7 @@ public sealed partial class TerrainSampler
         double extra = estuary > 0 ? Math.Max(0, half - r.Width * .5) + (bank - Hydrology.Bank(r.Width)) : 0; // estuary widening
         double flood = Math.Min(Hydrology.Floodplain(r.Width, rise - bankTop), Hydrology.MaxFloodplain(r.Width) - beach - extra);
         // Revision 20: below a waterfall the valley sides are a gorge's steep walls (about 70°), not a floodplain.
-        double gorge = _style.Revision >= 20 ? _hydrology.Gorge(r.Reach, r.Along) : 0;
+        double gorge = _style.Revision >= 20 ? Math.Max(_hydrology.Gorge(r.Reach, r.Along), wall) : 0; // (wall: canyons, revision 21)
         if (gorge > 0) flood += (Math.Max(bank, (rise - bankTop) * .35 + 4) - flood) * gorge;
         // A beach: a low, gently sloping strip (to ~0.3 m above the water) before the bank rises; everything beyond
         // the waterline moves outward by its width.
@@ -575,7 +576,26 @@ public sealed partial class TerrainSampler
         // The switch is blended over a metre of terrain height: a hard switch drew small crescent scarps wherever
         // walking-scale bumps crossed the bank-top level.
         double ramp = DetMath.Lerp(Math.Min(flood, bank * 2 + 10), flood, DetMath.Smooth(terrain - bankTop + .5));
+        if (gorge > 0 && _style.Revision >= 21) return GorgeWall(bankTop, terrain, d - half - bank, ramp, gorge, x, z);
         return bankTop + (terrain - bankTop) * DetMath.Smooth((d - half - bank) / ramp);
+    }
+
+    /// <summary>
+    /// A gorge's or canyon's wall (revision 21, D239): instead of one even smooth slope, a wall line that wanders
+    /// (4 m at ~23 m, 10 m at ~95 m) and three to five ledges — flat treads and steep risers, how layered rock
+    /// weathers — their number changing along the gorge. <paramref name="w"/>: metres from the foot of the wall.
+    /// </summary>
+    private double GorgeWall(double bankTop, double terrain, double w, double ramp, double gorge, double x, double z)
+    {
+        double lx = x - _ox, lz = z - _oz;
+        ulong seed = _bankSeed + 77;
+        w += gorge * (4 * Noise.Fbm(lx, lz, 23, 2, 2, seed) + 10 * Noise.Fbm(lx, lz, 95, 2, 2, seed + 1));
+        double f = DetMath.Smooth(w / ramp);
+        double tiers = 3 + 2 * DetMath.Smooth(.5 + 1.2 * Noise.Fbm(lx, lz, 420, 2, 2, seed + 2));
+        double q = f * tiers, k = Math.Floor(q), fr = q - k;
+        double stepped = Math.Min(1, (k + DetMath.Smooth((fr - .35) / .65)) / tiers);
+        f += (stepped - f) * .75 * gorge;
+        return bankTop + (terrain - bankTop) * f;
     }
 
     private static double SmoothMin(double a, double b, double k)

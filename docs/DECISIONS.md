@@ -3620,6 +3620,26 @@ no falls anywhere. `Hydrology.AddWaterfalls` (revision 20, before the confluence
 * Test: 495 falls in 3 worlds, none over 120 m; 34 of 36 drop over half their height within 30 m of the lip; 1 116
   water points along their gorges, none with ground above the water.
 
+## D239 — Terrain revision 21: gorges and canyons, gorge walls with ledges (2026-10-28)
+Tom: "let's go back to terrain" — landform no. 3. Measured first (`--gorge-stats`): rivers seldom run deep below flat
+high ground (the plan's erosion carves wide valleys): 10–50 stretches over 500 m per world, the longest 3.7 km. So
+canyons are made as antecedent rivers make them (`Game/WorldGen/Canyons.cs`, built in the plan after the rivers are
+final):
+* **Where**: stretches of 3–10 km (× size) on rivers with ≥ 150 km² catchment and a grade under 1 %, inland (land
+  ≥ 0.5), off the mountains (≤ 0.3), no lake within reach, 20 km apart; about one per 180 × 180 km of land (one per
+  512 km world, 5–6 in a 2,048 km one).
+* **How**: the land beside the river is raised into a plateau 60–180 m (× size, ±20 % along) for 600–1,500 m each
+  side, fading out over 1.5–2.5 km; the ends open out over 1.2 km. The raise goes under the walking-scale ground
+  (base height); the river keeps course and level and its channel cuts through with gorge walls (the waterfall gorges'
+  narrow sides, D238), and tributaries crossing the plateau cut side canyons the same way. Rivers, lakes and the sea
+  unchanged (test: 10 canyons, water level unchanged at every one, water above its ground across them).
+* **Walls** (gorges below falls too, from revision 21): the wall line wanders (4 m at ~23 m, 10 m at ~95 m) and steps
+  into 3–5 ledges (flat treads, steep risers; the count changes along), how layered rock weathers.
+* **Settings**: New world → Landforms → *Gorges and canyons*. Terrain version gains *Waterfalls (rev. 20)* (not in a
+  build); fingerprints `terrain-r20.json`; 150 older sample-hash cases unchanged.
+* Seen in the game (Balanced 42 at −66075, 115589): a river between stepped rock walls ~130 m high with grassy
+  ledges. Open: the ledge bands run very evenly along the wall; small teeth where wall pieces meet.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
