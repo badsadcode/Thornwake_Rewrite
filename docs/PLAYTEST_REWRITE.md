@@ -78,6 +78,20 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 118 — waterfalls, gorges and canyons (terrain revisions 20 and 21), wet sheen
+**Host and everyone joining need build 118** (versions must match to connect).
+* **Waterfalls**: where a river drops over a step (escarpment edges, mountain fronts) the water now falls in one drop
+  (up to 120 m) into a plunge pool, with rapids below and a narrow gorge cut back from the fall. About 100–260 per
+  512 km world. Try *Go to - waterfall (Balanced)* and *Go to - waterfall (Mountain kingdoms)*.
+* **Canyons**: a few rivers run through canyons ~60–180 m deep with stepped walls and ledges; tributaries cut side
+  canyons. About one per 512 km world. Try *Go to - canyon (Balanced)*.
+* **New world → Landforms** gains *Waterfalls* and *Gorges and canyons* (amount and size).
+* **Wet sheen** (Settings → Simulation): wet ground glints in specks and far wet ground has a soft sheen, instead of
+  one big shiny spot under a low sun; *build 117 (even)* brings the old look back.
+* Your build 117 worlds keep their terrain; *Terrain version → Build 117* gives it to new worlds too.
+* Known: the falls are drawn by the ordinary river water (no spray or white water yet: water shader rework); canyon
+  ledges run a little evenly.
+
 ## New in build 117 — escarpments fixed from your dumps (terrain revision 19)
 **Host and everyone joining need build 117** (versions must match to connect).
 * **The comb is gone**: the rows of thin steps came from the mesas where badlands fade out; mesas there now just get
