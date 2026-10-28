@@ -35,7 +35,8 @@ public readonly record struct TerrainSample(
 /// 4  Rivers                  TerrainSampler.Water.cs    9 (blended along, river profiles), 13 (tributaries on floodplains),
 ///                                                       20 (gorges below waterfalls), 21 (canyons, walls with ledges)
 /// 5  Lakes                   TerrainSampler.Water.cs    10 (fill within reach, low shore), 15 (a river in a lake is lake)
-/// 6  Pools                   TerrainSampler.Water.cs    11, 12 (shore stretch, seam fade, grow), 14 (mask is water, size ladder)
+/// 6  Pools                   TerrainSampler.Water.cs    11, 12 (shore stretch, seam fade, grow), 14 (mask is water, size ladder),
+///                                                       22 (none on ground a river has cut down)
 /// 7  PlayerEdits             TerrainSampler.Water.cs    -
 /// </code>
 /// <para>Each stage takes and gives plain values (a shared struct cost ~2.5 % of the speed).</para>
@@ -123,7 +124,10 @@ public sealed partial class TerrainSampler
         double height = Rivers(x, z, minWavelength, baseHeight, inland, detail, ref riverDamp, ref water, ref level, ref body, Canyons.Wall(canyon));
         double lakePlume = 0, lakeCells = double.PositiveInfinity;
         Lakes(x, z, ref height, ref water, ref level, ref body, ref lakePlume, ref lakeCells);
-        if (wetland && poolCover > 0 && water == WaterKind.None)
+        // Revision 22: no pools where a river has cut the ground down by over 2 m (valley sides, canyon and gorge walls),
+        // against the ground as the river stage sees it (the walking-scale relief is damped near rivers: big landforms
+        // there are not a cut). Pools filled the flat ledges of canyon walls (Tom's dump 21:59:22, build 118).
+        if (wetland && poolCover > 0 && water == WaterKind.None && (_style.Revision < 22 || baseHeight + detail * riverDamp - height < 2))
             Pools(lx, lz, x, z, minWavelength, baseHeight, roughness, mountainShare, inland, flatten, land, riverDamp, lakeCells, poolCover,
                 poolDepth, poolSize, poolChannels, ref height, ref water, ref level);
         PlayerEdits(x, z, ref height, ref water, ref level, ref body);

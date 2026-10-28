@@ -61,7 +61,7 @@ if (args.FirstOrDefault(a => a.StartsWith("--transect=")) is { } tr)
     {
         double x = x0 + (x1 - x0) * i / n, z = z0 + (z1 - z0) * i / n;
         var t = s.Sample(x, z);
-        Console.WriteLine($"{x:0.0},{z:0.0} height {t.Height:0.00} detail {t.Detail:0.00} mountain {t.Mountain:0.00}");
+        Console.WriteLine($"{x:0.0},{z:0.0} height {t.Height:0.00} detail {t.Detail:0.00} mountain {t.Mountain:0.00} water {t.Water} {t.WaterLevel:0.00} canyon {(s.Plan.Canyons?.Uplift(x, z) ?? 0):0.0}");
     }
     return 0;
 }

@@ -17,7 +17,7 @@ internal static class SimulationTests
         T.Run("Landforms: escarpments and plateaus — cliffs inland, water keeps its place (revision 18)", EscarpmentForms, filter);
         T.Run("Landforms: no combs, fins or cracks at escarpments and mesas (revision 19)", NoCombs, filter);
         T.Run("Landforms: waterfalls drop the river at a step, water stays above its ground (revision 20)", Waterfalls, filter);
-        T.Run("Landforms: canyons — raised land beside rivers that keep their course and level (revision 21)", CanyonForms, filter);
+        T.Run("Landforms: canyons — raised land beside rivers that keep their course and level, no cliffs of its own (revisions 21, 22)", CanyonForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1053,6 +1053,29 @@ internal static class SimulationTests
                 if (up) raised++;
             }
         }
+        // The raise itself never makes a cliff (revision 22): its steepest slope around every canyon, 25 m apart, in
+        // revision 21 (a meander set a canyon's end beside its middle: a 60 m wall with no river, Tom's dump 21:59:22) and now.
+        double Steepest(TerrainSampler sampler)
+        {
+            double worst = 0;
+            if (sampler.Plan.Canyons is not { } c) return 0;
+            foreach (var (x, z, _) in c.Probes())
+                for (double dz = -6000; dz <= 6000; dz += 25)
+                {
+                    double prev = double.NaN;
+                    for (double dx = -6000; dx <= 6000; dx += 25)
+                    {
+                        double u = c.Uplift(x + dx, z + dz);
+                        if (!double.IsNaN(prev)) worst = Math.Max(worst, Math.Abs(u - prev) / 25);
+                        prev = u;
+                    }
+                }
+            return worst;
+        }
+        var b42 = CoreTests.Sampler("balanced", 42);
+        double now = Steepest(b42), before = Steepest(new TerrainSampler(new WorldPlan(b42.Plan.Manifest, style: b42.Plan.Style with { Revision = 21 })));
+        T.Note($"steepest slope of the raise (balanced 42): revision 21 {before:0.00}, now {now:0.00}");
+        T.Check(now < .25, $"the raise has no cliffs of its own ({now:0.00})");
         T.Note($"{canyons} canyons: river at the middle {rivers}, land raised 400 m out {raised}, steep walls {walls}; {wet} water points across them, {dry} with ground above the water; water level changed at {levelMoved}");
         T.Check(canyons >= 8 && rivers == canyons && levelMoved == 0, $"canyons follow rivers that keep their level ({rivers}/{canyons}, {levelMoved} moved)");
         T.Check(raised >= canyons * .8 && walls >= canyons * .8, $"raised land and steep walls ({raised}, {walls} of {canyons})");

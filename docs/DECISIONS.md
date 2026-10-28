@@ -3640,6 +3640,21 @@ final):
 * Seen in the game (Balanced 42 at −66075, 115589): a river between stepped rock walls ~130 m high with grassy
   ledges. Open: the ledge bands run very evenly along the wall; small teeth where wall pieces meet.
 
+## D240 — Terrain revision 22: no false canyon cliffs, no pools on cut-down ground (2026-10-28)
+Tom, build 118 (dump 21:59:22, Balanced 42 at −64484, 113867): white strips on a wall by a canyon — "puddles, or a
+different biome, like small ponds?" They were wetland pools (the canyon floor there is marsh), but the wall was not a
+river's: the canyon's raise fell from 73 m to 9 m within 25 m. Revision 21 faded a canyon's ends and varied its depth
+by the position along the river; a meander set the canyon's end beside its middle, the position jumps between them,
+and the raise drew a straight 60 m cliff with no river at its foot (steepest slope 4.17; pools on the flat marsh below
+it read as strips on the wall). Revision 22:
+* the ends fade by the distance to the canyon's two ends (1.5 km) and the depth wanders by noise over the ground, so
+  the raise can only change gently (steepest slope 0.20; new check in the canyon test);
+* no wetland pools where a river has cut the ground down by over 2 m (valley sides, canyon and gorge walls), measured
+  against the ground as the river stage sees it (its relief damped near rivers: big landforms there are not a cut —
+  counting them first lost 15 ponds with every landform at its largest).
+* Revision 21 frozen as *Build 118* (`terrain-build118.json`, selectable in *Terrain version*); 160 older sample-hash
+  cases unchanged. Tom's dump view at revision 22: an open forest plateau where the false wall stood.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

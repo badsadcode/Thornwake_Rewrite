@@ -25,6 +25,7 @@ public sealed class Canyons
 
     private const double GridCell = 2000, Spacing = 100;
     private readonly List<Canyon> _canyons = new();
+    private readonly int _revision;
     private readonly double _minX, _minZ;
     private readonly int _gridSize;
     private readonly int[] _gridStart, _gridItems;
@@ -40,6 +41,7 @@ public sealed class Canyons
 
     public Canyons(WorldPlan plan, LandformSetting setting)
     {
+        _revision = plan.Style.Revision;
         var macro = plan.Macro; var hy = plan.Hydrology;
         var rng = new RandomStream(LandformCatalog.Seed(plan.Manifest, LandformCatalog.Canyons));
         var land = macro.Channel(WorldPlan.LandChannel);
@@ -120,7 +122,10 @@ public sealed class Canyons
 
     /// <summary>
     /// How much the land is raised here (m): the full depth within the band beside the river (600–1,500 m), fading
-    /// out over 1.5–2.5 km beyond; the ends open out over 1.2 km; the depth wanders ±20 % along the canyon.
+    /// out over 1.5–2.5 km beyond; the ends open out over 1.2 km; the depth wanders ±20 %. Revision 22 (D240) measures
+    /// the ends and the wander in space (distance to the canyon's two ends, noise over the ground): revision 21 used
+    /// the position along the river, which jumps where a meander brings two parts of the river side by side — a canyon's
+    /// end beside its middle drew a 60 m cliff with no river at its foot (Tom's dump 21:59:22, build 118).
     /// </summary>
     public double Uplift(double x, double z)
     {
@@ -133,8 +138,18 @@ public sealed class Canyons
             Nearest(c, x, z, out double dist, out double t);
             double across = 1 - DetMath.Smooth((dist - c.Band) / c.Fade);
             if (across <= 0) continue;
-            double ends = DetMath.Smooth(t / 1200) * DetMath.Smooth((c.Length - t) / 1200);
-            double vary = 1 + .2 * Noise.Fbm(t, 0, 2500, 2, 0, c.Seed);
+            double ends, vary;
+            if (_revision >= 22)
+            {
+                double toStart = Math.Sqrt(Sq(x - c.X[0]) + Sq(z - c.Z[0])), toEnd = Math.Sqrt(Sq(x - c.X[^1]) + Sq(z - c.Z[^1]));
+                ends = DetMath.Smooth(toStart / 1500) * DetMath.Smooth(toEnd / 1500);
+                vary = 1 + .2 * Noise.Fbm(x, z, 2500, 2, 0, c.Seed);
+            }
+            else
+            {
+                ends = DetMath.Smooth(t / 1200) * DetMath.Smooth((c.Length - t) / 1200);
+                vary = 1 + .2 * Noise.Fbm(t, 0, 2500, 2, 0, c.Seed);
+            }
             best = Math.Max(best, c.Depth * vary * across * ends);
         }
         return best;
