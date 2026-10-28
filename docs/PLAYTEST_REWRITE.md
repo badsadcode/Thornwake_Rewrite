@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 119 — cirques with a tarn, the canyon fixed (terrain revisions 22 and 23)
+**Host and everyone joining need build 119** (versions must match to connect).
+* **Cirques with a tarn**: rocky bowls high on mountain flanks, mostly facing north, each with a small mountain lake —
+  12–36 in a 512–768 km world. Try *Go to - cirque with a tarn (Mountain kingdoms)*. New world → Landforms → *Cirques
+  with a tarn*.
+* **Canyon fixed from your dump**: where a river meanders back on itself, a canyon's end drew a straight 60 m wall with
+  no river at its foot (and marsh ponds below it looked like strips on the wall) — gone; no wetland ponds on ground a
+  river has cut down (canyon ledges, gorge walls).
+* Your build 118 worlds keep their terrain; *Terrain version → Build 118* gives it to new worlds too.
+* Known: no stream flows out of a tarn yet.
+
 ## New in build 118 — waterfalls, gorges and canyons (terrain revisions 20 and 21), wet sheen
 **Host and everyone joining need build 118** (versions must match to connect).
 * **Waterfalls**: where a river drops over a step (escarpment edges, mountain fronts) the water now falls in one drop
