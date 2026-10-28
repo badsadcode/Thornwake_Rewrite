@@ -30,11 +30,12 @@ public readonly record struct TerrainSample(
 /// 1c Continent               TerrainSampler.cs          -  (ShoreSlope, MouthBlend: build 5 / preview 7 options)
 /// 2  Detail                  TerrainSampler.cs          18 (big landforms' walking-scale part: escarpment faces)
 /// 3  BiomeTerrain            TerrainSampler.cs          11 (wetlands), 12 (all biomes; landforms: BiomeLandforms.cs),
-///                                                       17 (landform module settings, LandformModules.cs)
+///                                                       17 (landform module settings, LandformModules.cs), 23 (cirques)
 /// 3b Sites, 3c Roads         (none yet)                 17 (the plan's lists exist, still empty: docs/WORLDGEN_PLAN.md step 3)
 /// 4  Rivers                  TerrainSampler.Water.cs    9 (blended along, river profiles), 13 (tributaries on floodplains),
 ///                                                       20 (gorges below waterfalls), 21 (canyons, walls with ledges)
-/// 5  Lakes                   TerrainSampler.Water.cs    10 (fill within reach, low shore), 15 (a river in a lake is lake)
+/// 5  Lakes                   TerrainSampler.Water.cs    10 (fill within reach, low shore), 15 (a river in a lake is lake),
+///                                                       23 (cirque tarns, Cirques.cs)
 /// 6  Pools                   TerrainSampler.Water.cs    11, 12 (shore stretch, seam fade, grow), 14 (mask is water, size ladder),
 ///                                                       22 (none on ground a river has cut down)
 /// 7  PlayerEdits             TerrainSampler.Water.cs    -
@@ -61,6 +62,7 @@ public sealed partial class TerrainSampler
     private readonly BiomeLandforms _landforms;
     private readonly PlanLandform[] _planForms;
     private readonly Canyons? _canyons;
+    private readonly Cirques? _cirques;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
     private readonly double[] _poolQuantiles, _channelQuantiles;
@@ -80,6 +82,7 @@ public sealed partial class TerrainSampler
         _landforms = new BiomeLandforms(_hydrology, _landformSeed, _duneAngle, _style);
         _planForms = plan.PlanLandforms.ToArray();
         _canyons = plan.Canyons is { Count: > 0 } c ? c : null;
+        _cirques = plan.Cirques is { Count: > 0 } q ? q : null;
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
@@ -118,12 +121,17 @@ public sealed partial class TerrainSampler
         if (_planForms.Length > 0) detail += PlanGround(x, z, minWavelength, out bare);
         BiomeTerrain(x, z, lx, lz, minWavelength, baseHeight, inland, ref detail, out bool wetland, out double poolCover, out double poolDepth,
             out double poolSize, out double poolChannels, out double flatten);
+        // Revision 23: cirques, carved after the biome's landforms so their tarns win (a mesa at its largest raised a
+        // tarn's floor 67 m over its water).
+        if (_cirques != null) detail += _cirques.Carve(x, z, baseHeight + detail, detail);
         // (3b sites and 3c roads come here once the plan has any: pads and corridors after the landforms, before the
         // water, so rivers and lakes still win. Plan.Sites and Plan.Roads are empty in revision 17.)
         var water = WaterKind.None; double level = double.NaN; int body = -1; double riverDamp = 1;
         double height = Rivers(x, z, minWavelength, baseHeight, inland, detail, ref riverDamp, ref water, ref level, ref body, Canyons.Wall(canyon));
         double lakePlume = 0, lakeCells = double.PositiveInfinity;
         Lakes(x, z, ref height, ref water, ref level, ref body, ref lakePlume, ref lakeCells);
+        // Revision 23: a cirque's tarn, still water of its own (drawn as a pond), where nothing else is water.
+        if (_cirques != null && water == WaterKind.None && _cirques.Tarn(x, z, height, out double tarn)) { water = WaterKind.Pond; level = tarn; }
         // Revision 22: no pools where a river has cut the ground down by over 2 m (valley sides, canyon and gorge walls),
         // against the ground as the river stage sees it (the walking-scale relief is damped near rivers: big landforms
         // there are not a cut). Pools filled the flat ledges of canyon walls (Tom's dump 21:59:22, build 118).

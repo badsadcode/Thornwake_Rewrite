@@ -84,6 +84,8 @@ Then the fantasy landforms Tom picks (section at the end).
   canyons already show the look.
 
 ### 4. Cirques with a tarn
+* **Status**: built, terrain revision 23 (D241), not in a build yet: lobed bowls on high north-facing flanks with rocky
+  walls, a rock bar and a closed-in tarn. Not yet: the outflow stream.
 * **What**: a bowl carved high on a mountainside, steep back wall, a small lake (tarn) in its floor.
 * **Where**: high on mountain flanks, mostly facing away from the sun (north in the northern half of the world).
 * **Play**: hidden places, cold clear water high up, the source of a stream.

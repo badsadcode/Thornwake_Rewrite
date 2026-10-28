@@ -3655,6 +3655,30 @@ it read as strips on the wall). Revision 22:
 * Revision 21 frozen as *Build 118* (`terrain-build118.json`, selectable in *Terrain version*); 160 older sample-hash
   cases unchanged. Tom's dump view at revision 22: an open forest plateau where the false wall stood.
 
+## D241 — Terrain revision 23: cirques with a tarn (2026-10-28)
+Tom: "cirques and tarns" — landform no. 4, and his earlier question about ponds high in the mountains (a plan lake
+needs ~2 km², 8 m depth and a share of the land, so none were this small). `Game/WorldGen/Cirques.cs`, built in the plan
+after the rivers are final:
+* **Where**: high mountain ground (mountain share over 0.35, height over the lowland plus 30 % of the mountain height),
+  on a flank (grade 0.12–0.8), mostly facing north (−Z, away from the sun: chance 0.25 + 0.75 × northness), no river
+  within the radius + 300 m, no lake, 2.5 radii apart; one per 10 × 10 km of such ground (12–36 in a 512–768 km world,
+  84–127 in a 2,048 km one).
+* **Shape**: radius 250–650 m (× size), wider across the slope than up and down it and lobed by noise (a first round
+  dish looked machined); a dish-shaped floor 6–18 m below the lip's level within 55 % of the radius; the back wall at
+  slope 1.3–1.9, the front 0.25–0.45; the mountain's own rock comes into the walls from their foot upward (all at once
+  it stepped the wall's foot into a ledge; on the floor it lifted it 40 m above the water), the floor has ±3 m of its
+  own; a rock bar 0.5 m over the lip's level closes the floor in where the real ground beside it would dip lower.
+* **The tarn**: still water of its own (drawn as a pond) within the floor, 2 m below the lip's level (more than the rim
+  blend's 1.5 m dip). The plan's rivers and lakes are unchanged (the cirque doesn't touch the raster).
+* Test: 93 cirques in 4 worlds, all 40 checked hold a tarn; 243,685 tarn points, all over lower ground, none with dry
+  ground below the water beside it (the first tries leaked at 17 and 14 points: the rim blend, then the downhill side).
+* Settings: New world → Landforms → *Cirques with a tarn*. Terrain version gains *Canyons fixed (rev. 22)* (not in a
+  build, fingerprints `terrain-r22.json`).
+* The bowl is carved after the biome's own landforms (mesas, dunes, spires), so its tarn wins: carved before them, a
+  mesa at its largest raised a tarn's floor 67 m over its water (the "water wins" test caught it).
+* Not yet: the tarn's outflow stream (the plan's rivers start lower), snow and scree in the bowl (the look is the
+  biome's).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

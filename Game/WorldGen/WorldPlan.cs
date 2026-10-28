@@ -35,6 +35,8 @@ public sealed class WorldPlan
     public IReadOnlyList<PlanLandform> PlanLandforms { get; }
     /// <summary>Canyons cut by rivers through raised land (revision 21, landform no. 3); null when off or older.</summary>
     public Canyons? Canyons { get; }
+    /// <summary>Cirques with a tarn (revision 23, landform no. 4); null when off or older.</summary>
+    public Cirques? Cirques { get; }
     /// <summary>Settlement sites and the roads between them (docs/WORLDGEN_PLAN.md step 3): empty in revision 17.</summary>
     public IReadOnlyList<WorldSite> Sites { get; } = Array.Empty<WorldSite>();
     public IReadOnlyList<WorldRoad> Roads { get; } = Array.Empty<WorldRoad>();
@@ -161,6 +163,8 @@ public sealed class WorldPlan
         // Canyons (revision 21): placed on the final rivers, before climate (the raise is walking-scale ground only).
         if (Style.Revision >= LandformCatalog.Canyons.Since && !Style.Landform(LandformCatalog.Canyons.Id).Off)
             Canyons = new Canyons(this, Style.Landform(LandformCatalog.Canyons.Id));
+        if (Style.Revision >= LandformCatalog.Cirques.Since && !Style.Landform(LandformCatalog.Cirques.Id).Off)
+            Cirques = new Cirques(this, Style.Landform(LandformCatalog.Cirques.Id));
         stage?.Invoke(3);
         Climate = new Climate(this, Style.Climate);
         stage?.Invoke(4);

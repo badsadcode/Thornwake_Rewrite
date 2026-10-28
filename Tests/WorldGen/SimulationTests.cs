@@ -18,6 +18,7 @@ internal static class SimulationTests
         T.Run("Landforms: no combs, fins or cracks at escarpments and mesas (revision 19)", NoCombs, filter);
         T.Run("Landforms: waterfalls drop the river at a step, water stays above its ground (revision 20)", Waterfalls, filter);
         T.Run("Landforms: canyons — raised land beside rivers that keep their course and level, no cliffs of its own (revisions 21, 22)", CanyonForms, filter);
+        T.Run("Landforms: cirques hold closed-in tarns high in the mountains; rivers and lakes unchanged (revision 23)", CirqueForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1080,6 +1081,44 @@ internal static class SimulationTests
         T.Check(canyons >= 8 && rivers == canyons && levelMoved == 0, $"canyons follow rivers that keep their level ({rivers}/{canyons}, {levelMoved} moved)");
         T.Check(raised >= canyons * .8 && walls >= canyons * .8, $"raised land and steep walls ({raised}, {walls} of {canyons})");
         T.Check(wet > 100 && dry == 0, $"water above its ground ({dry} of {wet})");
+    }
+
+    private static void CirqueForms()
+    {
+        int cirques = 0, tarns = 0, water = 0, under = 0, leaks = 0, sameHydrology = 0, worlds = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("continental", 42), ("mountainous", 42), ("mountainous", 7319) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            var h22 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 22 })).Plan.Hydrology;
+            worlds++;
+            if (h22.Reaches.Count == s.Plan.Hydrology.Reaches.Count && h22.Lakes.Count == s.Plan.Hydrology.Lakes.Count) sameHydrology++;
+            if (s.Plan.Cirques is not { } cq) continue;
+            cirques += cq.Count;
+            foreach (var (x, z, level, radius) in cq.Probes().Take(10))
+            {
+                // A grid over the floor, 5 m apart: tarn water at its level over lower ground; next to it, water or ground
+                // at least at the water's level (closed in).
+                int here = 0;
+                for (double dz = -radius * .6; dz <= radius * .6; dz += 5)
+                    for (double dx = -radius * .6; dx <= radius * .6; dx += 5)
+                    {
+                        var t = s.Sample(x + dx, z + dz);
+                        if (t.Water != WaterKind.Pond || Math.Abs(t.WaterLevel - level) > 1e-9) continue;
+                        here++; water++;
+                        if (!(t.Height < t.WaterLevel)) under++;
+                        foreach (var (ox, oz) in new[] { (5.0, 0.0), (-5.0, 0.0), (0.0, 5.0), (0.0, -5.0) })
+                        {
+                            var n = s.Sample(x + dx + ox, z + dz + oz);
+                            if (n.Water == WaterKind.None && n.Height < level - .05) leaks++;
+                        }
+                    }
+                if (here > 20) tarns++;
+            }
+        }
+        T.Note($"{cirques} cirques in 4 worlds; of 40 checked, {tarns} hold a tarn; {water} tarn points, {under} not over lower ground, {leaks} dry neighbours below the water");
+        T.Check(cirques >= 40 && tarns >= 30, $"cirques with tarns ({cirques}, {tarns} of 40)");
+        T.Check(under == 0 && leaks == 0, $"tarns lie over lower ground, closed in ({under}, {leaks})");
+        T.Check(sameHydrology == worlds, $"the plan's rivers and lakes are as before ({sameHydrology}/{worlds})");
     }
 
     private static void Wetlands()

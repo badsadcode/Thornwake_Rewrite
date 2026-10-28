@@ -144,6 +144,11 @@ if (args.Contains("--landform-probes"))
         foreach (int seed in new[] { 42, 7319 })
         {
             var s = CoreTests.Sampler(profile.Id, seed);
+            if (s.Plan.Cirques is { } cq)
+            {
+                Console.WriteLine($"{profile.Id}/{seed}: {cq.Count} cirques");
+                foreach (var (qx, qz, ql, qr) in cq.Probes().Take(3)) Console.WriteLine($"{profile.Id}/{seed} cirque at {qx:0},{qz:0} tarn level {ql:0} m, radius {qr:0} m");
+            }
             if (s.Plan.Canyons is { } cy)
             {
                 Console.WriteLine($"{profile.Id}/{seed}: {cy.Count} canyons");
