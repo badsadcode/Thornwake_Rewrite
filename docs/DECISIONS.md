@@ -3574,6 +3574,24 @@ choice), PBR terrain materials planned later with Noor (and Tom's asset app):
   terrain shader as `rain_now.w`.
 * Captures (Mountain kingdoms 42, low sun, wet): the far spot is much weaker and broken; close wet grass unchanged.
 
+## D237 — Asset spec for NoorMD's benches (2026-10-28)
+Tom: "I'm making a new app that will help me to make assets… trees, rocks, and actually PBR textures" (NoorMD,
+private, read-only for us: "just don't change anything there"); then "write the spec". Read from a read-only clone
+(push disabled), nothing changed there. `docs/ASSET_SPEC.md` gains Part 1, what Thornwake needs from it; the original
+scatter spec stays as Part 2.
+* **Files and a manifest only** (the repository rule: other repositories are sources of ideas, never code); recipes
+  committed beside the exports; looks arrive as a new switchable set, the old kept.
+* **Terrain PBR**: the 16 ground layers in the shader's order (first eight to start), albedo / normal (Godot, Y up) /
+  ORM / 16-bit height (low = where water collects, for wet hollows and height blending), 1024 px per 2 m tile,
+  `ground_set.json`; rock looks for cliffs and boulders in the same maps.
+* **Trees**: three levels (the game bakes its own impostors), GLB per level, `Bark` in bark material names, wind data
+  kept in TEXCOORD_1 for later; the placeholder species most wanted.
+* **Rocks**: stones, boulders, outcrops, scree packs, then landform models (sea stacks, arches, hoodoos, tors), with
+  convex `COL_` collision and budgets.
+* NoorMD writes its Godot import plugin into a project it finds: export as *Other* or outside Thornwake, so the plugin
+  never lands in Thornwake's addons.
+* Open for Tom: which look (realistic, stylized, pixel art), and texel density.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
