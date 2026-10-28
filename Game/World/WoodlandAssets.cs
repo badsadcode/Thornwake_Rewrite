@@ -12,6 +12,13 @@ public static class WoodlandAssets
     private static readonly Dictionary<string,BaseMaterial3D> Bark=new();
     private static readonly Dictionary<string,ShaderMaterial> Foliage=new();
     private static Shader? _canopyShader;
+    /// <summary>
+    /// Trees drawn from an outside export for a test, never saved (--test-tree, Tom's NoorMD pine, 2026-10-28): species
+    /// → path prefix of the export's level files (prefix + "_LOD0.glb" …), loaded at run time without importing them
+    /// into the project. Placement and everything else stay the species' own.
+    /// </summary>
+    public static readonly Dictionary<string,string> TestTrees=new();
+    private static readonly Dictionary<string,Node3D> TestTemplates=new();
     public static IEnumerable<MeshInstance3D> Meshes(Node node)
     {
         if(node is MeshInstance3D mesh)yield return mesh;
@@ -20,13 +27,18 @@ public static class WoodlandAssets
     private static Node3D Instance(string asset,int lod)
     {
         string name="TREE_"+asset+(lod==0?"":"_LOD"+lod);
-        if(!Scenes.TryGetValue(name,out var scene))
+        Node3D root;
+        if(TestTrees.TryGetValue(asset,out var test))root=TestTree(test+"_LOD"+lod+".glb");
+        else
         {
-            scene=GD.Load<PackedScene>("res://Assets/Vegetation/"+name+".glb")
-                ??throw new InvalidOperationException("Missing woodland model: "+name);
-            Scenes[name]=scene;
+            if(!Scenes.TryGetValue(name,out var scene))
+            {
+                scene=GD.Load<PackedScene>("res://Assets/Vegetation/"+name+".glb")
+                    ??throw new InvalidOperationException("Missing woodland model: "+name);
+                Scenes[name]=scene;
+            }
+            root=scene.Instantiate<Node3D>();
         }
-        var root=scene.Instantiate<Node3D>();
         foreach(var mesh in Meshes(root))
         {
             mesh.CastShadow=lod==2?GeometryInstance3D.ShadowCastingSetting.Off:GeometryInstance3D.ShadowCastingSetting.On;
@@ -52,6 +64,18 @@ public static class WoodlandAssets
             }
         }
         return root;
+    }
+    private static Node3D TestTree(string path)
+    {
+        if(!TestTemplates.TryGetValue(path,out var template))
+        {
+            var document=new GltfDocument();var state=new GltfState();
+            if(document.AppendFromFile(path,state)!=Error.Ok)throw new InvalidOperationException("Cannot read test tree: "+path);
+            template=(Node3D)document.GenerateScene(state);
+            TestTemplates[path]=template;
+            GD.Print("TEST TREE "+path);
+        }
+        return (Node3D)template.Duplicate();
     }
     public static WoodlandTree Tree(string asset,float scale=1,float rotation=0)
     {
@@ -88,6 +112,7 @@ public static class WoodlandAssets
     public static void Release()
     {
         foreach(var scene in Scenes.Values)scene.Dispose();Scenes.Clear();Bark.Clear();
+        foreach(var template in TestTemplates.Values)template.Free();TestTemplates.Clear();
         foreach(var material in Foliage.Values)material.Dispose();Foliage.Clear();
         _canopyShader?.Dispose();_canopyShader=null;
     }

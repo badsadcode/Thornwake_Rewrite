@@ -157,6 +157,14 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--view=")) { var v = arg[7..].Split(','); _shotView = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture), float.Parse(v[2], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--msaa=")) GetViewport().Msaa3D = arg[7..] switch { "0" => Viewport.Msaa.Disabled, "4" => Viewport.Msaa.Msaa4X, _ => Viewport.Msaa.Msaa2X };
             if (arg.StartsWith("--fly-height=")) _shotHeight = float.Parse(arg[13..], CultureInfo.InvariantCulture);
+            // --test-tree=<export prefix>[;Species,...]: draw these species (default the pines and spruces) with an outside
+            // tree export (NoorMD: prefix + "_LOD0.glb", "_LOD1.glb", "_LOD2.glb"), for a look or a benchmark; never saved.
+            if (arg.StartsWith("--test-tree="))
+            {
+                var parts = arg[12..].Split(';');
+                foreach (var species in parts.Length > 1 ? parts[1].Split(',') : new[] { "Pine_A", "Pine_B", "Pine_C", "Spruce_A", "Spruce_B" })
+                    Thornwake.World.WoodlandAssets.TestTrees[species] = parts[0];
+            }
             // --set=<setting key>=<value>, e.g. --set=fx.water_reflections=0 (testing; also saved)
             if (arg.StartsWith("--set=")) { var kv = arg[6..].Split('='); var setting = GameSettings.All.FirstOrDefault(x => x.Key == kv[0]); if (setting != null) GameSettings.Override(setting, double.Parse(kv[1], CultureInfo.InvariantCulture)); } // (not saved: a test run never changes the player's settings)
             if (arg.StartsWith("--debug-draw=")) GetViewport().DebugDraw = (Viewport.DebugDrawEnum)int.Parse(arg[13..], CultureInfo.InvariantCulture);
