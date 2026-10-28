@@ -9,6 +9,10 @@ only**: no code moves between the two projects, and nothing in NoorMD's reposito
 
 ### Ground rules
 
+Tom (2026-10-28): NoorMD is game-agnostic; he generates models and textures and hands them over, and Thornwake sorts
+them in. So nothing below is a Thornwake-specific export: it is what Thornwake looks for in NoorMD's ordinary
+exports, and the adapting (names, folders, set files, shaders) happens on Thornwake's side.
+
 * **The recipe travels with the files**: NoorMD's `.noortex.json` / tree and rock recipes are committed next to the
   exports, so an asset can be remade at another size or changed later. The game never reads them.
 * **A manifest per delivery** (NoorMD already writes one): the game reads names, files, levels and sizes from it,
@@ -41,8 +45,8 @@ in *Ground textures* (current procedural / Noor pixel art / PBR), the others kep
   game reads each layer's mean so textures add detail without shifting the biome's colour.
 * **Rock looks** for cliffs and boulders (the shared `rock_tex` array): `layered, granite, basalt, sandstone, mossy,
   icy`, same maps; cliffs are textured from three sides (triplanar), so no direction may look stretched.
-* **Delivery**: `Assets/Terrain/<SetName>/` with the PNGs, recipes and `ground_set.json` (layer → files, tile_metres,
-  height_cm).
+* **Delivery**: the exported maps, recipes and NoorMD's manifest, any names; Thornwake files them under
+  `Assets/Terrain/<SetName>/` and writes its own set file (layer → files, tile size, height range).
 
 ### 2. Trees (Asset Bench)
 
@@ -81,8 +85,9 @@ What the world needs, in order:
   game sinks them).
 * **Levels**: LOD0 plus LOD1 and LOD2 for anything over ~1 m; budgets LOD0: stone ≤ 150, rock ≤ 400,
   boulder ≤ 1,200, outcrop ≤ 2,500, landform model ≤ 8,000 triangles.
-* **Collision**: a `COL_` mesh (convex, ≤ 64 triangles; several convex pieces for arches) in the same GLB for
-  anything over ~1 m — the player climbs and walks on these.
+* **Collision**: simple convex collision pieces in the same GLB for anything over ~1 m, named by Godot's glTF
+  convention (`-convcolonly` suffix; ≤ 64 triangles each, several pieces for arches) — the player climbs and walks
+  on these.
 * **Materials** from the six rock looks above, so cliffs and rocks match; moss or snow on upward faces welcome
   (the game also tints by biome).
 
