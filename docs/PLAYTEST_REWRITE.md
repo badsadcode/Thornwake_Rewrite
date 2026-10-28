@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 117 — escarpments fixed from your dumps (terrain revision 19)
+**Host and everyone joining need build 117** (versions must match to connect).
+* **The comb is gone**: the rows of thin steps came from the mesas where badlands fade out; mesas there now just get
+  lower, and only mesas over ~15 m have tiers.
+* **No more fins and cracks** across plateaus (they came from the bends of the escarpment's line).
+* **Less regular slopes**: straight gullies downhill at uneven spacing instead of wavy worm-like ones, no wavy bands,
+  no teeth along the cliff top (the faces are at most ~75°, which the ground can draw cleanly).
+* Your build 116 worlds keep their terrain; *Terrain version → Build 116* gives it to new worlds too.
+* The dark upright slabs at cliff edges are rock outcrop models, not the ground (tell me if they should stay off
+  cliff edges).
+
 ## New in build 116 — escarpments and plateaus (terrain revision 18), Land shape
 **Host and everyone joining need build 116** (versions must match to connect).
 * **Escarpments and plateaus**, the first landform from your list: long cliffs inland with a raised table-land behind
