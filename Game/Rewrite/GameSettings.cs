@@ -561,6 +561,10 @@ public static class GameSettings
         "and stay wet longest, drying in patches, grass turns a richer green without shine, sand darkens; boulders, bark and " +
         "built wood and thatch darken too. Build 107: the ground evenly darker and glossier, drying in ~6 minutes.",
         options: new[] { "build 107 (even)", "by material" }));
+    public static readonly Setting WetSheen = Add(new("sim.wet_sheen", "Simulation", "Wet sheen", 0, 1, 1, 1,
+        "Broken up (D236): wet ground glints in specks where water sits in its small hollows, and far away it has a soft " +
+        "sheen. Build 117: each wet ground evenly glossy, which a low sun turned into one big shiny spot.",
+        options: new[] { "build 117 (even)", "broken up" }));
     public static readonly Setting RainShelter = Add(new("sim.rain_shelter", "Simulation", "Rain under cover", 0, 1, 1, 1,
         "With Rain look by strength (D211). Stops: no rain falls under roofs, floors, rock overhangs and ledges (blown in " +
         "under the windward edge in wind), drops splash on the roof instead, and the rain sounds muffled while you are under " +

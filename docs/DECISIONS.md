@@ -3561,6 +3561,19 @@ look too regular, kind of like a smooth sinusoidal wave". New tools found the ca
 * The upright slab at 17:33:12 is not terrain (the ground there is flat): a rock outcrop model the ground cover places
   on rocky ground, which the cliff's edge now is.
 
+## D236 — Wet sheen broken up: glints in specks, a soft sheen far away (2026-10-28)
+Tom, on build 117: "the specularity of the terrain, especially when it's wet, looks kind of weird, like this big
+specular spot. We'll need PBR materials for the terrain, I guess." Cause: the wet look by material (D212) gives each
+wet ground one even gloss (rock 0.28, earth 0.48 roughness); beyond the reach of the ground's small bumps (they fade at
+25–70 m) a wet patch is a smooth surface, so a low sun mirrored in it as one big copper spot. Quick fix first (Tom's
+choice), PBR terrain materials planned later with Noor (and Tom's asset app):
+* water sits in the surface's small hollows: gloss only where a pore noise (2.7 and 9.3 per metre) says so — 0.34
+  roughness there, 0.62 between; beyond 20–110 m the gloss fades to a soft sheen (roughness at least 0.7); puddles stay
+  mirrors.
+* **Settings → Simulation → Wet sheen**: *broken up* (default) or *build 117 (even)* (the return point); passed to the
+  terrain shader as `rain_now.w`.
+* Captures (Mountain kingdoms 42, low sun, wet): the far spot is much weaker and broken; close wet grass unchanged.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

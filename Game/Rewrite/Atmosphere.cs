@@ -851,8 +851,9 @@ public partial class Atmosphere : Node3D
         // Raindrops ringing on water (round 27): how hard it rains here (not snow), for the water shader.
         // (y: the wet look by material, D212)
         // (z: the ground stays dry under cover — the cover map is valid and Rain under cover is on, D214)
+        // (w: the wet sheen broken up, D236)
         RenderingServer.GlobalShaderParameterSet("rain_now", new Vector4(Snowing ? 0 : Mathf.Clamp(Precip, 0, 1), GameSettings.WetLook.Index,
-            GameSettings.RainShelter.Index == 1 && _coverTex != null ? 1 : 0, 0));
+            GameSettings.RainShelter.Index == 1 && _coverTex != null ? 1 : 0, GameSettings.WetSheen.Index));
         if (_steer == null) UpdateLightning(delta); // classic model; the simulated one has Lightning.cs
         else if (_flash != null) _flash.Visible = false;
         // Warmer light at a low sun (AtmosphereLight: build 47's single warm factor, or the colour curve by phase).

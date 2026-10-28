@@ -8,7 +8,7 @@ uniform float snow_line = 2700.0;
 uniform bool show_grid = false;
 // x: surface wetness (rain darkens and glosses the ground), y: cosmetic puddles in flat hollows (Atmosphere.cs).
 global uniform vec2 rain_wetness;
-global uniform vec4 rain_now; // y: the wet look by material (D212); z: the cover map is valid (D214)
+global uniform vec4 rain_now; // y: the wet look by material (D212); z: the cover map is valid (D214); w: wet sheen broken up (D236)
 // Dry ground under cover (D214): the rain's cover map around the camera (Atmosphere, 1 m cells, 40 x 40, toroidal):
 // r = the first surface rain lands on (scene y), g, b = the cell it holds, a > 0.5 written.
 global uniform sampler2D rain_cover : filter_nearest, repeat_enable;
@@ -363,6 +363,17 @@ void fragment() {
 		float sum = a_rock + a_grass + a_sand + a_dirt;
 		wet_rough = (0.28 * a_rock + 0.8 * a_grass + 0.6 * a_sand + 0.48 * a_dirt) / max(sum, 1e-3);
 		wet_rough_k = min(sum, 1.0);
+		if (rain_now.w > 0.5) {
+			// Wet sheen broken up (D236): water sits in the surface's small hollows and pores, so a wet patch glints in
+			// specks rather than shining as one even sheet; and farther than the small ground bumps reach (they fade
+			// at 25-70 m), a patch is a smooth surface that mirrored the low sun as one big spot - there the gloss
+			// fades to a soft sheen.
+			float near_wet = 1.0 - smoothstep(20.0, 110.0, dist);
+			float pores = vnoise(p * 2.7 + 4.2) * 0.55 + vnoise(p * 9.3 + 1.7) * 0.45;
+			float glossy = mix(0.5, smoothstep(0.42, 0.72, pores), near_wet);
+			wet_rough = mix(max(wet_rough, 0.62), max(wet_rough, 0.34), glossy);
+			wet_rough = mix(max(wet_rough, 0.7), wet_rough, near_wet);
+		}
 	} else {
 		c *= mix(1.0, 0.7, wetness);
 	}
