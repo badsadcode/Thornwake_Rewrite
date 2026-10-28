@@ -64,7 +64,7 @@ Then the fantasy landforms Tom picks (section at the end).
   116; Tom's dumps: a comb (mesas), fins at bends, worm-like rills — fixed in terrain revision 19 (D235), in build 117.
 
 ### 2. Waterfalls and rapids
-* **Status**: built, terrain revision 20 (D238), not in a build yet: falls at knickpoints with a plunge pool, rapids
+* **Status**: built, terrain revision 20 (D238), in build 118: falls at knickpoints with a plunge pool, rapids
   below, a steep-walled gorge below each fall. Spray and white water wait for the water shader rework.
 * **What**: a river drops over a rock step into a plunge pool; white water over a steep, rocky stretch.
 * **Where**: where a river's course crosses a steep step (escarpment edges, mountain fronts, hanging valleys).
@@ -74,7 +74,7 @@ Then the fantasy landforms Tom picks (section at the end).
 * **Water**: the river keeps flowing; the pool below is deeper, never dry.
 
 ### 3. Gorges and canyons
-* **Status**: built, terrain revision 21 (D239), not in a build yet: antecedent canyons (raised land beside a few
+* **Status**: built, terrain revision 21 (D239), in build 118: antecedent canyons (raised land beside a few
   rivers), gorge walls with ledges for canyons and the gorges below waterfalls.
 * **What**: a river cut deep and narrow where it crosses high ground, walls of rock on both sides.
 * **Where**: where a river crosses a plateau or a range (it was there first and cut down as the land rose).

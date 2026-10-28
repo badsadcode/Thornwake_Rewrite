@@ -3,7 +3,9 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 117** (v0.9.117, return point `ff1cfe9`, `dist/Preview-117`): escarpments fixed from his dumps,
+* **Last build Tom has: 118** (v0.9.118, return point `863fda0`, `dist/Preview-118`): waterfalls (D238), gorges and
+  canyons (D239) as terrain revisions 20 and 21, wet sheen broken up (D236); launchers "Go to - waterfall (Balanced /
+  Mountain kingdoms)", "Go to - canyon (Balanced)". Build 117 (`ff1cfe9`): escarpments fixed from his dumps,
   terrain revision 19 (D235); launcher "Go to - where the comb was". Build 116 (`6c530c5`): escarpments and plateaus,
   terrain revision 18 (D232-D234), Land shape (D230). Build 115
   (`9377656`): terrain revision 17 (D229) - New world Landforms, worlds keep their terrain version. Build 114 (`6473368`): strong rain fixed
