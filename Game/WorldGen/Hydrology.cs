@@ -489,6 +489,8 @@ public sealed class Hydrology
             r.Surface = surface;
             if (r.DownstreamReach >= 0 && --pending[r.DownstreamReach] == 0) ready.Enqueue(r.DownstreamReach);
         }
+        if (style.Revision >= LandformCatalog.Waterfalls.Since && !style.Landform(LandformCatalog.Waterfalls.Id).Off)
+            AddWaterfalls(style.Landform(LandformCatalog.Waterfalls.Id));
         // Confluences: all arriving reaches end exactly where the outgoing reach starts.
         foreach (var r in _reaches)
             if (r.DownstreamReach >= 0) r.Surface[^1] = Math.Min(r.Surface[^1], _reaches[r.DownstreamReach].Surface[0]);
@@ -517,6 +519,113 @@ public sealed class Hydrology
             r.Along = along;
         }
         _index = new SegmentIndex(_reaches, _raster, 768);
+    }
+
+    /// <summary>A waterfall (revision 20): where on which reach, the lip's position, the height of the drop.</summary>
+    public readonly record struct Waterfall(int Reach, int Point, Point2 Lip, double Height);
+
+    /// <summary>Waterfalls of this world (revision 20, landform no. 2), biggest first.</summary>
+    public IReadOnlyList<Waterfall> Falls => _falls;
+    private readonly List<Waterfall> _falls = new();
+    /// <summary>The stretch below each fall, per reach: metres along the reach from the lip to the end of the rapids.</summary>
+    private readonly Dictionary<int, List<(double From, double To)>> _gorges = new();
+
+    /// <summary>
+    /// How much a point of a reach lies in the gorge below a waterfall (0 none … 1): there the river's valley sides are
+    /// steep rock walls instead of a floodplain (a fall drops the water tens of metres below the land; a gentle valley
+    /// side from that depth spread into a funnel hundreds of metres wide). Already narrow 10 m above the lip (fading in
+    /// over the 50 m before: beside the lip the ground mixes the levels above and below the fall) and fading out over
+    /// the last 30 % of the stretch.
+    /// </summary>
+    public double Gorge(int reach, double along)
+    {
+        if (_gorges.Count == 0 || !_gorges.TryGetValue(reach, out var list)) return 0;
+        double g = 0;
+        foreach (var (from, to) in list)
+            if (along > from - 60 && along < to)
+                g = Math.Max(g, DetMath.Smooth((along - from + 60) / 50) * DetMath.Smooth((to - along) / ((to - from) * .3 + 1)));
+        return g;
+    }
+
+    /// <summary>
+    /// Waterfalls and the rapids below them (landform no. 2, terrain revision 20, D238). A river's surface follows the
+    /// eroded raster, so where it crosses a step (an escarpment's edge, a mountain front) the drop is spread over the
+    /// raster's ramp, a kilometre or more. A fall goes where the river drops much more steeply than just upstream (a
+    /// knickpoint), not on every steep mountain stream (those stay cascades): the water keeps its level to the lip,
+    /// falls there, and below it runs on in a plunge pool and gentle rapids down to where the river was. Lowering the
+    /// water under the ramp makes the river cut a gorge back from the fall, as falls retreat. Only the water's level
+    /// and the pool change: the course stays, the surface still strictly descends, the reach's ends are untouched (so
+    /// confluences and lakes are as before). Amount: how steep a step must be; size: the highest fall (120 m) and the pool.
+    /// </summary>
+    private void AddWaterfalls(LandformSetting setting)
+    {
+        const double Window = 400, Upstream = 2000, MaxRun = 1500, MinAbove = 800;
+        double minDrop = 15 / Math.Max(setting.Amount, .1), minGrade = .04, maxFall = 120 * setting.Size;
+        foreach (var r in _reaches)
+        {
+            if (r.Distributary || r.Points.Length < 8) continue;
+            var s = r.Surface;
+            // (Along is only filled after this step: measure it here)
+            var along = new double[r.Points.Length];
+            for (int k = 1; k < along.Length; k++) along[k] = along[k - 1] + Math.Sqrt(Sq(r.Points[k].X - r.Points[k - 1].X) + Sq(r.Points[k].Z - r.Points[k - 1].Z));
+            int Ahead(int k, double metres) { int j = k; while (j < along.Length - 2 && along[j] - along[k] < metres) j++; return j; }
+            // A lake's outlet keeps the lake's level while its course runs inside the lake (revision 15): no fall before
+            // it has left the lake.
+            int first = 1;
+            if (r.StartLake >= 0)
+                while (first < along.Length && LakeDistance(r.Points[first].X, r.Points[first].Z, out double cells) == r.StartLake && cells < 1.6) first++;
+            for (int k = Math.Max(1, first); k < along.Length - 3; k++)
+            {
+                // (a source has nothing upstream to judge a step against: mountain streams near their source stay
+                // cascades)
+                if (along[k] < MinAbove && r.UpstreamReaches.Count == 0 && r.StartLake < 0) continue;
+                int w = Ahead(k, Window);
+                double drop = s[k] - s[w], grade = drop / Math.Max(1, along[w] - along[k]);
+                if (drop < minDrop || grade < minGrade) continue;
+                // Upstream grade over the last 2 km (or what the reach has): the step must be much steeper than that.
+                int u = k; while (u > 0 && along[k] - along[u] < Upstream) u--;
+                double up = u < k ? (s[u] - s[k]) / Math.Max(1, along[k] - along[u]) : 0;
+                if (grade < 4 * up) continue;
+                // The steep stretch: until the river's grade falls back toward its upstream grade, or the fall would be
+                // higher than 120 m (× size; the rest of a mountain front stays cascades).
+                int end = w;
+                while (end < along.Length - 2 && along[end] - along[k] < MaxRun && (s[k] - s[end]) * .85 < maxFall)
+                {
+                    int next = Ahead(end, 200);
+                    if (next == end || (s[end] - s[next]) / Math.Max(1, along[next] - along[end]) < Math.Max(2 * up, .015)) break;
+                    end = next;
+                }
+                while (end > k + 2 && (s[k] - s[end]) * .85 > maxFall) end--; // (a steep first window: trim it back)
+                double top = s[k], bottom = s[end], height = (top - bottom) * .85;
+                // (not where the river already reaches the sea's level: there is nothing below to fall to, and pushing
+                // the rapids down toward it made the next point rise)
+                if (bottom < _seaLevel + .5) { k = end; continue; }
+                // Below the lip: at the pool's level at once, then rapids carrying the last 15 % of the drop.
+                for (int j = k + 1; j <= end; j++)
+                {
+                    double f = (along[j] - along[k + 1]) / Math.Max(1, along[end] - along[k + 1]);
+                    s[j] = Math.Min(s[j], bottom + (top - bottom) * .15 * (1 - f));
+                }
+                // Strictly descending, and above the stretch's end, which stays as it was (the rapids' line meets the old
+                // surface there; pushing a point below it made the next point rise).
+                for (int j = k + 1; j < end; j++)
+                {
+                    if (s[j] >= s[j - 1]) s[j] = s[j - 1] - 1e-5;
+                    s[j] = Math.Max(s[j], s[end] + (end - j) * 1e-5);
+                }
+                // The plunge pool: deeper and wider for the first ~40 m below the lip.
+                for (int j = k + 1; j <= end && along[j] - along[k] < 40; j++)
+                {
+                    r.Depth[j] = (float)(r.Depth[j] + Math.Min(10, .25 * height) * setting.Size);
+                    r.Width[j] = (float)(r.Width[j] * (1 + .5 * setting.Size));
+                }
+                _falls.Add(new Waterfall(r.Id, k, r.Points[k], height));
+                if (!_gorges.TryGetValue(r.Id, out var gorges)) _gorges[r.Id] = gorges = new List<(double, double)>();
+                gorges.Add((along[k], along[end]));
+                k = end;
+            }
+        }
+        _falls.Sort((a, b) => b.Height.CompareTo(a.Height));
     }
 
     /// <summary>

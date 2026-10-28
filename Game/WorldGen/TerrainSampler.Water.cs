@@ -477,6 +477,12 @@ public sealed partial class TerrainSampler
             bulge = Math.Max(fast, 0);
             shift = slow + Math.Min(fast, 0);
         }
+        // Revision 20: no bank irregularity in the gorge below a waterfall (on a wall tens of metres high each small
+        // shift of the bank became a step: the walls looked dashed).
+        if (_style.Revision >= 20 && _hydrology.Gorge(r0.Reach, r0.Along) is > 0 and var inGorge)
+        {
+            shift *= 1 - inGorge; bulge *= 1 - inGorge;
+        }
         double fade = bankWidth * 1.5 + (rev9 ? 2 * Math.Abs(shift) : 0);
         double carry = 1 - DetMath.Smooth((r0.Distance - nominal - Math.Max(shift, 0) - bankWidth) / fade);
         var r = r0 with { Distance = Math.Max(0, r0.Distance - shift * carry) };
@@ -536,6 +542,9 @@ public sealed partial class TerrainSampler
         if (estuary > 0) bankTop -= (.6 + .15 * r.Depth) * .6 * estuary;
         double extra = estuary > 0 ? Math.Max(0, half - r.Width * .5) + (bank - Hydrology.Bank(r.Width)) : 0; // estuary widening
         double flood = Math.Min(Hydrology.Floodplain(r.Width, rise - bankTop), Hydrology.MaxFloodplain(r.Width) - beach - extra);
+        // Revision 20: below a waterfall the valley sides are a gorge's steep walls (about 70°), not a floodplain.
+        double gorge = _style.Revision >= 20 ? _hydrology.Gorge(r.Reach, r.Along) : 0;
+        if (gorge > 0) flood += (Math.Max(bank, (rise - bankTop) * .35 + 4) - flood) * gorge;
         // A beach: a low, gently sloping strip (to ~0.3 m above the water) before the bank rises; everything beyond
         // the waterline moves outward by its width.
         double lift = 0;

@@ -3592,6 +3592,34 @@ scatter spec stays as Part 2.
   never lands in Thornwake's addons.
 * Open for Tom: which look (realistic, stylized, pixel art), and texel density.
 
+## D238 — Terrain revision 20: waterfalls, with a gorge below each (2026-10-28)
+Tom: "let's continue" — landform no. 2 of `docs/LANDFORMS.md`. A river's surface follows the eroded raster along its
+course (RefineSurfaces), so where it crossed a step the drop was spread over the raster's ramp (a kilometre or more):
+no falls anywhere. `Hydrology.AddWaterfalls` (revision 20, before the confluence fixes):
+* **Where**: a knickpoint — over 400 m the water drops at least 15 m (÷ amount) at a grade of 4 % or more, and 4 ×
+  steeper than over the 2 km upstream; not within 800 m of a source with nothing above it (mountain streams near
+  their source stay cascades: a first try gave falls up to 647 m there). A typical 512 km world: 100–260 falls, half
+  over 30 m, median 30–40 m.
+* **How**: the water keeps its level to the lip, drops 85 % of the steep stretch there (at most 120 m × size; a steep
+  first window is trimmed back), then runs in rapids carrying the last 15 % to where the river was; a plunge pool
+  (deeper by a quarter of the fall, at most 10 m, 1.5 × as wide) for 40 m. Reach ends, confluences and lakes are
+  untouched; every reach still descends (no new rise: test) and the stretch's last point keeps its level (the first
+  full suite caught a rise of 0.2 mm where rapids were pushed below it at sea level: no falls whose foot is within
+  0.5 m of the sea), and a lake's outlet gets no fall before its course leaves the lake (it keeps the lake's level
+  there, revision 15). `Hydrology.Falls` lists them.
+* **The gorge**: with the water below the land, the river's valley sides (floodplain up to 4 × the height above the
+  water, ≤ 260 m) carved a funnel hundreds of metres wide with radial streaks. In a fall's stretch (`Hydrology.Gorge`,
+  from 60 m above the lip, fading out over the last 30 %) the sides are steep walls (about 70°), and the bank
+  irregularity is off (on a tall wall each small shift of the bank drew a step).
+* **Settings**: New world → Landforms → *Waterfalls* (amount: how steep a step must be; size: the highest fall and
+  the pool). Terrain version gains *Build 117* (revision 19, fingerprints `terrain-build117.json`); 140 older
+  sample-hash cases unchanged.
+* **Seen in the game** (Balanced 42 at 150813, 10426; Mountain kingdoms 42 at −222795, 48817): a white fall at the head
+  of a narrow gorge. The gorge walls are even, layered cliff rock — breaking them up belongs to no. 3 (gorges and
+  canyons); spray and white water wait for the water shader rework.
+* Test: 495 falls in 3 worlds, none over 120 m; 34 of 36 drop over half their height within 30 m of the lip; 1 116
+  water points along their gorges, none with ground above the water.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

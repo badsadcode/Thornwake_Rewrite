@@ -55,6 +55,7 @@ internal static class CoreTests
         T.Run("Build 114 terrain still reproducible", () => Fingerprints(false, "terrain-build114.json", build114: true), filter);
         T.Run("Build 115 terrain still reproducible", () => Fingerprints(false, "terrain-build115.json", build115: true), filter);
         T.Run("Build 116 terrain still reproducible", () => Fingerprints(false, "terrain-build116.json", build116: true), filter);
+        T.Run("Build 117 terrain still reproducible", () => Fingerprints(false, "terrain-build117.json", build117: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -311,7 +312,7 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false, bool build25 = false, bool build51 = false, bool build52 = false, bool build114 = false, bool build115 = false, bool build116 = false)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false, bool build25 = false, bool build51 = false, bool build52 = false, bool build114 = false, bool build115 = false, bool build116 = false, bool build117 = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
         string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
@@ -349,6 +350,8 @@ internal static class CoreTests
                 if (build115) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 17 }));
                 // Build 116 (commit 6c530c5, v0.9.116): terrain revision 18, escarpments as first built.
                 if (build116) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 18 }));
+                // Build 117 (commit ff1cfe9, v0.9.117): terrain revision 19, before waterfalls.
+                if (build117) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 19 }));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];

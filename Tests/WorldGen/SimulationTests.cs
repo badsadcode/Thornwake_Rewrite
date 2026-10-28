@@ -16,6 +16,7 @@ internal static class SimulationTests
         T.Run("Landforms: water wins with every module at its largest (revision 17)", LandformWater, filter);
         T.Run("Landforms: escarpments and plateaus — cliffs inland, water keeps its place (revision 18)", EscarpmentForms, filter);
         T.Run("Landforms: no combs, fins or cracks at escarpments and mesas (revision 19)", NoCombs, filter);
+        T.Run("Landforms: waterfalls drop the river at a step, water stays above its ground (revision 20)", Waterfalls, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -969,6 +970,53 @@ internal static class SimulationTests
         }
         T.Note($"{spots} escarpment spots, 160 m square each: one-metre spikes and notches — revision 18: {old}, revision 19: {now}");
         T.Check(spots >= 15 && now <= old / 20, $"revision 19's escarpments have (almost) none ({now} against {old})");
+    }
+
+    private static void Waterfalls()
+    {
+        int falls = 0, tall = 0, checkedFalls = 0, dropped = 0, wet = 0, dry = 0, notDescending = 0, endsMoved = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("mountainous", 42), ("archipelago", 7319) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            var hy = s.Plan.Hydrology;
+            var h19 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 19 })).Plan.Hydrology;
+            falls += hy.Falls.Count;
+            tall += hy.Falls.Count(f => f.Height > 120.001);
+            // Every reach still strictly descends; its ends (confluences, lakes, the sea) are where they were.
+            for (int i = 0; i < hy.Reaches.Count; i++)
+            {
+                var r = hy.Reaches[i];
+                // (a reach that already rose somewhere in revision 19 — lake inflows and confluences adjust ends — is judged
+                // by whether the falls added a rise)
+                int Rises(double[] v) { int n = 0; for (int k = 1; k < v.Length; k++) if (!(v[k] < v[k - 1])) n++; return n; }
+                if (Rises(r.Surface) > Rises(h19.Reaches[i].Surface)) notDescending++;
+                if (r.Surface[0] != h19.Reaches[i].Surface[0] || r.Surface[^1] != h19.Reaches[i].Surface[^1]) endsMoved++;
+            }
+            // At each of the first 12 falls: the water 30 m below the lip is far lower than at the lip, and along the
+            // gorge (the river's line, 0–300 m below the lip) water lies above its ground.
+            foreach (var f in hy.Falls.Take(12))
+            {
+                var r = hy.Reaches[f.Reach];
+                int Below(double m) { int j = f.Point; while (j < r.Points.Length - 1 && r.Along[j] - r.Along[f.Point] < m) j++; return j; }
+                checkedFalls++;
+                var lip = s.Sample(r.Points[Math.Max(0, f.Point - 1)].X, r.Points[Math.Max(0, f.Point - 1)].Z);
+                var low = s.Sample(r.Points[Below(30)].X, r.Points[Below(30)].Z);
+                if (lip.Water == WaterKind.River && low.Water == WaterKind.River && lip.WaterLevel - low.WaterLevel > .5 * f.Height) dropped++;
+                for (double m = 0; m <= 300; m += 10)
+                {
+                    var p = r.Points[Below(m)];
+                    var t = s.Sample(p.X, p.Z);
+                    if (t.Water == WaterKind.None) continue;
+                    wet++;
+                    if (!(t.Height < t.WaterLevel)) dry++;
+                }
+            }
+        }
+        T.Note($"{falls} waterfalls in 3 worlds; {checkedFalls} checked: {dropped} drop over half their height within 30 m; {wet} water points along their gorges, {dry} with the ground above the water");
+        T.Check(falls > 100 && tall == 0, $"falls placed, none over 120 m ({falls}, {tall} too tall)");
+        T.Check(notDescending == 0 && endsMoved == 0, $"rivers still descend, ends unchanged ({notDescending}, {endsMoved})");
+        T.Check(dropped >= checkedFalls * .8, $"the water drops at the lip ({dropped}/{checkedFalls})");
+        T.Check(wet > 300 && dry == 0, $"water above its ground below the falls ({dry} of {wet})");
     }
 
     private static void Wetlands()

@@ -65,6 +65,29 @@ if (args.FirstOrDefault(a => a.StartsWith("--transect=")) is { } tr)
     }
     return 0;
 }
+// --river-stats: river point spacing and steep stretches (where the water drops > 12 m within 600 m), per test world.
+if (args.Contains("--river-stats"))
+{
+    foreach (var (id, seed) in new[] { ("balanced", 42), ("mountainous", 42) })
+    {
+        var s = CoreTests.Sampler(id, seed);
+        var reaches = s.Plan.Hydrology.Reaches;
+        var gaps = new List<double>();
+        int steep = 0;
+        foreach (var r in reaches)
+        {
+            for (int k = 1; k < r.Points.Length; k++) gaps.Add(r.Along[k] - r.Along[k - 1]);
+            for (int k = 0, j = 0; k < r.Points.Length; k++)
+            {
+                while (j < r.Points.Length - 1 && r.Along[j] - r.Along[k] < 600) j++;
+                if (r.Surface[k] - r.Surface[j] > 12) { steep++; k = j; }
+            }
+        }
+        gaps.Sort();
+        Console.WriteLine($"{id}/{seed}: {reaches.Count} reaches, point spacing median {gaps[gaps.Count / 2]:0} m (10 % {gaps[gaps.Count / 10]:0}, 90 % {gaps[gaps.Count * 9 / 10]:0}), steep stretches {steep}");
+    }
+    return 0;
+}
 // --landform-probes: where the big landforms are in each test world (for captures and Go to spots).
 if (args.Contains("--landform-probes"))
 {
@@ -72,6 +95,14 @@ if (args.Contains("--landform-probes"))
         foreach (int seed in new[] { 42, 7319 })
         {
             var s = CoreTests.Sampler(profile.Id, seed);
+            var falls = s.Plan.Hydrology.Falls;
+            if (falls.Count > 0) Console.WriteLine($"{profile.Id}/{seed}: {falls.Count} waterfalls, {falls.Count(f => f.Height >= 30)} over 30 m, median {falls[falls.Count / 2].Height:0} m");
+            foreach (var f in falls.Where(f => f.Height is > 40 and < 90).Take(3).Concat(falls.Take(2)))
+            {
+                var r = s.Plan.Hydrology.Reaches[f.Reach];
+                int j = f.Point; while (j < r.Points.Length - 1 && r.Along[j] - r.Along[f.Point] < 150) j++;
+                Console.WriteLine($"{profile.Id}/{seed} waterfall at {f.Lip.X:0},{f.Lip.Z:0} height {f.Height:0} m (reach {f.Reach}), 150 m downstream {r.Points[j].X:0},{r.Points[j].Z:0}, width {r.Width[f.Point]:0} m");
+            }
             foreach (var e in s.Plan.PlanLandforms.OfType<Escarpments>())
                 foreach (var (x, z, nx, nz, h) in e.Probes())
                     Console.WriteLine($"{profile.Id}/{seed} escarpment at {x:0},{z:0} toward plateau {nx:0.00},{nz:0.00} height {h:0} m, ground {s.Height(x, z):0}");

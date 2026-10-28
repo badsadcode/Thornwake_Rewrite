@@ -45,7 +45,9 @@ public static class LandformCatalog
 
     public static readonly LandformInfo Escarpments = new("escarpments", "Escarpments and plateaus", "inland, away from mountains", LandformKind.Plan, LandformRule.Terrain, 18);
 
-    public static readonly IReadOnlyList<LandformInfo> All = new[] { Escarpments, Dunes, Mesas, Spires };
+    public static readonly LandformInfo Waterfalls = new("waterfalls", "Waterfalls", "where rivers drop over a step", LandformKind.Plan, LandformRule.Water, 20);
+
+    public static readonly IReadOnlyList<LandformInfo> All = new[] { Escarpments, Waterfalls, Dunes, Mesas, Spires };
 
     /// <summary>The big landforms of a world, in order, run on the macro raster before erosion (each from the terrain
     /// revision that brought it, unless switched off).</summary>
