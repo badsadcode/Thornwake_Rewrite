@@ -75,7 +75,7 @@ Then the fantasy landforms Tom picks (section at the end).
 
 ### 3. Gorges and canyons
 * **Status**: built, terrain revision 21 (D239), in build 118; a false cliff at a meandering canyon's end and pools
-  on canyon ledges fixed in revision 22 (D240), not in a build yet: antecedent canyons (raised land beside a few
+  on canyon ledges fixed in revision 22 (D240), in build 119: antecedent canyons (raised land beside a few
   rivers), gorge walls with ledges for canyons and the gorges below waterfalls.
 * **What**: a river cut deep and narrow where it crosses high ground, walls of rock on both sides.
 * **Where**: where a river crosses a plateau or a range (it was there first and cut down as the land rose).
@@ -84,7 +84,7 @@ Then the fantasy landforms Tom picks (section at the end).
   canyons already show the look.
 
 ### 4. Cirques with a tarn
-* **Status**: built, terrain revision 23 (D241), not in a build yet: lobed bowls on high north-facing flanks with rocky
+* **Status**: built, terrain revision 23 (D241), in build 119: lobed bowls on high north-facing flanks with rocky
   walls, a rock bar and a closed-in tarn. Not yet: the outflow stream.
 * **What**: a bowl carved high on a mountainside, steep back wall, a small lake (tarn) in its floor.
 * **Where**: high on mountain flanks, mostly facing away from the sun (north in the northern half of the world).
