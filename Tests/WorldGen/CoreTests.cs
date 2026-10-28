@@ -59,6 +59,7 @@ internal static class CoreTests
         T.Run("Waterfalls (revision 20) terrain still reproducible", () => Fingerprints(false, "terrain-r20.json", r20: true), filter);
         T.Run("Build 118 terrain still reproducible", () => Fingerprints(false, "terrain-build118.json", build118: true), filter);
         T.Run("Canyons fixed (revision 22) terrain still reproducible", () => Fingerprints(false, "terrain-r22.json", r22: true), filter);
+        T.Run("Build 119 terrain still reproducible", () => Fingerprints(false, "terrain-build119.json", build119: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -315,7 +316,7 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false, bool build25 = false, bool build51 = false, bool build52 = false, bool build114 = false, bool build115 = false, bool build116 = false, bool build117 = false, bool r20 = false, bool build118 = false, bool r22 = false)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false, bool build25 = false, bool build51 = false, bool build52 = false, bool build114 = false, bool build115 = false, bool build116 = false, bool build117 = false, bool r20 = false, bool build118 = false, bool r22 = false, bool build119 = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
         string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
@@ -361,6 +362,8 @@ internal static class CoreTests
                 if (build118) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 21 }));
                 // Revision 22 (commit ebcce53): canyons without false cliffs, before cirques (not in a build).
                 if (r22) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 22 }));
+                // Build 119 (commit 2039f26, v0.9.119): terrain revision 23, before glacial troughs.
+                if (build119) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 23 }));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];

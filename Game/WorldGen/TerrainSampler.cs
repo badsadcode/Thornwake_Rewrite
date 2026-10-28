@@ -27,7 +27,8 @@ public readonly record struct TerrainSample(
 /// stage                      file                       terrain revisions that changed it
 /// 1a Coast                   TerrainSampler.cs          -
 /// 1b Sea (ends the walk)     TerrainSampler.cs          16 (a sea pocket inside a lake's reach is lake)
-/// 1c Continent               TerrainSampler.cs          -  (ShoreSlope, MouthBlend: build 5 / preview 7 options)
+/// 1c Continent               TerrainSampler.cs          21 (canyons' raise, Canyons.cs), 24 (glacial troughs, Troughs.cs)
+///                                                       (ShoreSlope, MouthBlend: build 5 / preview 7 options)
 /// 2  Detail                  TerrainSampler.cs          18 (big landforms' walking-scale part: escarpment faces)
 /// 3  BiomeTerrain            TerrainSampler.cs          11 (wetlands), 12 (all biomes; landforms: BiomeLandforms.cs),
 ///                                                       17 (landform module settings, LandformModules.cs), 23 (cirques)
@@ -63,6 +64,7 @@ public sealed partial class TerrainSampler
     private readonly PlanLandform[] _planForms;
     private readonly Canyons? _canyons;
     private readonly Cirques? _cirques;
+    private readonly Troughs? _troughs;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
     private readonly double[] _poolQuantiles, _channelQuantiles;
@@ -83,6 +85,7 @@ public sealed partial class TerrainSampler
         _planForms = plan.PlanLandforms.ToArray();
         _canyons = plan.Canyons is { Count: > 0 } c ? c : null;
         _cirques = plan.Cirques is { Count: > 0 } q ? q : null;
+        _troughs = plan.Troughs is { Count: > 0 } t ? t : null;
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
@@ -116,9 +119,15 @@ public sealed partial class TerrainSampler
         double baseHeight = Continent(land, rasterLand, macroHeight, coastDistance, ref mountainShare);
         double canyon = _canyons != null ? _canyons.Uplift(x, z) : 0; // (revision 21: raised land a river has cut through)
         baseHeight += canyon;
+        // Revision 24: glacial troughs, the ground taken down to a flat floor between steep walls (most of the
+        // walking-scale relief taken off the floor).
+        double troughFlat = 0, troughRock = 0;
+        if (_troughs != null) baseHeight = _troughs.Carve(x, z, baseHeight, out troughFlat, out troughRock);
         Detail(lx, lz, minWavelength, land, mountainShare, out double inland, out double detail, out double roughness);
+        if (troughFlat > 0) detail *= 1 - .85 * troughFlat;
         double bare = 0;
         if (_planForms.Length > 0) detail += PlanGround(x, z, minWavelength, out bare);
+        bare = Math.Max(bare, troughRock);
         BiomeTerrain(x, z, lx, lz, minWavelength, baseHeight, inland, ref detail, out bool wetland, out double poolCover, out double poolDepth,
             out double poolSize, out double poolChannels, out double flatten);
         // Revision 23: cirques, carved after the biome's landforms so their tarns win (a mesa at its largest raised a

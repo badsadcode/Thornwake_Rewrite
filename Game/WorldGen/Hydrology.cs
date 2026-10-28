@@ -547,6 +547,27 @@ public sealed class Hydrology
         return g;
     }
 
+    /// <summary>A gorge below a fall made by another landform (glacial troughs, revision 24; their falls are listed there,
+    /// <see cref="Falls"/> holds the waterfalls module's).</summary>
+    internal void AddGorge(int reach, double gorgeFrom, double gorgeTo)
+    {
+        if (!_gorges.TryGetValue(reach, out var gorges)) _gorges[reach] = gorges = new List<(double, double)>();
+        gorges.Add((gorgeFrom, gorgeTo));
+    }
+
+    /// <summary>Removes the falls of a reach whose drop another landform has taken away (and the gorge below each).</summary>
+    internal void DropFalls(int reach, Func<int, bool> gone)
+    {
+        var r = _reaches[reach];
+        for (int i = _falls.Count - 1; i >= 0; i--)
+        {
+            var f = _falls[i];
+            if (f.Reach != reach || !gone(f.Point)) continue;
+            _falls.RemoveAt(i);
+            if (_gorges.TryGetValue(reach, out var gorges)) gorges.RemoveAll(g => Math.Abs(g.From - r.Along[f.Point]) < .1);
+        }
+    }
+
     /// <summary>
     /// Waterfalls and the rapids below them (landform no. 2, terrain revision 20, D238). A river's surface follows the
     /// eroded raster, so where it crosses a step (an escarpment's edge, a mountain front) the drop is spread over the

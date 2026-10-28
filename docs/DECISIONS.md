@@ -3679,6 +3679,35 @@ after the rivers are final:
 * Not yet: the tarn's outflow stream (the plan's rivers start lower), snow and scree in the bowl (the look is the
   biome's).
 
+## D242 — Terrain revision 24: glacial troughs with hanging valleys (2026-10-28)
+Tom: "Okay, let's do it" — landform no. 5. A hanging valley needs a main valley far deeper than its side valleys, and
+the plan's rivers never make one: of 94–147 side reaches much smaller than the river they join (balanced, mountainous,
+continental 42), the main valley lies 5–8 m lower across the junction (median; 77 m at most). So the main valley is cut
+down as a glacier cut it — `Game/WorldGen/Troughs.cs`, placed in the plan after the canyons and cirques:
+* **Where**: a stretch of river followed downstream across junctions, 3–8 km (× size), dropping 40 m or more (at most
+  8 % grade), in the mountains (mountain share 0.15 at its middle), the land 300 m beyond the floor standing 50 m or
+  more over it on both sides, away from lakes, cirques, canyons and other troughs (15 km); one per 25 × 25 km of
+  mountain ground (3–5 in a 512–768 km world, 32–39 in a 2,048 km one).
+* **Shape**: the course averaged over ±400 m (a glacier's valley is straighter than the river winding over its floor
+  now; following the bends rippled the walls); a flat floor 300–700 m wide (wider where the bends need it, ±20 %,
+  narrowing over the last 1.5 km) 1.5 m over the water; walls steepening over 120 m to slope 1.3–2 (a U), their line
+  wandering ±25 m, a rounded shoulder (blended over up to 30 m), rock on the walls; 85 % of the walking-scale relief
+  taken off the floor (a biome's knobs and mounds stay). The ground goes under the walking-scale relief, like the
+  canyons' raise.
+* **Water**: the floor falls 85 % of the stretch's drop at the head (160 m at most × size; the lip, up the
+  amphitheatre at the head, can stand higher) and runs at an even grade to the old level at the end. Every river the
+  trough takes in runs at the floor's level from its lip (the first point where the trough lies below its water):
+  the main river falls in at the head, side rivers fall from their hanging valleys; falls over 8 m get a plunge pool
+  and a notch down the wall (a gorge). Waterfalls the floor takes in are removed. Refused when a river would leave the
+  trough lowered or a lake is near; rivers still strictly descend and meet at junctions; the network and lakes are
+  unchanged. Trough falls are listed by the troughs (`Troughs.Falls`), not with the waterfalls module's falls.
+* Test: 23 troughs in 4 worlds, 15 falls from hanging valleys, 18 at a head; lines across the floors within 12 m
+  (80 % of points); no new rise in any river, no junction apart. Speed 1 223 ns per sample.
+* Settings: New world → Landforms → *Glacial troughs, hanging valleys*. Terrain version gains *Build 119*
+  (`terrain-build119.json`).
+* Not yet: a lake on the trough's floor (moraine-dammed), the waterfall's spray; fjords (no. 6) are troughs reaching
+  the sea.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

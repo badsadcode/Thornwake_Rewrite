@@ -19,6 +19,7 @@ internal static class SimulationTests
         T.Run("Landforms: waterfalls drop the river at a step, water stays above its ground (revision 20)", Waterfalls, filter);
         T.Run("Landforms: canyons — raised land beside rivers that keep their course and level, no cliffs of its own (revisions 21, 22)", CanyonForms, filter);
         T.Run("Landforms: cirques hold closed-in tarns high in the mountains; rivers and lakes unchanged (revision 23)", CirqueForms, filter);
+        T.Run("Landforms: glacial troughs — flat floors, side rivers falling from hanging valleys, water still descending (revision 24)", TroughForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -979,7 +980,12 @@ internal static class SimulationTests
         int falls = 0, tall = 0, checkedFalls = 0, dropped = 0, wet = 0, dry = 0, notDescending = 0, endsMoved = 0;
         foreach (var (id, seed) in new[] { ("balanced", 42), ("mountainous", 42), ("archipelago", 7319) })
         {
-            var s = CoreTests.Sampler(id, seed);
+            var s0 = CoreTests.Sampler(id, seed);
+            // (glacial troughs, revision 24, lower whole stretches of river and move junctions: judged by their own test)
+            var s = new TerrainSampler(new WorldPlan(s0.Plan.Manifest, style: s0.Plan.Style with
+            {
+                Landforms = new Dictionary<string, LandformSetting> { [LandformCatalog.Troughs.Id] = new(0, 1) },
+            }));
             var hy = s.Plan.Hydrology;
             var h19 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 19 })).Plan.Hydrology;
             falls += hy.Falls.Count;
@@ -1119,6 +1125,52 @@ internal static class SimulationTests
         T.Check(cirques >= 40 && tarns >= 30, $"cirques with tarns ({cirques}, {tarns} of 40)");
         T.Check(under == 0 && leaks == 0, $"tarns lie over lower ground, closed in ({under}, {leaks})");
         T.Check(sameHydrology == worlds, $"the plan's rivers and lakes are as before ({sameHydrology}/{worlds})");
+    }
+
+    private static void TroughForms()
+    {
+        int troughs = 0, hanging = 0, heads = 0, rough = 0, floors = 0, rising = 0, junctions = 0, sameNetwork = 0, worlds = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("balanced", 7319), ("continental", 7319), ("mountainous", 42) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            var hy = s.Plan.Hydrology;
+            var h23 = new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 23 }).Hydrology;
+            worlds++;
+            if (h23.Reaches.Count == hy.Reaches.Count && h23.Lakes.Count == hy.Lakes.Count) sameNetwork++;
+            // Every river still strictly descends (no new rise against revision 23: lake inflows and confluences already
+            // adjust some ends) and meets the next one at its level.
+            int Rises(double[] v) { int n = 0; for (int k = 1; k < v.Length; k++) if (!(v[k] < v[k - 1])) n++; return n; }
+            for (int i = 0; i < hy.Reaches.Count && sameNetwork == worlds; i++)
+            {
+                var r = hy.Reaches[i];
+                if (Rises(r.Surface) > Rises(h23.Reaches[i].Surface)) rising++;
+                if (r.DownstreamReach >= 0 && !r.Distributary && Math.Abs(r.Surface[^1] - hy.Reaches[r.DownstreamReach].Surface[0]) > 1e-6) junctions++;
+            }
+            if (s.Plan.Troughs is not { } tr) continue;
+            troughs += tr.Count;
+            hanging += tr.Falls.Count(f => f.Side); heads += tr.Falls.Count(f => !f.Side);
+            // The floor: three lines across its middle (60 m apart), points 5 m apart over 60 % of its width, off the water:
+            // 80 % of each line within 12 m (a biome's own knobs and mounds stand on the floor too).
+            foreach (var (x, z, floor, half, dx, dz) in tr.Probes())
+                for (double a = -60; a <= 60; a += 60)
+                {
+                    var heights = new List<double>();
+                    for (double w = -half * .6; w <= half * .6; w += 5)
+                    {
+                        var t = s.Sample(x + dx * a - dz * w, z + dz * a + dx * w);
+                        if (t.Water == WaterKind.None) heights.Add(t.Height);
+                    }
+                    heights.Sort();
+                    double spread = heights[heights.Count * 9 / 10] - heights[heights.Count / 10];
+                    floors++;
+                    if (spread > 12) { rough++; T.Note($"{id}/{seed} trough floor at {x:0},{z:0}: {spread:0.0} m across"); }
+                }
+        }
+        T.Note($"{troughs} troughs in 4 worlds, {hanging} falls from hanging valleys, {heads} at a trough's head; {rough} of {floors} lines across floors spread over 12 m; {rising} reaches rising, {junctions} junctions apart");
+        T.Check(troughs >= 10 && hanging >= 6, $"troughs with hanging valleys ({troughs}, {hanging})");
+        T.Check(rough == 0, $"flat floors ({rough} of {floors} lines rough)");
+        T.Check(rising == 0 && junctions == 0, $"rivers descend and meet ({rising}, {junctions})");
+        T.Check(sameNetwork == worlds, $"the river network and lakes are as before ({sameNetwork}/{worlds})");
     }
 
     private static void Wetlands()

@@ -137,6 +137,79 @@ if (args.Contains("--gorge-stats"))
     }
     return 0;
 }
+// --junction-stats: river junctions in the mountains where a much smaller side river joins (hanging valley candidates).
+if (args.Contains("--junction-stats"))
+{
+    foreach (var (id, seed) in new[] { ("balanced", 42), ("mountainous", 42), ("continental", 42) })
+    {
+        var s = CoreTests.Sampler(id, seed);
+        var hy = s.Plan.Hydrology; var m = s.Plan.Macro;
+        int all = 0, small = 0, mountain = 0, steep = 0;
+        var reliefs = new List<double>();
+        foreach (var r in hy.Reaches)
+        {
+            if (r.DownstreamReach < 0 || r.Distributary || r.Length < 1500) continue;
+            all++;
+            var main = hy.Reaches[r.DownstreamReach];
+            // (a reach's last point is the junction itself, holding both rivers: compare them a few points before)
+            static float Before(RiverReach q) { int i = q.Points.Length - 1; while (i > 0 && q.Along[^1] - q.Along[i] < 1000) i--; return q.Catchment[i]; }
+            double own = Before(r), other = 0;
+            foreach (int u in main.UpstreamReaches) if (u != r.Id) other = Math.Max(other, Before(hy.Reaches[u]));
+            if (other < 3 * own) continue;
+            small++;
+            var end = r.Points[^1];
+            // Relief: the land 1.5 km around the junction against the water there (a deep valley, mountains or not).
+            int j = Math.Min(main.Points.Length - 1, 20);
+            double mx = main.Points[j].X - main.Points[0].X, mz = main.Points[j].Z - main.Points[0].Z, ml = Math.Max(1e-6, Math.Sqrt(mx * mx + mz * mz));
+            double px = -mz / ml, pz = mx / ml;
+            double rise = Math.Min(m.Sample(WorldPlan.HeightChannel, end.X + px * 1500, end.Z + pz * 1500), m.Sample(WorldPlan.HeightChannel, end.X - px * 1500, end.Z - pz * 1500))
+                - (r.Surface[^1] - s.Plan.Profile.SeaLevel);
+            reliefs.Add(rise);
+            if (rise < 120) continue;
+            mountain++;
+            int k = r.Points.Length - 1; while (k > 0 && r.Along[^1] - r.Along[k] < 400) k--;
+            if ((r.Surface[k] - r.Surface[^1]) / 400 > .05) steep++;
+        }
+        var shares = new List<double>();
+        foreach (var r in hy.Reaches) for (int i = 0; i < r.Points.Length; i += 50) shares.Add(m.Sample(WorldPlan.MountainChannel, r.Points[i].X, r.Points[i].Z));
+        shares.Sort();
+        Console.WriteLine($"  mountain share at river points: median {shares[shares.Count / 2]:0.000}, 90 % {shares[shares.Count * 9 / 10]:0.000}, 99 % {shares[shares.Count * 99 / 100]:0.000}, max {shares[^1]:0.000}");
+        reliefs.Sort();
+        if (reliefs.Count > 0) Console.WriteLine($"  relief around small-side junctions (lowest of 8, 1.5 km out): median {reliefs[reliefs.Count / 2]:0} m, 90 % {reliefs[reliefs.Count * 9 / 10]:0} m, max {reliefs[^1]:0} m");
+        Console.WriteLine($"{id}/{seed}: {all} side reaches joining another; {small} much smaller than the main; {mountain} in the mountains; {steep} of those dropping over 5 % in their last 400 m");
+    }
+    return 0;
+}
+// --trough-stats: river chains (following the river downstream across junctions) that drop 60 m or more within 3–9 km,
+// with side rivers joining on the way, away from lakes and the sea (glacial trough candidates).
+if (args.Contains("--trough-stats"))
+{
+    foreach (var (id, seed) in new[] { ("balanced", 42), ("mountainous", 42), ("continental", 42) })
+    {
+        var s = CoreTests.Sampler(id, seed);
+        var hy = s.Plan.Hydrology;
+        int found = 0; var drops = new List<double>(); var sides = new List<int>();
+        foreach (var start in hy.Reaches)
+        {
+            if (start.Distributary || start.StartLake >= 0 || start.Catchment[start.Catchment.Length / 2] < 60) continue;
+            double head = start.Surface[0], run = 0; int joins = 0; var r = start; bool ok = true;
+            while (run < 9000)
+            {
+                run += r.Length;
+                if (r.EndLake >= 0 || r.EndsInSea || r.DownstreamReach < 0) { ok = false; break; }
+                var next = hy.Reaches[r.DownstreamReach];
+                joins += next.UpstreamReaches.Count - 1;
+                if (run >= 3000 && head - r.Surface[^1] >= 60) break;
+                r = next;
+            }
+            if (!ok || run > 9000 || joins == 0) continue;
+            found++; drops.Add(head - r.Surface[^1]); sides.Add(joins);
+        }
+        drops.Sort();
+        Console.WriteLine($"{id}/{seed}: {found} chains (each start reach) dropping ≥ 60 m in 3–9 km with side rivers; drop median {(drops.Count > 0 ? drops[drops.Count / 2] : 0):0} m, sides median {(sides.Count > 0 ? sides.OrderBy(v => v).ElementAt(sides.Count / 2) : 0)}");
+    }
+    return 0;
+}
 // --landform-probes: where the big landforms are in each test world (for captures and Go to spots).
 if (args.Contains("--landform-probes"))
 {
@@ -144,6 +217,13 @@ if (args.Contains("--landform-probes"))
         foreach (int seed in new[] { 42, 7319 })
         {
             var s = CoreTests.Sampler(profile.Id, seed);
+            if (s.Plan.Troughs is { } tg)
+            {
+                int sides = tg.Falls.Count(f => f.Side);
+                Console.WriteLine($"{profile.Id}/{seed}: {tg.Count} troughs, {tg.Falls.Count} falls into them ({sides} from hanging valleys, highest {(tg.Falls.Count > 0 ? tg.Falls[0].Height : 0):0} m)");
+                foreach (var (tx, tz, tf, th, _, _) in tg.Probes().Take(3)) Console.WriteLine($"{profile.Id}/{seed} trough at {tx:0},{tz:0} floor {tf:0} m, half width {th:0} m");
+                foreach (var f in tg.Falls.Take(4)) Console.WriteLine($"{profile.Id}/{seed}   fall at {f.X:0},{f.Z:0} {f.Height:0} m{(f.Side ? " (hanging valley)" : " (head)")}");
+            }
             if (s.Plan.Cirques is { } cq)
             {
                 Console.WriteLine($"{profile.Id}/{seed}: {cq.Count} cirques");
