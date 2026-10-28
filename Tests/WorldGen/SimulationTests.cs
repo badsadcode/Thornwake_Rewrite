@@ -15,6 +15,7 @@ internal static class SimulationTests
         T.Run("Landforms: each module's switch changes only its own landform (revision 17)", LandformSwitches, filter);
         T.Run("Landforms: water wins with every module at its largest (revision 17)", LandformWater, filter);
         T.Run("Landforms: escarpments and plateaus — cliffs inland, water keeps its place (revision 18)", EscarpmentForms, filter);
+        T.Run("Landforms: no combs, fins or cracks at escarpments and mesas (revision 19)", NoCombs, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -886,10 +887,11 @@ internal static class SimulationTests
                 if (steepest > 1.2) cliffs++;
                 if (top - foot > .3 * height) steps++;
             }
-            // Revision 17 has no escarpments; switched off, revision 18 is revision 17's ground.
+            // Revision 17 has no escarpments; switched off, revision 18 is revision 17's ground (19 also changed mesas).
             var r17 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 17 }));
             var off = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with
             {
+                Revision = 18,
                 Landforms = new Dictionary<string, LandformSetting> { [LandformCatalog.Escarpments.Id] = new(0, 1) },
             }));
             T.Check(r17.Plan.PlanLandforms.Count == 0 && off.Plan.PlanLandforms.Count == 0, $"{id}: none in revision 17 or when off");
@@ -907,6 +909,66 @@ internal static class SimulationTests
         T.Check(cliffs >= probes * .7, $"most have a cliff face ({cliffs}/{probes})");
         T.Check(steps >= probes * .7, $"most raise a plateau ({steps}/{probes})");
         T.Check(badWater == 0, $"water stays above its ground ({badWater} of {wet})");
+    }
+
+    private static void NoCombs()
+    {
+        // A comb tooth, a fin or a crack is a one-metre spike or notch: the ground jumps out of line with both neighbours
+        // (second difference over 1 m above 6 m). Counted on the escarpments' own ground with mesas and spires switched off
+        // (their tiers and needles are meant to be steep), and as sudden steps at the comb Tom found (mesas, 2026-10-28).
+        int Spikes(TerrainSampler s, double cx, double cz, bool all = false)
+        {
+            const int N = 160;
+            var h = new double[N * N];
+            s.HeightGridParallel(cx - N / 2, cz - N / 2, 1, N, N, h);
+            var forms = s.Plan.PlanLandforms.OfType<Escarpments>().ToList();
+            int count = 0;
+            for (int j = 1; j < N - 1; j++)
+                for (int i = 1; i < N - 1; i++)
+                {
+                    double c = h[j * N + i];
+                    if (Math.Abs(h[j * N + i - 1] - 2 * c + h[j * N + i + 1]) <= 6 && Math.Abs(h[(j - 1) * N + i] - 2 * c + h[(j + 1) * N + i]) <= 6) continue;
+                    if (all || forms.Any(f => f.Ground(cx - N / 2 + i, cz - N / 2 + j, 2, out _) != 0)) count++;
+                }
+            return count;
+        }
+        // The comb's teeth were 2–4 m steps on gentle ground: a step over 1.5 m in one metre between gentle neighbours.
+        int Steps(TerrainSampler s, double cx, double cz)
+        {
+            const int N = 300;
+            var h = new double[N * N];
+            s.HeightGridParallel(cx - N / 2, cz - N / 2, 1, N, N, h);
+            int count = 0;
+            for (int j = 0; j < N; j++)
+                for (int i = 1; i < N - 2; i++)
+                {
+                    int k = j * N + i;
+                    if (Math.Abs(h[k + 1] - h[k]) > 1.5 && Math.Abs(h[k] - h[k - 1]) < .4 && Math.Abs(h[k + 2] - h[k + 1]) < .4) count++;
+                }
+            return count;
+        }
+        int old = 0, now = 0, spots = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("continental", 42), ("mountainous", 42), ("mountainous", 7319), ("vast-world", 7319) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            var s18 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 18 }));
+            var bare = new Dictionary<string, LandformSetting> { [LandformCatalog.Mesas.Id] = new(0, 1), [LandformCatalog.Spires.Id] = new(0, 1) };
+            var e18 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 18, Landforms = bare }));
+            var e19 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Landforms = bare }));
+            var spotsHere = s.Plan.PlanLandforms.OfType<Escarpments>().SelectMany(e => e.Probes()).Select(p => (p.X, p.Z)).Take(8).ToList();
+            // Tom's dumps from build 116: the fin at a bend of the line and the forest wall.
+            if (id == "balanced" && seed == 42) { spotsHere.Add((137727, 17277)); spotsHere.Add((140623, 16518)); }
+            if (id == "mountainous" && seed == 42)
+            {
+                spotsHere.Add((7011, 139478));
+                int comb18 = Steps(s18, 6980, 140292), comb19 = Steps(s, 6980, 140292);
+                T.Note($"the comb (mountainous 42, 6980, 140292): {comb18} sudden steps in revision 18, {comb19} in 19");
+                T.Check(comb19 <= comb18 / 10, $"the comb is gone ({comb19} against {comb18})");
+            }
+            foreach (var (x, z) in spotsHere) { spots++; old += Spikes(e18, x, z); now += Spikes(e19, x, z); }
+        }
+        T.Note($"{spots} escarpment spots, 160 m square each: one-metre spikes and notches — revision 18: {old}, revision 19: {now}");
+        T.Check(spots >= 15 && now <= old / 20, $"revision 19's escarpments have (almost) none ({now} against {old})");
     }
 
     private static void Wetlands()

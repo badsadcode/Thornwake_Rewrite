@@ -3533,6 +3533,34 @@ artificial". The even look came from one wall top to bottom and features at a st
 * Seen in captures: much less artificial on the badlands escarpment (Mountain kingdoms 42); the caprock band itself is
   still sheer, evenly textured rock, and in temperate forest the debris slopes stay mostly green.
 
+## D235 — Terrain revision 19: no combs, fins or worm-like rills (2026-10-28)
+Tom, playing build 116 (dumps 17:30:56–17:33:12): "a weird kind of formation… spiky and looks like a comb… some things
+look too regular, kind of like a smooth sinusoidal wave". New tools found the causes (`--hillshade=` shaded relief at
+1 m, `--transect=` heights along a line, both in Tests/WorldGen):
+* **The comb was the mesas** (revision 12), brought out because the escarpment turned that ground into badlands: where
+  the badlands fade out, the finished tiers were scaled down by the biome's strength — miniature 2–4 m steps along the
+  contours. Revision 19: the biome's strength lowers the uplift itself, and only uplift above ~15 m is tiered.
+* **Fins and cracks** across the plateau came from the escarpment's line: the nearest segment changes at each bend, so
+  the position along the line jumped there, and every feature placed along it jumped too. Revision 19 blends the
+  segments within 60 m of the nearest, each by its perpendicular distance to its own straight line (by plain distance,
+  a segment the point lay beyond the end of flipped its side as the point crossed it — 30 m jumps).
+* **The sinusoidal look**: the rills on the debris slopes were contour lines of smooth noise (they wandered like worms),
+  and the finest wiggle of the rim bent every contour of the slope into wavy bands. Revision 19: straight rills
+  downhill at irregular spacing (18–60 m apart, 5–14 m wide, smooth-bottomed, starting at different heights), the rim
+  wiggle kept to two octaves on the slope, the fine roughness only as outcrops along the cliff.
+* **Combs of teeth along the rim**: faces sheerer than the 1 m ground mesh can draw. Revision 19: the caprock face is
+  at most ~75° (at least 4 m and 1.5 × the minimum wavelength wide), the lip and ravine rims round off with a finite
+  slope (power curves were infinitely steep at their edge).
+* Also: ravines are looked up within four places either way (a big ravine reaches 650 m along the edge; a smaller
+  window dropped it and the ground jumped), the cut-off in front of the face covers the largest fan, a ravine's floor
+  meets the debris slope at its mouth (it dug a pit below the cliff), ravine walls are rough and wander.
+* **Proof**: new test "no combs, fins or cracks": at the comb, sudden 1.5 m steps on gentle ground 282 → 0; on the
+  escarpments of 5 test worlds (19 spots, 160 m squares, mesas and spires off), one-metre spikes and notches over 6 m
+  3 907 → 58. Revision 18 is frozen as *Build 116* (`terrain-build116.json`), selectable in *Terrain version*; all
+  older revisions unchanged (120 sample-hash cases). Tom's four dumps re-captured at revision 19.
+* The upright slab at 17:33:12 is not terrain (the ground there is flat): a rock outcrop model the ground cover places
+  on rocky ground, which the cliff's edge now is.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

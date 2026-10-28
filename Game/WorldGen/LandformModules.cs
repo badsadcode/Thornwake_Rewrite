@@ -52,7 +52,7 @@ public static class LandformCatalog
     public static IReadOnlyList<PlanLandform> PlanModules(WorldManifest manifest, TerrainStyle style)
     {
         var list = new List<PlanLandform>();
-        if (style.Revision >= Escarpments.Since && !style.Landform(Escarpments.Id).Off) list.Add(new Escarpments());
+        if (style.Revision >= Escarpments.Since && !style.Landform(Escarpments.Id).Off) list.Add(new Escarpments(style.Revision));
         return list;
     }
 

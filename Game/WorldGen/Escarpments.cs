@@ -9,10 +9,15 @@ namespace Thornwake.WorldGen;
 /// down (the ways up). Big landform: the step goes into the plan's macro height before erosion and rivers, as a ramp a
 /// few raster cells wide, so rivers flow off the plateau, cut notches into its edge or run along its foot. At walking
 /// scale <see cref="Ground"/> sharpens that ramp into the cliff face, fading where erosion or a river has cut through
-/// the edge, so a valley through the scarp keeps its floor.
+/// the edge, so a valley through the scarp keeps its floor. Revision 19 (D235) follows the line smoothly through its
+/// bends and draws the face without combs, fins or smooth-noise worms (revision 18 keeps its own path).
 /// </summary>
 public sealed class Escarpments : PlanLandform
 {
+    private readonly int _revision;
+
+    public Escarpments(int revision) { _revision = revision; }
+
     private sealed class Line
     {
         public required double[] X, Z, Along;
@@ -226,18 +231,27 @@ public sealed class Escarpments : PlanLandform
         out double rock)
     {
         rock = 0;
-        Nearest(l, x, z, out s, out double t, out nx, out nz);
+        double t;
+        if (_revision >= 19) NearestSmooth(l, x, z, out s, out t, out nx, out nz);
+        else Nearest(l, x, z, out s, out t, out nx, out nz);
         double lx = x - _ox, lz = z - _oz;
         s += 90 * Noise.Fbm(lx, lz, 700, 3, minWavelength, l.Seed) + 260 * Noise.Fbm(lx, lz, 4000, 2, minWavelength, l.Seed + 1);
         double ramp = l.Length * .18;
         double taper = DetMath.Smooth(t / ramp) * DetMath.Smooth((l.Length - t) / ramp);
         // (features fade out on coarse tiles: they are tens of metres wide)
         double feat = detail ? 1 - DetMath.Smooth((minWavelength - 40) / 120) : 0;
-        if (taper <= 0 || s < -face - feat * (l.Height * 2.6 + 200)) return 0;
+        // (in front of the face: the largest debris fan below the largest spur, 3.5 × the height + 400 m)
+        if (taper <= 0 || s < -face - feat * (l.Height * 3.5 + 400)) return 0;
         double h = l.Height * taper * (.7 + .6 * DetMath.Smooth(.5 + Noise.Fbm(t, 0, 9000, 2, 0, l.Seed + 2)));
         double back = s <= l.Depth * .55 ? 1 : 1 - DetMath.Smooth((s - l.Depth * .55) / (l.Depth * .45));
         double plain = h * DetMath.Smooth((s + face * .5) / face) * back;
         if (feat <= 0) return plain;
+        if (_revision >= 19)
+        {
+            double v19 = Detail(l, s, t, lx, lz, h, back, minWavelength, out rock);
+            rock *= feat;
+            return plain + (v19 - plain) * feat;
+        }
 
         // The rim, warped at several scales (a domain-warped wiggle on top of the line's own wobble).
         double wx = 70 * Noise.Fbm(lx, lz, 320, 2, minWavelength, l.Seed + 8);
@@ -311,6 +325,147 @@ public sealed class Escarpments : PlanLandform
         v = Math.Max(v, 0);
         rock *= feat;
         return plain + (v - plain) * feat;
+    }
+
+    /// <summary>
+    /// The walking-scale face of revision 19 (D235): continuous everywhere (every feature is a smooth function of the
+    /// position, combined by max/min, so the ground has no fins or cracks), never steeper than the ground's 1 m mesh can
+    /// draw (sheer faces sampled on the grid turned into combs of teeth along the rim), and rough where 18 was smooth:
+    /// <list type="bullet">
+    /// <item>rim warped by rougher noise, outcrops along the cliff;</item>
+    /// <item>caprock cliff 22–47 % of the height, about 65–75° steep, its rock broken into outcrops and ledges;</item>
+    /// <item>debris slope below, cut by straight rills running downhill at irregular spacing (18 drew contour lines of
+    /// smooth noise, which wandered like worms);</item>
+    /// <item>ravines of every size whose rough walls wander and whose line bends as it cuts back; spurs between them.</item>
+    /// </list>
+    /// </summary>
+    private double Detail(Line l, double s, double t, double lx, double lz, double h, double back, double minWavelength, out double rock)
+    {
+        double wx = 80 * Noise.Fbm(lx, lz, 360, 3, minWavelength, l.Seed + 8, .55);
+        // (two octaves: finer ones bent every contour of the debris slope into wavy bands; the rim's fine roughness
+        // comes from the outcrops below, which stay on the cliff)
+        double e = s + 42 * Noise.Fbm(lx + wx, lz - wx, 210, 2, minWavelength, l.Seed + 7, .55);
+        double rim = h * (1 + .05 * Noise.Fbm(lx, lz, 140, 3, minWavelength, l.Seed + 4));
+        double cap = h * (.22 + .25 * DetMath.Smooth(.5 + 1.3 * Noise.Fbm(t, 3, 650, 2, 0, l.Seed + 9)));
+        double cw = Math.Max(Math.Max(4, minWavelength * 1.5), cap * (.3 + .25 * DetMath.Smooth(.5 + 1.3 * Noise.Fbm(t, 4, 380, 2, 0, l.Seed + 12))));
+        // Spurs and ravines, one candidate per 170 m of edge, sizes skewed (many small, few big). Candidates within four
+        // places either way: the biggest ravine reaches 650 m along the edge (with its bend), its fan 500 m; a smaller
+        // window dropped a big ravine at its edge and the ground jumped.
+        const double Spacing = 170;
+        long c0 = (long)Math.Floor(t / Spacing);
+        double shift = 0, fan = 0;
+        Span<double> cut = stackalloc double[9], floorAt = stackalloc double[9];
+        int ravines = 0;
+        for (long c = c0 - 4; c <= c0 + 4; c++)
+        {
+            ulong hash = Hashing.Lattice(c, 9, l.Seed + 5);
+            double kind = Hashing.Unit(hash), size = Hashing.Unit(Hashing.Mix(hash + 3)), width = Hashing.Unit(Hashing.Mix(hash + 2));
+            double tc = (c + .2 + .6 * Hashing.Unit(Hashing.Mix(hash + 1))) * Spacing;
+            if (kind < .5)
+            {
+                double depth = (40 + 460 * Math.Pow(size, 2.2)) * Math.Sqrt(Math.Min(1, h / 90)), w0 = 14 + (.25 + .35 * width) * depth;
+                double into = Math.Clamp(e / depth, 0, 1);
+                // The ravine's line wanders as it cuts back, its walls are rough, it narrows toward its head.
+                double bend = .45 * depth * Noise.Fbm(into * 2.5, c * 31.7, 1, 2, 0, l.Seed + 11) * into;
+                double half = (w0 * (1 - .7 * into) + 4) * (1 + .3 * Noise.Fbm(lx, lz, 26, 2, minWavelength, l.Seed + 14));
+                double lat = Math.Clamp(1 - Math.Abs(t - tc - bend) / half, 0, 1);
+                double weight = DetMath.Smooth(lat) * DetMath.Smooth((depth - e) / (depth * .35 + 12))
+                    * DetMath.Smooth((e + cw + 6) / 8);
+                if (weight > 0) { cut[ravines] = weight; floorAt[ravines] = .92 * Math.Pow(into, 1.25); ravines++; }
+                fan = Math.Max(fan, DetMath.Smooth((w0 * 1.6 - Math.Abs(t - tc)) / (w0 * 1.1)) * Math.Min(1, depth / 200));
+            }
+            else if (kind < .78)
+            {
+                double jut = (12 + 130 * Math.Pow(size, 1.8)) * Math.Min(1, h / 80), half = 25 + 120 * width;
+                shift = Math.Max(shift, jut * DetMath.Smooth((half - Math.Abs(t - tc)) / (half * .7)));
+            }
+        }
+        e += shift;
+        // Outcrops and ledges: the face line itself is displaced a little around the cliff band.
+        double band = DetMath.Smooth(1 - Math.Abs(e + cw * .5) / cw);
+        e += band * cw * .3 * Noise.Fbm(lx, lz, 16, 3, minWavelength, l.Seed + 15);
+        double debris = rim - cap * (1 + .12 * fan);
+        double dw = 1.75 * debris * (1 + .9 * fan) / .9;
+        double v, d = 0;
+        if (e >= 0) v = rim * back;
+        else if (e >= -cw)
+        {
+            // (a rounded lip with a finite slope: a power curve was infinitely steep at the very top, a crease on the mesh)
+            double f = -e / cw;
+            v = (rim - (rim - debris) * (.6 * f + .4 * DetMath.Smooth(f))) * back;
+        }
+        else
+        {
+            d = (-e - cw) / dw;
+            v = d >= 1 ? 0 : debris * Math.Pow(1 - d, 1.7) * back;
+            if (d < 1)
+            {
+                // Rills straight down the slope at irregular spacing (18–60 m), deepest mid-slope, starting at different
+                // heights; a little rubble.
+                double u = t + 14 * Noise.Fbm(lx, lz, 110, 2, minWavelength, l.Seed + 13);
+                long k0 = (long)Math.Floor(u / 36);
+                double rill = 0;
+                for (long k = k0 - 1; k <= k0 + 1; k++)
+                {
+                    ulong hk = Hashing.Lattice(k, 11, l.Seed + 10);
+                    double uc = (k + Hashing.Unit(hk)) * 36, wide = 5 + 9 * Hashing.Unit(Hashing.Mix(hk + 1));
+                    double deep = Math.Min(wide * .45, debris * (.02 + .05 * Hashing.Unit(Hashing.Mix(hk + 2)))), start = .35 * Hashing.Unit(Hashing.Mix(hk + 3));
+                    double across = Math.Clamp(1 - Math.Abs(u - uc) / wide, 0, 1);
+                    rill = Math.Max(rill, deep * DetMath.Smooth(across) * DetMath.Smooth((d - start) / .12));
+                }
+                v -= rill * Math.Sin(Math.PI * d);
+                v += 1.2 * Noise.Fbm(lx, lz, 7, 2, minWavelength, l.Seed + 6) * (1 - d) * DetMath.Smooth(d / .1);
+            }
+        }
+        // Ravines: the ground falls toward the floor, which rises from the cliff's foot (where the fan takes over) to the
+        // rim.
+        for (int r = 0; r < ravines; r++)
+        {
+            double fl = (debris + (rim - debris) * floorAt[r]) * back;
+            if (fl < v) v += (fl - v) * cut[r];
+        }
+        v = Math.Max(v, 0);
+        // How bare: cliff rock, scree on the debris slope (thinning out toward the plain), ravine walls.
+        double cliff = DetMath.Smooth((e + cw + 4) / 8) * DetMath.Smooth((6 - e) / 6);
+        double scree = e < -cw && d < 1 ? .65 * (1 - DetMath.Smooth((d - .55) / .4)) * DetMath.Smooth((-e - cw) / 4 + 1) : 0;
+        double ravineRock = 0;
+        for (int r = 0; r < ravines; r++) ravineRock = Math.Max(ravineRock, .8 * cut[r]);
+        rock = Math.Max(Math.Max(cliff, scree), ravineRock);
+        return v;
+    }
+
+    /// <summary>
+    /// <see cref="Nearest"/> blended over the segments that are almost as near (within 60 m): the position along the
+    /// line, the signed distance and the normal change smoothly through the line's bends (revision 19). Plain nearest
+    /// jumped where the nearest segment changed — every feature placed along the line jumped with it (fins and cracks
+    /// across the plateau, D235).
+    /// </summary>
+    private static void NearestSmooth(Line l, double x, double z, out double s, out double t, out double nx, out double nz)
+    {
+        const double Blend = 60;
+        double best = double.MaxValue;
+        for (int i = 0; i + 1 < l.X.Length; i++)
+        {
+            double ax = l.X[i], az = l.Z[i], dx = l.X[i + 1] - ax, dz = l.Z[i + 1] - az, len2 = dx * dx + dz * dz;
+            double u = Math.Clamp(((x - ax) * dx + (z - az) * dz) / len2, 0, 1);
+            best = Math.Min(best, Math.Sqrt(Sq(ax + dx * u - x) + Sq(az + dz * u - z)));
+        }
+        double ws = 0, ss = 0, ts = 0, ns = 0, ms = 0;
+        for (int i = 0; i + 1 < l.X.Length; i++)
+        {
+            double ax = l.X[i], az = l.Z[i], dx = l.X[i + 1] - ax, dz = l.Z[i + 1] - az, len2 = dx * dx + dz * dz;
+            double u = Math.Clamp(((x - ax) * dx + (z - az) * dz) / len2, 0, 1);
+            double dist = Math.Sqrt(Sq(ax + dx * u - x) + Sq(az + dz * u - z));
+            double w = DetMath.Smooth(1 - (dist - best) / Blend);
+            if (w <= 0) continue;
+            double len = Math.Sqrt(len2), cross = (dx * (z - az) - dz * (x - ax)) / len;
+            // (each segment's perpendicular distance to its own straight line: a segment the point lies beyond the end of
+            // would otherwise flip its side as the point crosses that line, and the blend jumped by metres)
+            ws += w; ss += w * cross; ts += w * (l.Along[i] + u * len); ns += w * -dz / len; ms += w * dx / len;
+        }
+        s = ss / ws; t = ts / ws;
+        double nl = Math.Sqrt(ns * ns + ms * ms);
+        nx = ns / nl; nz = ms / nl;
     }
 
     /// <summary>Nearest point of the line: signed distance (positive on the plateau side, left of the line), position

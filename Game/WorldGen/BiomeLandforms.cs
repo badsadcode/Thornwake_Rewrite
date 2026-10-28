@@ -14,12 +14,14 @@ public sealed class BiomeLandforms
     private readonly DuneField _dunes;
     private readonly MesaLands _mesas;
     private readonly SpireRocks _spires;
+    private readonly int _revision;
 
     public BiomeLandforms(Hydrology hydrology, ulong landformSeed, double duneAngle, TerrainStyle style)
     {
         _hydrology = hydrology;
         _dunes = new DuneField(style.Landform(LandformCatalog.Dunes.Id), landformSeed, duneAngle);
         _mesas = new MesaLands(style.Landform(LandformCatalog.Mesas.Id), landformSeed);
+        _revision = style.Revision;
         _spires = new SpireRocks(style.Landform(LandformCatalog.Spires.Id), landformSeed);
     }
 
@@ -56,8 +58,16 @@ public sealed class BiomeLandforms
             // terraced: terracing the regional slope itself gave rice-paddy contour benches.
             double s = Math.Min(1, mods.Mesas) * fade;
             double up = _mesas.Uplift(lx, lz, minWavelength);
+            if (_revision >= 19)
+            {
+                // Revision 19 (D235): the biome's strength lowers the uplift itself, and only uplift above ~15 m is tiered.
+                // Before, the finished tiers were scaled down where the biome fades out — miniature 2–4 m steps along
+                // the contours, like the teeth of a comb.
+                up *= s;
+                if (up > 0) detail += up + (Math.Max(0, _mesas.Terrace(up, lx, lz, minWavelength)) - up) * DetMath.Smooth((up - 15) / 15);
+            }
             // (× a ramp over the first 4 m: the terrace of a near-zero uplift is not exactly zero; no step at the foot.)
-            if (up > 0) detail += Math.Max(0, _mesas.Terrace(up, lx, lz, minWavelength)) * DetMath.Smooth(up / 4) * s;
+            else if (up > 0) detail += Math.Max(0, _mesas.Terrace(up, lx, lz, minWavelength)) * DetMath.Smooth(up / 4) * s;
         }
         return detail;
     }

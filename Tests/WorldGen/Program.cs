@@ -17,6 +17,54 @@ bool record = args.Contains("--record");
 
 // Refactor guards (D227): --sample-hash prints a hash of everything TerrainSampler.Sample returns (all fields) over grids
 // at several detail levels, per profile, seed and terrain revision; --speed times single-threaded sampling.
+// --hillshade=profile,seed,x,z,size,out.png[,step]: shaded relief of the terrain around a point (1 m by default), lit from
+// the north-west, steep ground darker — to see what the ground holds at walking scale (combs, steps, fins).
+if (args.FirstOrDefault(a => a.StartsWith("--hillshade=")) is { } hs)
+{
+    var p = hs[12..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    // (an 8th value "off:<module>" switches one landform module off; "rev:<n>" picks a terrain revision)
+    foreach (var opt in p.Skip(7))
+    {
+        if (opt.StartsWith("off:")) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with
+            { Landforms = new Dictionary<string, LandformSetting> { [opt[4..]] = new(0, 1) } }));
+        if (opt.StartsWith("rev:")) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = int.Parse(opt[4..]) }));
+    }
+    double cx = double.Parse(p[2]), cz = double.Parse(p[3]), size = double.Parse(p[4]), step = p.Length > 6 ? double.Parse(p[6]) : 1;
+    int n = (int)(size / step);
+    var h = new double[(n + 1) * (n + 1)];
+    s.HeightGridParallel(cx - size / 2, cz - size / 2, step, n + 1, n + 1, h);
+    var rgb = new byte[n * n * 3];
+    for (int j = 0; j < n; j++)
+        for (int i = 0; i < n; i++)
+        {
+            double dx = (h[j * (n + 1) + i + 1] - h[j * (n + 1) + i]) / step, dz = (h[(j + 1) * (n + 1) + i] - h[j * (n + 1) + i]) / step;
+            double len = Math.Sqrt(dx * dx + dz * dz + 1), light = Math.Clamp((-dx * -.6 + -dz * -.6 + 1) / len / 1.5, 0, 1);
+            byte v = (byte)(40 + 215 * light);
+            int k = (j * n + i) * 3;
+            rgb[k] = v; rgb[k + 1] = v; rgb[k + 2] = (byte)Math.Min(255, v + 10);
+        }
+    Png.Write(p[5], n, n, rgb);
+    Console.WriteLine($"wrote {p[5]} ({n} px, {step} m per px)");
+    return 0;
+}
+// --transect=profile,seed,x0,z0,x1,z1,steps: heights and detail along a line (to look at a ridge or step).
+if (args.FirstOrDefault(a => a.StartsWith("--transect=")) is { } tr)
+{
+    var p = tr[11..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    if (p.Length > 7 && p[7] == "bare") s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with
+        { Landforms = new Dictionary<string, LandformSetting> { ["mesas"] = new(0, 1), ["spires"] = new(0, 1) } }));
+    double x0 = double.Parse(p[2]), z0 = double.Parse(p[3]), x1 = double.Parse(p[4]), z1 = double.Parse(p[5]);
+    int n = int.Parse(p[6]);
+    for (int i = 0; i <= n; i++)
+    {
+        double x = x0 + (x1 - x0) * i / n, z = z0 + (z1 - z0) * i / n;
+        var t = s.Sample(x, z);
+        Console.WriteLine($"{x:0.0},{z:0.0} height {t.Height:0.00} detail {t.Detail:0.00} mountain {t.Mountain:0.00}");
+    }
+    return 0;
+}
 // --landform-probes: where the big landforms are in each test world (for captures and Go to spots).
 if (args.Contains("--landform-probes"))
 {

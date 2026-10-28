@@ -141,12 +141,12 @@ public sealed record TerrainStyle
     /// pool mask, not the ground's gullies (no straight parallel channels; round 20); 15 = a lake's outlet keeps the
     /// lake's level inside the lake; 16 = a sea pocket inside a lake's reach is lake; 17 = landform modules with their
     /// own settings (<see cref="Landforms"/>), the same ground as 16 at the designed settings (D229); 18 = escarpments and
-    /// plateaus (D232).</summary>
+    /// plateaus (D232); 19 = escarpments without fins, combs or worm-like rills, mesa tiers only on real uplift (D235).</summary>
     public int Revision { get; init; } = CurrentRevision;
 
     /// <summary>The terrain revision new worlds get. Worlds record theirs (<c>--revision=</c>), so a new revision never
     /// changes an existing world (D229).</summary>
-    public const int CurrentRevision = 18;
+    public const int CurrentRevision = 19;
 
     /// <summary>Landform module settings by module id (revision 17 on; missing = as designed). See <see cref="LandformCatalog"/>.</summary>
     public IReadOnlyDictionary<string, LandformSetting>? Landforms { get; init; }
