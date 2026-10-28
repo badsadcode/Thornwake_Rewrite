@@ -88,6 +88,23 @@ if (args.Contains("--river-stats"))
     }
     return 0;
 }
+// --find-biome=profile,seed,biomeId: places where that biome is nearly pure, nearest the world's centre first.
+if (args.FirstOrDefault(a => a.StartsWith("--find-biome=")) is { } fb)
+{
+    var p = fb[13..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    var map = s.Plan.Biomes;
+    double half = s.Plan.Profile.WorldSize / 2;
+    var found = new List<(double D, double X, double Z)>();
+    for (double z = -half; z < half; z += 2000)
+        for (double x = -half; x < half; x += 2000)
+        {
+            var (a, _, share) = map.Sample(x, z);
+            if (map.Pool[a].Def.Id == p[2] && share > .85 && s.Sample(x, z).Water == WaterKind.None) found.Add((x * x + z * z, x, z));
+        }
+    foreach (var f in found.OrderBy(f => f.D).Take(5)) Console.WriteLine($"{p[2]} at {f.X:0},{f.Z:0} ground {s.Height(f.X, f.Z):0}");
+    return 0;
+}
 // --landform-probes: where the big landforms are in each test world (for captures and Go to spots).
 if (args.Contains("--landform-probes"))
 {

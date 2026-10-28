@@ -14,10 +14,11 @@ public static class WoodlandAssets
     private static Shader? _canopyShader;
     /// <summary>
     /// Trees drawn from an outside export for a test, never saved (--test-tree, Tom's NoorMD pine, 2026-10-28): species
-    /// → path prefix of the export's level files (prefix + "_LOD0.glb" …), loaded at run time without importing them
-    /// into the project. Placement and everything else stay the species' own.
+    /// → path prefix of the export's level files (prefix + "_LOD0.glb" …) and which of its levels stand for the game's
+    /// three, loaded at run time without importing them into the project. Placement and everything else stay the
+    /// species' own.
     /// </summary>
-    public static readonly Dictionary<string,string> TestTrees=new();
+    public static readonly Dictionary<string,(string Prefix,int[] Levels)> TestTrees=new();
     private static readonly Dictionary<string,Node3D> TestTemplates=new();
     public static IEnumerable<MeshInstance3D> Meshes(Node node)
     {
@@ -28,7 +29,7 @@ public static class WoodlandAssets
     {
         string name="TREE_"+asset+(lod==0?"":"_LOD"+lod);
         Node3D root;
-        if(TestTrees.TryGetValue(asset,out var test))root=TestTree(test+"_LOD"+lod+".glb");
+        if(TestTrees.TryGetValue(asset,out var test))root=TestTree(test.Prefix+"_LOD"+test.Levels[lod]+".glb");
         else
         {
             if(!Scenes.TryGetValue(name,out var scene))
