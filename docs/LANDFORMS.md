@@ -61,8 +61,7 @@ Then the fantasy landforms Tom picks (section at the end).
 * **Water**: rivers are routed after it; the face looks downhill so the lowland drains away from the foot.
 * **Status**: built, terrain revision 18 (D232); broken up with ravines, buttresses and scree (D233); rebuilt like
   real escarpments — caprock cliff over gullied debris slopes, ravines of every size, scree texture (D234); in build
-  116; Tom's dumps: a comb (mesas), fins at bends, worm-like rills — fixed in terrain revision 19 (D235), not in a
-  build yet.
+  116; Tom's dumps: a comb (mesas), fins at bends, worm-like rills — fixed in terrain revision 19 (D235), in build 117.
 
 ### 2. Waterfalls and rapids
 * **What**: a river drops over a rock step into a plunge pool; white water over a steep, rocky stretch.

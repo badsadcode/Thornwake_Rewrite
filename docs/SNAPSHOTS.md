@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 117** (escarpments fixed from Tom's dumps: no comb, fins or worm-like rills, terrain revision 19 D235) | `ff1cfe9` | Thornwake-Rewrite-Preview-117 (v0.9.117) | Versions must match to connect; *Terrain version → Build 116* keeps revision 18 — build 116 = `6c530c5` |
 | **Build 116** (escarpments and plateaus, terrain revision 18 D232-D234; Land shape D230) | `6c530c5` | Thornwake-Rewrite-Preview-116 (v0.9.116) | Versions must match to connect; New world: Escarpments *off* or *Terrain version → Build 115* keeps revision 17 — build 115 = `9377656` |
 | **Build 115** (terrain revision 17: New world Landforms, worlds keep their terrain version D229) | `9377656` | Thornwake-Rewrite-Preview-115 (v0.9.115) | Versions must match to connect; ground identical to 114 at the designed settings, *Terrain version → Build 114* keeps revision 16 — build 114 = `6473368` |
 | **Build 114** (strong rain: no arcs in gales, no rainless patch, rain visible under TAA D225) | `6473368` | Thornwake-Rewrite-Preview-114 (v0.9.114) | Versions must match to connect; fixes, not switchable — build 113 = `9948255` |

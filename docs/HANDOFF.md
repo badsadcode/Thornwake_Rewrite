@@ -3,8 +3,9 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 116** (v0.9.116, return point `6c530c5`, `dist/Preview-116`): escarpments and plateaus, terrain
-  revision 18 (D232-D234), Land shape (D230); launchers "Go to - escarpment in the badlands / in the forest". Build 115
+* **Last build Tom has: 117** (v0.9.117, return point `ff1cfe9`, `dist/Preview-117`): escarpments fixed from his dumps,
+  terrain revision 19 (D235); launcher "Go to - where the comb was". Build 116 (`6c530c5`): escarpments and plateaus,
+  terrain revision 18 (D232-D234), Land shape (D230). Build 115
   (`9377656`): terrain revision 17 (D229) - New world Landforms, worlds keep their terrain version. Build 114 (`6473368`): strong rain fixed
   (D225). Rain is parked ("better than it was, maybe go back to it later"). Build 113 (`9948255`): rain tuning (D224).
   Build 112 (`c6b7cdd`, `dist/Preview-112`): refractive rain streaks (D223),
@@ -68,7 +69,8 @@ Cloud shape = rounded):
   proved identical to 16. In build 115. World types rework part 1
   (D230): *Land shape* apart from the type, grouped type list (not in a build). Tom picked 15 landforms; order and
   catalogue in `docs/LANDFORMS.md` (D231); no. 1, escarpments and plateaus,
-  terrain revision 18 (D232-D234), in build 116; Tom to judge the look in play. Next on the list: waterfalls and rapids. Open: Tom's three design questions (one or two sliders, rework or
+  terrain revision 18 (D232-D234), fixed from his dumps in 19 (D235), in build 117. Open:
+  outcrop models on cliff edges (Tom to say). Next on the list: waterfalls and rapids. Open: Tom's three design questions (one or two sliders, rework or
   landforms first, which new shapes).
 
 ---
