@@ -3722,6 +3722,33 @@ lowering, carried on downstream, would take a river to within a metre of the sea
 Not changed: every river source still starts 5 m wide; a source fading in from a trickle would change rivers everywhere
 (ask Tom first).
 
+## D244 — Terrain revision 26: fjords, a first version (2026-10-29)
+Tom: "let's go with it" (landform no. 6), then, shown the first draft's low banks: "I will rely on your expertise in
+this." Fjords are troughs (D242, same module, `Troughs.cs`) that reach the sea:
+* **Where**: the last 6–18 km (× size) of a river reaching the sea with 50 km² or more draining to it, up the bigger
+  branch at each junction, up to where the river stands 400 m (× size) over the sea, at least 3.5 km; hilly on both
+  sides (60 m over the sea 400 m beyond the floor); away from troughs (8 km), canyons, cirques and lakes (under the
+  raised walls too); one per 60 × 60 km of mountain ground (1–2 in a 512–768 km world, 5–7 in a 2,048 km one).
+* **Floor**: a dry valley floor at the head (the river falls in from the amphitheatre, 150 m at most — the first
+  draft's heads stood up to 470 m over it) rising inland at up to 3.5 %; the head's shore after 15–55 % of the length;
+  80–220 m (× size) deep a quarter of the length on; a sill a quarter as deep at the coast. Floor 500–1,000 m wide,
+  walls at slope 1.6–2.4; the line runs on 1.5 km out to sea so the walls don't close round the mouth.
+* **Walls raised**: the worlds' coasts rise gently from the sea (with the land as it was, a fjord had 40–60 m banks,
+  and asking for 300 m walls found no place for one), so each fjord raises its own mountains, as canyons raise their
+  land: 300–600 m (× size, ±35 %) within 0.6–1.4 km (±60 %) of the floor's edge, fading out over 4–7 km (an even band
+  drew a raised block), and over the last 800 m to the coast (sea cliffs); rugged mountain relief easing in toward the
+  walls. Rivers crossing the raised land cut gorges (as tributaries do through a canyon's land).
+* **The sea**: where a fjord takes the ground (with its relief) below the sea, the sampler returns the ocean there and
+  ends the walk, as at the coast; rivers the fjord takes in are lowered to the sea's level at most and stay level
+  there (the descent rule already allows water at the sea's level).
+* Test: 5 fjords in 4 worlds, every point along them from 40 m deep to the coast is the sea; walls 150 m or more over
+  the sea at the middle; no river rising. Settings: New world → Landforms → *Fjords*; *Terrain version* gains *Troughs
+  fixed (rev. 25)* (`terrain-r25.json`).
+* **A first version, to be reworked** (Tom, 2026-10-29: "kind of randomly placed in the forest area ... I want fjords
+  to be more interesting to explore"): see docs/LANDFORMS.md no. 6 — fjord coasts in cold mountain country, several
+  branching fjords, varied ground along them. Known: open-sea waves run up the fjord; the biome is whatever the climate
+  gives (the first one stands in a swamp at 14 °C; climate is worked out after the landforms).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

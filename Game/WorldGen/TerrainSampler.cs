@@ -119,12 +119,23 @@ public sealed partial class TerrainSampler
         double baseHeight = Continent(land, rasterLand, macroHeight, coastDistance, ref mountainShare);
         double canyon = _canyons != null ? _canyons.Uplift(x, z) : 0; // (revision 21: raised land a river has cut through)
         baseHeight += canyon;
+        // Revision 26: a fjord's mountain walls, raised like a canyon's land (rivers crossing them cut gorges).
+        if (_troughs is { HasFjords: true })
+        {
+            double lift = _troughs.Raise(x, z, coastDistance, out double rocky);
+            baseHeight += lift; canyon += lift;
+            if (rocky > 0) mountainShare = Math.Max(mountainShare, .5 * rocky * rocky); // (rugged near the walls, easing out: at once it drew a patch)
+        }
         // Revision 24: glacial troughs, the ground taken down to a flat floor between steep walls (most of the
         // walking-scale relief taken off the floor).
-        double troughFlat = 0, troughRock = 0;
-        if (_troughs != null) baseHeight = _troughs.Carve(x, z, baseHeight, out troughFlat, out troughRock);
+        double troughFlat = 0, troughRock = 0; bool fjord = false;
+        if (_troughs != null) baseHeight = _troughs.Carve(x, z, baseHeight, out troughFlat, out troughRock, out fjord);
         Detail(lx, lz, minWavelength, land, mountainShare, out double inland, out double detail, out double roughness);
         if (troughFlat > 0) detail *= 1 - .85 * troughFlat;
+        // Revision 26: a fjord's floor below the sea is the sea (the walk ends here, as at the coast: rivers, lakes and
+        // pools have nothing to do under it).
+        if (fjord && baseHeight + detail < 0)
+            return new(_p.SeaLevel + baseHeight + detail, land, Math.Max(mountainShare, troughRock), detail, WaterKind.Ocean, _p.SeaLevel, -1, 0);
         double bare = 0;
         if (_planForms.Length > 0) detail += PlanGround(x, z, minWavelength, out bare);
         bare = Math.Max(bare, troughRock);

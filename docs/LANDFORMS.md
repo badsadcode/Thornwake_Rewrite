@@ -103,6 +103,14 @@ Then the fantasy landforms Tom picks (section at the end).
   waterfall (no. 2). The largest of the river-related landforms.
 
 ### 6. Fjords
+* **Status**: a first version, terrain revision 26 (D244), not in a build yet: the sea 80–220 m deep up a trough 6–18 km
+  inland between raised mountain walls, a dry valley floor and a fall at the head, a sill at the mouth.
+* **Rework (Tom, 2026-10-29)**: "kind of randomly placed in the forest area ... I want fjords to be more interesting to
+  explore. With varied terrain and different tree sizes". To do: fjord *coasts* — a stretch of cold, mountainous
+  coast chosen in the plan (high latitude, the mountains brought to the sea there), several fjords branching inland
+  with side arms, islands and skerries off the mouths, hanging valleys and falls off the walls, ledges with farms and
+  harbours at the heads, calmer water than the open sea. Tree heights that vary much more (now nearly every tree is the
+  same height): after the terrain is finished.
 * **What**: a long arm of the sea reaching far inland between steep mountain walls, deep water close to the shore.
 * **Where**: mountain coasts in cold country, where deep U-shaped valleys (no. 5) reach the sea.
 * **Play**: sailing deep into the mountains (GAMEPLAY_DESIGN §11), harbours at the fjord's head, waterfalls off the
@@ -218,6 +226,17 @@ field cannot hold need models (marked *models*).
   escarpments and gorges).
 * **Upside-down mountain** — a mountain balanced on its tip over a lake, held by roots or magic (*models*; pure
   fantasy).
+
+## Beyond height maps (Tom, 2026-10-29)
+
+Tom: landforms a height map cannot hold — "maybe we can introduce voxel generation for those. And put them on top of
+the height map." A height map has one ground height per point: no overhangs, arches, caves, sea caves, natural
+bridges, undercut cliffs or hollow rock. The plan so far is *rock models* (placed objects, no. 9 and the fantasy
+ones). A voxel layer would be generated ground of its own, laid over the height map only where such a landform stands
+(a small 3-D grid per site, meshed, collided, walkable), so the rest of the world stays as fast as it is. To decide
+with Tom before it is built: which landforms first (arches and sea caves are the natural start), voxel or signed-distance
+meshing (smooth rock, not blocks), how far away they are drawn, and digging (the player's terrain edits are on the
+height map today).
 
 ## Changes to this list
 

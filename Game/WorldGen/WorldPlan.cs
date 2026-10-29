@@ -37,7 +37,8 @@ public sealed class WorldPlan
     public Canyons? Canyons { get; }
     /// <summary>Cirques with a tarn (revision 23, landform no. 4); null when off or older.</summary>
     public Cirques? Cirques { get; }
-    /// <summary>Glacial troughs with hanging valleys (revision 24, landform no. 5); null when off or older.</summary>
+    /// <summary>Glacial troughs with hanging valleys (revision 24, landform no. 5) and fjords (revision 26, no. 6); null
+    /// when both are off or older.</summary>
     public Troughs? Troughs { get; }
     /// <summary>Settlement sites and the roads between them (docs/WORLDGEN_PLAN.md step 3): empty in revision 17.</summary>
     public IReadOnlyList<WorldSite> Sites { get; } = Array.Empty<WorldSite>();
@@ -168,8 +169,10 @@ public sealed class WorldPlan
         if (Style.Revision >= LandformCatalog.Cirques.Since && !Style.Landform(LandformCatalog.Cirques.Id).Off)
             Cirques = new Cirques(this, Style.Landform(LandformCatalog.Cirques.Id));
         // Troughs (revision 24) lower the rivers they take in: after the canyons and cirques, which read the rivers.
-        if (Style.Revision >= LandformCatalog.Troughs.Since && !Style.Landform(LandformCatalog.Troughs.Id).Off)
-            Troughs = new Troughs(this, Style.Landform(LandformCatalog.Troughs.Id));
+        // Fjords (revision 26) are troughs reaching the sea, placed by the same module after them.
+        bool fjords = Style.Revision >= LandformCatalog.Fjords.Since && !Style.Landform(LandformCatalog.Fjords.Id).Off;
+        if (Style.Revision >= LandformCatalog.Troughs.Since && (!Style.Landform(LandformCatalog.Troughs.Id).Off || fjords))
+            Troughs = new Troughs(this, Style.Landform(LandformCatalog.Troughs.Id), fjords ? Style.Landform(LandformCatalog.Fjords.Id) : null);
         stage?.Invoke(3);
         Climate = new Climate(this, Style.Climate);
         stage?.Invoke(4);

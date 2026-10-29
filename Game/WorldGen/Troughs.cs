@@ -13,7 +13,8 @@ namespace Thornwake.WorldGen;
 /// the hanging valleys. Placed once in the plan after the rivers, canyons and cirques; the trough is ground under the
 /// walking-scale relief (<see cref="Carve"/>), the rivers' water is lowered in the plan, every lowering ends on the
 /// trough's floor (rivers stay strictly descending, lakes are untouched). Revision 25 (D243): no fall from a river that
-/// rises less than 800 m above it.
+/// rises less than 800 m above it. Revision 26 (D244, landform no. 6): fjords, troughs whose floor runs below the sea
+/// to the coast — the sea follows them inland (<see cref="Carve"/> reports it, the sampler draws it as the ocean).
 /// </summary>
 public sealed class Troughs
 {
@@ -23,6 +24,11 @@ public sealed class Troughs
         public required double HalfFloor, Slope, Reach;
         public required ulong Seed;
         public double MinX, MinZ, MaxX, MaxZ;
+        /// <summary>A fjord (revision 26): the floor below the sea from its head's shore to the coast.</summary>
+        public bool Fjord;
+        /// <summary>A fjord's mountain walls: the land raised by <see cref="Lift"/> within <see cref="Band"/> of the
+        /// floor's edge, fading out over <see cref="Fade"/>.</summary>
+        public double Lift, Band, Fade;
     }
 
     /// <summary>A fall where a river drops into a trough: a side river from its hanging valley, or the main river at
@@ -37,8 +43,11 @@ public sealed class Troughs
     private readonly int _gridSize;
     private readonly int[] _gridStart, _gridItems;
 
-    /// <summary>Number of troughs in this world.</summary>
-    public int Count => _troughs.Count;
+    /// <summary>Number of troughs in this world (fjords not counted).</summary>
+    public int Count { get { int n = 0; foreach (var c in _troughs) if (!c.Fjord) n++; return n; } }
+
+    /// <summary>Number of fjords in this world (revision 26).</summary>
+    public int FjordCount => _troughs.Count - Count;
 
     /// <summary>Every fall into a trough (tests, captures), highest first.</summary>
     public IReadOnlyList<Fall> Falls => _falls;
@@ -49,13 +58,21 @@ public sealed class Troughs
     {
         foreach (var c in _troughs)
         {
+            if (c.Fjord) continue;
             int m = c.X.Length / 2;
             double dx = c.X[m + 1] - c.X[m - 1], dz = c.Z[m + 1] - c.Z[m - 1], l = Math.Max(1e-6, Math.Sqrt(dx * dx + dz * dz));
             yield return (c.X[m], c.Z[m], c.Floor[m], c.HalfFloor, dx / l, dz / l);
         }
     }
 
-    public Troughs(WorldPlan plan, LandformSetting setting)
+    /// <summary>Each fjord's line from its head to the coast, every 50 m, with its floor (metres above the sea, below 0
+    /// under the water) and half width (tests, captures).</summary>
+    public IEnumerable<(double[] X, double[] Z, double[] Floor, double HalfFloor)> FjordLines()
+    {
+        foreach (var c in _troughs) if (c.Fjord) yield return (c.X, c.Z, c.Floor, c.HalfFloor);
+    }
+
+    public Troughs(WorldPlan plan, LandformSetting setting, LandformSetting? fjords = null)
     {
         var macro = plan.Macro; var hy = plan.Hydrology; var p = plan.Profile;
         double sea = p.SeaLevel;
@@ -170,6 +187,7 @@ public sealed class Troughs
             }
             if (Lower(hy, c, chain, bounds, sea, setting)) _troughs.Add(c);
         }
+        if (fjords is { Amount: > 0 } fs) PlaceFjords(plan, fs, bounds, cirques, canyons);
         _falls.Sort((a, b) => b.Height.CompareTo(a.Height));
         // Troughs near each 2 km cell.
         _minX = macro.MinX; _minZ = macro.MinZ;
@@ -187,6 +205,137 @@ public sealed class Troughs
         for (int i = 0; i < cells.Length; i++) { _gridStart[i] = items.Count; if (cells[i] != null) items.AddRange(cells[i]); }
         _gridStart[^1] = items.Count;
         _gridItems = items.ToArray();
+    }
+
+    /// <summary>
+    /// Fjords (landform no. 6, revision 26, D244): the last 6–18 km (× size) of a river reaching the sea through
+    /// mountains (up to where the river stands 400 m × size over the sea), cut down like a trough but below the sea: a
+    /// dry valley floor at the head (the river falls in from its amphitheatre, 150 m at most — falls of 470 m came out
+    /// at first), rising inland at up to 3.5 %, its shore after 15–55 % of the length; then the floor drops to 80–220 m
+    /// (× size) below the sea and rises to a sill a quarter as deep at the coast. Wider than a trough (500–1,000 m floor), steeper walls (1.6–2.4), its
+    /// mouth open (no narrowing at the coast). Where: both sides stand 150 m or more over the sea 400 m beyond the floor;
+    /// apart from troughs, canyons, cirques and lakes; one per 60 × 60 km of mountain ground.
+    /// </summary>
+    private void PlaceFjords(WorldPlan plan, LandformSetting setting, (double MinX, double MinZ, double MaxX, double MaxZ)[] bounds,
+        List<(double X, double Z, double Radius)> cirques, List<(double X, double Z)> canyons)
+    {
+        var macro = plan.Macro; var hy = plan.Hydrology; var reaches = hy.Reaches;
+        double sea = plan.Profile.SeaLevel;
+        var rng = new RandomStream(LandformCatalog.Seed(plan.Manifest, LandformCatalog.Fjords));
+        var mountain = macro.Channel(WorldPlan.MountainChannel);
+        int mountainCells = 0;
+        foreach (float v in mountain) if (v > .25f) mountainCells++;
+        double km2 = mountainCells * macro.Cell * macro.Cell / 1e6;
+        int want = Math.Clamp((int)Math.Round(setting.Amount * km2 / (60 * 60)), 0, 30), placed = 0;
+        var mouths = new List<int>();
+        foreach (var r in reaches)
+            if (!r.Distributary && r.EndsInSea && r.Catchment[^1] >= 50) mouths.Add(r.Id);
+        for (int attempt = 0; attempt < want * 40 && placed < want && mouths.Count > 0; attempt++)
+        {
+            var mouth = reaches[mouths[rng.Int(mouths.Count)]];
+            double length = rng.Between(6000, 18000) * setting.Size, halfFloor = rng.Between(250, 500) * setting.Size;
+            double slope = rng.Between(1.6, 2.4), depth = rng.Between(80, 220) * setting.Size;
+            ulong seed = rng.Next();
+            double lift = rng.Between(300, 600) * setting.Size, band = rng.Between(600, 1400), fade = rng.Between(4000, 7000);
+            // Up the river from the sea, every 50 m, along the bigger branch at each junction.
+            var xs = new List<double>(); var zs = new List<double>(); var ss = new List<double>();
+            var chain = new HashSet<int>();
+            var r = mouth; int k = r.Points.Length - 1; double run = 0, next = 0;
+            while (true)
+            {
+                chain.Add(r.Id);
+                for (; k >= 0 && run < length && (ss.Count == 0 || ss[^1] <= 400 * setting.Size); k--)
+                {
+                    if (xs.Count > 0 && k + 1 < r.Points.Length) run += Math.Sqrt(Sq(r.Points[k].X - r.Points[k + 1].X) + Sq(r.Points[k].Z - r.Points[k + 1].Z));
+                    if (run >= next) { xs.Add(r.Points[k].X); zs.Add(r.Points[k].Z); ss.Add(r.Surface[k] - sea); next = run + Spacing; }
+                }
+                if (run >= length || r.UpstreamReaches.Count == 0 || r.StartLake >= 0 || ss[^1] > 400 * setting.Size) break;
+                int up = r.UpstreamReaches[0];
+                foreach (int u in r.UpstreamReaches) if (reaches[u].Catchment[^1] > reaches[up].Catchment[^1]) up = u;
+                r = reaches[up]; k = r.Points.Length - 2;
+            }
+            if (run < 3500 * setting.Size || xs.Count < 60) continue;
+            xs.Reverse(); zs.Reverse(); ss.Reverse();
+            int n = xs.Count;
+            if (ss[0] < 25) continue; // (the head stands above the sea: the river falls into the fjord)
+            bool ok = true;
+            for (int i = 0; i < n && ok; i += 4)
+            {
+                if (hy.LakeNear(xs[i], zs[i]) >= 0) ok = false;
+                // (no lake under the raised walls either)
+                int i0 = Math.Max(0, i - 2), i1 = Math.Min(n - 1, i + 2);
+                double tx = xs[i1] - xs[i0], tz = zs[i1] - zs[i0], tl = Math.Max(1e-6, Math.Sqrt(tx * tx + tz * tz));
+                foreach (double d in new[] { -halfFloor - band - fade, -halfFloor - band - fade * .5, -halfFloor - band, halfFloor + band, halfFloor + band + fade * .5, halfFloor + band + fade })
+                    if (hy.LakeNear(xs[i] - tz / tl * d, zs[i] + tx / tl * d) >= 0) ok = false;
+                foreach (var other in _troughs)
+                    for (int j = 0; j < other.X.Length && ok; j += 10)
+                        if (Math.Abs(other.X[j] - xs[i]) + Math.Abs(other.Z[j] - zs[i]) < 8000) ok = false;
+                foreach (var (cx, cz) in canyons) if (Math.Abs(cx - xs[i]) + Math.Abs(cz - zs[i]) < 15000) ok = false;
+                foreach (var (qx, qz, qr) in cirques) if (Math.Sqrt(Sq(qx - xs[i]) + Sq(qz - zs[i])) < qr * 1.3 + halfFloor * 1.25 + 400) ok = false;
+            }
+            if (!ok) continue;
+            var mx = new double[n]; var mz = new double[n];
+            double bends = 0;
+            for (int i = 0; i < n; i++)
+            {
+                int w = Math.Min(8, Math.Min(i, n - 1 - i));
+                for (int j = i - w; j <= i + w; j++) { mx[i] += xs[j]; mz[i] += zs[j]; }
+                mx[i] /= 2 * w + 1; mz[i] /= 2 * w + 1;
+                bends = Math.Max(bends, Math.Sqrt(Sq(mx[i] - xs[i]) + Sq(mz[i] - zs[i])));
+            }
+            halfFloor = Math.Max(halfFloor, bends + 80);
+            var along = new double[n];
+            for (int i = 1; i < n; i++) along[i] = along[i - 1] + Math.Sqrt(Sq(mx[i] - mx[i - 1]) + Sq(mz[i] - mz[i - 1]));
+            // The floor: dry at the head, the river falling in 150 m (× size) at most (half its height there where that is
+            // less than 30 m), a valley floor rising inland at up to 3.5 % to the head's shore (15–55 % of the length); then
+            // the deepest a quarter of the length on, a sill a quarter as deep at the coast; never above the old river.
+            double head = Math.Max(Math.Min(30, ss[0] * .5), ss[0] - 150 * setting.Size), shore = DetMath.Clamp(head / (.035 * along[^1]), .15, .55);
+            if (head / (shore * along[^1]) > .06) continue; // (a steep ramp, not a valley floor)
+            var floor = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                double u = along[i] / along[^1];
+                double f = u < shore ? head * (1 - u / shore)
+                    : -depth * DetMath.Smooth((u - shore) / .25) * (1 - .75 * DetMath.Smooth((u - .8) / .2));
+                floor[i] = Math.Min(ss[i], f);
+            }
+            // Hilly ground on both sides: 400 m beyond the floor the land stands 60 m or more over the sea (on average over
+            // the inner three quarters) — the fjord raises its own mountain walls (Lift): the worlds' coasts rise gently
+            // from the sea, and asking for 300 m found no fjord at all; on the land as it was, a fjord had 40–60 m banks.
+            double left = 0, right = 0;
+            for (int q = 1; q <= 3; q++)
+            {
+                int i = q * n / 5, i0 = Math.Max(0, i - 2), i1 = Math.Min(n - 1, i + 2);
+                double tx = mx[i1] - mx[i0], tz = mz[i1] - mz[i0], tl = Math.Max(1e-6, Math.Sqrt(tx * tx + tz * tz)), d = halfFloor + 400;
+                left += macro.Sample(WorldPlan.HeightChannel, mx[i] - tz / tl * d, mz[i] + tx / tl * d);
+                right += macro.Sample(WorldPlan.HeightChannel, mx[i] + tz / tl * d, mz[i] - tx / tl * d);
+            }
+            if (left < 3 * 60 || right < 3 * 60) continue;
+            // The line runs on 1.5 km out to sea, so the walls do not close around the mouth (the coast ends them).
+            {
+                double ex = mx[^1] - mx[^5], ez = mz[^1] - mz[^5], el = Math.Max(1e-6, Math.Sqrt(ex * ex + ez * ez));
+                var lx = new List<double>(mx); var lz = new List<double>(mz); var la = new List<double>(along); var lf = new List<double>(floor);
+                for (int e = 1; e <= 30; e++)
+                {
+                    lx.Add(mx[^1] + ex / el * e * Spacing); lz.Add(mz[^1] + ez / el * e * Spacing);
+                    la.Add(along[^1] + e * Spacing); lf.Add(floor[^1]);
+                }
+                mx = lx.ToArray(); mz = lz.ToArray(); along = la.ToArray(); floor = lf.ToArray(); n = mx.Length;
+            }
+            var c = new Trough
+            {
+                X = mx, Z = mz, Along = along, Floor = floor, HalfFloor = halfFloor, Slope = slope, Seed = seed, Fjord = true,
+                Lift = lift, Band = band, Fade = fade,
+                Reach = Math.Max(halfFloor * 1.25 + 40 + 2 * (depth + lift * 1.4 + 300) / slope, halfFloor + band * 1.6 + fade),
+            };
+            c.MinX = c.MaxX = c.X[0]; c.MinZ = c.MaxZ = c.Z[0];
+            for (int i = 1; i < n; i++)
+            {
+                c.MinX = Math.Min(c.MinX, c.X[i]); c.MaxX = Math.Max(c.MaxX, c.X[i]);
+                c.MinZ = Math.Min(c.MinZ, c.Z[i]); c.MaxZ = Math.Max(c.MaxZ, c.Z[i]);
+            }
+            if (Lower(hy, c, chain, bounds, sea, setting)) { _troughs.Add(c); placed++; }
+        }
     }
 
     /// <summary>
@@ -216,6 +365,7 @@ public sealed class Troughs
                 if (!inside) inside = Inside(r.Points[k].X, r.Points[k].Z, r.Surface[k]);
                 if (!inside) continue;
                 Surface(c, r.Points[k].X, r.Points[k].Z, out double floor, out _, out _);
+                if (c.Fjord) floor = Math.Max(floor, 0); // (in a fjord the river meets the sea)
                 if (floor + sea < r.Surface[k]) (s ??= Get(id))[k] = floor + sea;
             }
         }
@@ -233,7 +383,12 @@ public sealed class Troughs
                     if (s[^1] < down[0]) { down[0] = s[^1]; changed = true; }
                     else if (s[^1] > down[0]) { s[^1] = down[0]; changed = true; }
                 }
-                for (int k = 1; k < s.Length; k++) if (s[k] >= s[k - 1]) { s[k] = s[k - 1] - 1e-4; changed = true; }
+                for (int k = 1; k < s.Length; k++)
+                    if (s[k] >= s[k - 1])
+                    {
+                        double v = c.Fjord && s[k - 1] <= sea + 1e-9 ? sea : s[k - 1] - 1e-4; // (water at the sea's level stays there)
+                        if (v != s[k]) { s[k] = v; changed = true; }
+                    }
             }
             if (!changed) break;
             if (pass == 29) return false;
@@ -251,7 +406,7 @@ public sealed class Troughs
                     if (r.Surface[k] - s[k] > .5) { if (r.Along[k] < 800) return false; break; }
             // (and no water lowered to within a metre of the sea: lowering carried on downstream pushed a river at the sea's
             // level below it)
-            if (_revision >= 25)
+            if (_revision >= 25 && !c.Fjord)
                 for (int k = 0; k < s.Length; k++)
                     if (s[k] < r.Surface[k] && s[k] < sea + 1) return false;
         }
@@ -307,21 +462,52 @@ public sealed class Troughs
         double u = DetMath.Clamp((along - c.Along[i]) / Math.Max(1e-6, c.Along[i + 1] - c.Along[i]), 0, 1);
         floor = c.Floor[i] + (c.Floor[i + 1] - c.Floor[i]) * u;
         double toEnd = Math.Sqrt(Sq(x - c.X[^1]) + Sq(z - c.Z[^1]));
-        double half = c.HalfFloor * (1 + .2 * Noise.Fbm(x, z, 1500, 2, 0, c.Seed)) * DetMath.Smooth(toEnd / 1500);
+        double half = c.HalfFloor * (1 + .2 * Noise.Fbm(x, z, 1500, 2, 0, c.Seed)) * (c.Fjord ? 1 : DetMath.Smooth(toEnd / 1500));
         wall = dist - half + 25 * Noise.Fbm(x, z, 180, 2, 0, c.Seed + 1);
         const double Foot = 120; // (a U: the wall steepens upward from the floor)
         double rise = wall <= 0 ? 0 : wall < Foot ? c.Slope * wall * wall / (2 * Foot) : c.Slope * (wall - Foot * .5);
-        return floor + FloorAbove + rise;
+        return floor + (c.Fjord ? FloorAbove * DetMath.Smooth(floor / 3) : FloorAbove) + rise;
+    }
+
+    /// <summary>True when the world has fjords (revision 26).</summary>
+    public bool HasFjords => FjordCount > 0;
+
+    /// <summary>
+    /// A fjord's mountain walls (revision 26): how much the land is raised here (m) — 300–600 m (× size, ±35 % by noise)
+    /// within 0.6–1.4 km (±60 %) of the floor's edge, fading out over 4–7 km beyond (around the head too: the distance there is
+    /// to the head), and over the last 800 m to the coast (sea cliffs, not a wall standing in the surf).
+    /// <paramref name="share"/>: how much of the full raise this is (the ground there is mountain: rock, rugged relief).
+    /// </summary>
+    public double Raise(double x, double z, double coastDistance, out double share)
+    {
+        share = 0;
+        if (_troughs.Count == 0) return 0;
+        int cell = Cell(z, _minZ) * _gridSize + Cell(x, _minX);
+        double best = 0;
+        for (int n = _gridStart[cell]; n < _gridStart[cell + 1]; n++)
+        {
+            var c = _troughs[_gridItems[n]];
+            if (!c.Fjord || x < c.MinX - c.Reach || x > c.MaxX + c.Reach || z < c.MinZ - c.Reach || z > c.MaxZ + c.Reach) continue;
+            Nearest(c, x, z, out double dist, out _);
+            // (an even band drew a raised block around the fjord: its edge wanders ±60 % and the raise ±35 %)
+            double across = 1 - DetMath.Smooth((dist - c.HalfFloor - c.Band * (1 + .6 * Noise.Fbm(x, z, 4000, 2, 0, c.Seed + 3))) / c.Fade);
+            if (across <= 0) continue;
+            double s = across * DetMath.Smooth((coastDistance - 100) / 700);
+            share = Math.Max(share, s);
+            best = Math.Max(best, c.Lift * (1 + .35 * Noise.Fbm(x, z, 3000, 3, 0, c.Seed + 2)) * s);
+        }
+        return best;
     }
 
     /// <summary>
     /// The ground taken down into the troughs here (metres above the sea in and out), blended over 8 m on the floor and up
     /// to 30 m up the wall, so the wall's top is a rounded shoulder. <paramref name="flat"/>: how much of the walking-scale relief to take away (1 on the floor,
-    /// fading out up the wall's foot); <paramref name="rock"/>: how bare the wall is.
+    /// fading out up the wall's foot); <paramref name="rock"/>: how bare the wall is; <paramref name="sea"/>: a fjord took
+    /// the ground to within 3 m of the sea (the sea fills it wherever the ground with its relief lies below the sea).
     /// </summary>
-    public double Carve(double x, double z, double ground, out double flat, out double rock)
+    public double Carve(double x, double z, double ground, out double flat, out double rock, out bool sea)
     {
-        flat = 0; rock = 0;
+        flat = 0; rock = 0; sea = false;
         if (_troughs.Count == 0) return ground;
         int cell = Cell(z, _minZ) * _gridSize + Cell(x, _minX);
         double carved = ground;
@@ -337,6 +523,7 @@ public sealed class Troughs
             double cut = DetMath.Smooth((before - carved) / 15);
             flat = Math.Max(flat, cut * (1 - DetMath.Smooth((wall + 20) / 50)));
             rock = Math.Max(rock, .85 * cut * DetMath.Smooth((wall + 10) / 30));
+            if (c.Fjord && carved < 3) sea = true;
         }
         return carved;
     }

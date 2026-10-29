@@ -20,6 +20,7 @@ internal static class SimulationTests
         T.Run("Landforms: canyons — raised land beside rivers that keep their course and level, no cliffs of its own (revisions 21, 22)", CanyonForms, filter);
         T.Run("Landforms: cirques hold closed-in tarns high in the mountains; rivers and lakes unchanged (revision 23)", CirqueForms, filter);
         T.Run("Landforms: glacial troughs — flat floors, side rivers falling from hanging valleys, water still descending (revisions 24, 25)", TroughForms, filter);
+        T.Run("Landforms: fjords — sea from the coast to the head's shore, between high walls (revision 26)", FjordForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1182,6 +1183,49 @@ internal static class SimulationTests
         T.Check(shortSources == 0, $"no fall from a river rising just above it ({shortSources})");
         T.Check(rising == 0 && junctions == 0, $"rivers descend and meet ({rising}, {junctions})");
         T.Check(sameNetwork == worlds, $"the river network and lakes are as before ({sameNetwork}/{worlds})");
+    }
+
+    private static void FjordForms()
+    {
+        int fjords = 0, water = 0, dry = 0, gaps = 0, walls = 0, low = 0, rising = 0, worlds = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 7319), ("continental", 42), ("mountainous", 42), ("mountainous", 7319) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            var hy = s.Plan.Hydrology;
+            var h25 = new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 25 }).Hydrology;
+            worlds++;
+            int Rises(double[] v) { int n = 0; for (int k = 1; k < v.Length; k++) if (!(v[k] < v[k - 1] || v[k] == v[k - 1] && v[k] <= s.Plan.Profile.SeaLevel + 1e-9)) n++; return n; }
+            for (int i = 0; i < hy.Reaches.Count; i++) if (Rises(hy.Reaches[i].Surface) > Rises(h25.Reaches[i].Surface)) rising++;
+            if (s.Plan.Troughs is not { } tr) continue;
+            foreach (var (xs, zs, floor, half) in tr.FjordLines())
+            {
+                fjords++;
+                // Along the line from where the floor is 40 m below the sea (the head's shore wanders) to the coast: the sea all the way (joined to the
+                // open sea, never a lake or dry ground).
+                bool wet = false;
+                for (int i = 0; i < xs.Length; i += 4)
+                {
+                    if (floor[i] > -40 && !wet) continue;
+                    wet = true;
+                    var t = s.Sample(xs[i], zs[i]);
+                    if (t.Water == WaterKind.Ocean) water++; else { dry++; gaps++; T.Note($"{id}/{seed}: {xs[i]:0},{zs[i]:0} floor {floor[i]:0} m: {t.Water}, ground {t.Height - s.Plan.Profile.SeaLevel:0.0} m"); }
+                }
+                // The walls: 300 m beyond the floor's edge, at the middle, both sides 150 m or more over the sea.
+                int m = xs.Length / 2;
+                double dx = xs[m + 1] - xs[m - 1], dz = zs[m + 1] - zs[m - 1], l = Math.Sqrt(dx * dx + dz * dz);
+                foreach (double side in new[] { -1.0, 1.0 })
+                {
+                    walls++;
+                    double d = side * (half + 300);
+                    if (s.Sample(xs[m] - dz / l * d, zs[m] + dx / l * d).Height < s.Plan.Profile.SeaLevel + 150) low++;
+                }
+            }
+        }
+        T.Note($"{fjords} fjords in 4 worlds; {water} points along them sea, {dry} not; {low} of {walls} walls under 150 m; {rising} reaches rising");
+        T.Check(fjords >= 4, $"fjords placed ({fjords})");
+        T.Check(dry == 0, $"the sea along each fjord ({dry} points not)");
+        T.Check(low <= walls / 10, $"high walls ({low} of {walls} low)");
+        T.Check(rising == 0, $"rivers still descend ({rising})");
     }
 
     private static void Wetlands()

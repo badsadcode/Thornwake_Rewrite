@@ -144,12 +144,12 @@ public sealed record TerrainStyle
     /// plateaus (D232); 19 = escarpments without fins, combs or worm-like rills, mesa tiers only on real uplift (D235); 20 = waterfalls and the
     /// rapids below them (D238); 21 = gorges and canyons, gorge walls with ledges (D239); 22 = canyon ends and depth
     /// measured in space (no cliff where a meander brings a canyon's end beside its middle), no wetland pools on ground a
-    /// river has cut down (D240); 23 = cirques with a tarn (D241); 24 = glacial troughs with hanging valleys (D242); 25 = no trough fall from a river rising just above it (D243).</summary>
+    /// river has cut down (D240); 23 = cirques with a tarn (D241); 24 = glacial troughs with hanging valleys (D242); 25 = no trough fall from a river rising just above it (D243); 26 = fjords (D244).</summary>
     public int Revision { get; init; } = CurrentRevision;
 
     /// <summary>The terrain revision new worlds get. Worlds record theirs (<c>--revision=</c>), so a new revision never
     /// changes an existing world (D229).</summary>
-    public const int CurrentRevision = 25;
+    public const int CurrentRevision = 26;
 
     /// <summary>Landform module settings by module id (revision 17 on; missing = as designed). See <see cref="LandformCatalog"/>.</summary>
     public IReadOnlyDictionary<string, LandformSetting>? Landforms { get; init; }
