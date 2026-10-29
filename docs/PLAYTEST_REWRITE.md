@@ -78,6 +78,21 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 121 — fjord coasts, troughs fixed (terrain revisions 25–27)
+**Host and everyone joining need build 121** (versions must match to connect).
+* **Fjord coasts**: a stretch of the cold northern coast rises into a coastal range (500–900 m, ridges and peaks; taiga
+  and rock, not forest lowland), its rivers' mouths drowned into 3–4 fjords 8–22 km long and 100–300 m deep, some with
+  side arms, and islands and skerries off the coast. One coast in a normal world, five in the largest. Try
+  *Go to - down a fjord to the sea (Balanced, seed 7319)* and *Go to - on a fjord, toward its mouth (Balanced, seed
+  7319)*. New world → Landforms → *Fjords*.
+* **Troughs fixed from your dump**: no more river starting from nothing just above a hanging valley's fall (a trough
+  is only made where every river falling into it runs 800 m or more above the fall). The trough from build 120's
+  launchers is gone with it; new spots: *Go to - glacial trough (Balanced, seed 7319)* and *Go to - hanging valley's
+  fall (Balanced, seed 7319)*.
+* Your build 120 worlds keep their terrain; *Terrain version → Build 120* gives it to new worlds too.
+* Known: the open sea's waves run up the fjords (real ones are calm); no ledges on the walls yet; the world map does not
+  show the islands.
+
 ## New in build 120 — glacial troughs with hanging valleys (terrain revision 24)
 **Host and everyone joining need build 120** (versions must match to connect).
 * **Glacial troughs**: steep stretches of mountain river are now deep U-shaped valleys — a flat floor 300–700 m wide
