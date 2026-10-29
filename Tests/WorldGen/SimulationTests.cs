@@ -19,7 +19,7 @@ internal static class SimulationTests
         T.Run("Landforms: waterfalls drop the river at a step, water stays above its ground (revision 20)", Waterfalls, filter);
         T.Run("Landforms: canyons — raised land beside rivers that keep their course and level, no cliffs of its own (revisions 21, 22)", CanyonForms, filter);
         T.Run("Landforms: cirques hold closed-in tarns high in the mountains; rivers and lakes unchanged (revision 23)", CirqueForms, filter);
-        T.Run("Landforms: glacial troughs — flat floors, side rivers falling from hanging valleys, water still descending (revision 24)", TroughForms, filter);
+        T.Run("Landforms: glacial troughs — flat floors, side rivers falling from hanging valleys, water still descending (revisions 24, 25)", TroughForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1129,7 +1129,7 @@ internal static class SimulationTests
 
     private static void TroughForms()
     {
-        int troughs = 0, hanging = 0, heads = 0, rough = 0, floors = 0, rising = 0, junctions = 0, sameNetwork = 0, worlds = 0;
+        int troughs = 0, hanging = 0, heads = 0, shortSources = 0, rough = 0, floors = 0, rising = 0, junctions = 0, sameNetwork = 0, worlds = 0;
         foreach (var (id, seed) in new[] { ("balanced", 42), ("balanced", 7319), ("continental", 7319), ("mountainous", 42) })
         {
             var s = CoreTests.Sampler(id, seed);
@@ -1149,6 +1149,16 @@ internal static class SimulationTests
             if (s.Plan.Troughs is not { } tr) continue;
             troughs += tr.Count;
             hanging += tr.Falls.Count(f => f.Side); heads += tr.Falls.Count(f => !f.Side);
+            // Revision 25: every fall's river runs 800 m or more from its source to where it is lowered, its lip a point
+            // before (Tom's dump 17:28:48, build 120).
+            foreach (var f in tr.Falls)
+            {
+                if (!hy.NearestRiver(f.X, f.Z, 30, out var at) || hy.Reaches[at.Reach].UpstreamReaches.Count > 0) continue;
+                var r = hy.Reaches[at.Reach]; int k = 0;
+                for (int j = 1; j < r.Points.Length; j++)
+                    if (Math.Abs(r.Points[j].X - f.X) + Math.Abs(r.Points[j].Z - f.Z) < Math.Abs(r.Points[k].X - f.X) + Math.Abs(r.Points[k].Z - f.Z)) k = j;
+                if (r.Along[k] < 750) { shortSources++; T.Note($"{id}/{seed} fall at {f.X:0},{f.Z:0}: {r.Along[k]:0} m from its source"); }
+            }
             // The floor: three lines across its middle (60 m apart), points 5 m apart over 60 % of its width, off the water:
             // 80 % of each line within 12 m (a biome's own knobs and mounds stand on the floor too).
             foreach (var (x, z, floor, half, dx, dz) in tr.Probes())
@@ -1166,9 +1176,10 @@ internal static class SimulationTests
                     if (spread > 12) { rough++; T.Note($"{id}/{seed} trough floor at {x:0},{z:0}: {spread:0.0} m across"); }
                 }
         }
-        T.Note($"{troughs} troughs in 4 worlds, {hanging} falls from hanging valleys, {heads} at a trough's head; {rough} of {floors} lines across floors spread over 12 m; {rising} reaches rising, {junctions} junctions apart");
+        T.Note($"{troughs} troughs in 4 worlds, {hanging} falls from hanging valleys, {heads} at a trough's head, {shortSources} from a river rising less than 800 m above; {rough} of {floors} lines across floors spread over 12 m; {rising} reaches rising, {junctions} junctions apart");
         T.Check(troughs >= 10 && hanging >= 6, $"troughs with hanging valleys ({troughs}, {hanging})");
         T.Check(rough == 0, $"flat floors ({rough} of {floors} lines rough)");
+        T.Check(shortSources == 0, $"no fall from a river rising just above it ({shortSources})");
         T.Check(rising == 0 && junctions == 0, $"rivers descend and meet ({rising}, {junctions})");
         T.Check(sameNetwork == worlds, $"the river network and lakes are as before ({sameNetwork}/{worlds})");
     }

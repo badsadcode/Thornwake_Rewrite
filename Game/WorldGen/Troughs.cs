@@ -12,7 +12,8 @@ namespace Thornwake.WorldGen;
 /// its head where the river falls in. Side rivers keep their level to the lip of the wall and fall onto the floor —
 /// the hanging valleys. Placed once in the plan after the rivers, canyons and cirques; the trough is ground under the
 /// walking-scale relief (<see cref="Carve"/>), the rivers' water is lowered in the plan, every lowering ends on the
-/// trough's floor (rivers stay strictly descending, lakes are untouched).
+/// trough's floor (rivers stay strictly descending, lakes are untouched). Revision 25 (D243): no fall from a river that
+/// rises less than 800 m above it.
 /// </summary>
 public sealed class Troughs
 {
@@ -32,6 +33,7 @@ public sealed class Troughs
     private readonly List<Trough> _troughs = new();
     private readonly List<Fall> _falls = new();
     private readonly double _minX, _minZ;
+    private readonly int _revision;
     private readonly int _gridSize;
     private readonly int[] _gridStart, _gridItems;
 
@@ -57,6 +59,7 @@ public sealed class Troughs
     {
         var macro = plan.Macro; var hy = plan.Hydrology; var p = plan.Profile;
         double sea = p.SeaLevel;
+        _revision = plan.Style.Revision;
         var rng = new RandomStream(LandformCatalog.Seed(plan.Manifest, LandformCatalog.Troughs));
         var mountain = macro.Channel(WorldPlan.MountainChannel);
         int mountainCells = 0;
@@ -241,6 +244,16 @@ public sealed class Troughs
             if (r.StartLake >= 0 || r.EndLake >= 0) return false;
             for (int k = 0; k < s.Length; k++)
                 if (r.Surface[k] - s[k] > 3 && !Inside(r.Points[k].X, r.Points[k].Z, r.Surface[k])) return false;
+            // Revision 25 (D243): a river that rises here (a source) runs 800 m or more before it falls in — a source just
+            // above the lip showed a river starting from nothing at the edge of the wall (Tom's dump 17:28:48, build 120).
+            if (_revision >= 25 && r.UpstreamReaches.Count == 0)
+                for (int k = 0; k < s.Length; k++)
+                    if (r.Surface[k] - s[k] > .5) { if (r.Along[k] < 800) return false; break; }
+            // (and no water lowered to within a metre of the sea: lowering carried on downstream pushed a river at the sea's
+            // level below it)
+            if (_revision >= 25)
+                for (int k = 0; k < s.Length; k++)
+                    if (s[k] < r.Surface[k] && s[k] < sea + 1) return false;
         }
         // Accepted: the plan's water takes the new levels; falls into the trough.
         var falls = new List<(int Reach, int Point, double Height, double To)>();

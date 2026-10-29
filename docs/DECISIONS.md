@@ -3708,6 +3708,20 @@ down as a glacier cut it — `Game/WorldGen/Troughs.cs`, placed in the plan afte
 * Not yet: a lake on the trough's floor (moraine-dammed), the waterfall's spray; fjords (no. 6) are troughs reaching
   the sea.
 
+## D243 — Terrain revision 25: no trough fall from a river rising just above it (2026-10-29)
+Tom, build 120 (dump 17:28:48, Balanced 7319 at −90333, 36355): "looks awesome, except for that suddenly starting
+river" — a hanging valley's river began 70 m before the lip and fell into the trough at once. It was a source: the
+plan's rivers begin where enough land drains to them, already 5 m wide (31 km² there), and a start beside the fall
+showed as water out of nothing at the wall's edge. Revision 25 refuses a trough when any river it takes in rises less
+than 800 m above where the trough lowers it (side rivers and the main river at the head alike). That trough is gone in
+revision 25 (Balanced 7319 gets one at 53627, −142425 instead, its hanging valley's river longer than 800 m above the
+lip); 18 troughs in the 4 test worlds (23 before), 11 falls from hanging valleys. Also refused: a trough whose
+lowering, carried on downstream, would take a river to within a metre of the sea (one did, in Vast 7319, below it). Test: no fall from a river within
+750 m of its source (the lip is a point before the first lowered one). Revision 24 frozen as *Build 120*
+(`terrain-build120.json`, selectable in *Terrain version*).
+Not changed: every river source still starts 5 m wide; a source fading in from a trickle would change rivers everywhere
+(ask Tom first).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

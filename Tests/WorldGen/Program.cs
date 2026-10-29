@@ -180,6 +180,25 @@ if (args.Contains("--junction-stats"))
     }
     return 0;
 }
+// --reach-probe=profile,seed,x,z[,rev]: the reach nearest a point: where it starts, what flows into it, and along it the
+// water level against the ground (to look at a river that seems to begin or end in the wrong place).
+if (args.FirstOrDefault(a => a.StartsWith("--reach-probe=")) is { } rp)
+{
+    var q = rp[14..].Split(',');
+    var s0 = CoreTests.Sampler(q[0], int.Parse(q[1]));
+    var s = q.Length > 4 ? new TerrainSampler(new WorldPlan(s0.Plan.Manifest, style: s0.Plan.Style with { Revision = int.Parse(q[4]) })) : s0;
+    double px = double.Parse(q[2], CultureInfo.InvariantCulture), pz = double.Parse(q[3], CultureInfo.InvariantCulture);
+    var hy = s.Plan.Hydrology;
+    if (!hy.NearestRiver(px, pz, 500, out var hit)) { Console.WriteLine("no river within 500 m"); return 0; }
+    var r = hy.Reaches[hit.Reach];
+    Console.WriteLine($"reach {r.Id}: {r.Points.Length} points, {r.Length:0} m, upstream [{string.Join(",", r.UpstreamReaches)}], down {r.DownstreamReach}, start lake {r.StartLake}, catchment {r.Catchment[0]:0.0}..{r.Catchment[^1]:0.0} km2");
+    for (int k = 0; k < r.Points.Length; k += Math.Max(1, r.Points.Length / 40))
+    {
+        var p = r.Points[k]; var t = s.Sample(p.X, p.Z);
+        Console.WriteLine($"  {r.Along[k],7:0} m  {p.X:0},{p.Z:0}  water {r.Surface[k]:0.0}  ground {t.Height:0.0}  {t.Water} {t.WaterLevel:0.0}  width {r.Width[k]:0.0}");
+    }
+    return 0;
+}
 // --trough-stats: river chains (following the river downstream across junctions) that drop 60 m or more within 3–9 km,
 // with side rivers joining on the way, away from lakes and the sea (glacial trough candidates).
 if (args.Contains("--trough-stats"))

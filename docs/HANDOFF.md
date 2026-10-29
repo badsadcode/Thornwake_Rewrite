@@ -5,6 +5,9 @@ Written for the next conversation (the previous one ran out of context). Everyth
 ## Where things stand
 * **Last build Tom has: 120** (v0.9.120, return point `2b75ae6`, `dist/Preview-120`): glacial troughs with hanging
   valleys (D242), terrain revision 24; launchers "Go to - glacial trough / hanging valley's fall (Balanced, seed 7319)".
+  Since build 120 on `main`: terrain revision 25 (D243, Tom's dump 17:28:48): no trough fall from a river rising
+  just above it. For build 121 move the trough launchers to Balanced 7319 `--at=52600,-143120` (view 1.57,0.02,8 the
+  floor and head; view 0,0.08,6 at fly height 15 the hanging valley's fall); the build 120 spot has no trough at 25.
   Build 119 (`2039f26`): cirques with a tarn (D241), canyon
   false cliffs and pools on cut ground fixed (D240), terrain revisions 22 and 23; launcher "Go to - cirque with a tarn".
   Build 118 (`863fda0`): waterfalls (D238), gorges and
