@@ -193,6 +193,9 @@ public sealed partial class TerrainSampler
         double depth = _p.OceanDepth * DetMath.Smooth(-land / .6);
         if (shore > 0 && coastDistance < 1e7) depth = Math.Max(depth, 25 * (1 - DetMath.Exp(-coastDistance * .035 * shore / 25)));
         double seabed = _p.SeaLevel - depth, plume = 0;
+        // Revision 27: islands and skerries off a fjord coast.
+        double isle = _troughs is { HasCoasts: true } ? _troughs.Skerries(x, z, land) : 0;
+        seabed += isle;
         if (_style.MouthBlend > 0) seabed = MouthChannel(x, z, seabed, -1, out plume);
         seabed += Edits.Delta(x, z);
         // Revision 16: the coastline wiggle can cut a small pocket of "sea" out of a lake basin near the coast; the
@@ -205,7 +208,7 @@ public sealed partial class TerrainSampler
                 return new(seabed, land, 0, 0, WaterKind.Lake, _hydrology.Lakes[lake].Level, lake, 0);
         }
         return seabed < _p.SeaLevel ? new(seabed, land, 0, 0, WaterKind.Ocean, _p.SeaLevel, -1, plume)
-            : new(seabed, land, 0, 0, WaterKind.None, double.NaN, -1);
+            : new(seabed, land, isle > 0 ? .5 : 0, 0, WaterKind.None, double.NaN, -1);
     }
 
     /// <summary>Stage 1c, continent: the land's base height from the eroded macro height and the shore ramp.</summary>

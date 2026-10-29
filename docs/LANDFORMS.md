@@ -103,14 +103,14 @@ Then the fantasy landforms Tom picks (section at the end).
   waterfall (no. 2). The largest of the river-related landforms.
 
 ### 6. Fjords
-* **Status**: a first version, terrain revision 26 (D244), not in a build yet: the sea 80–220 m deep up a trough 6–18 km
-  inland between raised mountain walls, a dry valley floor and a fall at the head, a sill at the mouth.
+* **Status**: fjord coasts, terrain revision 27 (D245), not in a build yet: a cold northern coast raised into a coastal
+  range in the plan (the climate sees it: taiga, rock), 3–4 fjords up its rivers with side arms, islands and skerries
+  off it. Revision 26 (D244, single fjords with their own raised walls) stays selectable.
 * **Rework (Tom, 2026-10-29)**: "kind of randomly placed in the forest area ... I want fjords to be more interesting to
-  explore. With varied terrain and different tree sizes". To do: fjord *coasts* — a stretch of cold, mountainous
-  coast chosen in the plan (high latitude, the mountains brought to the sea there), several fjords branching inland
-  with side arms, islands and skerries off the mouths, hanging valleys and falls off the walls, ledges with farms and
-  harbours at the heads, calmer water than the open sea. Tree heights that vary much more (now nearly every tree is the
-  same height): after the terrain is finished.
+  explore. With varied terrain and different tree sizes". Done in revision 27: fjord coasts, several fjords with side
+  arms, islands and skerries. Still to do: ledges with farms and harbours at the heads, more falls off the walls,
+  calmer water than the open sea; tree heights that vary much more (now nearly every tree is the same height): after
+  the terrain is finished.
 * **What**: a long arm of the sea reaching far inland between steep mountain walls, deep water close to the shore.
 * **Where**: mountain coasts in cold country, where deep U-shaped valleys (no. 5) reach the sea.
 * **Play**: sailing deep into the mountains (GAMEPLAY_DESIGN §11), harbours at the fjord's head, waterfalls off the

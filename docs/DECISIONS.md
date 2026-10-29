@@ -3749,6 +3749,33 @@ this." Fjords are troughs (D242, same module, `Troughs.cs`) that reach the sea:
   branching fjords, varied ground along them. Known: open-sea waves run up the fjord; the biome is whatever the climate
   gives (the first one stands in a swamp at 14 °C; climate is worked out after the landforms).
 
+## D245 — Terrain revision 27: fjord coasts (2026-10-29)
+Tom on revision 26: fjords "kind of randomly placed in the forest area ... I want fjords to be more interesting to
+explore", then "Rework fjords now". Fjords now come as fjord *coasts* (`Troughs.PlaceFjordCoasts`):
+* **Where**: a stretch of the coldest coast — a coastal cell among the northern 30 % (north is −Z, colder), 25–45 km
+  (× size) round it, with three or more river mouths; one per 350 × 350 km of land (1–6).
+* **A coastal range in the plan**: the plan's own height raster (and mountain share) is raised there — 500–900 m
+  (× size) in ridges and peaks a few kilometres apart, from 0.5 km inland to full by 3 km, fading out 10–28 km inland
+  and toward the stretch's ends, away from lakes — after the rivers, before the climate and biomes. So the climate
+  sees mountains (the first coast: taiga at 5 °C, where revision 26's fjord stood in a swamp at 14 °C), the ground is
+  mountain relief with rock, and the rivers run in deep valleys. (Revision 26 raised each fjord's walls on the ground
+  only, a block the climate never saw.)
+* **Several fjords**: every river mouth there with 20 km² or more draining to it, biggest first, 3.5 km apart: 8–22 km
+  up the river (to where it stands 300 m over the sea), 100–300 m deep, a sill at the mouth, a floor 500–900 m wide,
+  walls at slope 1.8–2.6; a river rising gently comes in without a fall. Refused fjords retry shorter and narrower (a
+  river rising just above a fall into it refused most of them, D243): 3–4 fjords a coast.
+* **Side arms**: up to two tributaries joining a fjord where it is 30 m or more deep become arms 3–9 km long, their floor
+  meeting the fjord's.
+* **Islands and skerries**: clusters of rocky islets up to ~10 km off the coast (the sea stage raises the sea floor
+  over a noise threshold, in patches; knobs and clefts on them), none in a fjord's channel out to sea (they closed
+  mouths off in the first try).
+* Test: 4 coasts in 4 worlds, all north of the middle, all with islands; 13 fjords and arms, the sea all along them;
+  25 of 26 walls 150 m or more over the sea; no river rising. Speed 1 209 ns per sample. *Terrain version* gains
+  *Fjords first (rev. 26)* (`terrain-r26.json`).
+* Not yet: calmer water in the fjords (the open sea's waves run up them), ledges and terraces on the walls (farms,
+  harbours), tree heights that vary much more (Tom: after the terrain is finished), the world map drawing the islands
+  (it shows the plan's raster).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

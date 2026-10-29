@@ -241,6 +241,7 @@ if (args.Contains("--landform-probes"))
                 int sides = tg.Falls.Count(f => f.Side);
                 Console.WriteLine($"{profile.Id}/{seed}: {tg.Count} troughs, {tg.FjordCount} fjords, {tg.Falls.Count} falls into them ({sides} from hanging valleys, highest {(tg.Falls.Count > 0 ? tg.Falls[0].Height : 0):0} m)");
                 foreach (var (tx, tz, tf, th, _, _) in tg.Probes().Take(3)) Console.WriteLine($"{profile.Id}/{seed} trough at {tx:0},{tz:0} floor {tf:0} m, half width {th:0} m");
+                foreach (var (cx, cz, cr) in tg.Coasts()) Console.WriteLine($"{profile.Id}/{seed} fjord coast round {cx:0},{cz:0}, radius {cr / 1000:0} km");
                 foreach (var (fx, fz, ff, fh) in tg.FjordLines())
                     Console.WriteLine($"{profile.Id}/{seed} fjord from {fx[0]:0},{fz[0]:0} by {fx[fx.Length * 2 / 3]:0},{fz[fz.Length * 2 / 3]:0} to the coast at {fx[^1]:0},{fz[^1]:0}, {fx.Length * 50 / 1000.0:0.0} km, deepest {ff.Min():0} m, half width {fh:0} m");
                 foreach (var f in tg.Falls.Take(4)) Console.WriteLine($"{profile.Id}/{seed}   fall at {f.X:0},{f.Z:0} {f.Height:0} m{(f.Side ? " (hanging valley)" : " (head)")}");

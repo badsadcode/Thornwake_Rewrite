@@ -20,7 +20,7 @@ internal static class SimulationTests
         T.Run("Landforms: canyons — raised land beside rivers that keep their course and level, no cliffs of its own (revisions 21, 22)", CanyonForms, filter);
         T.Run("Landforms: cirques hold closed-in tarns high in the mountains; rivers and lakes unchanged (revision 23)", CirqueForms, filter);
         T.Run("Landforms: glacial troughs — flat floors, side rivers falling from hanging valleys, water still descending (revisions 24, 25)", TroughForms, filter);
-        T.Run("Landforms: fjords — sea from the coast to the head's shore, between high walls (revision 26)", FjordForms, filter);
+        T.Run("Landforms: fjords — sea from the coast to the head's shore, between high walls; fjord coasts with islands (revisions 26, 27)", FjordForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -982,10 +982,11 @@ internal static class SimulationTests
         foreach (var (id, seed) in new[] { ("balanced", 42), ("mountainous", 42), ("archipelago", 7319) })
         {
             var s0 = CoreTests.Sampler(id, seed);
-            // (glacial troughs, revision 24, lower whole stretches of river and move junctions: judged by their own test)
+            // (glacial troughs and fjords, revisions 24, 26, lower whole stretches of river and move junctions: judged by their
+            // own tests)
             var s = new TerrainSampler(new WorldPlan(s0.Plan.Manifest, style: s0.Plan.Style with
             {
-                Landforms = new Dictionary<string, LandformSetting> { [LandformCatalog.Troughs.Id] = new(0, 1) },
+                Landforms = new Dictionary<string, LandformSetting> { [LandformCatalog.Troughs.Id] = new(0, 1), [LandformCatalog.Fjords.Id] = new(0, 1) },
             }));
             var hy = s.Plan.Hydrology;
             var h19 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 19 })).Plan.Hydrology;
@@ -1187,7 +1188,7 @@ internal static class SimulationTests
 
     private static void FjordForms()
     {
-        int fjords = 0, water = 0, dry = 0, gaps = 0, walls = 0, low = 0, rising = 0, worlds = 0;
+        int fjords = 0, water = 0, dry = 0, gaps = 0, walls = 0, low = 0, rising = 0, worlds = 0, coasts = 0, islands = 0, cold = 0;
         foreach (var (id, seed) in new[] { ("balanced", 7319), ("continental", 42), ("mountainous", 42), ("mountainous", 7319) })
         {
             var s = CoreTests.Sampler(id, seed);
@@ -1197,6 +1198,20 @@ internal static class SimulationTests
             int Rises(double[] v) { int n = 0; for (int k = 1; k < v.Length; k++) if (!(v[k] < v[k - 1] || v[k] == v[k - 1] && v[k] <= s.Plan.Profile.SeaLevel + 1e-9)) n++; return n; }
             for (int i = 0; i < hy.Reaches.Count; i++) if (Rises(hy.Reaches[i].Surface) > Rises(h25.Reaches[i].Surface)) rising++;
             if (s.Plan.Troughs is not { } tr) continue;
+            // Revision 27: fjord coasts in the north (cold), with islands off them.
+            foreach (var (cx, cz, cr) in tr.Coasts())
+            {
+                coasts++;
+                if (s.Plan.Climate.Latitude(cz) > s.Plan.Climate.Latitude(0)) cold++;
+                bool any = false;
+                for (double dz = -cr; dz <= cr && !any; dz += 250)
+                    for (double dx = -cr; dx <= cr && !any; dx += 250)
+                    {
+                        var t = s.Sample(cx + dx, cz + dz);
+                        if (t.Water == WaterKind.None && t.Land <= 0) any = true; // (dry ground the sea stage made: an island)
+                    }
+                if (any) islands++;
+            }
             foreach (var (xs, zs, floor, half) in tr.FjordLines())
             {
                 fjords++;
@@ -1221,8 +1236,9 @@ internal static class SimulationTests
                 }
             }
         }
-        T.Note($"{fjords} fjords in 4 worlds; {water} points along them sea, {dry} not; {low} of {walls} walls under 150 m; {rising} reaches rising");
-        T.Check(fjords >= 4, $"fjords placed ({fjords})");
+        T.Note($"{fjords} fjords in 4 worlds, {coasts} fjord coasts ({cold} north of the middle, {islands} with islands); {water} points along them sea, {dry} not; {low} of {walls} walls under 150 m; {rising} reaches rising");
+        T.Check(fjords >= 8, $"fjords placed ({fjords})");
+        T.Check(coasts >= 4 && cold == coasts && islands == coasts, $"fjord coasts in the north, with islands ({coasts}, {cold}, {islands})");
         T.Check(dry == 0, $"the sea along each fjord ({dry} points not)");
         T.Check(low <= walls / 10, $"high walls ({low} of {walls} low)");
         T.Check(rising == 0, $"rivers still descend ({rising})");
