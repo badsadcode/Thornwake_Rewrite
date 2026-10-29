@@ -3,7 +3,9 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 119** (v0.9.119, return point `2039f26`, `dist/Preview-119`): cirques with a tarn (D241), canyon
+* **Last build Tom has: 120** (v0.9.120, return point `2b75ae6`, `dist/Preview-120`): glacial troughs with hanging
+  valleys (D242), terrain revision 24; launchers "Go to - glacial trough / hanging valley's fall (Balanced, seed 7319)".
+  Build 119 (`2039f26`): cirques with a tarn (D241), canyon
   false cliffs and pools on cut ground fixed (D240), terrain revisions 22 and 23; launcher "Go to - cirque with a tarn".
   Build 118 (`863fda0`): waterfalls (D238), gorges and
   canyons (D239) as terrain revisions 20 and 21, wet sheen broken up (D236); launchers "Go to - waterfall (Balanced /

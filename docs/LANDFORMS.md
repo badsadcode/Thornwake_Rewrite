@@ -93,7 +93,7 @@ Then the fantasy landforms Tom picks (section at the end).
   ~2 km², 8 m depth and a share of the land — Tom's question about mountain ponds); the tarn spills into a stream.
 
 ### 5. Hanging valleys
-* **Status**: built, terrain revision 24 (D242), not in a build yet: glacial troughs (flat floors, steep U walls, an
+* **Status**: built, terrain revision 24 (D242), in build 120: glacial troughs (flat floors, steep U walls, an
   amphitheatre at the head where the main river falls in) with side rivers falling from their hanging valleys.
 * **What**: a side valley that ends high on the wall of a deeper main valley, its stream falling as a waterfall.
 * **Where**: where a side valley joins a deep mountain valley (glacial country, with no. 4).
