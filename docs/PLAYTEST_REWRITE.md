@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 120 — glacial troughs with hanging valleys (terrain revision 24)
+**Host and everyone joining need build 120** (versions must match to connect).
+* **Glacial troughs**: steep stretches of mountain river are now deep U-shaped valleys — a flat floor 300–700 m wide
+  between steep walls with rock, a rounded amphitheatre at the head where the river falls in. 3–5 in a 512–768 km
+  world. Try *Go to - glacial trough (Balanced, seed 7319)*. New world → Landforms → *Glacial troughs, hanging valleys*.
+* **Hanging valleys**: side streams keep their level to the trough's edge and fall to its floor through a notch in the
+  wall — try *Go to - hanging valley's fall (Balanced, seed 7319)*.
+* Your build 119 worlds keep their terrain; *Terrain version → Build 119* gives it to new worlds too.
+* Known: no lake on a trough's floor yet; the falls have no spray.
+
 ## New in build 119 — cirques with a tarn, the canyon fixed (terrain revisions 22 and 23)
 **Host and everyone joining need build 119** (versions must match to connect).
 * **Cirques with a tarn**: rocky bowls high on mountain flanks, mostly facing north, each with a small mountain lake —
