@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 121** (fjord coasts D245, single fjords D244, troughs without falls from rivers rising just above them D243 — terrain revisions 25–27) | `770a9e4` | Thornwake-Rewrite-Preview-121 (v0.9.121) | Versions must match to connect; *Terrain version → Build 120* keeps revision 24 (also *Troughs fixed (rev. 25)*, *Fjords first (rev. 26)*) — build 120 = `2b75ae6` |
 | **Build 120** (glacial troughs with hanging valleys D242 — terrain revision 24) | `2b75ae6` | Thornwake-Rewrite-Preview-120 (v0.9.120) | Versions must match to connect; *Terrain version → Build 119* keeps revision 23 — build 119 = `2039f26` |
 | **Build 119** (cirques with a tarn D241; canyons without false cliffs, no pools on cut ground D240 — terrain revisions 22, 23) | `2039f26` | Thornwake-Rewrite-Preview-119 (v0.9.119) | Versions must match to connect; *Terrain version → Build 118* keeps revision 21 — build 118 = `863fda0` |
 | **Build 118** (waterfalls D238, gorges and canyons D239 — terrain revisions 20 and 21; wet sheen D236) | `863fda0` | Thornwake-Rewrite-Preview-118 (v0.9.118) | Versions must match to connect; *Terrain version → Build 117* keeps revision 19; *Wet sheen → build 117 (even)* — build 117 = `ff1cfe9` |

@@ -94,7 +94,7 @@ Then the fantasy landforms Tom picks (section at the end).
 
 ### 5. Hanging valleys
 * **Status**: built, terrain revision 24 (D242), in build 120; no fall from a river rising just above it in revision 25
-  (D243), not in a build yet: glacial troughs (flat floors, steep U walls, an
+  (D243), in build 121: glacial troughs (flat floors, steep U walls, an
   amphitheatre at the head where the main river falls in) with side rivers falling from their hanging valleys.
 * **What**: a side valley that ends high on the wall of a deeper main valley, its stream falling as a waterfall.
 * **Where**: where a side valley joins a deep mountain valley (glacial country, with no. 4).
@@ -103,7 +103,7 @@ Then the fantasy landforms Tom picks (section at the end).
   waterfall (no. 2). The largest of the river-related landforms.
 
 ### 6. Fjords
-* **Status**: fjord coasts, terrain revision 27 (D245), not in a build yet: a cold northern coast raised into a coastal
+* **Status**: fjord coasts, terrain revision 27 (D245), in build 121: a cold northern coast raised into a coastal
   range in the plan (the climate sees it: taiga, rock), 3–4 fjords up its rivers with side arms, islands and skerries
   off it. Revision 26 (D244, single fjords with their own raised walls) stays selectable.
 * **Rework (Tom, 2026-10-29)**: "kind of randomly placed in the forest area ... I want fjords to be more interesting to

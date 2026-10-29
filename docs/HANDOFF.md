@@ -3,11 +3,12 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 120** (v0.9.120, return point `2b75ae6`, `dist/Preview-120`): glacial troughs with hanging
-  valleys (D242), terrain revision 24; launchers "Go to - glacial trough / hanging valley's fall (Balanced, seed 7319)".
-  Since build 120 on `main`: terrain revision 25 (D243, Tom's dump 17:28:48): no trough fall from a river rising
-  just above it. For build 121 move the trough launchers to Balanced 7319 `--at=52600,-143120` (view 1.57,0.02,8 the
-  floor and head; view 0,0.08,6 at fly height 15 the hanging valley's fall); the build 120 spot has no trough at 25.
+* **Last build Tom has: 121** (v0.9.121, return point `770a9e4`, `dist/Preview-121`): fjord coasts (D245, terrain
+  revision 27: a cold northern coast raised into a range in the plan, 3–4 fjords with side arms, skerries), single
+  fjords (D244, rev. 26), troughs without falls from rivers rising just above them (D243, rev. 25); launchers "Go to -
+  glacial trough / hanging valley's fall / down a fjord to the sea / on a fjord, toward its mouth (Balanced, seed 7319)".
+  Open on fjords: calmer water in them, ledges on the walls, tree heights; Tom's voxel landform idea (LANDFORMS.md).
+  Build 120 (`2b75ae6`): glacial troughs with hanging valleys (D242), terrain revision 24.
   Build 119 (`2039f26`): cirques with a tarn (D241), canyon
   false cliffs and pools on cut ground fixed (D240), terrain revisions 22 and 23; launcher "Go to - cirque with a tarn".
   Build 118 (`863fda0`): waterfalls (D238), gorges and
