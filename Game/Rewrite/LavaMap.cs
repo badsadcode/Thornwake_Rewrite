@@ -14,8 +14,8 @@ namespace Thornwake.Rewrite;
 /// b, a = which way it moves (× 0.5 + 0.5; its length the speed, D252).
 /// The terrain shader draws it glowing (TerrainBody.gdshaderinc: globals <c>lava_map</c>, <c>lava_frame</c>). Glowing
 /// ground lights nothing round it in this renderer, so orange lights hang over the lava (D251): a strong one over the
-/// lava lake (distance^-0.35), and 15 m over the fresh flows every 150 m (distance^-0.5, the nearest three casting
-/// shadows), the 16 nearest the camera lit — the crater walls, the rocks beside a flow and the haze take the glow. Setting <c>fx.lava</c>: off leaves the lava fields as dark rock.
+/// lava lake (distance^-0.35), and 15 m over the fresh flows every 150 m (distance^-0.5, the nearest casting
+/// shadows), the 16 nearest the camera lit — the crater walls, the rocks beside a flow take the glow; only the lake's lights the haze.
 /// </summary>
 public sealed class LavaMap
 {
@@ -23,7 +23,7 @@ public sealed class LavaMap
     public const double Size = 16000;
     private const int Lights = 16;
     private const double LightSpacing = 150;
-    private const int ShadowLights = 3;
+    private const int ShadowLights = 1;
 
     private readonly ImageTexture _texture;
     private readonly OmniLight3D[] _lights = new OmniLight3D[Lights];
@@ -102,13 +102,15 @@ public sealed class LavaMap
             var p = chosen[i];
             // Flow lights close over the lava (10 m), every 150 m, falling off faster (D253, Noor: "nearby lava should
             // illuminate surrounding rocks with a softer orange glow ... not uniformly"): warm on the rocks beside a flow,
-            // fading over a few hundred metres; the nearest three cast shadows, so the rocks throw irregular shadows.
+            // fading over a few hundred metres; the nearest casts shadows (three cost too much: six scene renders each), so the rocks throw irregular shadows.
             // (Godot's omni light falls off as distance^-attenuation: at 1.2 a light 300 m off gave the crater walls 2 % of it)
             light.Position = new Vector3((float)(p.X - originX), (float)p.Y + (p.Lake ? 80 : 15), (float)(p.Z - originZ));
             light.OmniAttenuation = p.Lake ? .35f : .5f; // (0.8 lit only a few metres round each)
             light.LightEnergy = p.Lake ? 3.5f : (float)(4.5 * p.Heat);
             light.OmniRange = p.Lake ? 1400 : 450;
-            light.LightVolumetricFogEnergy = p.Lake ? 1.2f : .6f; // (3 turned the whole sky over the crater red)
+            // (the haze over the crater glows from the lake only, gently: 1.2 turned a cloud the crater sat in into a red wash
+            // in build 124's first package, and fog lit by every flow light cost frames)
+            light.LightVolumetricFogEnergy = p.Lake ? .3f : 0f;
             light.ShadowEnabled = !p.Lake && i <= ShadowLights;
             light.Visible = true;
         }

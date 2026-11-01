@@ -87,7 +87,8 @@ milestone M6), caves.
   kilometres away, and the lava lights the rocks round it (the crater's walls, the flank beside a flow).
 * **Heat shimmer**: the air above the lava wobbles the view behind it.
 * Try *Go to - lava lake (Balanced, seed 7319)*, *Go to - lava flow at night (Balanced, seed 7319)* and *Go to - onto a
-  lava flow (Balanced, seed 7319)*. The volcano from *Go to - volcano with lava flows* is an active one too.
+  lava flow (Balanced, seed 7319)* (they clear the clouds for that visit: the crater sits at the cloud base). The volcano
+  from *Go to - volcano with lava flows* is an active one too.
 * Settings: *Lighting and effects → Lava* (glowing / off: dark rock) and *Heat shimmer* (on / off). Near an active
   volcano the lava lights cost a little; the shimmer runs only within 12 km of one.
 * Your build 123 worlds keep their terrain; *Terrain version → Build 123* gives it to new worlds too.

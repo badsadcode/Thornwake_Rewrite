@@ -3959,6 +3959,13 @@ Noor's last point (D253), Tom: "Okay let's go." `HeatShimmer.gdshader`, a full-s
   that copy over the game's haze passes — brighter bands above the flow (a test with the wobble at zero showed it).
 * Difference image (on − off): only the flow and the air just above it change.
 
+## D256 — Build 124's first package: the lava light in a cloud, its cost (2026-11-01)
+The packaged build at the lava-lake launcher, with Tom's weather on: the crater (2,280 m) sat inside the cloud layer
+(base ~2,260 m) at night, and the lake's light (fog energy 1.2) turned the cloud into a red wash hiding the lava; 14
+FPS against 19 with lava off. The captures had switched the weather off. Now: only the lake's light lights the haze,
+at 0.3 (a soft red glow in the cloud), the flow lights none; only the nearest flow light casts shadows (three: six
+scene renders each). 22 FPS there. The lava launchers calm the weather for their session (`--set`, never saved).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
