@@ -3,7 +3,11 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 122** (v0.9.122, return point `6defaf6`, `dist/Preview-122`): volcanoes and calderas (D246,
+* **Last build Tom has: 123** (v0.9.123, return point `cf3d975`, `dist/Preview-123`): volcano detail (D248, terrain
+  revision 30: cinder cones, ravines, lava fields, rim outcrops); the whole test suite passes again (D249: the runner
+  stops at its first failure — record fingerprints, then run it to the end). Next asked by Tom: glowing molten lava,
+  later eruptions (a look of their own: his call).
+  Build 122 (v0.9.122, return point `6defaf6`, `dist/Preview-122`): volcanoes and calderas (D246,
   tuned D247; terrain revisions 28, 29); launchers "Go to - volcano with lava flows / caldera lake with an island /
   snowy volcano with a collapsed side". Volcanoes rise before the rivers, so at revision 29 rivers and the landforms
   placed along them (canyons, troughs, cirques) come out elsewhere: their launchers keep revision 27.

@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 123** (volcano detail D248; Build 122's terrain restored, whole test suite D249 — terrain revision 30) | `cf3d975` | Thornwake-Rewrite-Preview-123 (v0.9.123) | Versions must match to connect; *Terrain version → Build 122* keeps revision 29 — build 122 = `6defaf6` |
 | **Build 122** (volcanoes and calderas D246, tuned D247 — terrain revisions 28, 29) | `6defaf6` | Thornwake-Rewrite-Preview-122 (v0.9.122) | Versions must match to connect; *Terrain version → Build 121* keeps revision 27 (also *Volcanoes first (rev. 28)*) — build 121 = `770a9e4` |
 | **Build 121** (fjord coasts D245, single fjords D244, troughs without falls from rivers rising just above them D243 — terrain revisions 25–27) | `770a9e4` | Thornwake-Rewrite-Preview-121 (v0.9.121) | Versions must match to connect; *Terrain version → Build 120* keeps revision 24 (also *Troughs fixed (rev. 25)*, *Fjords first (rev. 26)*) — build 120 = `2b75ae6` |
 | **Build 120** (glacial troughs with hanging valleys D242 — terrain revision 24) | `2b75ae6` | Thornwake-Rewrite-Preview-120 (v0.9.120) | Versions must match to connect; *Terrain version → Build 119* keeps revision 23 — build 119 = `2039f26` |
