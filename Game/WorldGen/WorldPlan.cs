@@ -167,6 +167,7 @@ public sealed class WorldPlan
         Hydrology.BuildMilliseconds = hydroTimer.Elapsed.TotalMilliseconds;
         for (int k = 0; k < height.Length; k++) heightRaster[k] = (float)height[k];
         Hydrology.RefineSurfaces(Style);
+        volcanoes?.SetLakes(Hydrology, p.SeaLevel); // (revision 29: islands over their caldera lake's real level)
         // Canyons (revision 21): placed on the final rivers, before climate (the raise is walking-scale ground only).
         if (Style.Revision >= LandformCatalog.Canyons.Since && !Style.Landform(LandformCatalog.Canyons.Id).Off)
             Canyons = new Canyons(this, Style.Landform(LandformCatalog.Canyons.Id));

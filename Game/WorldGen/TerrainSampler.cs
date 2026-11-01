@@ -154,6 +154,10 @@ public sealed partial class TerrainSampler
         Lakes(x, z, ref height, ref water, ref level, ref body, ref lakePlume, ref lakeCells);
         // Revision 23: a cirque's tarn, still water of its own (drawn as a pond), where nothing else is water.
         if (_cirques != null && water == WaterKind.None && _cirques.Tarn(x, z, height, out double tarn)) { water = WaterKind.Pond; level = tarn; }
+        // Revision 29: a caldera's lake fills all of its floor below the water.
+        if (_volcanoes != null && water == WaterKind.None && _volcanoes.InCaldera(x, z, out double cx, out double cz)
+            && _hydrology.LakeNear(cx, cz) is >= 0 and var caldera && height < _hydrology.Lakes[caldera].Level - _p.SeaLevel)
+        { water = WaterKind.Lake; level = _hydrology.Lakes[caldera].Level; body = caldera; }
         // Revision 28: a quiet volcano's crater lake.
         if (_volcanoes != null && water == WaterKind.None && _volcanoes.CraterLake(x, z, height, out double crater)) { water = WaterKind.Pond; level = crater; }
         // Revision 22: no pools where a river has cut the ground down by over 2 m (valley sides, canyon and gorge walls),

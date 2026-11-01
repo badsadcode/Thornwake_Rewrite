@@ -21,7 +21,7 @@ internal static class SimulationTests
         T.Run("Landforms: cirques hold closed-in tarns high in the mountains; rivers and lakes unchanged (revision 23)", CirqueForms, filter);
         T.Run("Landforms: glacial troughs — flat floors, side rivers falling from hanging valleys, water still descending (revisions 24, 25)", TroughForms, filter);
         T.Run("Landforms: fjords — sea from the coast to the head's shore, between high walls; fjord coasts with islands (revisions 26, 27)", FjordForms, filter);
-        T.Run("Landforms: volcanoes — cones over the land, calderas holding a lake, crater lakes closed in, volcanic ground (revision 28)", VolcanoForms, filter);
+        T.Run("Landforms: volcanoes — cones over the land, calderas holding a lake, crater lakes closed in, volcanic ground (revisions 28, 29)", VolcanoForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1247,8 +1247,8 @@ internal static class SimulationTests
 
     private static void VolcanoForms()
     {
-        int cones = 0, calderas = 0, tall = 0, lakes = 0, craterWater = 0, leaks = 0, volcanic = 0;
-        foreach (var (id, seed) in new[] { ("balanced", 7319), ("continental", 42), ("mountainous", 42), ("archipelago", 42) })
+        int cones = 0, calderas = 0, tall = 0, lakes = 0, craterWater = 0, leaks = 0, volcanic = 0, holes = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 7319), ("continental", 42), ("mountainous", 42), ("archipelago", 42), ("mountainous", 7319), ("balanced", 42) })
         {
             var s = CoreTests.Sampler(id, seed);
             if (s.Plan.PlanLandforms.OfType<Volcanoes>().FirstOrDefault() is not { } vo) continue;
@@ -1262,7 +1262,17 @@ internal static class SimulationTests
                 if (caldera)
                 {
                     calderas++;
-                    if (s.Sample(x, z).Water == WaterKind.Lake) lakes++;
+                    var c0 = s.Sample(x, z);
+                    if (c0.Water != WaterKind.Lake) continue;
+                    lakes++;
+                    // Revision 29: no dry ground below the lake's level inside the caldera (the plan lake reached only round
+                    // its cells).
+                    for (double dz = -radius * .3; dz <= radius * .3; dz += 150)
+                        for (double dx = -radius * .3; dx <= radius * .3; dx += 150)
+                        {
+                            var t = s.Sample(x + dx, z + dz);
+                            if (t.Water == WaterKind.None && t.Height < c0.WaterLevel - .5) holes++;
+                        }
                     continue;
                 }
                 cones++;
@@ -1286,11 +1296,12 @@ internal static class SimulationTests
                     }
             }
         }
-        T.Note($"{cones} cones ({tall} standing over 60 % of their height above their foot), {calderas} calderas ({lakes} holding a lake), {craterWater} crater lake points, {leaks} dry neighbours below the water, {volcanic} volcanic in the middle");
+        T.Note($"{cones} cones ({tall} standing over 60 % of their height above their foot), {calderas} calderas ({lakes} holding a lake), {craterWater} crater lake points, {leaks} dry neighbours below the water, {holes} dry points below a caldera lake, {volcanic} volcanic in the middle");
         T.Check(cones >= 2 && calderas >= 2, $"cones and calderas placed ({cones}, {calderas})");
         T.Check(tall == cones, $"cones rise over the land ({tall} of {cones})");
         T.Check(lakes == calderas, $"every caldera holds a lake ({lakes} of {calderas})");
-        T.Check(leaks == 0, $"crater lakes closed in ({leaks})");
+        T.Check(craterWater > 0 && leaks == 0, $"crater lakes closed in ({craterWater}, {leaks})");
+        T.Check(holes == 0, $"caldera lakes fill their floor ({holes})");
         T.Check(volcanic == cones + calderas, $"volcanic ground on them ({volcanic} of {cones + calderas})");
     }
 

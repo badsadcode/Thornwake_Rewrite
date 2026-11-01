@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Thornwake.WorldGen;
 
@@ -9,7 +10,9 @@ namespace Thornwake.WorldGen;
 /// what the raster's cells cannot hold — the sharp summit, the crater, the caldera's cliffs, lava flows — is added at
 /// walking scale (<see cref="Ground"/>: the exact shape minus what the raster holds of it). A caldera's basin is a
 /// plan lake (the hydrology fills it to the breach in its rim, where its river leaves); a quiet cone's crater holds a
-/// small lake of its own (<see cref="CraterLake"/>). The volcanic biome is drawn onto them (BiomeMap).
+/// small lake of its own (<see cref="CraterLake"/>). The volcanic biome is drawn onto them (BiomeMap). Revision 29
+/// (D247, Tom: "tune first"): lava flows that follow the ground, taller cones (some with a collapsed side), gullies of
+/// different depths and lengths, calderas with taller cliffs, islands and older, worn rims.
 /// </summary>
 public sealed class Volcanoes : PlanLandform
 {
@@ -25,12 +28,39 @@ public sealed class Volcanoes : PlanLandform
         public (double Angle, double From, double To, double Width, double Thickness)[] Flows = Array.Empty<(double, double, double, double, double)>();
         public ulong Seed;
         public double LakeLevel = double.NaN;
-        /// <summary>The level it is built on: the land's mean height round its foot, before it was raised.</summary>
-        public double Base;
+        /// <summary>Revision 29's shapes (the fields below are used only then).</summary>
+        public bool Tuned;
+        /// <summary>A cone's collapsed side: its direction and how much of the height it took (0 none).</summary>
+        public double CollapseX, CollapseZ, Collapse;
+        /// <summary>A caldera's island cone: where (offset from the middle), its radius, its height over the floor; and
+        /// whether its rim is old and worn.</summary>
+        public double IslandX, IslandZ, IslandRadius, IslandHeight, IslandAbove;
+        public bool Worn;
+        /// <summary>Lava flows traced down the ground (revision 29), once the plan is final.</summary>
+        public List<Flow>? Traced;
+        /// <summary>The bounds of all its traced flows (a quick reject for points far from them).</summary>
+        public double FlowMinX = double.MaxValue, FlowMinZ = double.MaxValue, FlowMaxX = double.MinValue, FlowMaxZ = double.MinValue;
+        public (double Angle, double Length, double Width, double Thickness)[] FlowStarts = Array.Empty<(double, double, double, double)>();
+        /// <summary>The level it is built on: the land's mean height round its foot, before it was raised; revision 29: and
+        /// its tilt (m per m along X and Z: a level base cut a moat into a slope).</summary>
+        public double Base, TiltX, TiltZ;
+    }
+
+    /// <summary>A lava flow traced down the ground: its line every 40 m, its width there, its thickness, and the bounds of
+    /// each run of 10 segments (for a quick reject).</summary>
+    private sealed class Flow
+    {
+        public required double[] X, Z, W;
+        public required double Thickness;
+        public required (double MinX, double MinZ, double MaxX, double MaxZ)[] Chunks;
+        public double MinX, MinZ, MaxX, MaxZ;
+        public ulong Seed;
     }
 
     private readonly int _revision;
     private readonly List<Volcano> _volcanoes = new();
+    private readonly object _traceLock = new();
+    private volatile bool _traced;
     private MacroRaster? _macro, _raise;
     private double _sea;
 
@@ -45,6 +75,14 @@ public sealed class Volcanoes : PlanLandform
     public IEnumerable<(double X, double Z, double Radius, double Height, bool Caldera)> Probes()
     {
         foreach (var v in _volcanoes) yield return (v.X, v.Z, v.Radius, v.Height, v.Caldera);
+    }
+
+    /// <summary>Each volcano's middle and what it has (revision 29: a collapsed side, an island, a worn rim) (captures).</summary>
+    public IEnumerable<(double X, double Z, string Kind)> Kinds()
+    {
+        foreach (var v in _volcanoes)
+            yield return (v.X, v.Z, string.Join(", ", new[] { v.Caldera ? "caldera" : "cone", v.Collapse > 0 ? "collapsed side" : "",
+                v.IslandRadius > 0 ? "island" : "", v.Worn ? "worn rim" : "", v.Lake ? "crater lake" : "" }.Where(k => k.Length > 0)));
     }
 
     public override void Shape(MacroRaster macro, WorldManifest manifest, LandformSetting setting)
@@ -69,6 +107,16 @@ public sealed class Volcanoes : PlanLandform
                 sum += macro.Sample(WorldPlan.HeightChannel, v.X + Math.Cos(a) * v.Radius * 1.05, v.Z + Math.Sin(a) * v.Radius * 1.05);
             }
             v.Base = sum / 16;
+            if (v.Tuned)
+            {
+                double sx = 0, sz = 0;
+                for (int d = 0; d < 16; d++)
+                {
+                    double a = d * Math.Tau / 16, h = macro.Sample(WorldPlan.HeightChannel, v.X + Math.Cos(a) * v.Radius * 1.05, v.Z + Math.Sin(a) * v.Radius * 1.05);
+                    sx += (h - v.Base) * Math.Cos(a); sz += (h - v.Base) * Math.Sin(a);
+                }
+                v.TiltX = sx / 8 / (v.Radius * 1.05); v.TiltZ = sz / 8 / (v.Radius * 1.05); // (least squares on the ring)
+            }
         }
         _raise = new MacroRaster(macro.Size, macro.MinX, macro.MinZ, macro.Cell, 1);
         var raised = _raise.Channel(0);
@@ -83,7 +131,8 @@ public sealed class Volcanoes : PlanLandform
                     if (w <= 0) continue;
                     double shape = Profile(v, x, z, false, out _);
                     raised[k] = (float)(w * shape);
-                    height[k] = (float)(height[k] * (1 - w) + w * (v.Base + shape));
+                    double level = v.Base + v.TiltX * (x - v.X) + v.TiltZ * (z - v.Z);
+                    height[k] = (float)(height[k] * (1 - w) + w * (level + shape));
                     mountain[k] = (float)(mountain[k] * (1 - w) + w * .2 * shape / v.Height);
                 }
             }
@@ -127,6 +176,7 @@ public sealed class Volcanoes : PlanLandform
     private static double Weight(Volcano v, double x, double z)
     {
         double r = Math.Sqrt(Sq(x - v.X) + Sq(z - v.Z));
+        if (v.Tuned) return 1 - DetMath.Smooth((r - v.Radius * .6) / (v.Radius * .45)); // (revision 29: a wider blend)
         return 1 - DetMath.Smooth((r - v.Radius * .75) / (v.Radius * .25));
     }
 
@@ -160,7 +210,8 @@ public sealed class Volcanoes : PlanLandform
             if (from.Count == 0) continue;
             int k = from[rng.Int(from.Count)];
             var v = new Volcano { X = macro.CellX(k % macro.Size), Z = macro.CellZ(k / macro.Size), Caldera = rng.Unit() < .3, Seed = rng.Next() };
-            if (v.Caldera)
+            if (_revision >= 29) TunedShape(v, rng, setting);
+            else if (v.Caldera)
             {
                 v.Height = rng.Between(500, 1100) * setting.Size; v.Radius = rng.Between(9000, 16000) * setting.Size; v.Power = 1.5;
                 v.Inner = rng.Between(2500, 5000) * setting.Size; v.Depth = rng.Between(250, 500) * setting.Size;
@@ -189,6 +240,47 @@ public sealed class Volcanoes : PlanLandform
     }
 
     /// <summary>
+    /// Revision 29's volcanoes. Cones: 1,200–3,000 m (× size; the tallest stand over the snow line), slopes 1 in 3.5–5,
+    /// steeper toward the top (power 2.2–2.8); three in ten with a collapsed side — a horseshoe scar from the summit taking
+    /// 20–35 % of the height on one side (no crater lake: it would run out); 3–6 lava flows 2–7 km long (× size), traced
+    /// down the ground. Calderas: cliffs 350–700 m deep; an island cone in the lake in 45 of 100 (400–900 m round, 30–150 m
+    /// over the water); an old, worn rim in four of ten (its height wandering by a third of the depth, gentler walls).
+    /// </summary>
+    private static void TunedShape(Volcano v, RandomStream rng, LandformSetting setting)
+    {
+        v.Tuned = true;
+        if (v.Caldera)
+        {
+            v.Height = rng.Between(500, 1100) * setting.Size; v.Radius = rng.Between(9000, 16000) * setting.Size; v.Power = 1.5;
+            v.Inner = rng.Between(2500, 5000) * setting.Size; v.Depth = rng.Between(350, 700) * setting.Size;
+            double a = rng.Unit() * Math.Tau;
+            v.BreachX = Math.Cos(a); v.BreachZ = Math.Sin(a); v.Breach = rng.Between(.55, .7);
+            if (rng.Unit() < .45)
+            {
+                double ia = rng.Unit() * Math.Tau, id = rng.Between(0, .3) * v.Inner;
+                v.IslandX = Math.Cos(ia) * id; v.IslandZ = Math.Sin(ia) * id;
+                v.IslandRadius = rng.Between(400, 900) * setting.Size;
+                v.IslandAbove = rng.Between(30, 150);
+                v.IslandHeight = v.Depth * (1 - v.Breach) + v.IslandAbove; // (set from the lake's level once it is known: SetLakes)
+            }
+            v.Worn = rng.Unit() < .4;
+            return;
+        }
+        v.Height = rng.Between(1200, 3000) * setting.Size; v.Radius = v.Height * rng.Between(3.5, 5); v.Power = rng.Between(2.2, 2.8);
+        v.Inner = rng.Between(250, 600) * setting.Size; v.Depth = rng.Between(80, 200) * setting.Size;
+        if (rng.Unit() < .3)
+        {
+            double a = rng.Unit() * Math.Tau;
+            v.CollapseX = Math.Cos(a); v.CollapseZ = Math.Sin(a); v.Collapse = rng.Between(.2, .35);
+        }
+        v.Lake = v.Collapse == 0 && rng.Unit() < .6;
+        int flows = 3 + rng.Int(4);
+        v.FlowStarts = new (double, double, double, double)[flows];
+        for (int f = 0; f < flows; f++)
+            v.FlowStarts[f] = (rng.Unit() * Math.Tau, rng.Between(2000, 7000) * setting.Size, rng.Between(150, 350) * setting.Size, rng.Between(6, 15));
+    }
+
+    /// <summary>
     /// The volcano's height over the land it stands on (m) at a point: <paramref name="exact"/> with its crater or
     /// caldera cliffs (walking scale), otherwise the shape the raster holds (no crater; the caldera's basin rounded by
     /// the cells anyway). The outline wanders ±6 % (a cone is never a perfect circle). <paramref name="steep"/>: how
@@ -206,6 +298,26 @@ public sealed class Volcanoes : PlanLandform
             double u = Math.Max(0, (r - v.Inner) / (v.Radius - v.Inner));
             double cone = v.Height * Math.Pow(1 - u, v.Power);
             steep = DetMath.Smooth((v.Power * v.Height / (v.Radius - v.Inner) * Math.Pow(1 - u, v.Power - 1) - .45) / .3);
+            if (v.Collapse > 0)
+            {
+                // A collapsed side (revision 29): a horseshoe amphitheatre — a bowl cut into the summit, its floor sloping
+                // away downhill, so it opens on the low side and its head is a steep curved wall (a wedge cut along two
+                // radial lines first looked machined). The crater is gone with it there.
+                if (r < v.Inner && exact) cone = Math.Min(cone, v.Height - v.Depth * (1 - Sq(r / v.Inner)));
+                double rs = v.Radius * .18, px = v.X + v.CollapseX * rs * .7, pz = v.Z + v.CollapseZ * rs * .7;
+                double d = Math.Sqrt(Sq(x - px) + Sq(z - pz)) * (1 + .12 * Noise.Fbm(x, z, rs * .5, 2, 0, v.Seed + 31));
+                double scar = 1 - DetMath.Smooth((d - rs * .85) / (rs * .3));
+                if (scar > 0)
+                {
+                    double down = (x - px) * v.CollapseX + (z - pz) * v.CollapseZ;
+                    double atP = v.Height * Math.Pow(1 - Math.Max(0, (rs * .7 - v.Inner) / (v.Radius - v.Inner)), v.Power);
+                    double scarFloor = atP - v.Collapse * v.Height - .3 * down;
+                    double cut = scar * Math.Max(0, cone - scarFloor);
+                    steep = Math.Max(steep, scar * DetMath.Smooth((cut - 40) / 120) * DetMath.Smooth(-down / rs + .2));
+                    cone -= cut;
+                }
+                return cone;
+            }
             if (r >= v.Inner || !exact) return cone;
             // The crater: a bowl under a sharp rim.
             double q = r / v.Inner;
@@ -220,18 +332,32 @@ public sealed class Volcanoes : PlanLandform
         if (r0 > 1e-6)
         {
             double along = (dx * v.BreachX + dz * v.BreachZ) / r0;
-            breach = v.Breach * DetMath.Smooth((along - .93) / .06) * (1 - DetMath.Smooth((r - v.Inner * 1.6) / (v.Inner * .5)));
+            breach = v.Tuned
+                ? v.Breach * DetMath.Smooth((along - .82) / .14) * (1 - DetMath.Smooth((r - v.Inner * 1.6) / (v.Inner * .6))) // (wider: a narrow one was a slot)
+                : v.Breach * DetMath.Smooth((along - .93) / .06) * (1 - DetMath.Smooth((r - v.Inner * 1.6) / (v.Inner * .5)));
         }
         double top = v.Height - v.Depth * breach;
+        if (v.Worn) top -= v.Depth * .33 * DetMath.Smooth(.5 + Noise.Fbm(x, z, v.Inner * .5, 2, 0, v.Seed + 21)); // (an old rim, worn down unevenly)
         if (r >= v.Inner)
         {
             double u = (r - v.Inner) / (v.Radius - v.Inner);
             return Math.Min(top, v.Height * Math.Pow(1 - u, v.Power) + (top - v.Height) * (1 - u));
         }
-        double wall = v.Depth * (exact ? 1 : 3), floor = v.Height - v.Depth;
+        double wall = v.Depth * (exact ? v.Worn ? 2.2 : 1 : 3), floor = v.Height - v.Depth;
         double t = DetMath.Smooth((r - (v.Inner - wall)) / wall);
-        steep = exact ? DetMath.Smooth(1 - Math.Abs(t - .5) * 2.5) : 0;
-        return floor + (top - floor) * t;
+        steep = exact ? DetMath.Smooth(1 - Math.Abs(t - .5) * (v.Worn ? 4 : 2.5)) : 0;
+        double inside = floor + (top - floor) * t;
+        if (v.IslandRadius > 0 && exact)
+        {
+            // An island cone in the lake (revision 29), a small crater at its top.
+            double ir = Math.Sqrt(Sq(dx - v.IslandX) + Sq(dz - v.IslandZ)) / v.IslandRadius;
+            if (ir < 1)
+            {
+                double island = floor + v.IslandHeight * Math.Pow(1 - ir, 1.6) - v.IslandHeight * .15 * (1 - DetMath.Smooth(ir / .12));
+                if (island > inside) { inside = island; steep = Math.Max(steep, .5 * DetMath.Smooth((.6 - ir) / .3)); }
+            }
+        }
+        return inside;
     }
 
     /// <summary>
@@ -257,7 +383,25 @@ public sealed class Volcanoes : PlanLandform
             // Gullies: 18–30 V-shaped channels round the cone (a smooth cone read as a mound), 10–30 m deep, from below the
             // crater to the lower slopes, wavering, spreading apart downhill (noise lines drew hundreds of thin cracks).
             double zone = DetMath.Smooth((u - .06) / .08) * (1 - DetMath.Smooth((u - .6) / .3));
-            if (zone > 0)
+            if (v.Tuned)
+            {
+                // Revision 29: gullies of different depths and lengths, some fading out, a second, shallower set between
+                // them lower down (an even starburst before).
+                if (u > .05 && u < .95)
+                {
+                    int count = 16 + (int)(v.Seed % 11);
+                    double warp = 3 * Noise.Fbm(x, z, 2200, 2, 0, v.Seed + 13);
+                    double depthVary = DetMath.Smooth(.45 + 1.3 * Noise.Fbm(x, z, 2600, 2, 0, v.Seed + 14));
+                    double reach = .4 + .35 * DetMath.Smooth(.5 + Noise.Fbm(x, z, 3000, 2, 0, v.Seed + 15));
+                    double z1 = DetMath.Smooth((u - .06) / .08) * (1 - DetMath.Smooth((u - reach) / .2));
+                    double g1 = DetMath.Smooth((Math.Cos(count * angle + warp) - .5) / .5) * depthVary * z1 * (8 + 26 * DetMath.Smooth(1 - u / .6));
+                    double z2 = DetMath.Smooth((u - .25) / .1) * (1 - DetMath.Smooth((u - .85) / .1));
+                    double g2 = DetMath.Smooth((Math.Cos(count * 1.7 * angle + warp * 1.3 + 1.1) - .6) / .4) * z2 * 9
+                        * DetMath.Smooth(.5 + Noise.Fbm(x, z, 1700, 2, 0, v.Seed + 16));
+                    g -= Math.Max(g1, g2) * fade;
+                }
+            }
+            else if (zone > 0)
             {
                 int count = 18 + (int)(v.Seed % 13);
                 double phase = count * angle + 2.2 * Noise.Fbm(x, z, 1800, 2, 0, v.Seed + 13);
@@ -265,6 +409,7 @@ public sealed class Volcanoes : PlanLandform
                 g -= (10 + 20 * DetMath.Smooth(1 - u / .6)) * Math.Max(0, gully) * zone * fade;
             }
             // Lava flows: lobes down the flanks, each along a wavering line from below the summit.
+            if (v.Tuned) continue;
             foreach (var (a0, from, to, width, thickness) in v.Flows)
             {
                 if (u < from - .02 || u > to + .05) continue;
@@ -279,7 +424,138 @@ public sealed class Volcanoes : PlanLandform
                 rock = Math.Max(rock, .9 * across * ends * fade);
             }
         }
+        if (_revision >= 29) g += TracedFlows(x, z, ref rock);
         return g;
+    }
+
+    /// <summary>
+    /// Lava flows (revision 29): raised lobes along lines traced down the ground from vents below the summit — down the
+    /// steepest way (with some momentum and a waver), round obstacles, spreading where the ground flattens, stopping
+    /// there, at the sea or after 2–7 km. 150–350 m wide at the vent, widening twofold downhill and half again at the end,
+    /// 6–15 m thick, their edges lobed; bare rock. (Revision 28's ran straight down the cone, over whatever lay there.)
+    /// </summary>
+    private double TracedFlows(double x, double z, ref double rock)
+    {
+        if (!_traced) Trace();
+        double g = 0;
+        foreach (var v in _volcanoes)
+        {
+            if (v.Traced == null || x < v.FlowMinX || x > v.FlowMaxX || z < v.FlowMinZ || z > v.FlowMaxZ) continue;
+            foreach (var f in v.Traced)
+            {
+                if (x < f.MinX || x > f.MaxX || z < f.MinZ || z > f.MaxZ) continue;
+                double best = double.MaxValue, width = 0;
+                for (int c = 0; c < f.Chunks.Length; c++)
+                {
+                    var b = f.Chunks[c];
+                    if (x < b.MinX || x > b.MaxX || z < b.MinZ || z > b.MaxZ) continue;
+                    int end = Math.Min(f.X.Length - 1, c * 10 + 10);
+                    for (int i = c * 10; i < end; i++)
+                    {
+                        double ax = f.X[i], az = f.Z[i], ex = f.X[i + 1] - ax, ez = f.Z[i + 1] - az, len2 = Math.Max(1e-9, ex * ex + ez * ez);
+                        double t = Math.Clamp(((x - ax) * ex + (z - az) * ez) / len2, 0, 1);
+                        double d = Math.Sqrt(Sq(ax + ex * t - x) + Sq(az + ez * t - z));
+                        if (d < best) { best = d; width = f.W[i] + (f.W[i + 1] - f.W[i]) * t; }
+                    }
+                }
+                if (best == double.MaxValue) continue;
+                double edge = width * .5 * (1 + .25 * Noise.Fbm(x, z, 160, 2, 0, f.Seed));
+                double across = 1 - DetMath.Smooth((best - edge * .7) / (edge * .3 + 1));
+                if (across <= 0) continue;
+                g = Math.Max(g, f.Thickness * across * (1 + .3 * Noise.Fbm(x, z, 120, 2, 0, f.Seed + 1)));
+                rock = Math.Max(rock, .9 * across);
+            }
+        }
+        return g;
+    }
+
+    /// <summary>Traces every lava flow once the plan is final (the first time the ground is asked for one).</summary>
+    private void Trace()
+    {
+        lock (_traceLock)
+        {
+            if (_traced || _macro == null || _raise == null) { _traced = true; return; }
+            foreach (var v in _volcanoes)
+            {
+                if (!v.Tuned || v.Caldera) continue;
+                v.Traced = new List<Flow>();
+                for (int n = 0; n < v.FlowStarts.Length; n++)
+                {
+                    var (angle, length, width, thickness) = v.FlowStarts[n];
+                    ulong seed = v.Seed + 100 + (ulong)n;
+                    double vr = v.Inner * 1.4 + v.Radius * .05;
+                    double x = v.X + Math.Cos(angle) * vr, z = v.Z + Math.Sin(angle) * vr, dx = Math.Cos(angle), dz = Math.Sin(angle);
+                    var xs = new List<double> { x }; var zs = new List<double> { z }; var ws = new List<double> { width };
+                    int flat = 0;
+                    for (double run = 0; run < length; run += 40)
+                    {
+                        double gx = (Ground0(v, x + 20, z) - Ground0(v, x - 20, z)) / 40, gz = (Ground0(v, x, z + 20) - Ground0(v, x, z - 20)) / 40;
+                        double grade = Math.Sqrt(gx * gx + gz * gz);
+                        if (grade > 1e-6) { dx = dx * .6 - gx / grade * .4; dz = dz * .6 - gz / grade * .4; }
+                        double turn = .35 * Noise.Fbm(run, n * 977, 600, 2, 0, seed);
+                        double c = Math.Cos(turn), s = Math.Sin(turn), l = Math.Max(1e-9, Math.Sqrt(dx * dx + dz * dz));
+                        double nx = (dx * c - dz * s) / l, nz = (dx * s + dz * c) / l;
+                        x += nx * 40; z += nz * 40;
+                        if (_macro.Sample(WorldPlan.LandChannel, x, z) < .25) break; // (the sea)
+                        flat = grade < .02 ? flat + 1 : 0;
+                        xs.Add(x); zs.Add(z); ws.Add(width * (1 + run / Math.Max(1, length)) * (flat > 0 ? 1.5 : 1));
+                        if (flat > 6) break; // (spread out on the flat)
+                    }
+                    if (xs.Count < 5) continue;
+                    ws[^1] *= 1.3;
+                    var chunks = new (double, double, double, double)[(xs.Count - 1 + 9) / 10];
+                    double pad = width * 3;
+                    for (int c = 0; c < chunks.Length; c++)
+                    {
+                        double x0 = double.MaxValue, z0 = double.MaxValue, x1 = double.MinValue, z1 = double.MinValue;
+                        for (int i = c * 10; i <= Math.Min(xs.Count - 1, c * 10 + 10); i++)
+                        { x0 = Math.Min(x0, xs[i]); z0 = Math.Min(z0, zs[i]); x1 = Math.Max(x1, xs[i]); z1 = Math.Max(z1, zs[i]); }
+                        chunks[c] = (x0 - pad, z0 - pad, x1 + pad, z1 + pad);
+                    }
+                    var f = new Flow { X = xs.ToArray(), Z = zs.ToArray(), W = ws.ToArray(), Thickness = thickness, Chunks = chunks, Seed = seed };
+                    f.MinX = double.MaxValue; f.MinZ = double.MaxValue; f.MaxX = double.MinValue; f.MaxZ = double.MinValue;
+                    foreach (var b in chunks) { f.MinX = Math.Min(f.MinX, b.Item1); f.MinZ = Math.Min(f.MinZ, b.Item2); f.MaxX = Math.Max(f.MaxX, b.Item3); f.MaxZ = Math.Max(f.MaxZ, b.Item4); }
+                    v.Traced.Add(f);
+                    v.FlowMinX = Math.Min(v.FlowMinX, f.MinX); v.FlowMinZ = Math.Min(v.FlowMinZ, f.MinZ);
+                    v.FlowMaxX = Math.Max(v.FlowMaxX, f.MaxX); v.FlowMaxZ = Math.Max(v.FlowMaxZ, f.MaxZ);
+                }
+            }
+            _traced = true;
+        }
+    }
+
+    /// <summary>The ground a flow runs on (m): the plan's height with the volcano's exact shape, no walking-scale relief.</summary>
+    private double Ground0(Volcano v, double x, double z) =>
+        _macro!.Sample(WorldPlan.HeightChannel, x, z) + Weight(v, x, z) * Profile(v, x, z, true, out _) - _raise!.Sample(0, x, z);
+
+    /// <summary>
+    /// Once the hydrology has made the caldera lakes (revision 29): each island stands 30–150 m over its lake's real
+    /// level (taken from the rim as planned, the lake settled higher and drowned the islands).
+    /// </summary>
+    public void SetLakes(Hydrology hy, double sea)
+    {
+        foreach (var v in _volcanoes)
+        {
+            if (!v.Caldera || v.IslandRadius <= 0 || hy.LakeNear(v.X, v.Z) is not (>= 0 and var lake)) continue;
+            v.IslandHeight = hy.Lakes[lake].Level - sea - v.Base - (v.Height - v.Depth) + v.IslandAbove;
+        }
+    }
+
+    /// <summary>
+    /// Inside a caldera's rim here (revision 29), and the caldera's middle (where its plan lake is): its lake fills all the
+    /// ground there below its level — the plan lake reaches only round the raster cells it was found in, and a deeper
+    /// floor beyond them lay dry below the water, the lake ending in a squarish outline.
+    /// </summary>
+    public bool InCaldera(double x, double z, out double cx, out double cz)
+    {
+        cx = cz = 0;
+        foreach (var v in _volcanoes)
+        {
+            if (!v.Caldera || !v.Tuned || Sq(x - v.X) + Sq(z - v.Z) > Sq(v.Inner * 1.15)) continue;
+            cx = v.X; cz = v.Z;
+            return true;
+        }
+        return false;
     }
 
     /// <summary>

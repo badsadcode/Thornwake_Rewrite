@@ -3807,6 +3807,31 @@ raster before erosion, so rivers form on the volcanoes and run down them:
 * Not yet: smoke, heat, hot springs and obsidian (gameplay); a volcanic island land shape; lava flows that follow the
   ground rather than straight down the cone.
 
+## D247 — Terrain revision 29: volcanoes tuned (2026-11-01)
+Tom: "Tune first", then all four proposals: lava flows that follow the ground, taller and bolder cones, less regular
+gullies, more varied calderas. Revision 28 stays selectable (*Volcanoes first (rev. 28)*, `terrain-r28.json`).
+* **Lava flows** are traced once the plan is final: from a vent below the summit down the steepest way over the plan's
+  ground with the volcano's exact shape (with some momentum and a waver), round obstacles, widening downhill, spreading
+  where the ground flattens and stopping there, at the sea or after 2–7 km (× size); lobes 150–350 m wide at the vent,
+  6–15 m thick, lobed edges, bare rock. (Revision 28's ran straight down the cone over whatever lay there.)
+* **Cones**: 1,200–3,000 m (× size; the tallest stand over the 2,700 m snow line), slopes 1 in 3.5–5, steeper toward the
+  top (power 2.2–2.8). Three in ten have a collapsed side: a horseshoe amphitheatre cut into the summit (18 % of the
+  radius), its floor sloping away downhill so it opens on the low side, its head a steep curved wall, 20–35 % of the
+  height (a first wedge cut along two radial lines looked machined); no crater lake on those.
+* **Built on a tilted base**, fitted to the land round the foot (least squares on 16 points), blended out from 60 % of
+  the radius to its foot: a level base cut a moat into a slope in the mountains.
+* **Gullies**: 16–26 of different depths (some fading out) and lengths (40–75 % of the radius), wavering more, with a
+  second, shallower set between them lower down (an even starburst before).
+* **Calderas**: cliffs 350–700 m deep; a wider breach (a narrow one was a slot); four in ten with an old, worn rim (its
+  height wandering by a third of the depth, gentler walls); 45 in 100 with an island cone (400–900 m round, a small
+  crater at its top) standing 30–150 m over the lake's real level (set once the hydrology has made the lake: from the
+  rim as planned, the lake settled higher and drowned the islands). The lake fills all of the floor below its level (the
+  plan lake reaches only round its raster cells; a deeper floor beyond them lay dry below the water, the lake ending in
+  a squarish outline).
+* Test (6 worlds): 7 cones, all over 60 % of their height above their foot; 6 calderas, all with a lake filling the
+  floor; 1,094 crater lake points closed in; all volcanic in the middle. Speed 1 316 ns per sample (1 261 at revision
+  28: the sample tiles crossing volcanoes pay for their exact shape, gullies and flows).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

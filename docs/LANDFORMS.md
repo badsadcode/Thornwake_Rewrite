@@ -120,8 +120,10 @@ Then the fantasy landforms Tom picks (section at the end).
   is sea, joined to the open sea, never a lake).
 
 ### 7. Volcanoes and calderas
-* **Status**: built, terrain revision 28 (D246), not in a build yet: cones with a crater (a lake in most), gullies and
-  lava flows; calderas with cliffs round a lake spilling through a breach; volcanic ground on both.
+* **Status**: built, terrain revision 28 (D246), tuned in revision 29 (D247), not in a build yet: cones up to 3 km (snow
+  on the tallest), some with a collapsed side, a crater (a lake in most), varied gullies, lava flows traced down the
+  ground; calderas with cliffs round a lake spilling through a breach, some with an island cone or a worn rim;
+  volcanic ground on both.
 * **What**: a cone rising alone or in a chain, a crater at the top (a lake in it when quiet), lava-stone slopes and old
   flows around it; a caldera is a collapsed volcano — a wide ring of cliffs round a lake.
 * **Where**: a few per world on fault lines, along mountain chains or alone; a *Volcanic island* land shape builds a

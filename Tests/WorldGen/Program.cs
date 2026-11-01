@@ -255,6 +255,7 @@ if (args.Contains("--landform-probes"))
             if (s.Plan.PlanLandforms.OfType<Volcanoes>().FirstOrDefault() is { } vo)
             {
                 Console.WriteLine($"{profile.Id}/{seed}: {vo.Count} volcanoes");
+                foreach (var (kx, kz, kk) in vo.Kinds()) Console.WriteLine($"{profile.Id}/{seed}   {kx:0},{kz:0}: {kk}");
                 foreach (var (vx, vz, vr, vh, vc) in vo.Probes())
                     Console.WriteLine($"{profile.Id}/{seed} {(vc ? "caldera" : "cone")} at {vx:0},{vz:0}, radius {vr / 1000:0.0} km, {vh:0} m high, summit ground {s.Height(vx, vz) - s.Plan.Profile.SeaLevel:0} m, water there {s.Sample(vx, vz).Water}, plan lake {s.Plan.Hydrology.LakeNear(vx, vz)}, nearest lake {s.Plan.Hydrology.Lakes.Select(l => Math.Sqrt((l.Center.X - vx) * (l.Center.X - vx) + (l.Center.Z - vz) * (l.Center.Z - vz))).DefaultIfEmpty(-1).Min():0} m, raster {s.Plan.Macro.Sample(WorldPlan.HeightChannel, vx, vz):0}");
             }
