@@ -78,6 +78,21 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 122 — volcanoes and calderas (terrain revisions 28 and 29)
+**Host and everyone joining need build 122** (versions must match to connect).
+* **Volcanoes**: cones 1.2–3 km high (snow on the tallest) with a crater — a lake in most — gullies down their flanks
+  and dark lava flows that run down the ground, spread on the flats and stop there; some have a side collapsed into a
+  horseshoe-shaped bowl. 1–4 in a normal world, alone or beside mountain chains, on volcanic ground.
+* **Calderas**: broad volcanoes with a ring of cliffs round a lake that spills out through a breach in the rim; some
+  with an island cone in the lake, some with an old, worn rim.
+* Try *Go to - volcano with lava flows (Balanced, seed 7319)*, *Go to - caldera lake with an island (Balanced, seed
+  42)* and *Go to - snowy volcano with a collapsed side (Mountain kingdoms)*. New world → Landforms → *Volcanoes and
+  calderas*.
+* Volcanoes rise before the rivers form, so new worlds' rivers — and the canyons, troughs and cirques along them —
+  come out a little differently; the older *Go to* spots for those keep build 121's terrain.
+* Your build 121 worlds keep their terrain; *Terrain version → Build 121* gives it to new worlds too.
+* Known: no smoke, heat, hot springs or obsidian yet.
+
 ## New in build 121 — fjord coasts, troughs fixed (terrain revisions 25–27)
 **Host and everyone joining need build 121** (versions must match to connect).
 * **Fjord coasts**: a stretch of the cold northern coast rises into a coastal range (500–900 m, ridges and peaks; taiga
