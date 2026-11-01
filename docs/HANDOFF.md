@@ -3,7 +3,12 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 123** (v0.9.123, return point `cf3d975`, `dist/Preview-123`): volcano detail (D248, terrain
+* **Last build Tom has: 124** (v0.9.124, return point `00730f0`, `dist/Preview-124`): active volcanoes and glowing,
+  flowing lava (D250–D256, terrain revision 31; Noor's notes in D253), heat shimmer (D255); settings *Lava*, *Heat
+  shimmer*; launchers "Go to - lava lake / lava flow at night / onto a lava flow (Balanced, seed 7319)" (they calm the
+  weather for the visit: that crater sits at the cloud base). Open: smoke over the crater, eruptions (Tom: later),
+  lava that hurts; more landforms (Tom: "we still need some more").
+  Build 123 (v0.9.123, return point `cf3d975`, `dist/Preview-123`): volcano detail (D248, terrain
   revision 30: cinder cones, ravines, lava fields, rim outcrops); the whole test suite passes again (D249: the runner
   stops at its first failure — record fingerprints, then run it to the end). Next asked by Tom: glowing molten lava,
   later eruptions (a look of their own: his call).
