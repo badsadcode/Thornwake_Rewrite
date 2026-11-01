@@ -16,6 +16,7 @@ namespace Thornwake.Rewrite;
 /// ground lights nothing round it in this renderer, so orange lights hang over the lava (D251): a strong one over the
 /// lava lake (distance^-0.35), and 15 m over the fresh flows every 150 m (distance^-0.5, the nearest casting
 /// shadows), the 16 nearest the camera lit — the crater walls, the rocks beside a flow take the glow; only the lake's lights the haze.
+/// Setting <c>fx.lava</c>: off leaves the lava fields as dark rock.
 /// </summary>
 public sealed class LavaMap
 {
