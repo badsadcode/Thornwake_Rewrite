@@ -83,6 +83,13 @@ float lava_fbm(vec2 p) {
 	for (int o = 0; o < 4; o++) { v += a * (vnoise(p) * 2.0 - 1.0); p = turn * p * 2.03 + 7.1; a *= 0.5; }
 	return v;
 }
+// The lava's fields at a point (moved along the flow by the caller): x = churn (0 … 1, how hot the melt is), y = the
+// rift field (rifts where it is near 0), z = the fine crack field (cracks where near 0).
+vec3 lava_fields(vec2 p, vec2 drift) {
+	float churn = vnoise(p * 0.04 + vec2(TIME * 0.015, -TIME * 0.01)) * 0.65 + vnoise(p * 0.13 - vec2(TIME * 0.04, TIME * 0.03)) * 0.35;
+	vec2 q = p + 14.0 * vec2(lava_fbm(p * 0.02 + drift), lava_fbm(p * 0.02 + 5.2 - drift));
+	return vec3(churn, abs(lava_fbm(q * 0.035 + drift * 2.0)), abs(lava_fbm(q * 0.16 + 3.3)));
+}
 
 // A ground texture at ~8 m per tile, two differently rotated and scaled copies blended by slow noise so the tiles
 // do not repeat visibly over open ground.
@@ -426,22 +433,31 @@ void fragment() {
 	if (lava_frame.w > 0.0) {
 		vec2 lm = (scene_xz - lava_frame.xy) / lava_frame.z + 0.5;
 		if (lm.x > 0.0 && lm.y > 0.0 && lm.x < 1.0 && lm.y < 1.0) {
-			vec2 lv = textureLod(lava_map, lm, 0.0).rg;
+			vec4 lvd = textureLod(lava_map, lm, 0.0);
+			vec2 lv = lvd.rg;
 			if (lv.x + lv.y > 0.004) {
 				vec2 lp = scene_xz - lava_frame.xy; // (anchored to the volcano, not the moving scene origin)
 				vec2 drift = vec2(TIME * 0.004, -TIME * 0.003);
-				float churn = vnoise(lp * 0.04 + vec2(TIME * 0.015, -TIME * 0.01)) * 0.65 + vnoise(lp * 0.13 - vec2(TIME * 0.04, TIME * 0.03)) * 0.35;
-				vec2 q = lp + 14.0 * vec2(lava_fbm(lp * 0.02 + drift), lava_fbm(lp * 0.02 + 5.2 - drift));
+				// Flowing (D252): the pattern moves along the lava's direction (the map's b, a: a flow downhill, the lake out
+				// from its middle), up to 2.5 m/s in a flow's molten channel, its crust a third of that; two copies offset by
+				// half a 10 s cycle, cross-faded, so it moves on for ever without stretching.
+				vec2 flow_dir = lvd.ba * 2.0 - 1.0;
+				float speed = mix(0.8, 2.5, lv.x);
+				float ph0 = fract(TIME / 10.0), ph1 = fract(TIME / 10.0 + 0.5);
+				vec3 f0 = lava_fields(lp - flow_dir * speed * ph0 * 10.0, drift);
+				vec3 f1 = lava_fields(lp - flow_dir * speed * ph1 * 10.0, drift);
+				vec3 fld = mix(f0, f1, abs(ph0 * 2.0 - 1.0));
+				float churn = fld.x;
 				// rifts: the zero lines of slow noise, wider where the melt is hotter; fine cracks: faster noise's zero lines
-				float rift_n = abs(lava_fbm(q * 0.035 + drift * 2.0));
+				float rift_n = fld.y;
 				float rift = 1.0 - smoothstep(0.0, 0.05 + 0.1 * churn, rift_n);
-				float fine_n = abs(lava_fbm(q * 0.16 + 3.3));
+				float fine_n = fld.z;
 				float fine = 1.0 - smoothstep(0.0, 0.035 + 0.03 * vnoise(lp * 0.05), fine_n);
 				float seam = (1.0 - smoothstep(0.0, 0.22, rift_n)) * (1.0 - rift); // the incandescent edge along a rift
 				float open = lv.x * rift;
 				float crust = max(lv.y, lv.x * (1.0 - rift));
 				vec3 hot = mix(vec3(1.0, 0.1, 0.01), vec3(1.0, 0.45, 0.07), smoothstep(0.4, 0.9, churn));
-				float shade = 0.75 + 0.5 * vnoise(q * 0.09); // (the crust's own unevenness)
+				float shade = 0.6 + 0.8 * churn; // (the crust's own unevenness, moving with it)
 				ALBEDO = mix(ALBEDO, vec3(0.022, 0.019, 0.017) * shade, max(lv.x, lv.y));
 				ROUGHNESS = mix(ROUGHNESS, 0.9, crust);
 				ROUGHNESS = mix(ROUGHNESS, 0.35, open);

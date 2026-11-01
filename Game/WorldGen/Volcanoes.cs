@@ -544,11 +544,12 @@ public sealed class Volcanoes : PlanLandform
     /// there, at the sea or after 2–7 km. 150–350 m wide at the vent, widening twofold downhill and half again at the end,
     /// 6–15 m thick, their edges lobed; bare rock. (Revision 28's ran straight down the cone, over whatever lay there.)
     /// </summary>
-    /// <summary>The nearest point of a flow's line: its distance, the flow's width there and how far along it lies (0 at the
-    /// vent … 1 at the end); false when the point is outside every run's bounds.</summary>
-    private static bool FlowNearest(Flow f, double x, double z, out double best, out double width, out double along)
+    /// <summary>The nearest point of a flow's line: its distance, the flow's width there, how far along it lies (0 at the
+    /// vent … 1 at the end) and which way the line runs there (downhill, unit); false when the point is outside every
+    /// run's bounds.</summary>
+    private static bool FlowNearest(Flow f, double x, double z, out double best, out double width, out double along, out double dirX, out double dirZ)
     {
-        best = double.MaxValue; width = 0; along = 0;
+        best = double.MaxValue; width = 0; along = 0; dirX = dirZ = 0;
         for (int c = 0; c < f.Chunks.Length; c++)
         {
             var b = f.Chunks[c];
@@ -559,9 +560,11 @@ public sealed class Volcanoes : PlanLandform
                 double ax = f.X[i], az = f.Z[i], ex = f.X[i + 1] - ax, ez = f.Z[i + 1] - az, len2 = Math.Max(1e-9, ex * ex + ez * ez);
                 double t = Math.Clamp(((x - ax) * ex + (z - az) * ez) / len2, 0, 1);
                 double d = Math.Sqrt(Sq(ax + ex * t - x) + Sq(az + ez * t - z));
-                if (d < best) { best = d; width = f.W[i] + (f.W[i + 1] - f.W[i]) * t; along = (i + t) / (f.X.Length - 1); }
+                if (d < best) { best = d; width = f.W[i] + (f.W[i + 1] - f.W[i]) * t; along = (i + t) / (f.X.Length - 1); dirX = ex; dirZ = ez; }
             }
         }
+        double dl = Math.Sqrt(dirX * dirX + dirZ * dirZ);
+        if (dl > 1e-9) { dirX /= dl; dirZ /= dl; }
         return best != double.MaxValue;
     }
 
@@ -575,7 +578,7 @@ public sealed class Volcanoes : PlanLandform
             foreach (var f in v.Traced)
             {
                 if (x < f.MinX || x > f.MaxX || z < f.MinZ || z > f.MaxZ) continue;
-                if (!FlowNearest(f, x, z, out double best, out double width, out _)) continue;
+                if (!FlowNearest(f, x, z, out double best, out double width, out _, out _, out _)) continue;
                 double edge = width * .5 * (1 + .25 * Noise.Fbm(x, z, 160, 2, 0, f.Seed));
                 double across = 1 - DetMath.Smooth((best - edge * .7) / (edge * .3 + 1));
                 if (across <= 0) continue;
@@ -757,9 +760,20 @@ public sealed class Volcanoes : PlanLandform
     /// </summary>
     public (float Molten, float Crust) LavaAt(double x, double z)
     {
-        if (_volcanoes.Count == 0 || _revision < 31) return (0, 0);
+        var (m, c, _, _) = LavaFlow(x, z);
+        return (m, c);
+    }
+
+    /// <summary>
+    /// <see cref="LavaAt"/> and which way the lava moves there (D252): a fresh flow down its line, its speed (0 … 1) the
+    /// flow's heat; the lava lake slowly out from its middle (0.3 at its shore), as its crust creeps from the upwelling to
+    /// the edges.
+    /// </summary>
+    public (float Molten, float Crust, float DirX, float DirZ) LavaFlow(double x, double z)
+    {
+        if (_volcanoes.Count == 0 || _revision < 31) return (0, 0, 0, 0);
         if (!_traced) Trace();
-        double molten = 0, crust = 0;
+        double molten = 0, crust = 0, dirX = 0, dirZ = 0, lead = 0;
         foreach (var v in _volcanoes)
         {
             if (!v.Active) continue;
@@ -768,21 +782,24 @@ public sealed class Volcanoes : PlanLandform
             {
                 // (the lake: where the crater's exact bowl lies below the lake's level, 30 % of the depth over its floor)
                 double bowl = Profile(v, x, z, true, out _);
-                molten = Math.Max(molten, DetMath.Smooth((v.Height - .7 * v.Depth - bowl) / 3));
+                double lake = DetMath.Smooth((v.Height - .7 * v.Depth - bowl) / 3);
+                molten = Math.Max(molten, lake);
+                if (lake > lead && r > 1e-6) { lead = lake; double out_ = .3 * Math.Min(1, r / (v.Inner * .55)); dirX = (x - v.X) / r * out_; dirZ = (z - v.Z) / r * out_; }
             }
             if (v.Traced == null || x < v.FlowMinX || x > v.FlowMaxX || z < v.FlowMinZ || z > v.FlowMaxZ) continue;
             for (int n = 0; n < Math.Min(v.FreshFlows, v.Traced.Count); n++)
             {
                 var f = v.Traced[n];
-                if (x < f.MinX || x > f.MaxX || z < f.MinZ || z > f.MaxZ || !FlowNearest(f, x, z, out double best, out double width, out double along)) continue;
+                if (x < f.MinX || x > f.MaxX || z < f.MinZ || z > f.MaxZ || !FlowNearest(f, x, z, out double best, out double width, out double along, out double tx, out double tz)) continue;
                 double heat = 1 - .65 * along;
                 double across = 1 - DetMath.Smooth((best - width * .35) / (width * .15 + 1));
                 double core = 1 - DetMath.Smooth((best - width * .08) / (width * .05 + 1));
                 crust = Math.Max(crust, across * heat);
                 molten = Math.Max(molten, core * heat * (1 - DetMath.Smooth((along - .85) / .15)));
+                if (across * heat > lead) { lead = across * heat; dirX = tx * heat; dirZ = tz * heat; }
             }
         }
-        return ((float)molten, (float)crust);
+        return ((float)molten, (float)crust, (float)dirX, (float)dirZ);
     }
 
     /// <summary>

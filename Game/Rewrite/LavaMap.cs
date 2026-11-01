@@ -10,7 +10,8 @@ namespace Thornwake.Rewrite;
 /// <summary>
 /// Molten lava around the nearest active volcano (terrain revision 31, D250) as a texture: 16 km square, 1,024 pixels
 /// (about 16 m each), from <see cref="Volcanoes.LavaAt"/> on worker threads when the player comes within 20 km of an
-/// active volcano's foot. r = molten (the lava lake, a fresh flow's channel), g = crust (a fresh flow's crusted sides).
+/// active volcano's foot. r = molten (the lava lake, a fresh flow's channel), g = crust (a fresh flow's crusted sides),
+/// b, a = which way it moves (× 0.5 + 0.5; its length the speed, D252).
 /// The terrain shader draws it glowing (TerrainBody.gdshaderinc: globals <c>lava_map</c>, <c>lava_frame</c>). Glowing
 /// ground lights nothing round it in this renderer, so orange lights hang over the lava (D251): a strong one over the
 /// lava lake, and along the fresh flows every 300 m, the 12 nearest the camera lit, falling off gently (distance^-0.35 to
@@ -32,8 +33,8 @@ public sealed class LavaMap
 
     public LavaMap(Node3D parent)
     {
-        var image = Image.CreateEmpty(Pixels, Pixels, false, Image.Format.Rg8);
-        image.Fill(new Color(0, 0, 0, 1));
+        var image = Image.CreateEmpty(Pixels, Pixels, false, Image.Format.Rgba8);
+        image.Fill(new Color(0, 0, .5f, .5f)); // (no lava, standing still)
         _texture = ImageTexture.CreateFromImage(image);
         RenderingServer.GlobalShaderParameterSet("lava_map", _texture);
         for (int i = 0; i < Lights; i++)
@@ -48,7 +49,7 @@ public sealed class LavaMap
     {
         if (_job is { IsCompleted: true } done)
         {
-            _texture.Update(Image.CreateFromData(Pixels, Pixels, false, Image.Format.Rg8, done.Result.Data));
+            _texture.Update(Image.CreateFromData(Pixels, Pixels, false, Image.Format.Rgba8, done.Result.Data));
             _points = done.Result.Lights;
             _mapX = _jobX; _mapZ = _jobZ;
             _job = null;
@@ -105,16 +106,18 @@ public sealed class LavaMap
 
     private static (byte[], (double, double, double, double, bool)[]) Build(TerrainSampler terrain, Volcanoes volcanoes, double cx, double cz)
     {
-        var data = new byte[Pixels * Pixels * 2];
+        var data = new byte[Pixels * Pixels * 4];
         double step = Size / Pixels;
         Parallel.For(0, Pixels, j =>
         {
             for (int i = 0; i < Pixels; i++)
             {
-                var (molten, crust) = volcanoes.LavaAt(cx - Size / 2 + (i + .5) * step, cz - Size / 2 + (j + .5) * step);
-                int k = (j * Pixels + i) * 2;
+                var (molten, crust, dx, dz) = volcanoes.LavaFlow(cx - Size / 2 + (i + .5) * step, cz - Size / 2 + (j + .5) * step);
+                int k = (j * Pixels + i) * 4;
                 data[k] = (byte)Math.Clamp(molten * 255, 0, 255);
                 data[k + 1] = (byte)Math.Clamp(crust * 255, 0, 255);
+                data[k + 2] = (byte)Math.Clamp((dx * .5 + .5) * 255, 0, 255);
+                data[k + 3] = (byte)Math.Clamp((dz * .5 + .5) * 255, 0, 255);
             }
         });
         var lights = new List<(double, double, double, double, bool)>();

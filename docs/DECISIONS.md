@@ -3913,6 +3913,14 @@ onto this. About the glow, it's not lighting up surrounding area that much."
   energy 1.2; 3 turned the whole sky red).
 * Night captures: the crater's walls glow red round the lake; a flow lights the flank beside it.
 
+## D252 — The lava flows (2026-11-01)
+Tom: "it looks good. Should it flow a bit?" It churned in place. `Volcanoes.LavaFlow` adds which way the lava moves —
+down a fresh flow's line (its speed the flow's heat), out from the lava lake's middle (0.3 at the shore: its crust
+creeps from the upwelling to the edges) — and `LavaMap` keeps it in the map's b, a channels. The shader moves the
+lava's fields along it, up to 2.5 m/s in a flow's molten channel and 0.8 m/s on its crust, with two copies half a
+10 s cycle apart cross-faded (a flow map: it moves on for ever without stretching); the crust's shade moves with it.
+Terrain unchanged (fingerprints, Build 122, the volcano test).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
