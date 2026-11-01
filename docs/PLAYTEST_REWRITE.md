@@ -78,6 +78,21 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 124 — active volcanoes and glowing lava (terrain revision 31)
+**Host and everyone joining need build 124** (versions must match to connect).
+* **Active volcanoes**: about half the cones are active — a lava lake in the crater instead of water, and one or two
+  fresh lava flows down the flank. The lava glows and moves: the middle of a flow runs fast, its edges creep, dark
+  crust islands drift, break up and re-form on the melt, its cracks glow, surges of hotter lava pulse down it now and
+  then. Bright yellow-orange where hottest, dark red where it cools. At night a flow is a red streak down the cone from
+  kilometres away, and the lava lights the rocks round it (the crater's walls, the flank beside a flow).
+* **Heat shimmer**: the air above the lava wobbles the view behind it.
+* Try *Go to - lava lake (Balanced, seed 7319)*, *Go to - lava flow at night (Balanced, seed 7319)* and *Go to - onto a
+  lava flow (Balanced, seed 7319)*. The volcano from *Go to - volcano with lava flows* is an active one too.
+* Settings: *Lighting and effects → Lava* (glowing / off: dark rock) and *Heat shimmer* (on / off). Near an active
+  volcano the lava lights cost a little; the shimmer runs only within 12 km of one.
+* Your build 123 worlds keep their terrain; *Terrain version → Build 123* gives it to new worlds too.
+* Known: no smoke over the crater yet, lava doesn't hurt, no eruptions (later).
+
 ## New in build 123 — volcano detail (terrain revision 30)
 **Host and everyone joining need build 123** (versions must match to connect).
 * **Volcanoes less smooth**: small cinder cones on their flanks and round their foot (with a little crater on top),
