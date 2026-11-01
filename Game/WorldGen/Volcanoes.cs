@@ -131,7 +131,9 @@ public sealed class Volcanoes : PlanLandform
                     if (w <= 0) continue;
                     double shape = Profile(v, x, z, false, out _);
                     raised[k] = (float)(w * shape);
-                    double level = v.Base + v.TiltX * (x - v.X) + v.TiltZ * (z - v.Z);
+                    // (a caldera's floor stays level inside its rim: tilted, its basin drained over the low side)
+                    double tilt = v.Caldera ? DetMath.Smooth((Math.Sqrt(Sq(x - v.X) + Sq(z - v.Z)) - v.Inner * 1.2) / (v.Inner * .6)) : 1;
+                    double level = v.Base + tilt * (v.TiltX * (x - v.X) + v.TiltZ * (z - v.Z));
                     height[k] = (float)(height[k] * (1 - w) + w * (level + shape));
                     mountain[k] = (float)(mountain[k] * (1 - w) + w * .2 * shape / v.Height);
                 }

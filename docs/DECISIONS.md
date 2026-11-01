@@ -3819,7 +3819,8 @@ gullies, more varied calderas. Revision 28 stays selectable (*Volcanoes first (r
   radius), its floor sloping away downhill so it opens on the low side, its head a steep curved wall, 20–35 % of the
   height (a first wedge cut along two radial lines looked machined); no crater lake on those.
 * **Built on a tilted base**, fitted to the land round the foot (least squares on 16 points), blended out from 60 % of
-  the radius to its foot: a level base cut a moat into a slope in the mountains.
+  the radius to its foot: a level base cut a moat into a slope in the mountains. A caldera's floor stays level inside its
+  rim (tilted, one basin drained over its low side).
 * **Gullies**: 16–26 of different depths (some fading out) and lengths (40–75 % of the radius), wavering more, with a
   second, shallower set between them lower down (an even starburst before).
 * **Calderas**: cliffs 350–700 m deep; a wider breach (a narrow one was a slot); four in ten with an old, worn rim (its

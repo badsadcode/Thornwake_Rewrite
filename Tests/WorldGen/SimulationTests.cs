@@ -1262,16 +1262,21 @@ internal static class SimulationTests
                 if (caldera)
                 {
                     calderas++;
+                    // (the plan's lake; its water sampled round the middle, where an island cone may stand)
+                    if (s.Plan.Hydrology.LakeNear(x, z) < 0) { T.Note($"{id}/{seed} caldera at {x:0},{z:0}: no plan lake"); continue; }
                     var c0 = s.Sample(x, z);
-                    if (c0.Water != WaterKind.Lake) continue;
+                    for (int d = 0; d < 8 && c0.Water != WaterKind.Lake; d++)
+                        c0 = s.Sample(x + Math.Cos(d * Math.PI / 4) * radius * .12, z + Math.Sin(d * Math.PI / 4) * radius * .12);
+                    if (c0.Water != WaterKind.Lake) { T.Note($"{id}/{seed} caldera at {x:0},{z:0}: plan lake {s.Plan.Hydrology.LakeNear(x, z)}, water {c0.Water}, ground {c0.Height:0.0}"); continue; }
                     lakes++;
                     // Revision 29: no dry ground below the lake's level inside the caldera (the plan lake reached only round
                     // its cells).
                     for (double dz = -radius * .3; dz <= radius * .3; dz += 150)
                         for (double dx = -radius * .3; dx <= radius * .3; dx += 150)
                         {
+                            if (!vo.InCaldera(x + dx, z + dz, out _, out _)) continue; // (its outer slopes fall below the lake)
                             var t = s.Sample(x + dx, z + dz);
-                            if (t.Water == WaterKind.None && t.Height < c0.WaterLevel - .5) holes++;
+                            if (t.Water == WaterKind.None && t.Height < c0.WaterLevel - .5) { holes++; T.Note($"{id}/{seed} hole at {x + dx:0},{z + dz:0}: ground {t.Height:0.0}, lake {c0.WaterLevel:0.0}"); }
                         }
                     continue;
                 }
