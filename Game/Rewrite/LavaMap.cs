@@ -28,12 +28,17 @@ public sealed class LavaMap
 
     private readonly ImageTexture _texture;
     private readonly OmniLight3D[] _lights = new OmniLight3D[Lights];
-    private Task<(byte[] Data, (double X, double Y, double Z, double Heat, bool Lake)[] Lights)>? _job;
+    private Task<(byte[] Data, (double X, double Y, double Z, double Heat, bool Lake)[] Lights, double Rim)>? _job;
     private double _jobX = double.NaN, _jobZ, _mapX = double.NaN, _mapZ;
     private (double X, double Y, double Z, double Heat, bool Lake)[] _points = Array.Empty<(double, double, double, double, bool)>();
+    private double _rim = double.NaN;
     private TerrainSampler? _for;
 
     private readonly MeshInstance3D _shimmer;
+    private readonly VolcanoSmoke _smoke = new();
+
+    /// <summary>The wind the plume drifts with.</summary>
+    public Wind? Wind { get => _smoke.Wind; set => _smoke.Wind = value; }
 
     public LavaMap(Node3D parent, Camera3D camera)
     {
@@ -47,6 +52,7 @@ public sealed class LavaMap
             GIMode = GeometryInstance3D.GIModeEnum.Disabled, Visible = false,
         };
         camera.AddChild(_shimmer);
+        parent.AddChild(_smoke);
         var image = Image.CreateEmpty(Pixels, Pixels, false, Image.Format.Rgba8);
         image.Fill(new Color(0, 0, .5f, .5f)); // (no lava, standing still)
         _texture = ImageTexture.CreateFromImage(image);
@@ -64,7 +70,7 @@ public sealed class LavaMap
         if (_job is { IsCompleted: true } done)
         {
             _texture.Update(Image.CreateFromData(Pixels, Pixels, false, Image.Format.Rgba8, done.Result.Data));
-            _points = done.Result.Lights;
+            _points = done.Result.Lights; _rim = done.Result.Rim;
             _mapX = _jobX; _mapZ = _jobZ;
             _job = null;
         }
@@ -90,6 +96,11 @@ public sealed class LavaMap
         RenderingServer.GlobalShaderParameterSet("lava_frame", new Vector4((float)(_mapX - originX), (float)(_mapZ - originZ), (float)Size, 1));
         PlaceLights(camX, camZ, originX, originZ);
         _shimmer.Visible = GameSettings.HeatShimmer.Index == 1 && bestDistance < 12000;
+        // The plume over the lava lake (D258), within 25 km of the volcano.
+        bool smoke = GameSettings.VolcanoSmoke.Index == 1 && bestDistance < 25000 && _points.Length > 0 && _points[0].Lake;
+        // (from the crater's rim: from just over the lake, deep in the crater, most of it never rose out)
+        if (smoke) _smoke.Position = new Vector3((float)(_points[0].X - originX), (float)(double.IsNaN(_rim) ? _points[0].Y + 120 : _rim + 30), (float)(_points[0].Z - originZ));
+        if (_smoke.Emitting != smoke) { _smoke.Emitting = smoke; if (smoke) _smoke.Restart(); }
     }
 
     /// <summary>The lake's light always (strong, far-reaching, glowing in the haze); the flow lights nearest the camera.</summary>
@@ -121,12 +132,13 @@ public sealed class LavaMap
     {
         Disable();
         _shimmer.Visible = false;
+        _smoke.Emitting = false;
         foreach (var light in _lights) light.Visible = false;
     }
 
     public static void Disable() => RenderingServer.GlobalShaderParameterSet("lava_frame", Vector4.Zero);
 
-    private static (byte[], (double, double, double, double, bool)[]) Build(TerrainSampler terrain, Volcanoes volcanoes, double cx, double cz)
+    private static (byte[], (double, double, double, double, bool)[], double) Build(TerrainSampler terrain, Volcanoes volcanoes, double cx, double cz)
     {
         var data = new byte[Pixels * Pixels * 4];
         double step = Size / Pixels;
@@ -145,6 +157,11 @@ public sealed class LavaMap
         var lights = new List<(double, double, double, double, bool)>();
         foreach (var (x, z, heat, lake) in volcanoes.LavaLights(cx, cz, LightSpacing))
             lights.Add((x, terrain.Height(x, z), z, heat, lake));
-        return (data, lights.ToArray());
+        // The crater's rim: the highest ground round it.
+        double crater = volcanoes.CraterRadius(cx, cz), rim = double.NaN;
+        if (crater > 0)
+            for (int a = 0; a < 16; a++)
+                rim = Math.Max(double.IsNaN(rim) ? double.MinValue : rim, terrain.Height(cx + Math.Cos(a * Math.Tau / 16) * crater * 1.05, cz + Math.Sin(a * Math.Tau / 16) * crater * 1.05));
+        return (data, lights.ToArray(), rim);
     }
 }

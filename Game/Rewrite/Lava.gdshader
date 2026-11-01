@@ -5,7 +5,8 @@
 // islands and rifts, fine glowing cracks, shear, surges — now drawn per pixel on a surface of its own, with:
 // * heavy, slow swells rolling down a flow and welling up on the lake (the vertex shader);
 // * a ragged, lobed edge (no straight triangle edges), the sheet tucked under the ground there;
-// * close up, grain and fine glowing veins in the crust, and relief that catches the light.
+// * close up, grain in the crust, flakes and streaks on the melt, and relief that catches the light; the crust's fine
+//   cracks ride with it, broken into segments (D258).
 // Drawn only while lava_frame.w > 0 (the Lava setting on, near an active volcano).
 shader_type spatial;
 render_mode cull_back, diffuse_burley;
@@ -31,7 +32,12 @@ vec3 lava_fields(vec2 p, vec2 drift) {
 	float churn = vnoise(p * 0.04 + vec2(TIME * 0.015, -TIME * 0.01)) * 0.65 + vnoise(p * 0.13 - vec2(TIME * 0.04, TIME * 0.03)) * 0.35;
 	vec2 wobble = 4.0 * vec2(lava_fbm(p * 0.05 + vec2(TIME * 0.03, 1.7)), lava_fbm(p * 0.05 + vec2(4.1, -TIME * 0.025)));
 	vec2 q = p + wobble + 14.0 * vec2(lava_fbm(p * 0.02 + drift), lava_fbm(p * 0.02 + 5.2 - drift));
-	return vec3(churn, abs(lava_fbm(q * 0.035 + drift * 2.0)), abs(lava_fbm(q * 0.16 + 3.3)));
+	// (the fine cracks ride with the crust: a fixed warp, no time — warped with the rest they reshaped every second,
+	// boiling; and they are cut into segments, so no closed rings: whole they read as contour lines on a map)
+	vec2 r = p + 3.0 * vec2(lava_fbm(p * 0.07 + 11.0), lava_fbm(p * 0.07 + 23.0));
+	float crack_n = min(abs(lava_fbm(r * 0.22 + 3.3)), abs(lava_fbm(r * 0.13 + 7.7)) * 1.3) // (two sets crossing: junctions)
+		+ 0.25 * smoothstep(0.42, 0.58, vnoise(r * 0.5 + 5.0));
+	return vec3(churn, abs(lava_fbm(q * 0.035 + drift * 2.0)), crack_n);
 }
 
 void vertex() {
@@ -93,12 +99,10 @@ void fragment() {
 	float core_heat = clamp(lv.x * 1.15, 0.0, 1.0);
 	// (deep orange at its hottest, not yellow-white: by day it burned to white)
 	vec3 hot = mix(vec3(0.6, 0.04, 0.003), vec3(1.0, 0.4, 0.06), smoothstep(0.25, 0.95, core_heat * (0.75 + 0.35 * churn) + swell * 0.15));
-	// Close up: grain in the crust (clinker a few decimetres across) and fine veins glowing between it.
+	// Close up: grain in the crust (clinker a few decimetres across). (Fine glowing veins drew contour-line rings: gone.)
 	float dist = dist0;
 	float near = 1.0 - smoothstep(60.0, 250.0, dist);
 	float grain = vnoise(lp * 1.7) * 0.6 + vnoise(lp * 4.3 + 7.0) * 0.4;
-	float vein_n = abs(lava_fbm(lp * 0.45 + drift * 6.0));
-	float vein = (1.0 - smoothstep(0.0, fwidth(vein_n) * 1.2 + 0.002, vein_n)) * near * smoothstep(0.55, 0.85, vnoise(lp * 0.08)); // (rare)
 	float shade = (0.6 + 0.8 * churn) * mix(1.0, 0.55 + 0.9 * grain, near) * (1.0 + flake * 0.6);
 	ALBEDO = vec3(0.022, 0.019, 0.017) * shade;
 	ROUGHNESS = mix(0.9, 0.35, open);
@@ -106,7 +110,7 @@ void fragment() {
 	float heat = max(lv.x, lv.y);
 	// (open melt at most ~1.6×: 3× burned it to white by day)
 	float glow = open * (0.6 + 0.7 * churn) * (0.6 + 0.4 * core_heat) * mix(1.0, 0.7 + 0.6 * streak, close) + seam * lv.x * 0.6
-		+ fine * crust * heat * (0.3 + 0.4 * churn) * (0.4 + core_heat) + vein * crust * heat * 0.5;
+		+ fine * crust * heat * (0.3 + 0.4 * churn) * (0.4 + core_heat);
 	glow *= (0.8 + 0.4 * vnoise(lp * 0.025 + vec2(TIME * 0.12, TIME * 0.09))) * (1.0 + 0.6 * surge);
 	float far = smoothstep(600.0, 3000.0, dist);
 	EMISSION = hot * (glow * (1.0 - far) + max(lv.x, lv.y * 0.7) * 2.6 * far);

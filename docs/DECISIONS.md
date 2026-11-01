@@ -3993,6 +3993,28 @@ through, grass, stones and trees standing in it.
   glowing edges edged by the field's screen-space change; the flows' broad ones filled the gaps between the plates), and
   rare open pools where it churns hottest.
 
+## D258 — Lava: cracks that ride with the crust, and a gas plume (2026-11-01)
+Tom: "Keep working on lava".
+* **Cracks**: the crust's fine glowing cracks used the same time-warped noise as the melt, so they reshaped every second
+  (boiling). They now ride with the crust (a fixed warp, moved only by the flow like the rest), two crossing sets meet at
+  junctions, and a mask cuts them into segments. Whole, they formed closed rings that read as contour lines on a map.
+  The rare fine veins drew the same rings and are gone.
+* **The plume** (`VolcanoSmoke.cs`, `VolcanoSmoke.gdshader`; setting *Volcano smoke*, `fx.volcano_smoke`, on):
+  * 150 puffs of Tom's smoke texture, 60–200 m across, rising for about a minute to a few hundred metres from the
+    crater's rim (`Volcanoes.CraterRadius`). Released inside the crater, they hid in it.
+  * They bend off with the wind, white-grey and thinning as they go.
+  * They are world-space GPU particles with a visibility box of their own. CPU particles reported an empty box and were
+    culled.
+  * They are lit by the scene. At dusk and night their base glows dull red from the lava, fading out within a fifth of a
+    puff's life.
+  * The glow is gated by the real sun's elevation (`sun_true.w`). `sun_dir_world` follows the moon at night, which had
+    switched the glow off.
+  * The glow is at 0.55: at 5× it read as a ball of fire floating over the summit, and left on by day it tinted the
+    white plume orange.
+  * Soft where it meets the ground. The proximity fade is guarded against the sky's zero w, which made whole puffs
+    vanish.
+* No terrain change: `CraterRadius` only reads the plan.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

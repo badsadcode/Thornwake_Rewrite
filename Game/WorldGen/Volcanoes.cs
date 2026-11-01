@@ -751,6 +751,13 @@ public sealed class Volcanoes : PlanLandform
         return false;
     }
 
+    /// <summary>The crater's radius of the active volcano centred here (0 if none): the game's plume rises from its rim.</summary>
+    public double CraterRadius(double x, double z)
+    {
+        foreach (var v in _volcanoes) if (v.Active && v.X == x && v.Z == z) return v.Inner;
+        return 0;
+    }
+
     /// <summary>The active volcanoes: middle and radius (the game draws their lava around the nearest).</summary>
     public IEnumerable<(double X, double Z, double Radius)> Active()
     {

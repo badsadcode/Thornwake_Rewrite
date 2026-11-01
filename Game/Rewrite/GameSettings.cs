@@ -216,6 +216,9 @@ public static class GameSettings
         "Molten lava at active volcanoes: a glowing lava lake in the crater, fresh flows glowing down the middle with a dark " +
         "crust cracked open over the heat, an orange light over the crater. Off: lava fields stay dark rock (build 123).",
         options: new[] { "off (dark rock)", "glowing" }));
+    public static readonly Setting VolcanoSmoke = Add(new("fx.volcano_smoke", "Lighting and effects", "Volcano smoke", 0, 1, 1, 1,
+        "A gas plume rising from an active volcano's lava lake and drifting with the wind, lit by the lava at night.",
+        options: new[] { "off", "on" }));
     public static readonly Setting HeatShimmer = Add(new("fx.heat_shimmer", "Lighting and effects", "Heat shimmer", 0, 1, 1, 1,
         "The air above glowing lava wobbles the view behind it (a full-screen pass, drawn only near an active volcano).",
         options: new[] { "off", "on" }));
