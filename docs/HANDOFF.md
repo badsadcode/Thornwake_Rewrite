@@ -3,7 +3,11 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 121** (v0.9.121, return point `770a9e4`, `dist/Preview-121`): fjord coasts (D245, terrain
+* **Last build Tom has: 122** (v0.9.122, return point `6defaf6`, `dist/Preview-122`): volcanoes and calderas (D246,
+  tuned D247; terrain revisions 28, 29); launchers "Go to - volcano with lava flows / caldera lake with an island /
+  snowy volcano with a collapsed side". Volcanoes rise before the rivers, so at revision 29 rivers and the landforms
+  placed along them (canyons, troughs, cirques) come out elsewhere: their launchers keep revision 27.
+  Build 121 (`770a9e4`, `dist/Preview-121`): fjord coasts (D245, terrain
   revision 27: a cold northern coast raised into a range in the plan, 3–4 fjords with side arms, skerries), single
   fjords (D244, rev. 26), troughs without falls from rivers rising just above them (D243, rev. 25); launchers "Go to -
   glacial trough / hanging valley's fall / down a fjord to the sea / on a fjord, toward its mouth (Balanced, seed 7319)".
