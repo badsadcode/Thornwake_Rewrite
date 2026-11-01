@@ -3833,6 +3833,26 @@ gullies, more varied calderas. Revision 28 stays selectable (*Volcanoes first (r
   floor; 1,094 crater lake points closed in; all volcanic in the middle. Speed 1 316 ns per sample (1 261 at revision
   28: the sample tiles crossing volcanoes pay for their exact shape, gullies and flows).
 
+## D248 — Terrain revision 30: volcano detail (2026-11-01)
+Tom on build 122: "Maybe we could add some more details to the volcanoes so they are not as smooth ... I'm not sure",
+then "Yes, add detail" to the proposal. The silhouettes held; close up, the middle and lower slopes were one soft surface
+(the gullies were 10–30 m on slopes kilometres long, and the mountains' rugged relief had been taken off the
+volcanoes, D246). The volcanoes stay where revision 29 put them (the cinder cones draw from a stream of their own):
+* **Cinder cones**: 3–7 on a cone (half on the flanks, 45–90 % of the radius out, half round the foot), 2–5 on a
+  caldera's shield outside the rim; 300–700 m round, 50–150 m high (× size), a crater in the top; on land.
+* **Ravines and knife ridges** high on a cone: 9–14, 70–140 m deep on a 2 km cone (scaled by its height), with rocky
+  ridges 25 m high between them, from below the crater's rim (never through it: a lake would run out) to 45–65 % of
+  the radius; 40–90 m first barely showed from the foot through the volcanic haze.
+* **Old lava fields**: hummocky, blocky ground (ridged noise over 140 m, a few metres high, bare rock) on the lower flanks
+  and round the foot, in patches; the traced flows get a blocky crust.
+* **Rougher lower flanks**: the mountain share on the volcano rises from 0.08 near the top (smooth ash) to up to 0.35
+  low down, in patches over 5 km (rough all round, it drew a rugged ring round the cone).
+* **Rock outcrops** along a crater's rim and a caldera's cliffs (up to 30 m).
+* Revision 29 frozen as *Build 122* (`terrain-build122.json`, selectable in *Terrain version*). Speed 1 359 ns per
+  sample (1 316 before: the sample tiles crossing volcanoes).
+* Next (Tom): glowing molten lava, later eruptions — a look of their own (emissive lava, heat shimmer, smoke, night
+  glow), his call.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

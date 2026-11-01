@@ -12,7 +12,9 @@ namespace Thornwake.WorldGen;
 /// plan lake (the hydrology fills it to the breach in its rim, where its river leaves); a quiet cone's crater holds a
 /// small lake of its own (<see cref="CraterLake"/>). The volcanic biome is drawn onto them (BiomeMap). Revision 29
 /// (D247, Tom: "tune first"): lava flows that follow the ground, taller cones (some with a collapsed side), gullies of
-/// different depths and lengths, calderas with taller cliffs, islands and older, worn rims.
+/// different depths and lengths, calderas with taller cliffs, islands and older, worn rims. Revision 30 (D248, Tom: "not
+/// as smooth"): cinder cones, deep ravines with sharp ridges high on the cones, hummocky old lava fields and rougher
+/// lower flanks, rock outcrops on rims and cliffs (<see cref="Detail"/>).
 /// </summary>
 public sealed class Volcanoes : PlanLandform
 {
@@ -40,6 +42,9 @@ public sealed class Volcanoes : PlanLandform
         public List<Flow>? Traced;
         /// <summary>The bounds of all its traced flows (a quick reject for points far from them).</summary>
         public double FlowMinX = double.MaxValue, FlowMinZ = double.MaxValue, FlowMaxX = double.MinValue, FlowMaxZ = double.MinValue;
+        /// <summary>Revision 30's detail (<see cref="Detail"/>), and its cinder cones: where, radius, height.</summary>
+        public bool Detailed;
+        public (double X, double Z, double Radius, double Height)[] Cinders = Array.Empty<(double, double, double, double)>();
         public (double Angle, double Length, double Width, double Thickness)[] FlowStarts = Array.Empty<(double, double, double, double)>();
         /// <summary>The level it is built on: the land's mean height round its foot, before it was raised; revision 29: and
         /// its tilt (m per m along X and Z: a level base cut a moat into a slope).</summary>
@@ -135,7 +140,11 @@ public sealed class Volcanoes : PlanLandform
                     double tilt = v.Caldera ? DetMath.Smooth((Math.Sqrt(Sq(x - v.X) + Sq(z - v.Z)) - v.Inner * 1.2) / (v.Inner * .6)) : 1;
                     double level = v.Base + tilt * (v.TiltX * (x - v.X) + v.TiltZ * (z - v.Z));
                     height[k] = (float)(height[k] * (1 - w) + w * (level + shape));
-                    mountain[k] = (float)(mountain[k] * (1 - w) + w * .2 * shape / v.Height);
+                    // (revision 30: rougher lower flanks in patches, smooth ash near the top; before, smoother than the mountains
+                    // all over; rough all round, a rugged ring)
+                    double patch = DetMath.Smooth(.5 + 1.2 * Noise.Fbm(x, z, 5000, 2, 0, v.Seed + 81));
+                    double m = v.Detailed ? .08 + .27 * patch * DetMath.Smooth((Math.Sqrt(Sq(x - v.X) + Sq(z - v.Z)) / v.Radius - .3) / .5) : .2 * shape / v.Height;
+                    mountain[k] = (float)(mountain[k] * (1 - w) + w * m);
                 }
             }
     }
@@ -213,6 +222,7 @@ public sealed class Volcanoes : PlanLandform
             int k = from[rng.Int(from.Count)];
             var v = new Volcano { X = macro.CellX(k % macro.Size), Z = macro.CellZ(k / macro.Size), Caldera = rng.Unit() < .3, Seed = rng.Next() };
             if (_revision >= 29) TunedShape(v, rng, setting);
+            if (_revision >= 30) Cinders(v, macro, setting); // (its own random stream: the volcanoes stay where revision 29 put them)
             else if (v.Caldera)
             {
                 v.Height = rng.Between(500, 1100) * setting.Size; v.Radius = rng.Between(9000, 16000) * setting.Size; v.Power = 1.5;
@@ -280,6 +290,86 @@ public sealed class Volcanoes : PlanLandform
         v.FlowStarts = new (double, double, double, double)[flows];
         for (int f = 0; f < flows; f++)
             v.FlowStarts[f] = (rng.Unit() * Math.Tau, rng.Between(2000, 7000) * setting.Size, rng.Between(150, 350) * setting.Size, rng.Between(6, 15));
+    }
+
+    /// <summary>
+    /// Revision 30: cinder cones (their own random stream, from the volcano's seed). Cones: 3–7, half on the flanks (45–90
+    /// % of the radius out), half round the foot (100–130 %); calderas: 2–5 on the shield outside the rim. Each 300–700 m
+    /// round and 50–150 m high (× size), a crater in its top, on land.
+    /// </summary>
+    private static void Cinders(Volcano v, MacroRaster macro, LandformSetting setting)
+    {
+        v.Detailed = true;
+        var rng = new RandomStream(v.Seed ^ 0x5C0B1A5EUL);
+        int count = v.Caldera ? 2 + rng.Int(4) : 3 + rng.Int(5);
+        var list = new List<(double, double, double, double)>();
+        for (int n = 0; n < count; n++)
+        {
+            double a = rng.Unit() * Math.Tau;
+            double u = v.Caldera ? rng.Between(Math.Max(.5, v.Inner * 1.6 / v.Radius), 1.2) : rng.Unit() < .5 ? rng.Between(.45, .9) : rng.Between(1, 1.3);
+            double cr = rng.Between(300, 700) * setting.Size, ch = rng.Between(50, 150) * setting.Size;
+            double x = v.X + Math.Cos(a) * u * v.Radius, z = v.Z + Math.Sin(a) * u * v.Radius;
+            if (macro.Sample(WorldPlan.LandChannel, x, z) < .45) continue;
+            list.Add((x, z, cr, ch));
+        }
+        v.Cinders = list.ToArray();
+    }
+
+    /// <summary>
+    /// Revision 30's walking-scale detail on a volcano (Tom on revision 29: "add some more details ... so they are not as
+    /// smooth"): the cinder cones; on a cone, 9–14 deep ravines (70–140 m on a 2 km cone) with sharp rocky ridges between
+    /// them high up, from below the crater's rim to 45–65 % of the radius (the smooth ash slopes stay between); hummocky old lava fields
+    /// on the lower flanks and round the foot, in patches (blocks and pressure ridges a few metres high, bare rock); rock
+    /// outcrops along a crater's rim and a caldera's cliffs. <paramref name="fade"/>: the land fade (none at the sea).
+    /// </summary>
+    private static double Detail(Volcano v, double x, double z, double r, double fade, ref double rock)
+    {
+        double g = 0, u = r / v.Radius;
+        foreach (var (cx, cz, cr, ch) in v.Cinders)
+        {
+            double d = Math.Sqrt(Sq(x - cx) + Sq(z - cz));
+            if (d >= cr) continue;
+            double q = d / cr * (1 + .08 * Noise.Fbm(x, z, cr * .6, 2, 0, v.Seed + 61));
+            if (q >= 1) continue;
+            g += ch * Math.Pow(1 - q, 1.3) - ch * .45 * (1 - DetMath.Smooth(q / .28));
+            rock = Math.Max(rock, .55 * (1 - DetMath.Smooth((q - .5) / .5)));
+        }
+        if (u > 1.35) return g * fade;
+        if (!v.Caldera)
+        {
+            // Ravines and knife ridges high on the cone, starting below the crater's rim (a ravine through the rim would
+            // drain its lake).
+            double start = Math.Max(.07, v.Inner * 1.5 / v.Radius);
+            double zone = DetMath.Smooth((u - start) / .06) * (1 - DetMath.Smooth((u - .45) / .2));
+            if (zone > 0)
+            {
+                int count = 9 + (int)(v.Seed % 6);
+                double c = Math.Cos(count * Math.Atan2(z - v.Z, x - v.X) + 2 * Noise.Fbm(x, z, 3000, 2, 0, v.Seed + 71));
+                double ravine = DetMath.Smooth((c - .45) / .55), crest = DetMath.Smooth((-c - .6) / .4);
+                double deep = (70 + 70 * DetMath.Smooth(.5 + Noise.Fbm(x, z, 2000, 2, 0, v.Seed + 72))) * Math.Min(1, v.Height / 2000);
+                g += (25 * crest - deep * ravine) * zone; // (40–90 m barely showed from the foot through the haze)
+                rock = Math.Max(rock, zone * Math.Max(.5 * ravine, .7 * crest));
+            }
+        }
+        // Old lava fields: hummocky, blocky ground on the lower flanks and round the foot, in patches.
+        double field = DetMath.Smooth((u - .4) / .15) * (1 - DetMath.Smooth((u - 1.2) / .15))
+            * DetMath.Smooth((Noise.Fbm(x, z, 3500, 2, 0, v.Seed + 41) + .05) / .25);
+        if (field > 0)
+        {
+            double ridged = 1 - Math.Abs(Noise.Fbm(x, z, 140, 3, 0, v.Seed + 42));
+            g += field * (6 * ridged * ridged - 2 + 2.5 * Noise.Fbm(x, z, 35, 2, 0, v.Seed + 43));
+            rock = Math.Max(rock, .75 * field);
+        }
+        // Rock outcrops on a crater's rim or along a caldera's cliffs.
+        double band = v.Caldera ? 1 - DetMath.Smooth(Math.Abs(r - v.Inner) / (v.Inner * .15))
+            : 1 - DetMath.Smooth(Math.Abs(r - v.Inner) / (v.Inner * .35));
+        if (band > 0)
+        {
+            double outcrop = Math.Max(0, Noise.Fbm(x, z, 90, 3, 0, v.Seed + 51) - .05);
+            g += band * 30 * outcrop;
+            rock = Math.Max(rock, .9 * band);
+        }
+        return g * fade;
     }
 
     /// <summary>
@@ -375,6 +465,11 @@ public sealed class Volcanoes : PlanLandform
         foreach (var v in _volcanoes)
         {
             double dx = x - v.X, dz = z - v.Z, r = Math.Sqrt(dx * dx + dz * dz);
+            if (v.Detailed && r < v.Radius * 1.4 + 800)
+            {
+                double near = DetMath.Smooth((_macro.Sample(WorldPlan.LandChannel, x, z) - .2) / .3);
+                g += Detail(v, x, z, r, near, ref rock);
+            }
             if (r >= v.Radius * 1.1 + _macro.Cell * 2) continue;
             double fade = DetMath.Smooth((_macro.Sample(WorldPlan.LandChannel, x, z) - .2) / .3);
             double exact = Profile(v, x, z, true, out double steep);
@@ -464,7 +559,9 @@ public sealed class Volcanoes : PlanLandform
                 double edge = width * .5 * (1 + .25 * Noise.Fbm(x, z, 160, 2, 0, f.Seed));
                 double across = 1 - DetMath.Smooth((best - edge * .7) / (edge * .3 + 1));
                 if (across <= 0) continue;
-                g = Math.Max(g, f.Thickness * across * (1 + .3 * Noise.Fbm(x, z, 120, 2, 0, f.Seed + 1)));
+                double lobe = f.Thickness * across * (1 + .3 * Noise.Fbm(x, z, 120, 2, 0, f.Seed + 1));
+                if (_revision >= 30) lobe += across * 3 * (1 - Math.Abs(Noise.Fbm(x, z, 45, 2, 0, f.Seed + 2))); // (a blocky crust)
+                g = Math.Max(g, lobe);
                 rock = Math.Max(rock, .9 * across);
             }
         }
