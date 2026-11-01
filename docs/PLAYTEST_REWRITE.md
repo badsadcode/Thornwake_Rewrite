@@ -78,6 +78,21 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 125 — lava like water, and a volcano plume
+**Host and everyone joining need build 125** (versions must match to connect). Same terrain as build 124.
+* **Lava as its own surface** (after your three dumps): the lava is now a sheet of its own lying on the ground, like the
+  water, instead of colour painted on the terrain. No ground texture shows through, the edges are ragged lobes instead
+  of a blur, and heavy slow swells roll down a flow and well up on the lake. Close up: grain in the crust, small flakes
+  of skin drifting on the melt, streaks along the flow, thin glowing cracks that ride with the crust (they no longer
+  boil). The lava lake is plates of crust with melt in narrow seams and an open pool here and there.
+* **Nothing grows in lava**: no grass, plants, stones, logs or trees in it.
+* **Volcano smoke**: a gas plume rises from an active volcano's crater and bends off with the wind. Grey-white by day;
+  at dusk and night its base glows dull red from the lava.
+* The lava glows deep orange rather than white by day; from far away a flow is still a red streak down the cone at night.
+* Settings: *Lighting and effects → Volcano smoke* (on / off), besides *Lava* and *Heat shimmer*.
+* Try *Go to - lava lake*, *Go to - lava flow at night* and *Go to - onto a lava flow* (Balanced, seed 7319).
+* Known: lava doesn't hurt, no eruptions yet.
+
 ## New in build 124 — active volcanoes and glowing lava (terrain revision 31)
 **Host and everyone joining need build 124** (versions must match to connect).
 * **Active volcanoes**: about half the cones are active — a lava lake in the crater instead of water, and one or two
