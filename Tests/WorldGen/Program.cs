@@ -215,6 +215,38 @@ if (args.FirstOrDefault(a => a.StartsWith("--raster-grid=")) is { } rgq)
     }
     return 0;
 }
+// --point=profile,seed,x,z,rev[,rev...]: one sample at a point, at each terrain revision (what changed where).
+if (args.FirstOrDefault(a => a.StartsWith("--point=")) is { } pt)
+{
+    var q = pt[8..].Split(',');
+    var s0 = CoreTests.Sampler(q[0], int.Parse(q[1]));
+    double px = double.Parse(q[2], CultureInfo.InvariantCulture), pz = double.Parse(q[3], CultureInfo.InvariantCulture);
+    foreach (var rv in q.Skip(4))
+    {
+        var s = new TerrainSampler(new WorldPlan(s0.Plan.Manifest, style: s0.Plan.Style with { Revision = int.Parse(rv) }));
+        var t = s.Sample(px, pz);
+        Console.WriteLine($"revision {rv}: ground {t.Height:0.0}, water {t.Water} {t.WaterLevel:0.0}, detail {t.Detail:0.0}, mountain {t.Mountain:0.00}, lakes {s.Plan.Hydrology.Lakes.Count}, lake near {s.Plan.Hydrology.LakeNear(px, pz)}");
+    }
+    return 0;
+}
+// --landform-point=x,z: the Vast test world (7319, 2,048 km) at a point, as designed and with dunes, mesas and spires at their
+// largest (the "water wins" test), and with each of them alone at its largest.
+if (args.FirstOrDefault(a => a.StartsWith("--landform-point=")) is { } lp)
+{
+    var q = lp[17..].Split(',');
+    double px = double.Parse(q[0], CultureInfo.InvariantCulture), pz = double.Parse(q[1], CultureInfo.InvariantCulture);
+    var plan = new WorldPlan(WorldManifest.Create(7319, WorldRecipe.Catalog(CoreTests.Profiles).First(r => r.Id == "vast-world").Resolve(new WorldChoices { SizeKm = 2048 }), worldId: CoreTests.FixedWorldId));
+    void Show(string name, params LandformInfo[] big)
+    {
+        var s = new TerrainSampler(new WorldPlan(plan.Manifest, style: plan.Style with { Landforms = big.ToDictionary(i => i.Id, i => new LandformSetting(2.5, 2)) }));
+        var t = s.Sample(px, pz);
+        Console.WriteLine($"{name}: ground {t.Height:0.00}, water {t.Water} {t.WaterLevel:0.00}, detail {t.Detail:0.00}, biome terrain {s.Plan.Biomes.TerrainAt(px, pz, out var m, allBiomes: true)} dunes {m.Dunes:0.00} mesas {m.Mesas:0.00} spires {m.Spires:0.00}");
+    }
+    Show("designed");
+    Show("all largest", LandformCatalog.Dunes, LandformCatalog.Mesas, LandformCatalog.Spires);
+    Show("dunes largest", LandformCatalog.Dunes); Show("mesas largest", LandformCatalog.Mesas); Show("spires largest", LandformCatalog.Spires);
+    return 0;
+}
 // --trough-stats: river chains (following the river downstream across junctions) that drop 60 m or more within 3–9 km,
 // with side rivers joining on the way, away from lakes and the sea (glacial trough candidates).
 if (args.Contains("--trough-stats"))

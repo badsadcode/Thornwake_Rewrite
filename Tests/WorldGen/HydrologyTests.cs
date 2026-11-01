@@ -74,7 +74,11 @@ internal static class HydrologyTests
             {
                 double land = 0; var macro = s.Plan.Macro.Channel(WorldPlan.HeightChannel);
                 foreach (var h in macro) if (h > 0) land++;
-                double share = hy.Lakes.Sum(l => l.Area) / (land * s.Plan.Macro.Cell * s.Plan.Macro.Cell);
+                // (a caldera's lake is the volcano's, kept beyond the share of the land the erosion's lakes may cover: revision
+                // 28 on, D246)
+                var volcanoes = s.Plan.PlanLandforms.OfType<Volcanoes>().FirstOrDefault();
+                double share = hy.Lakes.Where(l => volcanoes?.InCaldera(l.Center.X, l.Center.Z, out _, out _) != true).Sum(l => l.Area)
+                    / (land * s.Plan.Macro.Cell * s.Plan.Macro.Cell);
                 T.Check(share <= s.Plan.Style.LakeShare + 1e-9, $"lake share {share}");
             }
         }
@@ -115,13 +119,16 @@ internal static class HydrologyTests
         foreach (var s in Worlds())
             foreach (var lake in s.Plan.Hydrology.Lakes.Take(20))
             {
-                // The deepest lake cell is under water.
+                // The deepest lake cell is under water (not counting a caldera's island cone: dry inside its lake by design,
+                // and a caldera's floor is flat, so its deepest cell can lie under it).
                 int n = s.Plan.Macro.Size, deepest = -1; double low = double.PositiveInfinity;
                 var h = s.Plan.Macro.Channel(WorldPlan.HeightChannel);
+                var volcanoes = s.Plan.PlanLandforms.OfType<Volcanoes>().FirstOrDefault();
                 for (int c = 0; c < s.Plan.Hydrology.LakeCell.Length; c++)
-                    if (s.Plan.Hydrology.LakeCell[c] == lake.Id && h[c] < low) { low = h[c]; deepest = c; }
+                    if (s.Plan.Hydrology.LakeCell[c] == lake.Id && h[c] < low && volcanoes?.OnIsland(s.Plan.Macro.CellX(c % n), s.Plan.Macro.CellZ(c / n)) != true)
+                    { low = h[c]; deepest = c; }
                 var t = s.Sample(s.Plan.Macro.CellX(deepest % n), s.Plan.Macro.CellZ(deepest / n));
-                T.Check(t.Water == WaterKind.Lake || t.Water == WaterKind.River, $"{s.Plan.Profile.Id} lake {lake.Id} deepest point is wet ({t.Water}, h {t.Height}, level {lake.Level})");
+                T.Check(t.Water == WaterKind.Lake || t.Water == WaterKind.River, $"{s.Plan.Profile.Id} lake {lake.Id} deepest point is wet ({t.Water}, h {t.Height}, level {lake.Level}) at {s.Plan.Macro.CellX(deepest % n):0},{s.Plan.Macro.CellZ(deepest / n):0}");
                 if (t.Water == WaterKind.Lake) T.Check(t.WaterLevel == lake.Level && t.Height < lake.Level, "lake level and bed");
             }
     }

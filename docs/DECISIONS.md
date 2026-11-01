@@ -3853,6 +3853,30 @@ volcanoes, D246). The volcanoes stay where revision 29 put them (the cinder cone
 * Next (Tom): glowing molten lava, later eruptions — a look of their own (emissive lava, heat shimmer, smoke, night
   glow), his call.
 
+## D249 — Build 122's terrain restored; the whole test suite again (2026-11-01)
+* **The test runner stops at its first failure.** After each generator change the frozen "current" fingerprints fail
+  first (expected), so since revision 27 the "full" runs never reached the tests after them; only filtered runs
+  followed. Now: record, then the whole suite to its final pass line, before every commit.
+* **Build 122 restored.** Revision 30's cinder-cone call went between `if (revision >= 29) TunedShape(...)` and its
+  `else if (v.Caldera)`: at revision 29 the old (revision 28) shapes then overwrote the tuned ones. Caught by the
+  *Build 122* fixture after commit c58acbf; the call now comes after the whole chain. Build 122's terrain (and revision
+  30's, which never took the broken branch) reproduce exactly.
+* **Lake share**: since revision 28 a caldera's lake is kept beyond the share of land the erosion's lakes may cover
+  (3 %); one world reached 3.03 %. That is the design (D246): the test now measures the erosion's lakes only. (Counting
+  caldera lakes into the budget instead let a small high mountain lake in whose deepest cell lay 62 m above its water
+  under the walking-scale relief — dropped.)
+* **Pools with every landform at its largest**: 3 wetland pond points of 160,297 lose their water (from revision 29 on,
+  where the volcanoes moved the rivers): beside a river, mesas at their largest reshape its floodplain (the ground 2.4 m
+  lower) and revision 22's guard (no pools on ground a river cut down, D240) refuses the 12 cm pond there. A pool is the
+  biome's own water, not the plan's: the test keeps rivers, lakes and the sea exact and lets at most 1 in 10,000 pool
+  points move. (Two tries at revision 31 — the guard measured without the landforms, then without only what they
+  raised — either refused every fen pool or still lost 2 points: dropped, the generator unchanged.)
+* **Tests that compared with an older revision**: the volcanoes (revision 28) reshape the river network, so the waterfall,
+  canyon, cirque, trough and fjord tests now compare with the same world with that landform switched off (the
+  waterfall test crashed on a reach list of another length). The trough floor check measures the middle half of each
+  line within 45 % of the floor's half width, under 20 m (biome knobs, narrow stretches and low valley sides read as
+  rough floors in the new troughs); water at the sea's level may stay level in it too (fjords).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -142,9 +142,13 @@ public sealed class Volcanoes : PlanLandform
                     height[k] = (float)(height[k] * (1 - w) + w * (level + shape));
                     // (revision 30: rougher lower flanks in patches, smooth ash near the top; before, smoother than the mountains
                     // all over; rough all round, a rugged ring)
-                    double patch = DetMath.Smooth(.5 + 1.2 * Noise.Fbm(x, z, 5000, 2, 0, v.Seed + 81));
-                    double m = v.Detailed ? .08 + .27 * patch * DetMath.Smooth((Math.Sqrt(Sq(x - v.X) + Sq(z - v.Z)) / v.Radius - .3) / .5) : .2 * shape / v.Height;
-                    mountain[k] = (float)(mountain[k] * (1 - w) + w * m);
+                    if (v.Detailed)
+                    {
+                        double patch = DetMath.Smooth(.5 + 1.2 * Noise.Fbm(x, z, 5000, 2, 0, v.Seed + 81));
+                        double m = .08 + .27 * patch * DetMath.Smooth((Math.Sqrt(Sq(x - v.X) + Sq(z - v.Z)) / v.Radius - .3) / .5);
+                        mountain[k] = (float)(mountain[k] * (1 - w) + w * m);
+                    }
+                    else mountain[k] = (float)(mountain[k] * (1 - w) + w * .2 * shape / v.Height); // (kept in this exact form: bit-exact)
                 }
             }
     }
@@ -222,7 +226,6 @@ public sealed class Volcanoes : PlanLandform
             int k = from[rng.Int(from.Count)];
             var v = new Volcano { X = macro.CellX(k % macro.Size), Z = macro.CellZ(k / macro.Size), Caldera = rng.Unit() < .3, Seed = rng.Next() };
             if (_revision >= 29) TunedShape(v, rng, setting);
-            if (_revision >= 30) Cinders(v, macro, setting); // (its own random stream: the volcanoes stay where revision 29 put them)
             else if (v.Caldera)
             {
                 v.Height = rng.Between(500, 1100) * setting.Size; v.Radius = rng.Between(9000, 16000) * setting.Size; v.Power = 1.5;
@@ -240,6 +243,9 @@ public sealed class Volcanoes : PlanLandform
                 for (int f = 0; f < flows; f++)
                     v.Flows[f] = (rng.Unit() * Math.Tau, rng.Between(.12, .25), rng.Between(.5, .9), rng.Between(150, 400) * setting.Size, rng.Between(6, 15));
             }
+            // (its own random stream: the volcanoes stay where revision 29 put them; first placed inside the if/else above,
+            // it cut the chain and revision 29's volcanoes took revision 28's shapes too — caught by the Build 122 fixture)
+            if (_revision >= 30) Cinders(v, macro, setting);
             bool ok = true;
             for (int d = 0; d < 8 && ok; d++)
             {
@@ -638,6 +644,14 @@ public sealed class Volcanoes : PlanLandform
             if (!v.Caldera || v.IslandRadius <= 0 || hy.LakeNear(v.X, v.Z) is not (>= 0 and var lake)) continue;
             v.IslandHeight = hy.Lakes[lake].Level - sea - v.Base - (v.Height - v.Depth) + v.IslandAbove;
         }
+    }
+
+    /// <summary>On a caldera's island cone here (revision 29: dry ground inside a lake, by design).</summary>
+    public bool OnIsland(double x, double z)
+    {
+        foreach (var v in _volcanoes)
+            if (v.Caldera && v.IslandRadius > 0 && Sq(x - v.X - v.IslandX) + Sq(z - v.Z - v.IslandZ) < Sq(v.IslandRadius)) return true;
+        return false;
     }
 
     /// <summary>
