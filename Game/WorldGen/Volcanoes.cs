@@ -754,7 +754,8 @@ public sealed class Volcanoes : PlanLandform
 
     /// <summary>
     /// How molten and how crusted the ground is here (0 … 1 each; revision 31): the lava lake molten (where the crater's
-    /// floor lies below its level), a fresh flow molten in a channel down its middle (a fifth of its width) and crusted
+    /// floor lies below its level), a fresh flow molten in a channel down its middle (half its width, brightest in its
+    /// middle; D253) and crusted
     /// across all of it, both cooling along it (a third as hot at its end). For the game's lava look; no effect on the
     /// ground itself.
     /// </summary>
@@ -793,7 +794,9 @@ public sealed class Volcanoes : PlanLandform
                 if (x < f.MinX || x > f.MaxX || z < f.MinZ || z > f.MaxZ || !FlowNearest(f, x, z, out double best, out double width, out double along, out double tx, out double tz)) continue;
                 double heat = 1 - .65 * along;
                 double across = 1 - DetMath.Smooth((best - width * .35) / (width * .15 + 1));
-                double core = 1 - DetMath.Smooth((best - width * .08) / (width * .05 + 1));
+                // (D253, Noor: "broader molten areas": the channel half the flow's width, brightest in its middle and falling off
+                // toward the cooling edges — a fifth of it drew thin lines)
+                double core = (1 - DetMath.Smooth((best - width * .12) / (width * .16 + 1))) * (.55 + .45 * (1 - DetMath.Smooth(best / (width * .14 + 1))));
                 crust = Math.Max(crust, across * heat);
                 molten = Math.Max(molten, core * heat * (1 - DetMath.Smooth((along - .85) / .15)));
                 if (across * heat > lead) { lead = across * heat; dirX = tx * heat; dirZ = tz * heat; }

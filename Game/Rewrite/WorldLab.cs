@@ -495,7 +495,7 @@ public partial class WorldLab : Node3D
         // Molten lava round the nearest active volcano (terrain revision 31, D250; with or without weather).
         if (_sampler != null)
         {
-            _lavaMap ??= new LavaMap(this);
+            _lavaMap ??= new LavaMap(this, _camera);
             var camLava = _camera.GlobalPosition;
             _lavaMap.Update(_sampler, _originX + camLava.X, _originZ + camLava.Z, _originX, _originZ, _shotPath != null);
         }

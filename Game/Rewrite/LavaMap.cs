@@ -14,15 +14,16 @@ namespace Thornwake.Rewrite;
 /// b, a = which way it moves (× 0.5 + 0.5; its length the speed, D252).
 /// The terrain shader draws it glowing (TerrainBody.gdshaderinc: globals <c>lava_map</c>, <c>lava_frame</c>). Glowing
 /// ground lights nothing round it in this renderer, so orange lights hang over the lava (D251): a strong one over the
-/// lava lake, and along the fresh flows every 300 m, the 12 nearest the camera lit, falling off gently (distance^-0.35 to
-/// ^-0.45) — the crater walls, the flanks and the haze over the crater take the glow. Setting <c>fx.lava</c>: off leaves the lava fields as dark rock.
+/// lava lake (distance^-0.35), and 15 m over the fresh flows every 150 m (distance^-0.5, the nearest three casting
+/// shadows), the 16 nearest the camera lit — the crater walls, the rocks beside a flow and the haze take the glow. Setting <c>fx.lava</c>: off leaves the lava fields as dark rock.
 /// </summary>
 public sealed class LavaMap
 {
     public const int Pixels = 1024;
     public const double Size = 16000;
-    private const int Lights = 12;
-    private const double LightSpacing = 300;
+    private const int Lights = 16;
+    private const double LightSpacing = 150;
+    private const int ShadowLights = 3;
 
     private readonly ImageTexture _texture;
     private readonly OmniLight3D[] _lights = new OmniLight3D[Lights];
@@ -31,8 +32,20 @@ public sealed class LavaMap
     private (double X, double Y, double Z, double Heat, bool Lake)[] _points = Array.Empty<(double, double, double, double, bool)>();
     private TerrainSampler? _for;
 
-    public LavaMap(Node3D parent)
+    private readonly MeshInstance3D _shimmer;
+
+    public LavaMap(Node3D parent, Camera3D camera)
     {
+        // Heat shimmer (D255): a full-screen pass in front of the camera, drawn first of the transparent passes — it copies the
+        // opaque picture, and drawn last it laid that copy over the haze passes (brighter bands over the flow).
+        _shimmer = new MeshInstance3D
+        {
+            Name = "HeatShimmer", Mesh = new QuadMesh { Size = new Vector2(2, 2) },
+            MaterialOverride = new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/HeatShimmer.gdshader"), RenderPriority = -128 },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, ExtraCullMargin = 16384, Position = new Vector3(0, 0, -1),
+            GIMode = GeometryInstance3D.GIModeEnum.Disabled, Visible = false,
+        };
+        camera.AddChild(_shimmer);
         var image = Image.CreateEmpty(Pixels, Pixels, false, Image.Format.Rgba8);
         image.Fill(new Color(0, 0, .5f, .5f)); // (no lava, standing still)
         _texture = ImageTexture.CreateFromImage(image);
@@ -75,6 +88,7 @@ public sealed class LavaMap
         if (double.IsNaN(_mapX)) { Off(); return; }
         RenderingServer.GlobalShaderParameterSet("lava_frame", new Vector4((float)(_mapX - originX), (float)(_mapZ - originZ), (float)Size, 1));
         PlaceLights(camX, camZ, originX, originZ);
+        _shimmer.Visible = GameSettings.HeatShimmer.Index == 1 && bestDistance < 12000;
     }
 
     /// <summary>The lake's light always (strong, far-reaching, glowing in the haze); the flow lights nearest the camera.</summary>
@@ -86,12 +100,16 @@ public sealed class LavaMap
             var light = _lights[i];
             if (i >= chosen.Length) { light.Visible = false; continue; }
             var p = chosen[i];
-            light.Position = new Vector3((float)(p.X - originX), (float)p.Y + (p.Lake ? 80 : 25), (float)(p.Z - originZ));
+            // Flow lights close over the lava (10 m), every 150 m, falling off faster (D253, Noor: "nearby lava should
+            // illuminate surrounding rocks with a softer orange glow ... not uniformly"): warm on the rocks beside a flow,
+            // fading over a few hundred metres; the nearest three cast shadows, so the rocks throw irregular shadows.
             // (Godot's omni light falls off as distance^-attenuation: at 1.2 a light 300 m off gave the crater walls 2 % of it)
-            light.OmniAttenuation = p.Lake ? .35f : .45f;
-            light.LightEnergy = p.Lake ? 3.5f : (float)(4 * p.Heat);
-            light.OmniRange = p.Lake ? 1400 : 500;
-            light.LightVolumetricFogEnergy = p.Lake ? 1.2f : .8f; // (3 turned the whole sky over the crater red)
+            light.Position = new Vector3((float)(p.X - originX), (float)p.Y + (p.Lake ? 80 : 15), (float)(p.Z - originZ));
+            light.OmniAttenuation = p.Lake ? .35f : .5f; // (0.8 lit only a few metres round each)
+            light.LightEnergy = p.Lake ? 3.5f : (float)(4.5 * p.Heat);
+            light.OmniRange = p.Lake ? 1400 : 450;
+            light.LightVolumetricFogEnergy = p.Lake ? 1.2f : .6f; // (3 turned the whole sky over the crater red)
+            light.ShadowEnabled = !p.Lake && i <= ShadowLights;
             light.Visible = true;
         }
     }
@@ -99,6 +117,7 @@ public sealed class LavaMap
     private void Off()
     {
         Disable();
+        _shimmer.Visible = false;
         foreach (var light in _lights) light.Visible = false;
     }
 

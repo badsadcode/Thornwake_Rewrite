@@ -3921,6 +3921,44 @@ lava's fields along it, up to 2.5 m/s in a flow's molten channel and 0.8 m/s on 
 10 s cycle apart cross-faded (a flow map: it moves on for ever without stretching); the crust's shade moves with it.
 Terrain unchanged (fingerprints, Build 122, the volcano test).
 
+## D253 — The lava after Noor's notes (2026-11-01)
+Tom sent the captures to Noor ("maybe we could test that idea"). Noor: the lava hugs the ground and the night is right,
+but "I'd love to see some broader molten areas, with darker cooling crust floating over bright orange material ...
+bright yellow-orange lava where the flow is fastest, dark red along the cooling edges, black crust forming irregular
+islands, occasional cracks revealing molten material underneath, heat distortion"; and "nearby lava should
+illuminate surrounding rocks with a softer orange glow. Not uniformly, though!"
+* **Broader melt**: a fresh flow's molten channel is half its width (a fifth drew thin lines), brightest in its middle.
+* **Colour across**: yellow-orange where the melt is hottest (its middle), dark red toward the cooling edges.
+* **Crust islands**: on a flow's melt, black crust floats in irregular islands (from the rift field), more of them
+  toward the edges and downstream; the crust's fine cracks glow. The lake keeps its rifts.
+* **Light on the rocks**: flow lights every 150 m (300 before), 15 m over the lava (25), falling off as distance^−0.5
+  (energy 4.5 × heat, 450 m); 0.8 lit only a few metres round each. The nearest three cast shadows, so rocks beside a
+  flow throw irregular shadows. 16 lights (12).
+* Heat shimmer: not yet (a screen effect of its own, with its own setting — next).
+
+## D254 — Lava that lives, not a slid texture (2026-11-01)
+Tom: "can something be done so it doesn't look like only the texture is being moved?" The pattern slid along at one
+speed and never changed. Shader only (TerrainBody.gdshaderinc):
+* **Shear**: speed 0.2–3.2 m/s by how molten (graded across a flow since D253): the middle runs, the edges creep, the
+  crust tears between them.
+* **The crust re-forms**: a second, time-changing warp makes the cracks wriggle; the islands grow and melt away in a
+  slow field that stays put while they slide through it.
+* **Surges**: pulses of hotter lava down a flow (~4 m/s, a few hundred metres apart, irregular) widen the molten channel
+  and glow brighter; the heat throbs here and there on its own.
+* **Relief**: the crust islands stand up from the melt in the shading (within 600 m), so lights catch their edges.
+* Burst captures 3 s apart: the islands change shape, the flow shears, the core shifts.
+
+## D255 — Heat shimmer over lava (2026-11-01)
+Noor's last point (D253), Tom: "Okay let's go." `HeatShimmer.gdshader`, a full-screen pass in front of the camera
+(like the lens drops), setting *Heat shimmer* (`fx.heat_shimmer`, on), drawn only within 12 km of an active volcano:
+* each pixel's ground point is rebuilt from the depth and looked up in the lava map; the pixels up to 8 % of the
+  screen above lava take it too, fading upward (the hot air in front of what lies behind; 8 steps, jittered — 4 drew
+  bands); gone past 1.5 km;
+* the picture is wobbled by rising noise at two sizes, up to ~0.45 % of the screen where hottest.
+* It copies the opaque picture, so it draws first of the transparent passes (render priority −128): drawn last, it laid
+  that copy over the game's haze passes — brighter bands above the flow (a test with the wobble at zero showed it).
+* Difference image (on − off): only the flow and the air just above it change.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
