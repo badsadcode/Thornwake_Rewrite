@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 125** (lava as its own surface D257; cracks that ride with the crust and a volcano gas plume D258 — terrain revision 31, as build 124; setting Volcano smoke) | `d81fa08` | Thornwake-Rewrite-Preview-125 (v0.9.125) | Versions must match to connect; *Volcano smoke → off*; the lava painted on the terrain = build 124 (`00730f0`) |
 | **Build 124** (active volcanoes and glowing lava D250–D256 — terrain revision 31; settings Lava, Heat shimmer) | `00730f0` | Thornwake-Rewrite-Preview-124 (v0.9.124) | Versions must match to connect; *Terrain version → Build 123* keeps revision 30; *Lava → off* and *Heat shimmer → off* — build 123 = `cf3d975` |
 | **Build 123** (volcano detail D248; Build 122's terrain restored, whole test suite D249 — terrain revision 30) | `cf3d975` | Thornwake-Rewrite-Preview-123 (v0.9.123) | Versions must match to connect; *Terrain version → Build 122* keeps revision 29 — build 122 = `6defaf6` |
 | **Build 122** (volcanoes and calderas D246, tuned D247 — terrain revisions 28, 29) | `6defaf6` | Thornwake-Rewrite-Preview-122 (v0.9.122) | Versions must match to connect; *Terrain version → Build 121* keeps revision 27 (also *Volcanoes first (rev. 28)*) — build 121 = `770a9e4` |

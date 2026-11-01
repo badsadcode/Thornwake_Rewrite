@@ -90,7 +90,8 @@ milestone M6), caves.
   at dusk and night its base glows dull red from the lava.
 * The lava glows deep orange rather than white by day; from far away a flow is still a red streak down the cone at night.
 * Settings: *Lighting and effects → Volcano smoke* (on / off), besides *Lava* and *Heat shimmer*.
-* Try *Go to - lava lake*, *Go to - lava flow at night* and *Go to - onto a lava flow* (Balanced, seed 7319).
+* Try *Go to - lava lake*, *Go to - lava flow at night*, *Go to - onto a lava flow* and *Go to - volcano smoke at night*
+  (Balanced, seed 7319).
 * Known: lava doesn't hurt, no eruptions yet.
 
 ## New in build 124 — active volcanoes and glowing lava (terrain revision 31)

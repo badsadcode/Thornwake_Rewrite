@@ -3,7 +3,12 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 124** (v0.9.124, return point `00730f0`, `dist/Preview-124`): active volcanoes and glowing,
+* **Last build Tom has: 125** (v0.9.125, return point `d81fa08`, `dist/Preview-125`): lava as its own surface like the
+  water (D257: a sheet per tile on levels up to 4, `Lava.gdshader`; nothing grows in it), cracks that ride with the
+  crust and a volcano gas plume (D258, `VolcanoSmoke.cs`, setting *Volcano smoke*; glows dull red at dusk and night).
+  Same terrain as 124. New launcher "Go to - volcano smoke at night". Open: eruptions (Tom: later), lava that hurts,
+  wisps off the flows; more landforms.
+  Build 124 (v0.9.124, return point `00730f0`, `dist/Preview-124`): active volcanoes and glowing,
   flowing lava (D250–D256, terrain revision 31; Noor's notes in D253), heat shimmer (D255); settings *Lava*, *Heat
   shimmer*; launchers "Go to - lava lake / lava flow at night / onto a lava flow (Balanced, seed 7319)" (they calm the
   weather for the visit: that crater sits at the cloud base). Open: smoke over the crater, eruptions (Tom: later),
