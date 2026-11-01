@@ -14,7 +14,9 @@ namespace Thornwake.WorldGen;
 /// (D247, Tom: "tune first"): lava flows that follow the ground, taller cones (some with a collapsed side), gullies of
 /// different depths and lengths, calderas with taller cliffs, islands and older, worn rims. Revision 30 (D248, Tom: "not
 /// as smooth"): cinder cones, deep ravines with sharp ridges high on the cones, hummocky old lava fields and rougher
-/// lower flanks, rock outcrops on rims and cliffs (<see cref="Detail"/>).
+/// lower flanks, rock outcrops on rims and cliffs (<see cref="Detail"/>). Revision 31 (D250, Tom: "I'm really curious about
+/// the lava"): active volcanoes, a lava lake in the crater and fresh flows molten down the middle (<see cref="LavaAt"/>,
+/// which the game draws as glowing lava).
 /// </summary>
 public sealed class Volcanoes : PlanLandform
 {
@@ -44,6 +46,10 @@ public sealed class Volcanoes : PlanLandform
         public double FlowMinX = double.MaxValue, FlowMinZ = double.MaxValue, FlowMaxX = double.MinValue, FlowMaxZ = double.MinValue;
         /// <summary>Revision 30's detail (<see cref="Detail"/>), and its cinder cones: where, radius, height.</summary>
         public bool Detailed;
+        /// <summary>Revision 31: an active cone — a lava lake in its crater (instead of water), its first flows fresh.</summary>
+        public bool Active;
+        public int FreshFlows;
+        public double LavaLevel = double.NaN;
         public (double X, double Z, double Radius, double Height)[] Cinders = Array.Empty<(double, double, double, double)>();
         public (double Angle, double Length, double Width, double Thickness)[] FlowStarts = Array.Empty<(double, double, double, double)>();
         /// <summary>The level it is built on: the land's mean height round its foot, before it was raised; revision 29: and
@@ -87,7 +93,7 @@ public sealed class Volcanoes : PlanLandform
     {
         foreach (var v in _volcanoes)
             yield return (v.X, v.Z, string.Join(", ", new[] { v.Caldera ? "caldera" : "cone", v.Collapse > 0 ? "collapsed side" : "",
-                v.IslandRadius > 0 ? "island" : "", v.Worn ? "worn rim" : "", v.Lake ? "crater lake" : "" }.Where(k => k.Length > 0)));
+                v.IslandRadius > 0 ? "island" : "", v.Worn ? "worn rim" : "", v.Lake ? "crater lake" : "", v.Active ? "active (lava lake)" : "" }.Where(k => k.Length > 0)));
     }
 
     public override void Shape(MacroRaster macro, WorldManifest manifest, LandformSetting setting)
@@ -246,6 +252,7 @@ public sealed class Volcanoes : PlanLandform
             // (its own random stream: the volcanoes stay where revision 29 put them; first placed inside the if/else above,
             // it cut the chain and revision 29's volcanoes took revision 28's shapes too — caught by the Build 122 fixture)
             if (_revision >= 30) Cinders(v, macro, setting);
+            if (_revision >= 31) Activity(v); // (its own random stream too)
             bool ok = true;
             for (int d = 0; d < 8 && ok; d++)
             {
@@ -537,6 +544,27 @@ public sealed class Volcanoes : PlanLandform
     /// there, at the sea or after 2–7 km. 150–350 m wide at the vent, widening twofold downhill and half again at the end,
     /// 6–15 m thick, their edges lobed; bare rock. (Revision 28's ran straight down the cone, over whatever lay there.)
     /// </summary>
+    /// <summary>The nearest point of a flow's line: its distance, the flow's width there and how far along it lies (0 at the
+    /// vent … 1 at the end); false when the point is outside every run's bounds.</summary>
+    private static bool FlowNearest(Flow f, double x, double z, out double best, out double width, out double along)
+    {
+        best = double.MaxValue; width = 0; along = 0;
+        for (int c = 0; c < f.Chunks.Length; c++)
+        {
+            var b = f.Chunks[c];
+            if (x < b.MinX || x > b.MaxX || z < b.MinZ || z > b.MaxZ) continue;
+            int end = Math.Min(f.X.Length - 1, c * 10 + 10);
+            for (int i = c * 10; i < end; i++)
+            {
+                double ax = f.X[i], az = f.Z[i], ex = f.X[i + 1] - ax, ez = f.Z[i + 1] - az, len2 = Math.Max(1e-9, ex * ex + ez * ez);
+                double t = Math.Clamp(((x - ax) * ex + (z - az) * ez) / len2, 0, 1);
+                double d = Math.Sqrt(Sq(ax + ex * t - x) + Sq(az + ez * t - z));
+                if (d < best) { best = d; width = f.W[i] + (f.W[i + 1] - f.W[i]) * t; along = (i + t) / (f.X.Length - 1); }
+            }
+        }
+        return best != double.MaxValue;
+    }
+
     private double TracedFlows(double x, double z, ref double rock)
     {
         if (!_traced) Trace();
@@ -547,21 +575,7 @@ public sealed class Volcanoes : PlanLandform
             foreach (var f in v.Traced)
             {
                 if (x < f.MinX || x > f.MaxX || z < f.MinZ || z > f.MaxZ) continue;
-                double best = double.MaxValue, width = 0;
-                for (int c = 0; c < f.Chunks.Length; c++)
-                {
-                    var b = f.Chunks[c];
-                    if (x < b.MinX || x > b.MaxX || z < b.MinZ || z > b.MaxZ) continue;
-                    int end = Math.Min(f.X.Length - 1, c * 10 + 10);
-                    for (int i = c * 10; i < end; i++)
-                    {
-                        double ax = f.X[i], az = f.Z[i], ex = f.X[i + 1] - ax, ez = f.Z[i + 1] - az, len2 = Math.Max(1e-9, ex * ex + ez * ez);
-                        double t = Math.Clamp(((x - ax) * ex + (z - az) * ez) / len2, 0, 1);
-                        double d = Math.Sqrt(Sq(ax + ex * t - x) + Sq(az + ez * t - z));
-                        if (d < best) { best = d; width = f.W[i] + (f.W[i + 1] - f.W[i]) * t; }
-                    }
-                }
-                if (best == double.MaxValue) continue;
+                if (!FlowNearest(f, x, z, out double best, out double width, out _)) continue;
                 double edge = width * .5 * (1 + .25 * Noise.Fbm(x, z, 160, 2, 0, f.Seed));
                 double across = 1 - DetMath.Smooth((best - edge * .7) / (edge * .3 + 1));
                 if (across <= 0) continue;
@@ -669,6 +683,106 @@ public sealed class Volcanoes : PlanLandform
             return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Revision 31: whether a cone is active (its own random stream, from its seed): 45 in 100 cones, not calderas; an active
+    /// one has a lava lake in its crater instead of water, and its first 1–2 traced flows are fresh (molten).
+    /// </summary>
+    private static void Activity(Volcano v)
+    {
+        if (v.Caldera) return;
+        var rng = new RandomStream(v.Seed ^ 0x1A7A1A7AUL);
+        v.Active = rng.Unit() < .45;
+        if (!v.Active) return;
+        v.Lake = false;
+        v.FreshFlows = 1 + rng.Int(2);
+    }
+
+    /// <summary>
+    /// Where the game hangs lights over an active volcano's lava (revision 31): over the lava lake (its middle, heat 1),
+    /// then every <paramref name="spacing"/> metres along each fresh flow's molten channel, with its heat there (1 at the
+    /// vent, a third at the end).
+    /// </summary>
+    public IEnumerable<(double X, double Z, double Heat, bool Lake)> LavaLights(double x0, double z0, double spacing)
+    {
+        if (!_traced) Trace();
+        foreach (var v in _volcanoes)
+        {
+            if (!v.Active || v.X != x0 || v.Z != z0) continue;
+            yield return (v.X, v.Z, 1, true);
+            if (v.Traced == null) continue;
+            for (int n = 0; n < Math.Min(v.FreshFlows, v.Traced.Count); n++)
+            {
+                var f = v.Traced[n];
+                int every = Math.Max(1, (int)Math.Round(spacing / 40));
+                for (int i = every / 2; i < f.X.Length * .85; i += every)
+                    yield return (f.X[i], f.Z[i], 1 - .65 * i / (f.X.Length - 1), false);
+            }
+        }
+    }
+
+    /// <summary>The active volcanoes: middle and radius (the game draws their lava around the nearest).</summary>
+    public IEnumerable<(double X, double Z, double Radius)> Active()
+    {
+        foreach (var v in _volcanoes) if (v.Active) yield return (v.X, v.Z, v.Radius);
+    }
+
+    /// <summary>
+    /// An active cone's lava lake (revision 31): flat molten rock within 85 % of the crater's radius, 30 % of the crater's
+    /// depth over the floor's middle, over ground (metres above the sea) lower than that; <paramref name="level"/> is the
+    /// lake's height above the sea (the ground there is raised to it: a lava lake is a level surface, not water).
+    /// </summary>
+    public bool LavaLake(double x, double z, double ground, out double level)
+    {
+        level = double.NaN;
+        if (_volcanoes.Count == 0 || _raise == null || _macro == null) return false;
+        foreach (var v in _volcanoes)
+        {
+            if (!v.Active) continue;
+            double dx = x - v.X, dz = z - v.Z;
+            if (dx * dx + dz * dz > Sq(v.Inner * .85)) continue;
+            if (double.IsNaN(v.LavaLevel))
+                v.LavaLevel = _macro.Sample(WorldPlan.HeightChannel, v.X, v.Z) + Profile(v, v.X, v.Z, true, out _) - _raise.Sample(0, v.X, v.Z) + .3 * v.Depth;
+            if (ground < v.LavaLevel) { level = v.LavaLevel; return true; }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// How molten and how crusted the ground is here (0 … 1 each; revision 31): the lava lake molten (where the crater's
+    /// floor lies below its level), a fresh flow molten in a channel down its middle (a fifth of its width) and crusted
+    /// across all of it, both cooling along it (a third as hot at its end). For the game's lava look; no effect on the
+    /// ground itself.
+    /// </summary>
+    public (float Molten, float Crust) LavaAt(double x, double z)
+    {
+        if (_volcanoes.Count == 0 || _revision < 31) return (0, 0);
+        if (!_traced) Trace();
+        double molten = 0, crust = 0;
+        foreach (var v in _volcanoes)
+        {
+            if (!v.Active) continue;
+            double r = Math.Sqrt(Sq(x - v.X) + Sq(z - v.Z));
+            if (r < v.Inner)
+            {
+                // (the lake: where the crater's exact bowl lies below the lake's level, 30 % of the depth over its floor)
+                double bowl = Profile(v, x, z, true, out _);
+                molten = Math.Max(molten, DetMath.Smooth((v.Height - .7 * v.Depth - bowl) / 3));
+            }
+            if (v.Traced == null || x < v.FlowMinX || x > v.FlowMaxX || z < v.FlowMinZ || z > v.FlowMaxZ) continue;
+            for (int n = 0; n < Math.Min(v.FreshFlows, v.Traced.Count); n++)
+            {
+                var f = v.Traced[n];
+                if (x < f.MinX || x > f.MaxX || z < f.MinZ || z > f.MaxZ || !FlowNearest(f, x, z, out double best, out double width, out double along)) continue;
+                double heat = 1 - .65 * along;
+                double across = 1 - DetMath.Smooth((best - width * .35) / (width * .15 + 1));
+                double core = 1 - DetMath.Smooth((best - width * .08) / (width * .05 + 1));
+                crust = Math.Max(crust, across * heat);
+                molten = Math.Max(molten, core * heat * (1 - DetMath.Smooth((along - .85) / .15)));
+            }
+        }
+        return ((float)molten, (float)crust);
     }
 
     /// <summary>

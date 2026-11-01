@@ -29,9 +29,9 @@ public sealed class WorldGenOptions
     {
         _shapes = Array.ConvertAll(WorldRecipe.ShapeIds, id => catalogue?.FirstOrDefault(r => r.Id == id));
         const string S = "World shape", T = "Terrain", W = "Rivers and lakes";
-        Classic = Add(new("gen.version", S, "Terrain version", 0, 20, 1, 0,
-            "Generate the world as in an earlier build, to compare or go back: Build 9 (before biomes), Build 8 (before estuaries and gentler bulging banks), Preview 7 (before smooth river mouths), Build 5 (before natural banks and steeper shores), Build 51 (before rivers inside lakes took the lake's level), Build 52 (before sea pockets inside lakes became lake), Build 114 (before the Landforms settings), Build 115 (before escarpments and plateaus), Build 116 (escarpments as first built), Build 117 (before waterfalls), Waterfalls (before canyons; not in a build), Build 118 (before canyons lost their false cliffs), Canyons fixed (before cirques; not in a build), Build 119 (before glacial troughs and hanging valleys), Build 120 (before troughs left out rivers rising just above their falls), Troughs fixed (before fjords; not in a build), Fjords first (single fjords before fjord coasts; not in a build), Build 121 (before volcanoes), Volcanoes first (before they were tuned; not in a build), Build 122 (before the volcanoes' detail).",
-            options: new[] { "current", "Build 9", "Build 8", "Preview 7", "Build 5", "Build 51", "Build 52", "Build 114", "Build 115", "Build 116", "Build 117", "Waterfalls (rev. 20)", "Build 118", "Canyons fixed (rev. 22)", "Build 119", "Build 120", "Troughs fixed (rev. 25)", "Fjords first (rev. 26)", "Build 121", "Volcanoes first (rev. 28)", "Build 122" }));
+        Classic = Add(new("gen.version", S, "Terrain version", 0, 21, 1, 0,
+            "Generate the world as in an earlier build, to compare or go back: Build 9 (before biomes), Build 8 (before estuaries and gentler bulging banks), Preview 7 (before smooth river mouths), Build 5 (before natural banks and steeper shores), Build 51 (before rivers inside lakes took the lake's level), Build 52 (before sea pockets inside lakes became lake), Build 114 (before the Landforms settings), Build 115 (before escarpments and plateaus), Build 116 (escarpments as first built), Build 117 (before waterfalls), Waterfalls (before canyons; not in a build), Build 118 (before canyons lost their false cliffs), Canyons fixed (before cirques; not in a build), Build 119 (before glacial troughs and hanging valleys), Build 120 (before troughs left out rivers rising just above their falls), Troughs fixed (before fjords; not in a build), Fjords first (single fjords before fjord coasts; not in a build), Build 121 (before volcanoes), Volcanoes first (before they were tuned; not in a build), Build 122 (before the volcanoes' detail), Build 123 (before active volcanoes and lava).",
+            options: new[] { "current", "Build 9", "Build 8", "Preview 7", "Build 5", "Build 51", "Build 52", "Build 114", "Build 115", "Build 116", "Build 117", "Waterfalls (rev. 20)", "Build 118", "Canyons fixed (rev. 22)", "Build 119", "Build 120", "Troughs fixed (rev. 25)", "Fjords first (rev. 26)", "Build 121", "Volcanoes first (rev. 28)", "Build 122", "Build 123" }));
         Size = Add(new("gen.size", S, "World size", 0, WorldRecipe.Sizes.Length - 1, 1, 4, "Width and length of the world. The world type adapts to any size.",
             options: Array.ConvertAll(WorldRecipe.Sizes, k => $"{k:0} km × {k:0} km")));
         Shape = Add(new("gen.shape", S, "Land shape", 0, WorldRecipe.ShapeIds.Length, 1, 0,
@@ -153,8 +153,8 @@ public sealed class WorldGenOptions
 
     public WorldChoices Choices => ChoicesBase with { ScaleRevision = Era >= 2 ? 8 : 9 };
 
-    /// <summary>The terrain version as an age: 0 = current, Build 51, 52, 114–122 or revisions 20, 22, 25, 26, 28 (the same apart from <see cref="TerrainStyle.Revision"/>),
-    /// 1 = Build 9, 2 = Build 8, 3 = Preview 7, 4 = Build 5 (Builds 51, 52, 114–122 and revisions 20, 22, 25, 26 and 28 were added after them, at indices 5–20).</summary>
+    /// <summary>The terrain version as an age: 0 = current, Build 51, 52, 114–123 or revisions 20, 22, 25, 26, 28 (the same apart from <see cref="TerrainStyle.Revision"/>),
+    /// 1 = Build 9, 2 = Build 8, 3 = Preview 7, 4 = Build 5 (Builds 51, 52, 114–123 and revisions 20, 22, 25, 26 and 28 were added after them, at indices 5–21).</summary>
     private int Era => Classic.Index >= 5 ? 0 : Classic.Index;
 
     private WorldChoices ChoicesBase => new()
@@ -196,7 +196,7 @@ public sealed class WorldGenOptions
             BankVariation = Era == 4 ? 0 : Banks.Value,
             ShoreSlope = Era == 4 ? 0 : Shores.Value,
             MouthBlend = Era >= 3 ? 0 : 1,
-            Revision = Era >= 2 ? 8 : Era == 1 ? 9 : Classic.Index == 5 ? 14 : Classic.Index == 6 ? 15 : Classic.Index == 7 ? 16 : Classic.Index == 8 ? 17 : Classic.Index == 9 ? 18 : Classic.Index == 10 ? 19 : Classic.Index == 11 ? 20 : Classic.Index == 12 ? 21 : Classic.Index == 13 ? 22 : Classic.Index == 14 ? 23 : Classic.Index == 15 ? 24 : Classic.Index == 16 ? 25 : Classic.Index == 17 ? 26 : Classic.Index == 18 ? 27 : Classic.Index == 19 ? 28 : Classic.Index == 20 ? 29 : current,
+            Revision = Era >= 2 ? 8 : Era == 1 ? 9 : Classic.Index == 5 ? 14 : Classic.Index == 6 ? 15 : Classic.Index == 7 ? 16 : Classic.Index == 8 ? 17 : Classic.Index == 9 ? 18 : Classic.Index == 10 ? 19 : Classic.Index == 11 ? 20 : Classic.Index == 12 ? 21 : Classic.Index == 13 ? 22 : Classic.Index == 14 ? 23 : Classic.Index == 15 ? 24 : Classic.Index == 16 ? 25 : Classic.Index == 17 ? 26 : Classic.Index == 18 ? 27 : Classic.Index == 19 ? 28 : Classic.Index == 20 ? 29 : Classic.Index == 21 ? 30 : current,
             Landforms = _landforms.ToDictionary(l => l.Info.Id, l => new LandformSetting(LandformCatalog.AmountValues[l.Amount.Index], l.Size.Value)),
             ForestCover = ForestCover.Value, ForestDensity = ForestDensity.Value, RockAmount = Rocks.Value, PropAmount = Props.Value,
             LakeShare = b.LakeShare * Lakes.Value,

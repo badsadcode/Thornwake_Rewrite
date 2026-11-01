@@ -158,6 +158,8 @@ public sealed partial class TerrainSampler
         if (_volcanoes != null && water == WaterKind.None && _volcanoes.InCaldera(x, z, out double cx, out double cz)
             && _hydrology.LakeNear(cx, cz) is >= 0 and var caldera && height < _hydrology.Lakes[caldera].Level - _p.SeaLevel)
         { water = WaterKind.Lake; level = _hydrology.Lakes[caldera].Level; body = caldera; }
+        // Revision 31: an active volcano's lava lake, a level surface of molten rock (the game draws it glowing).
+        if (_volcanoes != null && water == WaterKind.None && _volcanoes.LavaLake(x, z, height, out double lava)) height = lava;
         // Revision 28: a quiet volcano's crater lake.
         if (_volcanoes != null && water == WaterKind.None && _volcanoes.CraterLake(x, z, height, out double crater)) { water = WaterKind.Pond; level = crater; }
         // Revision 22: no pools where a river has cut the ground down by over 2 m (valley sides, canyon and gorge walls),

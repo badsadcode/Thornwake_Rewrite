@@ -124,7 +124,8 @@ Then the fantasy landforms Tom picks (section at the end).
   on the tallest), some with a collapsed side, a crater (a lake in most), varied gullies, lava flows traced down the
   ground; calderas with cliffs round a lake spilling through a breach, some with an island cone or a worn rim;
   volcanic ground on both. Detail in revision 30 (D248), in build 123: cinder cones, deep ravines and knife ridges
-  high up, hummocky old lava fields and rougher lower flanks, rock outcrops on rims. Next: glowing lava, eruptions.
+  high up, hummocky old lava fields and rougher lower flanks, rock outcrops on rims. Active volcanoes with a glowing lava
+  lake and fresh flows in revision 31 (D250), not in a build yet. Next: smoke over the crater, eruptions.
 * **What**: a cone rising alone or in a chain, a crater at the top (a lake in it when quiet), lava-stone slopes and old
   flows around it; a caldera is a collapsed volcano — a wide ring of cliffs round a lake.
 * **Where**: a few per world on fault lines, along mountain chains or alone; a *Volcanic island* land shape builds a

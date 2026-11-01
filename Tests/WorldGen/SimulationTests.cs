@@ -21,7 +21,7 @@ internal static class SimulationTests
         T.Run("Landforms: cirques hold closed-in tarns high in the mountains; rivers and lakes unchanged (revision 23)", CirqueForms, filter);
         T.Run("Landforms: glacial troughs — flat floors, side rivers falling from hanging valleys, water still descending (revisions 24, 25)", TroughForms, filter);
         T.Run("Landforms: fjords — sea from the coast to the head's shore, between high walls; fjord coasts with islands (revisions 26, 27)", FjordForms, filter);
-        T.Run("Landforms: volcanoes — cones over the land, calderas holding a lake, crater lakes closed in, volcanic ground (revisions 28, 29)", VolcanoForms, filter);
+        T.Run("Landforms: volcanoes — cones over the land, calderas holding a lake, crater lakes closed in, volcanic ground, lava at active ones (revisions 28–31)", VolcanoForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1274,11 +1274,23 @@ internal static class SimulationTests
 
     private static void VolcanoForms()
     {
-        int cones = 0, calderas = 0, tall = 0, lakes = 0, craterWater = 0, leaks = 0, volcanic = 0, holes = 0;
+        int cones = 0, calderas = 0, tall = 0, lakes = 0, craterWater = 0, leaks = 0, volcanic = 0, holes = 0, active = 0, lavaLakes = 0, flowing = 0;
         foreach (var (id, seed) in new[] { ("balanced", 7319), ("continental", 42), ("mountainous", 42), ("archipelago", 42), ("mountainous", 7319), ("balanced", 42) })
         {
             var s = CoreTests.Sampler(id, seed);
             if (s.Plan.PlanLandforms.OfType<Volcanoes>().FirstOrDefault() is not { } vo) continue;
+            // Revision 31: an active cone's crater holds molten lava (a level surface, no water), a fresh flow runs molten.
+            foreach (var (ax, az, ar) in vo.Active())
+            {
+                active++;
+                var t = s.Sample(ax, az);
+                if (t.Water == WaterKind.None && vo.LavaAt(ax, az).Molten > .9 && Math.Abs(s.Height(ax + 20, az) - t.Height) < .01) lavaLakes++;
+                bool any = false;
+                for (double d = ar * .1; d < ar * .6 && !any; d += 25)
+                    for (int k = 0; k < 64 && !any; k++)
+                        if (vo.LavaAt(ax + Math.Cos(k * Math.Tau / 64) * d, az + Math.Sin(k * Math.Tau / 64) * d).Crust > .5) any = true; // (the crusted band: the molten channel is narrower than the search)
+                if (any) flowing++;
+            }
             foreach (var (x, z, radius, height, caldera) in vo.Probes())
             {
                 var (b, _, share) = s.Plan.Biomes.Sample(x, z);
@@ -1335,6 +1347,8 @@ internal static class SimulationTests
         T.Check(craterWater > 0 && leaks == 0, $"crater lakes closed in ({craterWater}, {leaks})");
         T.Check(holes == 0, $"caldera lakes fill their floor ({holes})");
         T.Check(volcanic == cones + calderas, $"volcanic ground on them ({volcanic} of {cones + calderas})");
+        T.Note($"{active} active cones: {lavaLakes} with a level lava lake, {flowing} with a fresh flow on the flank");
+        T.Check(active >= 2 && lavaLakes == active && flowing == active, $"active volcanoes: lava lakes and fresh flows ({active}, {lavaLakes}, {flowing})");
     }
 
     private static void Wetlands()

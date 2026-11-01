@@ -3877,6 +3877,42 @@ volcanoes, D246). The volcanoes stay where revision 29 put them (the cinder cone
   line within 45 % of the floor's half width, under 20 m (biome knobs, narrow stretches and low valley sides read as
   rough floors in the new troughs); water at the sea's level may stay level in it too (fjords).
 
+## D250 — Terrain revision 31: active volcanoes and glowing lava (2026-11-01)
+Tom: "I'm really curious about the lava and what it will look like, so please do that" (eruptions later). A look of
+its own — shown to Tom in captures, switchable (*Lava*, `fx.lava`: off leaves the lava fields as dark rock).
+* **World (revision 31)**: 45 in 100 cones are active (their own random stream: nothing else moves). An active cone's
+  crater holds a lava lake instead of water — a level surface 30 % of the crater's depth over its floor (the ground is
+  raised to it) — and its first 1–2 traced flows are fresh. `Volcanoes.LavaAt` says how molten and how crusted the
+  ground is: the lake molten; a fresh flow molten in a channel down its middle (a fifth of its width) and crusted
+  across, both cooling along it (a third as hot at its end). Revision 30 frozen as *Build 123*
+  (`terrain-build123.json`).
+* **Game**: `LavaMap` bakes `LavaAt` round the nearest active volcano (within 20 km of its foot) into a 1,024² texture
+  over 16 km (about 16 m a pixel) on worker threads, like the wind map; the terrain shader draws it (globals
+  `lava_map`, `lava_frame`). An orange light (900 m) hangs over the lava lake.
+* **The look**: the melt churns slowly (two noises drifting), yellow-orange where hottest, deep orange-red cooler; a
+  near-black crust floats on it in irregular plates (cells warped by noise at two sizes — plain cells drew a honeycomb
+  like floor tiles) with glowing seams; a flow's crusted band shows glowing cracks. First try glowed 3–8× and blew out
+  to white even by day: now 0.9–2.7× on open melt, 1.3× on cracks. Far away (from 600 m to 3 km) the hot ground glows
+  as a whole, so a flow reads as a red streak down the cone at night from 8 km (the 25 m channel vanished under a
+  pixel from 6 km).
+* Test: every active cone has a level lava lake (no water) and a fresh flow on its flank (3 in 6 worlds).
+* Not yet: smoke and a glow over the crater seen from below the rim, heat shimmer, eruptions (Tom: later), lava that
+  hurts.
+
+## D251 — The lava's look reworked, lights over the lava (2026-11-01)
+Tom on the first captures: "the lava shader will need some more work so it doesn't look like Voronoi was just slapped
+onto this. About the glow, it's not lighting up surrounding area that much."
+* **No cells**: the crust and its cracks come from warped signed noise (`lava_fbm`, four turned octaves; the coordinates
+  warped by more of it): the melt shows along the zero lines of a slow field — rifts that wander and branch, wider
+  where the melt is hotter, with an incandescent edge — and the crust is crazed by the faint glowing zero lines of a
+  faster one; the crust's own shade varies. Slow drift and churn keep it moving.
+* **Lights**: glowing ground lights nothing round it in this renderer, so `LavaMap` hangs orange omni lights over the
+  lava — over the lake (energy 3.5, 1.4 km) and every 300 m along the fresh flows (4 × heat, 500 m), the 12 nearest
+  the camera lit, no shadows. Godot's omni light falls off as distance^−attenuation: at 1.2 a light 300 m away gave the
+  crater walls 2 % of it; now 0.35 (lake) and 0.45 (flows). The lake's light also lights the haze over the crater (fog
+  energy 1.2; 3 turned the whole sky red).
+* Night captures: the crater's walls glow red round the lake; a flow lights the flank beside it.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

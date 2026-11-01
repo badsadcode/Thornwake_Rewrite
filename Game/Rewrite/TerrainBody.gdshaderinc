@@ -72,6 +72,18 @@ float vnoise(vec2 p) {
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
 }
 
+// Molten lava (terrain revision 31, D250; LavaMap.cs): r = molten, g = crusted, around the nearest active volcano.
+global uniform sampler2D lava_map : filter_linear, repeat_disable;
+global uniform vec4 lava_frame; // xy: the map's centre in scene coordinates, z: size (m), w: 1 when there is lava to draw
+// Signed noise for the lava crust (−1 … 1, four octaves, each turned): its zero lines wander and branch like cracks
+// (cells drew polygons, "Voronoi slapped onto it" — Tom).
+float lava_fbm(vec2 p) {
+	float v = 0.0, a = 0.5;
+	mat2 turn = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8));
+	for (int o = 0; o < 4; o++) { v += a * (vnoise(p) * 2.0 - 1.0); p = turn * p * 2.03 + 7.1; a *= 0.5; }
+	return v;
+}
+
 // A ground texture at ~8 m per tile, two differently rotated and scaled copies blended by slow noise so the tiles
 // do not repeat visibly over open ground.
 vec3 gtex(int layer, vec2 p) {
@@ -408,6 +420,41 @@ void fragment() {
 	ROUGHNESS = mix(mix(mix(base_rough, 0.55, snow), wet_rough, wet_rough_k), 0.04, puddle);
 	ROUGHNESS = mix(ROUGHNESS, 0.55, damp * wetland * 0.7); // glistening mud at wetland pool margins
 	SPECULAR = mix(0.5, 0.9, puddle);
+	// Molten lava (revision 31, D250; look D251): the melt glows, slowly churning (yellow-orange where hottest, deep red
+	// as it cools). A near-black crust skins over most of it, torn open along wandering rifts where the melt shows, and
+	// crazed by fine cracks that glow faintly; a flow's crusted band shows the cracks only. All from warped noise (no cells).
+	if (lava_frame.w > 0.0) {
+		vec2 lm = (scene_xz - lava_frame.xy) / lava_frame.z + 0.5;
+		if (lm.x > 0.0 && lm.y > 0.0 && lm.x < 1.0 && lm.y < 1.0) {
+			vec2 lv = textureLod(lava_map, lm, 0.0).rg;
+			if (lv.x + lv.y > 0.004) {
+				vec2 lp = scene_xz - lava_frame.xy; // (anchored to the volcano, not the moving scene origin)
+				vec2 drift = vec2(TIME * 0.004, -TIME * 0.003);
+				float churn = vnoise(lp * 0.04 + vec2(TIME * 0.015, -TIME * 0.01)) * 0.65 + vnoise(lp * 0.13 - vec2(TIME * 0.04, TIME * 0.03)) * 0.35;
+				vec2 q = lp + 14.0 * vec2(lava_fbm(lp * 0.02 + drift), lava_fbm(lp * 0.02 + 5.2 - drift));
+				// rifts: the zero lines of slow noise, wider where the melt is hotter; fine cracks: faster noise's zero lines
+				float rift_n = abs(lava_fbm(q * 0.035 + drift * 2.0));
+				float rift = 1.0 - smoothstep(0.0, 0.05 + 0.1 * churn, rift_n);
+				float fine_n = abs(lava_fbm(q * 0.16 + 3.3));
+				float fine = 1.0 - smoothstep(0.0, 0.035 + 0.03 * vnoise(lp * 0.05), fine_n);
+				float seam = (1.0 - smoothstep(0.0, 0.22, rift_n)) * (1.0 - rift); // the incandescent edge along a rift
+				float open = lv.x * rift;
+				float crust = max(lv.y, lv.x * (1.0 - rift));
+				vec3 hot = mix(vec3(1.0, 0.1, 0.01), vec3(1.0, 0.45, 0.07), smoothstep(0.4, 0.9, churn));
+				float shade = 0.75 + 0.5 * vnoise(q * 0.09); // (the crust's own unevenness)
+				ALBEDO = mix(ALBEDO, vec3(0.022, 0.019, 0.017) * shade, max(lv.x, lv.y));
+				ROUGHNESS = mix(ROUGHNESS, 0.9, crust);
+				ROUGHNESS = mix(ROUGHNESS, 0.35, open);
+				SPECULAR = mix(SPECULAR, 0.3, max(lv.x, lv.y));
+				float heat = max(lv.x, lv.y);
+				float glow = open * (1.0 + 1.6 * churn) + seam * lv.x * 0.9 + fine * crust * heat * (0.25 + 0.35 * churn);
+				// far away the rifts and cracks are smaller than a pixel: the hot ground glows as a whole, so a flow reads as a
+				// glowing streak from kilometres off (from 6 km it was gone)
+				float far = smoothstep(600.0, 3000.0, length(VERTEX));
+				EMISSION = hot * (glow * (1.0 - far) + max(lv.x, lv.y * 0.7) * 1.4 * far);
+			}
+		}
+	}
 #ifdef AIR_SHADOW
 	air_sun = 1.0;
 	if (air_frame.w > 0.0) {

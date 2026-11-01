@@ -55,6 +55,7 @@ public partial class WorldLab : Node3D
     private WeatherField? _weatherField;
     private WeatherMap? _weatherMap;
     private WindMap? _windMap;
+    private LavaMap? _lavaMap;
     private double _windTimer;
     private (double X, double Z, double Speed) _localWind = (1, 0, 5);
     private TerrainSampler? _weatherFieldFor;
@@ -490,6 +491,13 @@ public partial class WorldLab : Node3D
                 }
                 _atmosphere.SetCrowns(crowns, cam);
             }
+        }
+        // Molten lava round the nearest active volcano (terrain revision 31, D250; with or without weather).
+        if (_sampler != null)
+        {
+            _lavaMap ??= new LavaMap(this);
+            var camLava = _camera.GlobalPosition;
+            _lavaMap.Update(_sampler, _originX + camLava.X, _originZ + camLava.Z, _originX, _originZ, _shotPath != null);
         }
         if (!GameSettings.WeatherOn.On || _sampler == null)
         {

@@ -212,6 +212,10 @@ public static class GameSettings
         "Smoke from torches and campfires. Smoke texture: puffs of a smoke picture (Tom's), turning and spreading as they " +
         "rise, campfires smoking too. Build 72: soft round dots from the torch only, no campfire smoke.",
         options: new[] { "build 72 (soft dots, torch only)", "smoke texture" }));
+    public static readonly Setting Lava = Add(new("fx.lava", "Lighting and effects", "Lava", 0, 1, 1, 1,
+        "Molten lava at active volcanoes: a glowing lava lake in the crater, fresh flows glowing down the middle with a dark " +
+        "crust cracked open over the heat, an orange light over the crater. Off: lava fields stay dark rock (build 123).",
+        options: new[] { "off (dark rock)", "glowing" }));
     public static readonly Setting TorchLook = Add(new("fx.torch_look", "Lighting and effects", "Torch in mist", 0, 1, 1, 0,
         "How a torch lights mist and fog (Tom, dump 221438: the torch lit a whole mist bank evenly, far trees standing dark " +
         "against an orange haze). Halo: the mist glows around the flame and fades within a few metres, the ground is lit as " +

@@ -288,6 +288,19 @@ if (args.Contains("--landform-probes"))
             {
                 Console.WriteLine($"{profile.Id}/{seed}: {vo.Count} volcanoes");
                 foreach (var (kx, kz, kk) in vo.Kinds()) Console.WriteLine($"{profile.Id}/{seed}   {kx:0},{kz:0}: {kk}");
+                foreach (var (ax, az, ar) in vo.Active())
+                {
+                    int molten = 0, crust = 0; (double X, double Z) flowAt = (double.NaN, 0);
+                    for (double dz = -ar; dz <= ar; dz += 50)
+                        for (double dx = -ar; dx <= ar; dx += 50)
+                        {
+                            var (m, c) = vo.LavaAt(ax + dx, az + dz);
+                            if (m > .5) molten++;
+                            if (c > .5) crust++;
+                            if (m > .3 && dx * dx + dz * dz > Math.Pow(ar * .25, 2) && dx * dx + dz * dz < Math.Pow(ar * .3, 2)) flowAt = (ax + dx, az + dz);
+                        }
+                    Console.WriteLine($"{profile.Id}/{seed}   lava round {ax:0},{az:0}: {molten} molten, {crust} crusted points (50 m apart); centre {vo.LavaAt(ax, az)}, ground {s.Sample(ax, az).Height:0.0}; a fresh flow at {flowAt.X:0},{flowAt.Z:0}");
+                }
                 foreach (var (vx, vz, vr, vh, vc) in vo.Probes())
                     Console.WriteLine($"{profile.Id}/{seed} {(vc ? "caldera" : "cone")} at {vx:0},{vz:0}, radius {vr / 1000:0.0} km, {vh:0} m high, summit ground {s.Height(vx, vz) - s.Plan.Profile.SeaLevel:0} m, water there {s.Sample(vx, vz).Water}, plan lake {s.Plan.Hydrology.LakeNear(vx, vz)}, nearest lake {s.Plan.Hydrology.Lakes.Select(l => Math.Sqrt((l.Center.X - vx) * (l.Center.X - vx) + (l.Center.Z - vz) * (l.Center.Z - vz))).DefaultIfEmpty(-1).Min():0} m, raster {s.Plan.Macro.Sample(WorldPlan.HeightChannel, vx, vz):0}");
             }
