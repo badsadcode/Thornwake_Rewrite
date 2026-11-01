@@ -78,6 +78,15 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 123 — volcano detail (terrain revision 30)
+**Host and everyone joining need build 123** (versions must match to connect).
+* **Volcanoes less smooth**: small cinder cones on their flanks and round their foot (with a little crater on top),
+  deep ravines and sharp rocky ridges high on the cones, hummocky old lava fields and rougher, rockier lower slopes in
+  patches, rock outcrops along crater rims and caldera cliffs; lava flows with a blocky crust. The top keeps its smooth
+  ash slopes. The three volcano *Go to* spots show it.
+* Your build 122 worlds keep their terrain; *Terrain version → Build 122* gives it to new worlds too.
+* Still to come: glowing molten lava, later eruptions.
+
 ## New in build 122 — volcanoes and calderas (terrain revisions 28 and 29)
 **Host and everyone joining need build 122** (versions must match to connect).
 * **Volcanoes**: cones 1.2–3 km high (snow on the tallest) with a crater — a lake in most — gullies down their flanks
