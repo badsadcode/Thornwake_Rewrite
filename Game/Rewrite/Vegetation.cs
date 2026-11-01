@@ -44,7 +44,7 @@ public static class Vegetation
     /// sets how much forest there is (none in deserts and on ice, little in steppe and tundra, dense in rainforest).</summary>
     public static double ForestDensity(TerrainSampler sampler, double x, double z, in TerrainSample t, double coverSetting = 1, double biomeForest = -1)
     {
-        if (coverSetting <= 0 || t.Water is not (WaterKind.None or WaterKind.Pond)) return 0;
+        if (coverSetting <= 0 || t.Water is not (WaterKind.None or WaterKind.Pond) || t.Lava > .02) return 0; // (no trees in lava, D257)
         double inWater = 1;
         if (t.Water == WaterKind.Pond)
         {

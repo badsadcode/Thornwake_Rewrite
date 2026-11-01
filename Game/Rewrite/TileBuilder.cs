@@ -78,6 +78,10 @@ public sealed class TileData
     /// </summary>
     public Godot.Collections.Array? TerrainArrays { get; set; }
     public Godot.Collections.Array? WaterArrays { get; set; }
+    /// <summary>Lava surface mesh (D257; null where there is none): a sheet lying on the ground over an active volcano's
+    /// lava, like the water's. COLOR = (molten, crust, cover, 1), UV = which way it moves (its length the speed).</summary>
+    public (Vector3[] Vertices, Color[] Colors, Vector2[] Flow, Vector3[] Normals, int[] Indices)? Lava { get; set; }
+    public Godot.Collections.Array? LavaArrays { get; set; }
 
     /// <summary>Fill <see cref="TerrainArrays"/> and <see cref="WaterArrays"/> (pure data; safe on a worker thread).</summary>
     public void PrepareSurfaces()
@@ -109,6 +113,17 @@ public sealed class TileData
             w[(int)Mesh.ArrayType.Index] = water.Indices;
             if (WaterShore is { } shore && shore.Length == water.Vertices.Length * 4) w[(int)Mesh.ArrayType.Custom0] = shore;
             WaterArrays = w;
+        }
+        if (Lava is { } lava && lava.Indices.Length > 0)
+        {
+            var l = new Godot.Collections.Array();
+            l.Resize((int)Mesh.ArrayType.Max);
+            l[(int)Mesh.ArrayType.Vertex] = lava.Vertices;
+            l[(int)Mesh.ArrayType.Normal] = lava.Normals;
+            l[(int)Mesh.ArrayType.Color] = lava.Colors;
+            l[(int)Mesh.ArrayType.TexUV] = lava.Flow;
+            l[(int)Mesh.ArrayType.Index] = lava.Indices;
+            LavaArrays = l;
         }
     }
 
@@ -251,7 +266,8 @@ public static class TileBuilder
                 // from 0 °C to −6 °C; round 25, Tom: "alpine feels a bit empty" — was +1 to −3), carried in the plant
                 // cover; GroundCover then drops its fixed 1.7 km line.
                 if (climate.Settings.Biomes) plants *= DetMath.Smooth((temperature + 6) / 6);
-                Put(biome1, k, Mix(A.Dry, B.Dry, sa, sb, dark), Math.Min(1, plants));
+                double lavaFree = 1 - DetMath.Smooth(t.Lava / .1); // (no plants, stones or logs in lava, D257)
+                Put(biome1, k, Mix(A.Dry, B.Dry, sa, sb, dark), Math.Min(1, plants) * lavaFree);
                 // CUSTOM2: r = map colour packed (debug view), g = the two rock looks (lo + 8·hi), b = weight of hi,
                 // a = rock exposure. Looks are ordered so neighbouring vertices across a border agree on the pair.
                 var mapColour = Mix(A.Map, B.Map, sa, sb, 1);
@@ -262,8 +278,8 @@ public static class TileBuilder
                 biome2[k * 4 + 2] = whi;
                 biome2[k * 4 + 3] = (float)Math.Max(A.Def.Appearance.RockExposure * share + B.Def.Appearance.RockExposure * (1 - share), rocky * 1.6);
                 Put(biome3, k, Mix(A.Rock, B.Rock, sa, sb, 1), A.Def.Water.Wetness * share + B.Def.Water.Wetness * (1 - share));
-                props[k * 3] = (float)(A.Def.Props.Rocks * share + B.Def.Props.Rocks * (1 - share));
-                props[k * 3 + 1] = (float)(A.Def.Props.Logs * share + B.Def.Props.Logs * (1 - share));
+                props[k * 3] = (float)((A.Def.Props.Rocks * share + B.Def.Props.Rocks * (1 - share)) * lavaFree);
+                props[k * 3 + 1] = (float)((A.Def.Props.Logs * share + B.Def.Props.Logs * (1 - share)) * lavaFree);
                 props[k * 3 + 2] = share >= .5 ? A.RockTexture : B.RockTexture;
                 waterTint[k] = WaterTint(A, B, share);
             }
@@ -318,6 +334,7 @@ public static class TileBuilder
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };
         BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater, sea);
+        if (key.Level <= LavaLevels) BuildLava(sampler, data, samples, heights, s2, spacing, Side, x0, z0);
         if (data.Water is { } builtWater) data.WaterShore = ShoreData(sampler, builtWater.Vertices, builtWater.Colors, heights, s2, samples, x0, z0, spacing, Side);
         var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2, biome1, props, biome3, biome0, climate.Settings.Biomes);
         ulong coverSeed = Hashing.Mix((ulong)sampler.Plan.Manifest.Seed + 0xC0FFEEUL);
@@ -383,6 +400,52 @@ public static class TileBuilder
         float r = (ar * wa + br * wb) / w, g = (ag * wa + bg * wb) / w, bl = (ab * wa + bb * wb) / w;
         int packed = (int)(r * 255) << 16 | (int)(g * 255) << 8 | (int)(bl * 255);
         return new Vector2(packed, strength);
+    }
+
+    /// <summary>Lava sheets on the levels up to 4 (1 km tiles, 32 m apart: ~2 km round the player); beyond, the terrain
+    /// shader's glow draws the lava from afar.</summary>
+    public const int LavaLevels = 4;
+
+    /// <summary>
+    /// The lava sheet (D257, Tom: lava "like water is, just with different properties and different flow speed ...
+    /// different vertex shader, so it actually flows like rivers"): over every vertex the lava covers, 0.25–0.6 m above the
+    /// ground (thicker where it covers more); its edge vertices tucked 0.5 m under the ground so the sheet meets it like
+    /// a bank. Per vertex how molten, how crusted, how covered, and which way it moves (Volcanoes.LavaFlow).
+    /// </summary>
+    private static void BuildLava(TerrainSampler sampler, TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing, int n, double x0, double z0)
+    {
+        bool any = false;
+        for (int k = 0; k < n * n && !any; k++) any = samples[k].Lava > .02;
+        if (!any || sampler.Plan.PlanLandforms.OfType<Volcanoes>().FirstOrDefault() is not { } volcanoes) return;
+        var vertices = new Vector3[n * n];
+        var colors = new Color[n * n];
+        var flow = new Vector2[n * n];
+        var normals = new Vector3[n * n];
+        var lava = new bool[n * n];
+        for (int k = 0; k < n * n; k++) lava[k] = samples[k].Lava > .02;
+        for (int j = 0; j < n; j++)
+            for (int i = 0; i < n; i++)
+            {
+                int k = j * n + i;
+                double ground = heights[(j + 1) * s2 + i + 1];
+                var (molten, crust, dx, dz) = volcanoes.LavaFlow(x0 + i * spacing, z0 + j * spacing);
+                float cover = (float)samples[k].Lava;
+                double lift = lava[k] ? .25 + .35 * cover : -.5;
+                vertices[k] = new Vector3(i * (float)spacing, (float)(ground + lift), j * (float)spacing);
+                colors[k] = new Color(molten, crust, cover, 1);
+                flow[k] = new Vector2(dx, dz);
+                normals[k] = data.Normals[k];
+            }
+        var indices = new List<int>();
+        for (int j = 0; j < n - 1; j++)
+            for (int i = 0; i < n - 1; i++)
+            {
+                int a = j * n + i, b = a + 1, c = a + n, d = c + 1;
+                if (!(lava[a] || lava[b] || lava[c] || lava[d])) continue;
+                indices.Add(a); indices.Add(b); indices.Add(c);
+                indices.Add(b); indices.Add(d); indices.Add(c);
+            }
+        data.Lava = (vertices, colors, flow, normals, indices.ToArray());
     }
 
     private static void BuildWater(TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing, int n, bool simulated, double seaLevel)

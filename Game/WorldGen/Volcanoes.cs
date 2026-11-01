@@ -725,6 +725,32 @@ public sealed class Volcanoes : PlanLandform
         }
     }
 
+    private (double X0, double Z0, double X1, double Z1)[]? _lavaBoxes;
+
+    /// <summary>
+    /// Whether a point lies within reach of any active volcano's lava (D257): its middle ± its radius and the longest a
+    /// fresh flow can run (7 km × size, plus its width). The sampler asks every point about lava; outside these boxes the
+    /// answer is at once no (asking every volcano cost 13 % of the sampler's speed).
+    /// </summary>
+    public bool NearLava(double x, double z)
+    {
+        var boxes = _lavaBoxes;
+        if (boxes == null)
+        {
+            var list = new List<(double, double, double, double)>();
+            foreach (var v in _volcanoes)
+            {
+                if (!v.Active) continue;
+                double reach = v.Radius * .1 + v.Inner * 2;
+                foreach (var (_, length, width, _) in v.FlowStarts) reach = Math.Max(reach, v.Inner * 1.4 + v.Radius * .05 + length + width * 2);
+                list.Add((v.X - reach, v.Z - reach, v.X + reach, v.Z + reach));
+            }
+            _lavaBoxes = boxes = list.ToArray();
+        }
+        foreach (var (x0, z0, x1, z1) in boxes) if (x >= x0 && x <= x1 && z >= z0 && z <= z1) return true;
+        return false;
+    }
+
     /// <summary>The active volcanoes: middle and radius (the game draws their lava around the nearest).</summary>
     public IEnumerable<(double X, double Z, double Radius)> Active()
     {
@@ -739,7 +765,7 @@ public sealed class Volcanoes : PlanLandform
     public bool LavaLake(double x, double z, double ground, out double level)
     {
         level = double.NaN;
-        if (_volcanoes.Count == 0 || _raise == null || _macro == null) return false;
+        if (_volcanoes.Count == 0 || _raise == null || _macro == null || !NearLava(x, z)) return false;
         foreach (var v in _volcanoes)
         {
             if (!v.Active) continue;
@@ -772,7 +798,7 @@ public sealed class Volcanoes : PlanLandform
     /// </summary>
     public (float Molten, float Crust, float DirX, float DirZ) LavaFlow(double x, double z)
     {
-        if (_volcanoes.Count == 0 || _revision < 31) return (0, 0, 0, 0);
+        if (_volcanoes.Count == 0 || _revision < 31 || !NearLava(x, z)) return (0, 0, 0, 0);
         if (!_traced) Trace();
         double molten = 0, crust = 0, dirX = 0, dirZ = 0, lead = 0;
         foreach (var v in _volcanoes)

@@ -3966,6 +3966,33 @@ FPS against 19 with lava off. The captures had switched the weather off. Now: on
 at 0.3 (a soft red glow in the cloud), the flow lights none; only the nearest flow light casts shadows (three: six
 scene renders each). 22 FPS there. The lava launchers calm the weather for their session (`--set`, never saved).
 
+## D257 — Lava as its own surface, like the water (2026-11-01)
+Tom, three dumps from build 124 (21:58:42 the lava lake, 21:59:45 a flow's end by day, 22:01:08 beside a flow at night):
+"Lava up close needs more details. Sometimes you can see ground texture. I was thinking we would have something like
+water is, just with different properties and different flow speed ... different vertex shader, so it actually flows
+like rivers." The lava was painted onto the terrain from a 16 m map: blurry blobs up close, the ground texture showing
+through, grass, stones and trees standing in it.
+* **The sample**: `TerrainSample.Lava` (0 … 1, how much lava covers the ground; `Volcanoes.LavaAt`). Heights are
+  unchanged: no new terrain revision.
+* **The sheet**: `TileBuilder.BuildLava` builds a mesh over the lava on the tile levels up to 4 (~2 km round the player),
+  0.25–0.6 m above the ground, its edge vertices tucked 0.5 m under it like a bank; per vertex how molten, how crusted,
+  how covered and which way it moves. `Lava.gdshader` draws it: heavy, slow swells rolling down a flow (vertex shader);
+  a ragged, lobed edge; the look of D250–D254 per pixel; close up, grain in the crust, rare fine veins, small skin flakes
+  drifting on the melt and streaks stretched along the flow; cracks a fixed few pixels wide at any distance (a width in
+  noise units drew glowing worms a metre or two wide); deep orange at its hottest (yellow-white burned out by day).
+* **The terrain** under the lava is dark rock only well inside it, and glows only beyond the sheets (from 1.5–2.5 km, a
+  red streak down the cone at night, 2.6×). Flow lights 7.5 × heat: the terrain's own blurred glow beside a flow, which
+  had lit the flank, is gone.
+* **Nothing grows in lava**: plant cover and the rocks and logs props are zero on lava vertices (no grass, plants, stones
+  or logs); `Vegetation.ForestDensity` is zero there (no trees).
+* Tom's three dumps rebuilt from their Reproduce lines: no plants or trees in the lava, sharp edges, no ground texture.
+* Speed: the sampler asks every point about lava, behind a quick reach check (`Volcanoes.NearLava`: active volcanoes'
+  middles ± radius and longest flow). Measured side by side the same hour: build 123 1 441, build 124 1 480, now 1 478
+  ns per sample (the machine ran ~10 % slower than at D247–D248, whose figures are not comparable).
+* The lava lake (Tom's 21:58 dump: soft blobs): plates of crust with melt in narrow seams between them (rifts and their
+  glowing edges edged by the field's screen-space change; the flows' broad ones filled the gaps between the plates), and
+  rare open pools where it churns hottest.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

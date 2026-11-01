@@ -107,7 +107,7 @@ public sealed class LavaMap
             // (Godot's omni light falls off as distance^-attenuation: at 1.2 a light 300 m off gave the crater walls 2 % of it)
             light.Position = new Vector3((float)(p.X - originX), (float)p.Y + (p.Lake ? 80 : 15), (float)(p.Z - originZ));
             light.OmniAttenuation = p.Lake ? .35f : .5f; // (0.8 lit only a few metres round each)
-            light.LightEnergy = p.Lake ? 3.5f : (float)(4.5 * p.Heat);
+            light.LightEnergy = p.Lake ? 3.5f : (float)(7.5 * p.Heat); // (D257: the terrain's own blurred glow beside a flow is gone; the lights carry it)
             light.OmniRange = p.Lake ? 1400 : 450;
             // (the haze over the crater glows from the lake only, gently: 1.2 turned a cloud the crater sat in into a red wash
             // in build 124's first package, and fog lit by every flow light cost frames)

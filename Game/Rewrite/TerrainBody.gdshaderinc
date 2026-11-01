@@ -75,25 +75,6 @@ float vnoise(vec2 p) {
 // Molten lava (terrain revision 31, D250; LavaMap.cs): r = molten, g = crusted, around the nearest active volcano.
 global uniform sampler2D lava_map : filter_linear, repeat_disable;
 global uniform vec4 lava_frame; // xy: the map's centre in scene coordinates, z: size (m), w: 1 when there is lava to draw
-// Signed noise for the lava crust (−1 … 1, four octaves, each turned): its zero lines wander and branch like cracks
-// (cells drew polygons, "Voronoi slapped onto it" — Tom).
-float lava_fbm(vec2 p) {
-	float v = 0.0, a = 0.5;
-	mat2 turn = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8));
-	for (int o = 0; o < 4; o++) { v += a * (vnoise(p) * 2.0 - 1.0); p = turn * p * 2.03 + 7.1; a *= 0.5; }
-	return v;
-}
-// The lava's fields at a point (moved along the flow by the caller): x = churn (0 … 1, how hot the melt is), y = the
-// rift field (rifts where it is near 0), z = the fine crack field (cracks where near 0).
-vec3 lava_fields(vec2 p, vec2 drift) {
-	float churn = vnoise(p * 0.04 + vec2(TIME * 0.015, -TIME * 0.01)) * 0.65 + vnoise(p * 0.13 - vec2(TIME * 0.04, TIME * 0.03)) * 0.35;
-	// (D254: a second, faster warp that changes over time, so the cracks wriggle and the crust re-forms as it moves —
-	// carried along alone, the pattern read as a texture being slid)
-	vec2 wobble = 4.0 * vec2(lava_fbm(p * 0.05 + vec2(TIME * 0.03, 1.7)), lava_fbm(p * 0.05 + vec2(4.1, -TIME * 0.025)));
-	vec2 q = p + wobble + 14.0 * vec2(lava_fbm(p * 0.02 + drift), lava_fbm(p * 0.02 + 5.2 - drift));
-	return vec3(churn, abs(lava_fbm(q * 0.035 + drift * 2.0)), abs(lava_fbm(q * 0.16 + 3.3)));
-}
-
 // A ground texture at ~8 m per tile, two differently rotated and scaled copies blended by slow noise so the tiles
 // do not repeat visibly over open ground.
 vec3 gtex(int layer, vec2 p) {
@@ -430,77 +411,21 @@ void fragment() {
 	ROUGHNESS = mix(mix(mix(base_rough, 0.55, snow), wet_rough, wet_rough_k), 0.04, puddle);
 	ROUGHNESS = mix(ROUGHNESS, 0.55, damp * wetland * 0.7); // glistening mud at wetland pool margins
 	SPECULAR = mix(0.5, 0.9, puddle);
-	// Molten lava (revision 31, D250; look D251): the melt glows, slowly churning (yellow-orange where hottest, deep red
-	// as it cools). A near-black crust skins over most of it, torn open along wandering rifts where the melt shows, and
-	// crazed by fine cracks that glow faintly; a flow's crusted band shows the cracks only. All from warped noise (no cells).
+	// Lava (revision 31): the lava itself is a sheet of its own on the ground (Lava.gdshader, D257). Under it the ground is
+	// dark rock (no ground texture at its ragged edge); from afar, beyond the sheets (~2 km), the hot ground glows as a
+	// whole, so a flow reads as a red streak down the cone at night.
 	if (lava_frame.w > 0.0) {
 		vec2 lm = (scene_xz - lava_frame.xy) / lava_frame.z + 0.5;
 		if (lm.x > 0.0 && lm.y > 0.0 && lm.x < 1.0 && lm.y < 1.0) {
-			vec4 lvd = textureLod(lava_map, lm, 0.0);
-			vec2 lv = lvd.rg;
-			if (lv.x + lv.y > 0.004) {
-				vec2 lp = scene_xz - lava_frame.xy; // (anchored to the volcano, not the moving scene origin)
-				vec2 drift = vec2(TIME * 0.004, -TIME * 0.003);
-				// Flowing (D252): the pattern moves along the lava's direction (the map's b, a: a flow downhill, the lake out
-				// from its middle), up to 2.5 m/s in a flow's molten channel, its crust a third of that; two copies offset by
-				// half a 10 s cycle, cross-faded, so it moves on for ever without stretching.
-				vec2 flow_dir = lvd.ba * 2.0 - 1.0;
-				bool on_flow = length(flow_dir) > 0.31; // (a flow moves faster than 0.3 — the lake's creep is at most that)
-				// D254: shear — a flow's middle runs fast, its edges barely creep (lv.x is graded across it), so the crust
-				// stretches and tears between them; one speed across slid the whole pattern like a texture.
-				float speed = mix(0.2, 3.2, pow(lv.x, 1.5));
-				// Surges: pulses of hotter lava travelling down a flow (~4 m/s, a few hundred metres apart, irregular), the
-				// molten channel widening into the crust as one passes.
-				vec2 fdn = on_flow ? normalize(flow_dir) : vec2(0.0);
-				float along = dot(lp, fdn);
-				float surge = on_flow ? smoothstep(0.55, 1.0, sin(along / 70.0 - TIME * 0.06 + 3.0 * vnoise(lp * 0.004))) * smoothstep(0.2, 0.6, vnoise(lp * 0.008 + 9.0)) : 0.0;
-				lv.x = min(1.0, lv.x + surge * (0.35 * lv.y + 0.2 * lv.x));
-				float ph0 = fract(TIME / 10.0), ph1 = fract(TIME / 10.0 + 0.5);
-				vec3 f0 = lava_fields(lp - flow_dir * speed * ph0 * 10.0, drift);
-				vec3 f1 = lava_fields(lp - flow_dir * speed * ph1 * 10.0, drift);
-				vec3 fld = mix(f0, f1, abs(ph0 * 2.0 - 1.0));
-				float churn = fld.x;
-				// rifts: the zero lines of slow noise, wider where the melt is hotter; fine cracks: faster noise's zero lines
-				float rift_n = fld.y;
-				float rift = 1.0 - smoothstep(0.0, 0.05 + 0.1 * churn, rift_n);
-				float fine_n = fld.z;
-				float fine = 1.0 - smoothstep(0.0, 0.035 + 0.03 * vnoise(lp * 0.05), fine_n);
-				float seam = (1.0 - smoothstep(0.0, 0.22, rift_n)) * (1.0 - rift); // the incandescent edge along a rift
-				// D253 (Noor): on a flow's broad melt, black crust floats in irregular islands — more of them toward the cooling
-				// edges and downstream (lower molten) — their cracks showing the melt under them; on the lake the rifts open it.
-				// (a flow moves faster than 0.3 — the lake's creep is at most that)
-				// (D254: the islands grow and melt away over time — a slow field that stays put while they slide through it)
-				float form = 0.22 * (vnoise(lp * 0.015 + vec2(TIME * 0.02, -TIME * 0.017)) - 0.5);
-				float isle = smoothstep(-0.06, 0.06, fld.y * 2.2 - 0.25 - (1.0 - lv.x) * 0.55 + form - surge * 0.15);
-				float open = on_flow ? max(lv.x * (1.0 - isle), lv.x * rift) : lv.x * rift;
-				float crust = max(lv.y, lv.x - open);
-				// bright yellow-orange where the melt is fastest and hottest (a flow's middle), dark red at the cooling edges
-				float core_heat = clamp(lv.x * 1.15, 0.0, 1.0);
-				vec3 hot = mix(vec3(0.65, 0.05, 0.005), vec3(1.0, 0.5, 0.1), smoothstep(0.25, 0.95, core_heat * (0.75 + 0.35 * churn)));
-				float shade = 0.6 + 0.8 * churn; // (the crust's own unevenness, moving with it)
-				ALBEDO = mix(ALBEDO, vec3(0.022, 0.019, 0.017) * shade, max(lv.x, lv.y));
-				ROUGHNESS = mix(ROUGHNESS, 0.9, crust);
-				ROUGHNESS = mix(ROUGHNESS, 0.35, open);
-				SPECULAR = mix(SPECULAR, 0.3, max(lv.x, lv.y));
-				float heat = max(lv.x, lv.y);
-				float glow = open * (1.0 + 1.6 * churn) * (0.6 + 0.6 * core_heat) + seam * lv.x * 0.9 + fine * crust * heat * (0.25 + 0.35 * churn) * (0.5 + core_heat);
-				// (D254: the heat throbs here and there on its own, and a surge glows brighter)
-				glow *= (0.8 + 0.4 * vnoise(lp * 0.025 + vec2(TIME * 0.12, TIME * 0.09))) * (1.0 + 0.6 * surge);
-				// Relief (D254): the crust stands up from the melt (up to ~0.6 m), so lights catch the islands' edges and the
-				// melt lies in the channels between them — not a flat picture.
-				if (length(VERTEX) < 600.0) {
-					float lh = crust * (0.6 * isle + 0.25) - open * 0.2;
-					vec3 lpx = dFdx(VERTEX), lpy = dFdy(VERTEX);
-					float lhx = dFdx(lh), lhy = dFdy(lh);
-					vec3 lr1 = cross(lpy, NORMAL), lr2 = cross(NORMAL, lpx);
-					float ldet = dot(lpx, lr1);
-					vec3 lb = abs(ldet) * NORMAL - sign(ldet) * (lhx * lr1 + lhy * lr2);
-					if (abs(ldet) > 1e-12 && dot(lb, lb) > 1e-24) NORMAL = normalize(mix(NORMAL, normalize(lb), 1.0 - smoothstep(300.0, 600.0, length(VERTEX))));
-				}
-				// far away the rifts and cracks are smaller than a pixel: the hot ground glows as a whole, so a flow reads as a
-				// glowing streak from kilometres off (from 6 km it was gone)
-				float far = smoothstep(600.0, 3000.0, length(VERTEX));
-				EMISSION = hot * (glow * (1.0 - far) + max(lv.x, lv.y * 0.7) * 1.4 * far);
+			vec2 lv = textureLod(lava_map, lm, 0.0).rg;
+			float lava = max(lv.x, lv.y);
+			if (lava > 0.004) {
+				// (dark only well inside the lava: the map's 16 m blur spread the dark rock over the lit flank beside a flow)
+				ALBEDO = mix(ALBEDO, vec3(0.02, 0.018, 0.016), smoothstep(0.3, 0.6, lava));
+				ROUGHNESS = mix(ROUGHNESS, 0.9, smoothstep(0.3, 0.6, lava));
+				float far = smoothstep(1500.0, 2500.0, length(VERTEX));
+				vec3 hot = mix(vec3(0.65, 0.05, 0.005), vec3(1.0, 0.5, 0.1), smoothstep(0.25, 0.95, lv.x));
+				EMISSION = hot * max(lv.x, lv.y * 0.7) * 2.6 * far; // (1.4 read faint from 8 km)
 			}
 		}
 	}

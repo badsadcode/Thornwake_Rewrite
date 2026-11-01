@@ -14,7 +14,9 @@ public readonly record struct TerrainSample(
     WaterKind Water,     // water body covering this point (None if dry)
     double WaterLevel,   // absolute surface elevation of that water (NaN if dry)
     int WaterBody,       // lake id or river reach id (-1 for sea / none)
-    double Plume = 0);   // 0..1 river water mixing into a lake or the sea near a mouth (shading)
+    double Plume = 0,    // 0..1 river water mixing into a lake or the sea near a mouth (shading)
+    double Lava = 0);    // 0..1 how much lava covers the ground here (revision 31: an active volcano's lake and fresh flows;
+                         // D257: the game draws it as its own surface and nothing grows in it)
 
 /// <summary>
 /// The terrain authority for generated (unedited) ground: a pure, thread-safe function of world position.
@@ -169,7 +171,9 @@ public sealed partial class TerrainSampler
             Pools(lx, lz, x, z, minWavelength, baseHeight, roughness, mountainShare, inland, flatten, land, riverDamp, lakeCells, poolCover,
                 poolDepth, poolSize, poolChannels, ref height, ref water, ref level);
         PlayerEdits(x, z, ref height, ref water, ref level, ref body);
-        return new(_p.SeaLevel + height, land, bare > 0 ? Math.Max(mountainShare, bare) : mountainShare, detail, water, level, body, lakePlume);
+        double lavaCover = 0;
+        if (_volcanoes != null && water == WaterKind.None) { var (molten, crust) = _volcanoes.LavaAt(x, z); lavaCover = Math.Max(molten, crust); }
+        return new(_p.SeaLevel + height, land, bare > 0 ? Math.Max(mountainShare, bare) : mountainShare, detail, water, level, body, lakePlume, lavaCover);
     }
 
     /// <summary>Stage 1a, coast: the macro raster (land, eroded height, mountain share) and the sub-raster coastline wiggle.</summary>

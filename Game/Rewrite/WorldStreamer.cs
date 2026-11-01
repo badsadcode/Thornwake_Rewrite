@@ -136,6 +136,7 @@ public partial class WorldStreamer : Node3D
     private readonly HashSet<TileKey> _failed = new();
     private readonly int _maxJobs = Background.TileJobs;
     private ShaderMaterial _terrain = null!, _water = null!, _farTree = null!;
+    private readonly ShaderMaterial _lava = new() { Shader = GD.Load<Shader>("res://Game/Rewrite/Lava.gdshader") };
     private Mesh _grass = null!, _card = null!;
     private TreeCatalog _trees = null!;
     /// <summary>The tree species' models (crowns for the rain, D213).</summary>
@@ -434,6 +435,16 @@ public partial class WorldStreamer : Node3D
             }
             else mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
             root.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _water, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        }
+        if (data.Lava is { } lavaSheet && lavaSheet.Indices.Length > 0 && data.LavaArrays is { } lavaArrays)
+        {
+            // The lava sheet (D257): its own surface over an active volcano's lava, like the water's.
+            using (lavaArrays)
+            {
+                var mesh = new ArrayMesh();
+                mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, lavaArrays);
+                root.AddChild(new MeshInstance3D { Name = "Lava", Mesh = mesh, MaterialOverride = _lava, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+            }
         }
         CommitMeshMs += Stopwatch.GetElapsedTime(stage).TotalMilliseconds;
         stage = Stopwatch.GetTimestamp();
