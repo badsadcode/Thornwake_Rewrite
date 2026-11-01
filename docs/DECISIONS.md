@@ -3776,6 +3776,37 @@ explore", then "Rework fjords now". Fjords now come as fjord *coasts* (`Troughs.
   harbours), tree heights that vary much more (Tom: after the terrain is finished), the world map drawing the islands
   (it shows the plan's raster).
 
+## D246 — Terrain revision 28: volcanoes and calderas (2026-11-01)
+Tom: "Yes, please" (landform no. 7). `Game/WorldGen/Volcanoes.cs`, a big landform (like escarpments) run on the plan's
+raster before erosion, so rivers form on the volcanoes and run down them:
+* **Where**: one per 160 × 160 km of land (at least one; 16 at most): 1–4 in a 512–768 km world. Inland (land 0.6 at the
+  middle, 0.35 all round the foot); two in three beside mountain chains (their shoulders), the rest on the plains; apart.
+  Three in ten are calderas.
+* **Cones**: 900–2,200 m (× size) over the land, slopes 1 in 4–6 on average, concave (steep near the top), the outline
+  wandering ±6 %; a crater 250–600 m (× size) across 80–200 m deep, a lake in six of ten (its own still water, drawn as
+  a pond, 40 % of the crater's depth over the floor: closed in by the rim); 18–30 gullies down the flanks (noise lines
+  first drew hundreds of thin cracks); 3–6 lava flows, lobes 6–15 m thick widening downhill, bare rock.
+* **Calderas**: broad shields 500–1,100 m high, 9–16 km round; a caldera 2.5–5 km (× size) with cliffs 250–500 m deep, its
+  outline wandering ±10 % (a first one was a drawn circle), its rim breached on one side; the basin is a plan lake
+  spilling through the breach, its river leaving there.
+* **Built on a level base**: each volcano replaces the land under it (the land's mean height round its foot plus its
+  shape, whole within 75 % of its radius): added onto the mountains' relief, a cone was lost in it and a caldera's floor
+  drained away through it. Less mountain share on its slopes (smoother than the mountains, rockier toward the top).
+* **The raster and the ground**: the raster takes the volcano without its crater; at walking scale the ground adds the
+  exact shape minus what the raster holds of it (sharp summit, crater, caldera cliffs), the gullies and the flows.
+* **The hydrology** (only when a world has calderas, so earlier revisions are unchanged): a caldera's rim resists
+  erosion (it cut the rim through where the basin overflowed), and a caldera's floor is always a lake (the share of
+  the land kept as lakes went to bigger basins and its basin was filled flat). Without these, 2 of 7 calderas held a
+  lake; with them, all.
+* **Biome**: the volcanic biome (already in the content, its "volcano" feature never built) is drawn onto every volcano
+  out to just beyond its foot.
+* Test: 5 cones, all standing over 60 % of their height above their foot; 3 calderas, all with a lake; 4,555 crater lake
+  points, none with dry ground below the water beside it; all volcanic in the middle. Settings: New world → Landforms →
+  *Volcanoes and calderas*. *Terrain version* gains *Build 121* (`terrain-build121.json`). Speed 1 261 ns per sample
+  (1 209 before).
+* Not yet: smoke, heat, hot springs and obsidian (gameplay); a volcanic island land shape; lava flows that follow the
+  ground rather than straight down the cone.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

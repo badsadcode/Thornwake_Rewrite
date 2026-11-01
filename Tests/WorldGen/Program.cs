@@ -199,6 +199,22 @@ if (args.FirstOrDefault(a => a.StartsWith("--reach-probe=")) is { } rp)
     }
     return 0;
 }
+if (args.FirstOrDefault(a => a.StartsWith("--raster-grid=")) is { } rgq)
+{
+    var q = rgq[14..].Split(',');
+    var s = CoreTests.Sampler(q[0], int.Parse(q[1]));
+    double cx = double.Parse(q[2], CultureInfo.InvariantCulture), cz = double.Parse(q[3], CultureInfo.InvariantCulture);
+    var m = s.Plan.Macro; var h = m.Channel(WorldPlan.HeightChannel);
+    int ci = (int)((cx - m.MinX) / m.Cell), cj = (int)((cz - m.MinZ) / m.Cell);
+    Console.WriteLine($"cell {m.Cell} m");
+    for (int j = cj - 8; j <= cj + 8; j++)
+    {
+        var sb = new StringBuilder();
+        for (int i = ci - 8; i <= ci + 8; i++) sb.Append($"{h[j * m.Size + i],6:0}");
+        Console.WriteLine(sb);
+    }
+    return 0;
+}
 // --trough-stats: river chains (following the river downstream across junctions) that drop 60 m or more within 3–9 km,
 // with side rivers joining on the way, away from lakes and the sea (glacial trough candidates).
 if (args.Contains("--trough-stats"))
@@ -236,6 +252,12 @@ if (args.Contains("--landform-probes"))
         foreach (int seed in new[] { 42, 7319 })
         {
             var s = CoreTests.Sampler(profile.Id, seed);
+            if (s.Plan.PlanLandforms.OfType<Volcanoes>().FirstOrDefault() is { } vo)
+            {
+                Console.WriteLine($"{profile.Id}/{seed}: {vo.Count} volcanoes");
+                foreach (var (vx, vz, vr, vh, vc) in vo.Probes())
+                    Console.WriteLine($"{profile.Id}/{seed} {(vc ? "caldera" : "cone")} at {vx:0},{vz:0}, radius {vr / 1000:0.0} km, {vh:0} m high, summit ground {s.Height(vx, vz) - s.Plan.Profile.SeaLevel:0} m, water there {s.Sample(vx, vz).Water}, plan lake {s.Plan.Hydrology.LakeNear(vx, vz)}, nearest lake {s.Plan.Hydrology.Lakes.Select(l => Math.Sqrt((l.Center.X - vx) * (l.Center.X - vx) + (l.Center.Z - vz) * (l.Center.Z - vz))).DefaultIfEmpty(-1).Min():0} m, raster {s.Plan.Macro.Sample(WorldPlan.HeightChannel, vx, vz):0}");
+            }
             if (s.Plan.Troughs is { } tg)
             {
                 int sides = tg.Falls.Count(f => f.Side);

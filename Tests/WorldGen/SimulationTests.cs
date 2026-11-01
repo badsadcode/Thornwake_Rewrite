@@ -21,6 +21,7 @@ internal static class SimulationTests
         T.Run("Landforms: cirques hold closed-in tarns high in the mountains; rivers and lakes unchanged (revision 23)", CirqueForms, filter);
         T.Run("Landforms: glacial troughs — flat floors, side rivers falling from hanging valleys, water still descending (revisions 24, 25)", TroughForms, filter);
         T.Run("Landforms: fjords — sea from the coast to the head's shore, between high walls; fjord coasts with islands (revisions 26, 27)", FjordForms, filter);
+        T.Run("Landforms: volcanoes — cones over the land, calderas holding a lake, crater lakes closed in, volcanic ground (revision 28)", VolcanoForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1242,6 +1243,55 @@ internal static class SimulationTests
         T.Check(dry == 0, $"the sea along each fjord ({dry} points not)");
         T.Check(low <= walls / 10, $"high walls ({low} of {walls} low)");
         T.Check(rising == 0, $"rivers still descend ({rising})");
+    }
+
+    private static void VolcanoForms()
+    {
+        int cones = 0, calderas = 0, tall = 0, lakes = 0, craterWater = 0, leaks = 0, volcanic = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 7319), ("continental", 42), ("mountainous", 42), ("archipelago", 42) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            if (s.Plan.PlanLandforms.OfType<Volcanoes>().FirstOrDefault() is not { } vo) continue;
+            foreach (var (x, z, radius, height, caldera) in vo.Probes())
+            {
+                var (b, _, share) = s.Plan.Biomes.Sample(x, z);
+                if (s.Plan.Biomes.Pool[b].Def.Id == "volcanic" && share > .5) volcanic++;
+                // The foot: the mean ground round it at its radius.
+                double foot = 0;
+                for (int d = 0; d < 8; d++) foot += s.Height(x + Math.Cos(d * Math.PI / 4) * radius, z + Math.Sin(d * Math.PI / 4) * radius) / 8;
+                if (caldera)
+                {
+                    calderas++;
+                    if (s.Sample(x, z).Water == WaterKind.Lake) lakes++;
+                    continue;
+                }
+                cones++;
+                double top = double.MinValue;
+                for (int d = 0; d < 16; d++) top = Math.Max(top, s.Height(x + Math.Cos(d * Math.PI / 8) * radius * .05, z + Math.Sin(d * Math.PI / 8) * radius * .05));
+                if (top - foot > height * .6) tall++;
+                // A crater lake: closed in (no dry ground below its level beside it).
+                var t0 = s.Sample(x, z);
+                if (t0.Water != WaterKind.Pond) continue;
+                for (double dz = -radius * .1; dz <= radius * .1; dz += 10)
+                    for (double dx = -radius * .1; dx <= radius * .1; dx += 10)
+                    {
+                        var t = s.Sample(x + dx, z + dz);
+                        if (t.Water != WaterKind.Pond) continue;
+                        craterWater++;
+                        foreach (var (ox, oz) in new[] { (10.0, 0.0), (-10.0, 0.0), (0.0, 10.0), (0.0, -10.0) })
+                        {
+                            var n = s.Sample(x + dx + ox, z + dz + oz);
+                            if (n.Water == WaterKind.None && n.Height < t.WaterLevel - .05) leaks++;
+                        }
+                    }
+            }
+        }
+        T.Note($"{cones} cones ({tall} standing over 60 % of their height above their foot), {calderas} calderas ({lakes} holding a lake), {craterWater} crater lake points, {leaks} dry neighbours below the water, {volcanic} volcanic in the middle");
+        T.Check(cones >= 2 && calderas >= 2, $"cones and calderas placed ({cones}, {calderas})");
+        T.Check(tall == cones, $"cones rise over the land ({tall} of {cones})");
+        T.Check(lakes == calderas, $"every caldera holds a lake ({lakes} of {calderas})");
+        T.Check(leaks == 0, $"crater lakes closed in ({leaks})");
+        T.Check(volcanic == cones + calderas, $"volcanic ground on them ({volcanic} of {cones + calderas})");
     }
 
     private static void Wetlands()

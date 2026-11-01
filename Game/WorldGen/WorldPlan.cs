@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Thornwake.WorldGen;
 
@@ -159,7 +160,10 @@ public sealed class WorldPlan
         stage?.Invoke(2);
         var hydroTimer = Stopwatch.StartNew();
         ulong riverSeed = Hashing.FeatureSeed(manifest.Seed, 100 + WorldManifest.CurrentGenerator, manifest.ProfileDigest, "rivers");
-        Hydrology = new Hydrology(Macro, height, p, Style, riverSeed);
+        // Revision 28: a caldera's rim resists erosion (erosion cut it through where it overflowed and drained its lake),
+        // and its floor is always a lake (the share of land kept as lakes went to bigger basins).
+        var volcanoes = PlanLandforms.OfType<Volcanoes>().FirstOrDefault();
+        Hydrology = new Hydrology(Macro, height, p, Style, riverSeed, volcanoes?.Resistance(Macro), volcanoes?.LakeCells(Macro));
         Hydrology.BuildMilliseconds = hydroTimer.Elapsed.TotalMilliseconds;
         for (int k = 0; k < height.Length; k++) heightRaster[k] = (float)height[k];
         Hydrology.RefineSurfaces(Style);

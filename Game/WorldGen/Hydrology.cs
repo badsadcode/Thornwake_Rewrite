@@ -92,7 +92,12 @@ public sealed class Hydrology
     /// <summary>
     /// Erode <paramref name="height"/> (metres above sea; ≤ 0 is sea) in place and extract lakes and rivers.
     /// </summary>
-    internal Hydrology(MacroRaster raster, double[] height, WorldProfile profile, TerrainStyle style, ulong seed)
+    /// <param name="resist">How much each cell resists erosion (0 none … 1 not eroded): a caldera's rim (revision 28; null
+    /// before: every cell erodes alike).</param>
+    /// <param name="lakeCells">Cells whose depression is always a lake, beyond the share of the land kept as lakes: a
+    /// caldera's floor (revision 28; the budget went to bigger basins elsewhere and its basin was filled flat).</param>
+    internal Hydrology(MacroRaster raster, double[] height, WorldProfile profile, TerrainStyle style, ulong seed, float[]? resist = null,
+        IReadOnlyCollection<int>? lakeCells = null)
     {
         _raster = raster; _seaLevel = profile.SeaLevel; _minWidth = style.RiverMinWidth; _style = style;
         int n = raster.Size, count = n * n;
@@ -115,6 +120,7 @@ public sealed class Hydrology
                 if (r < 0 || height[c] <= 0) continue;
                 double distance = Distance(c, r, n) * cell;
                 double f = strength * Math.Sqrt(area[c]) / distance;
+                if (resist != null) f *= 1 - resist[c]; // (revision 28: a caldera's rim holds; cut through, its lake drained away)
                 double next = (height[c] + f * height[r]) / (1 + f);
                 // No deposition: depressions stay depressions (they become lakes); land never sinks below the sea.
                 if (next < height[c]) height[c] = Math.Max(next, .5);
@@ -166,6 +172,7 @@ public sealed class Hydrology
         {
             var members = candidate.Members;
             bool keep = members.Length >= style.LakeMinCells && candidate.MaxDepth >= style.LakeMinDepth && used + members.Length <= budget;
+            if (lakeCells != null && !keep && candidate.MaxDepth >= style.LakeMinDepth && members.Any(lakeCells.Contains)) keep = true;
             if (!keep) { foreach (int c in members) height[c] = filled[c]; continue; }
             used += members.Length;
             int id = _lakes.Count;

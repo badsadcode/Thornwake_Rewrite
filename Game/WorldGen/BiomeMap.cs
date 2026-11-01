@@ -135,6 +135,21 @@ public sealed class BiomeMap
                 f[k] = hostFit[k] > 0 ? (float)(hostFit[k] * 2.2 * DetMath.Smooth((mask[k] - threshold) / .06 + .5)) : 0;
         }
 
+        // ---- revision 28: the volcanic biome on the volcanoes (their whole cone, fading out just beyond the foot)
+        if (plan.PlanLandforms.OfType<Volcanoes>().FirstOrDefault() is { Count: > 0 } volcanoes
+            && pool.FirstOrDefault(r => r.Def.Id == "volcanic" && !excluded[r.Index]) is { } volcanic)
+            foreach (var (vx, vz, vr, _, _) in volcanoes.Probes())
+                for (int k = 0; k < n * n; k++)
+                {
+                    if (!land[k]) continue;
+                    double d = Math.Sqrt(Sq(_grid.CellX(k % n) - vx) + Sq(_grid.CellZ(k / n) - vz));
+                    double near = 1 - DetMath.Smooth((d - vr * .9) / (vr * .3));
+                    if (near <= 0) continue;
+                    float best = 0;
+                    for (int b = 0; b < count; b++) best = Math.Max(best, fit[b][k]);
+                    fit[volcanic.Index][k] = Math.Max(fit[volcanic.Index][k], (float)(Math.Max(best, .1f) * 2.5 * near));
+                }
+
         // ---- neighbour rules (one soft pass): suppressed near forbidden neighbours, boosted near preferred ones
         var top = Top(fit, land, n, count);
         var presence = new float[count][];

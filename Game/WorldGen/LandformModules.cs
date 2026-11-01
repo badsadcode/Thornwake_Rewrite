@@ -55,7 +55,9 @@ public static class LandformCatalog
 
     public static readonly LandformInfo Fjords = new("fjords", "Fjords", "where mountain rivers reach the sea", LandformKind.Plan, LandformRule.Coast, 26);
 
-    public static readonly IReadOnlyList<LandformInfo> All = new[] { Escarpments, Waterfalls, Canyons, Cirques, Troughs, Fjords, Dunes, Mesas, Spires };
+    public static readonly LandformInfo Volcanoes = new("volcanoes", "Volcanoes and calderas", "alone or beside mountain chains", LandformKind.Plan, LandformRule.Terrain, 28);
+
+    public static readonly IReadOnlyList<LandformInfo> All = new[] { Escarpments, Waterfalls, Canyons, Cirques, Troughs, Fjords, Volcanoes, Dunes, Mesas, Spires };
 
     /// <summary>The big landforms of a world, in order, run on the macro raster before erosion (each from the terrain
     /// revision that brought it, unless switched off).</summary>
@@ -63,6 +65,7 @@ public static class LandformCatalog
     {
         var list = new List<PlanLandform>();
         if (style.Revision >= Escarpments.Since && !style.Landform(Escarpments.Id).Off) list.Add(new Escarpments(style.Revision));
+        if (style.Revision >= Volcanoes.Since && !style.Landform(Volcanoes.Id).Off) list.Add(new Volcanoes(style.Revision));
         return list;
     }
 

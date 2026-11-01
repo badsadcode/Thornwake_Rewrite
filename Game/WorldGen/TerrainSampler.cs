@@ -65,6 +65,7 @@ public sealed partial class TerrainSampler
     private readonly Canyons? _canyons;
     private readonly Cirques? _cirques;
     private readonly Troughs? _troughs;
+    private readonly Volcanoes? _volcanoes;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
     private readonly double[] _poolQuantiles, _channelQuantiles;
@@ -86,6 +87,7 @@ public sealed partial class TerrainSampler
         _canyons = plan.Canyons is { Count: > 0 } c ? c : null;
         _cirques = plan.Cirques is { Count: > 0 } q ? q : null;
         _troughs = plan.Troughs is { Count: > 0 } t ? t : null;
+        _volcanoes = _planForms.OfType<Volcanoes>().FirstOrDefault(v => v.Count > 0);
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
@@ -152,6 +154,8 @@ public sealed partial class TerrainSampler
         Lakes(x, z, ref height, ref water, ref level, ref body, ref lakePlume, ref lakeCells);
         // Revision 23: a cirque's tarn, still water of its own (drawn as a pond), where nothing else is water.
         if (_cirques != null && water == WaterKind.None && _cirques.Tarn(x, z, height, out double tarn)) { water = WaterKind.Pond; level = tarn; }
+        // Revision 28: a quiet volcano's crater lake.
+        if (_volcanoes != null && water == WaterKind.None && _volcanoes.CraterLake(x, z, height, out double crater)) { water = WaterKind.Pond; level = crater; }
         // Revision 22: no pools where a river has cut the ground down by over 2 m (valley sides, canyon and gorge walls),
         // against the ground as the river stage sees it (the walking-scale relief is damped near rivers: big landforms
         // there are not a cut). Pools filled the flat ledges of canyon walls (Tom's dump 21:59:22, build 118).
