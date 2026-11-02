@@ -78,6 +78,13 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 129 — the volcano's smoke stays on the volcano
+**Host and everyone joining need build 129** (versions must match to connect). Same terrain as build 128.
+* **Smoke fixed** (after your two dumps): the ash column no longer stands beside the volcano or jumps from place to
+  place as you travel. The game re-centres its scene every ~1.5 km you move, and the smoke already in the air was left
+  behind each time; now it stays over the crater.
+* Try *Go to - volcano smoke by day* and fly round the volcano.
+
 ## New in build 128 — scree and boulders (terrain revision 33)
 **Host and everyone joining need build 128** (versions must match to connect).
 * **Scree under the walls**: the rock a wall sheds now lies at its foot. Gorge and canyon walls stand on a concave
