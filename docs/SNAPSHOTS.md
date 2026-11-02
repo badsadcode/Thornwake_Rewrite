@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 127** (lava that hurts D261; the volcano's smoke fades out, a bigger, denser ash column with mixed colours D262) | `8c88992` | Thornwake-Rewrite-Preview-127 (v0.9.127) | Versions must match to connect; same terrain as 126; *Volcano smoke → on (build 126)* — build 126 = `4d63959` |
 | **Build 126** (lava flows spill from the crater through a notch and run downhill, no holes at a flow's end D259 — terrain revision 32; our own veined lava as *Lava → glowing* D260) | `4d63959` | Thornwake-Rewrite-Preview-126 (v0.9.126) | Versions must match to connect; *Terrain version → Build 125* keeps revision 31; *Lava → glowing (build 125)* — build 125 = `d81fa08` |
 | **Build 125** (lava as its own surface D257; cracks that ride with the crust and a volcano gas plume D258 — terrain revision 31, as build 124; setting Volcano smoke) | `d81fa08` | Thornwake-Rewrite-Preview-125 (v0.9.125) | Versions must match to connect; *Volcano smoke → off*; the lava painted on the terrain = build 124 (`00730f0`) |
 | **Build 124** (active volcanoes and glowing lava D250–D256 — terrain revision 31; settings Lava, Heat shimmer) | `00730f0` | Thornwake-Rewrite-Preview-124 (v0.9.124) | Versions must match to connect; *Terrain version → Build 123* keeps revision 30; *Lava → off* and *Heat shimmer → off* — build 123 = `cf3d975` |
