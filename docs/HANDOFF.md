@@ -9,7 +9,8 @@ Written for the next conversation (the previous one ran out of context). Everyth
   `Lava.gdshader`). Tom's pasted canvas_item shader was tried and taken out (unknown, likely non-commercial licence).
   Launchers "Go to - lava spilling from the crater / lava lake / lava flow at night / onto a lava flow" on revision 32.
   Tool: `--lava-transect`. Open: eruptions (later), more landforms.
-  **Since 126 (not in a build)**: lava that hurts (D261: the melt kills in seconds, the crust slowly; needs on).
+  **Since 126 (not in a build)**: lava that hurts (D261: the melt kills in seconds, the crust slowly; needs on); the volcano's
+  smoke fades out and is a bigger, denser ash column with mixed colours (D262; *Volcano smoke → on (build 126)* = old).
   Build 125 (v0.9.125, return point `d81fa08`, `dist/Preview-125`): lava as its own surface like the
   water (D257: a sheet per tile on levels up to 4, `Lava.gdshader`; nothing grows in it), cracks that ride with the
   crust and a volcano gas plume (D258, `VolcanoSmoke.cs`, setting *Volcano smoke*; glows dull red at dusk and night).

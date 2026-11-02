@@ -97,9 +97,10 @@ public sealed class LavaMap
         PlaceLights(camX, camZ, originX, originZ);
         _shimmer.Visible = GameSettings.HeatShimmer.Index == 1 && bestDistance < 12000;
         // The plume over the lava lake (D258), within 25 km of the volcano.
-        bool smoke = GameSettings.VolcanoSmoke.Index == 1 && bestDistance < 25000 && _points.Length > 0 && _points[0].Lake;
+        bool smoke = GameSettings.VolcanoSmoke.Index >= 1 && bestDistance < 25000 && _points.Length > 0 && _points[0].Lake;
         // (from the crater's rim: from just over the lake, deep in the crater, most of it never rose out)
         if (smoke) _smoke.Position = new Vector3((float)(_points[0].X - originX), (float)(double.IsNaN(_rim) ? _points[0].Y + 120 : _rim + 30), (float)(_points[0].Z - originZ));
+        _smoke.Build126 = GameSettings.VolcanoSmoke.Index == 2;
         if (_smoke.Emitting != smoke) { _smoke.Emitting = smoke; if (smoke) _smoke.Restart(); }
     }
 

@@ -4086,6 +4086,27 @@ tree (D113):
   warmth (up to 40 °C) for the body.
 * With *Hunger and cold* off nothing harms the player (as a falling tree): only the message and the shake.
 
+## D262 — The volcano's smoke: puffs that fade, a bigger ash column (2026-11-02)
+Tom: the puffs "disappear abruptly. They should probably fade out over time", then "smoke from a volcano should be
+bigger, denser, and have more color variance" (with five photos of ash columns: brown-grey cauliflower billows, dark
+undersides, white steam among them).
+* **Why they popped**: the particles' colour ramp (alpha 0.85 → 0) never reached the shader's `COLOR` (a debug run drew
+  `COLOR.a` near 1 to the top of the plume), so every puff stayed whole to its end. And `INSTANCE_CUSTOM.y` is the
+  particle's age as a 0–1 fraction, not seconds: the shader divided it by 55, so its night glow never faded up the plume
+  (the whole column glowed red). `VolcanoSmoke.gdshader` now draws the fade from the age: in over the first 5 % of a
+  puff's life, 0.95 → 0.85, then away over its last half (smooth).
+* **The column** (`VolcanoSmoke.cs`): 260 puffs (150), 150–260 m growing to 2.6× (60–110 to 1.8×), rising at 14–22 m/s
+  (7–11), from a 150 m sphere, 22° spread, 75 s (55): roughly twice as wide and high. Denser: alpha from the texture's
+  `pow(a, 0.75)`.
+* **Colour**: each particle slot its own shade (hashed `INSTANCE_ID`): 20 % white steam, 45 % brown ash and 35 % grey
+  ash, each from dark to light; warmer just over the lava.
+* **Billows**: a normal bulging toward the camera from each puff's middle (turned with its spin), so the sun lights one
+  side; darker underneath (AO by the normal's height).
+* **Night**: the red glow underneath, dimming up the column, gone by three quarters of a puff's life (a fifth, as D258
+  meant, left the night plume almost unseen), stronger on the puffs' undersides.
+* Return point: *Volcano smoke → on (build 126)* = `VolcanoSmokeBuild126.gdshader` with the old particle numbers. Cost:
+  more and bigger transparent puffs (overdraw near the volcano); build 126's is the lighter option.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
