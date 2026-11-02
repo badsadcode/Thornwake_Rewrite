@@ -7,8 +7,8 @@ namespace Thornwake.Rewrite;
 /// SmokePlume's), 70–680 m across, billowing up from the crater for over a minute to about a kilometre and bending off
 /// with the wind; ash brown and grey with white steam among it, each puff its own shade, sunlit on top and dark underneath
 /// (VolcanoSmoke.gdshader), fading in as it leaves the crater and away before it ends; its underside glowing red from the
-/// lava at night. World-space GPU particles with a visibility box of their own (CPU particles reported an empty box and
-/// were culled). Setting <c>fx.volcano_smoke</c>; "on (build 126)" is the earlier thin, white-grey plume.
+/// lava at night. GPU particles in the node's own space, with a visibility box of their own (CPU particles reported an
+/// empty box and were culled). Setting <c>fx.volcano_smoke</c>; "on (build 126)" is the earlier thin, white-grey plume.
 /// </summary>
 public sealed partial class VolcanoSmoke : GpuParticles3D
 {
@@ -48,7 +48,9 @@ public sealed partial class VolcanoSmoke : GpuParticles3D
     public VolcanoSmoke()
     {
         Name = "VolcanoSmoke";
-        LocalCoords = false; Randomness = .6f;
+        // (local: the node is moved over the crater when the scene's origin shifts, and its puffs move with it — in world
+        // space they stayed at their old scene positions, the column jumping 1.5 km off the volcano at each shift, D264)
+        LocalCoords = true; Randomness = .6f;
         VisibilityAabb = new Aabb(new Vector3(-1500, -150, -1500), new Vector3(3000, 2000, 3000));
         _process = new ParticleProcessMaterial
         {

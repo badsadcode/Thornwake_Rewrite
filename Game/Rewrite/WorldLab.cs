@@ -94,6 +94,7 @@ public partial class WorldLab : Node3D
     private bool _faceSun; // debug: turn the camera toward the sun before the screenshot
     // --extra-yaws=a,b,…: after the shot, more shots turned by these yaw offsets (<name>-1.png …), same world and tiles.
     private readonly List<float> _extraYaws = new();
+    private bool _extraRebase;
     // --extra-every=s: seconds between those extra shots (default 3); with yaw offsets 0 a short burst of the same view,
     // to see what moves (Tom's fast fog waves, D170).
     private float _extraEvery = 3;
@@ -154,6 +155,7 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--world-shot=")) { _shotPath = arg[13..]; _smokeDirectory = Path.GetDirectoryName(_shotPath) ?? "."; _atmosphere.StillShot = true; }
             if (arg.StartsWith("--at=")) { var v = arg[5..].Split(','); _shotAt = (double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--extra-every=")) _extraEvery = float.Parse(arg[14..], CultureInfo.InvariantCulture);
+            if (arg == "--extra-rebase") _extraRebase = true;
             if (arg.StartsWith("--extra-yaws=")) foreach (var y in arg[13..].Split(',')) _extraYaws.Add(float.Parse(y, CultureInfo.InvariantCulture));
             if (arg.StartsWith("--view=")) { var v = arg[7..].Split(','); _shotView = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture), float.Parse(v[2], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--msaa=")) GetViewport().Msaa3D = arg[7..] switch { "0" => Viewport.Msaa.Disabled, "4" => Viewport.Msaa.Msaa4X, _ => Viewport.Msaa.Msaa2X };
@@ -1828,6 +1830,9 @@ public partial class WorldLab : Node3D
                 Screenshot(Path.Combine(Path.GetDirectoryName(_shotPath) ?? ".", $"{Path.GetFileNameWithoutExtension(_shotPath)}-{_extraShot}.png"));
                 if (_extraShot >= _extraYaws.Count) GetTree().Quit(0);
                 else { _smokeTimer = 0; _yaw += _extraYaws[_extraShot] - _extraYaws[_extraShot - 1]; }
+                // (--extra-rebase: the scene origin jumps 1.4 km back and forth between shots (under the 1,536 m that rebases it back), the player staying put —
+                // nothing in the world may move with it, D264)
+                if (_extraRebase) Rebase(PlayerX + (_extraShot % 2 == 1 ? 1400 : -1400), PlayerZ, true);
             }
             return;
         }

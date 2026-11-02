@@ -7,6 +7,7 @@ Written for the next conversation (the previous one ran out of context). Everyth
   boulders (D263): talus under gorge, canyon and trough walls, scree look and rubble, erratics in cold biomes;
   *Terrain version → Build 127* = revision 32. Launchers "Go to - scree under a canyon wall / talus fans in a glacial
   trough". Open: scree in cirques and under mountain walls; eruptions (later); more landforms (next: sea stacks).
+  **Since 128 (not in a build)**: the volcano's smoke stays on the volcano when the scene origin shifts (D264).
   Build 127 (v0.9.127, return point `8c88992`, `dist/Preview-127`): lava that hurts (D261: the melt kills in
   seconds, the crust slowly; needs on); the volcano's smoke fades out and is a bigger, denser ash column with mixed
   colours (D262; *Volcano smoke → on (build 126)* = old). New launcher "Go to - volcano smoke by day"; "at night" closer.

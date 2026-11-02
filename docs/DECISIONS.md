@@ -4134,6 +4134,16 @@ Tom picked landform no. 8 next (docs/LANDFORMS.md). Scree as part of the terrain
 * Return point: *Terrain version → Build 127* (revision 32, fingerprints frozen in `terrain-build127.json`). Tool:
   `--scree-transect=<profile>,<seed>,<x0>,<z0>,<x1>,<z1>,<n>` (revision 32 against the current), `--canyons=<profile>,<seed>`.
 
+## D264 — The volcano's smoke stays on the volcano (2026-11-02)
+Tom's dumps 21:49:07 and 21:49:18 (build 128): the ash column stood beside the volcano, "kind of behind", and jumped
+from place to place. The plume's particles were in world space (`LocalCoords = false`), which in this game is scene
+space: when the scene's origin shifts (every ~1.5 km the player travels; his dumps: (-126400, 28032) → (-124864, 28224))
+the emitter is moved back over the crater but the puffs already in the air stayed at their old scene positions — the
+whole column carried off by the shift, new puffs starting over the crater. Now local to the node (it stands still in the
+world: moving it at a shift moves its puffs too). Test flag `--extra-rebase` (with `--extra-yaws`): the origin jumps
+1.4 km back and forth between burst shots, the player staying put; before the fix the column jumped 1.4 km each shot,
+after it stays on the crater.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
