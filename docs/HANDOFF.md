@@ -3,7 +3,13 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 125** (v0.9.125, return point `d81fa08`, `dist/Preview-125`): lava as its own surface like the
+* **Last build Tom has: 126** (v0.9.126, return point `4d63959`, `dist/Preview-126`): terrain revision 32 — fresh lava
+  flows leave the lava lake through a notch in the rim and run down the fall line (D259); lava cover apart from heat (no
+  holes at a flow's end); our own veined lava `LavaVeins.gdshader` as *Lava → glowing* (D260; *glowing (build 125)* =
+  `Lava.gdshader`). Tom's pasted canvas_item shader was tried and taken out (unknown, likely non-commercial licence).
+  Launchers "Go to - lava spilling from the crater / lava lake / lava flow at night / onto a lava flow" on revision 32.
+  Tool: `--lava-transect`. Open: eruptions (later), lava that hurts, more landforms.
+  Build 125 (v0.9.125, return point `d81fa08`, `dist/Preview-125`): lava as its own surface like the
   water (D257: a sheet per tile on levels up to 4, `Lava.gdshader`; nothing grows in it), cracks that ride with the
   crust and a volcano gas plume (D258, `VolcanoSmoke.cs`, setting *Volcano smoke*; glows dull red at dusk and night).
   Same terrain as 124. New launcher "Go to - volcano smoke at night". Open: eruptions (Tom: later), lava that hurts,
