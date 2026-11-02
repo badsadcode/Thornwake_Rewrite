@@ -277,6 +277,62 @@ if (args.Contains("--trough-stats"))
     }
     return 0;
 }
+// --lava-transect=<profile id>,<seed>,<x>,<z>[,<revision>]: the lava round the point, then across the active volcano nearest the point, west to east and south to
+// north through its middle: the ground and how molten and crusted it is.
+if (args.FirstOrDefault(a => a.StartsWith("--lava-transect=")) is { } lt)
+{
+    var v = lt[16..].Split(',');
+    var s = CoreTests.Sampler(v[0], int.Parse(v[1]));
+    if (v.Length > 4) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = int.Parse(v[4]) }));
+    double px = double.Parse(v[2]), pz = double.Parse(v[3]);
+    var vo = s.Plan.PlanLandforms.OfType<Volcanoes>().First();
+    for (int k = -2; k <= 2; k++)
+    {
+        var (m0, c0, cv0) = vo.LavaAt(px + k * 30, pz);
+        Console.WriteLine($"at {px + k * 30:0},{pz:0}: molten {m0:0.00} crust {c0:0.00} cover {cv0:0.00}");
+    }
+    var (ax, az, _) = vo.Active().OrderBy(a => (a.X - px) * (a.X - px) + (a.Z - pz) * (a.Z - pz)).First();
+    double inner = vo.CraterRadius(ax, az), sea = s.Plan.Profile.SeaLevel;
+    Console.WriteLine($"volcano {ax:0},{az:0}, crater radius {inner:0} m");
+    var rim = new StringBuilder("rim (every 15° from east): ");
+    for (int k = 0; k < 24; k++) rim.Append($"{s.Height(ax + Math.Cos(k * Math.PI / 12) * inner, az + Math.Sin(k * Math.PI / 12) * inner) - sea:0} ");
+    Console.WriteLine(rim);
+    // (the lowest point of the rim, 1° apart, and the ground out from the middle that way: a spilling flow's notch)
+    double lowAngle = 0, low = double.MaxValue;
+    for (int k = 0; k < 360; k++)
+    {
+        double h = s.Height(ax + Math.Cos(k * Math.PI / 180) * inner, az + Math.Sin(k * Math.PI / 180) * inner);
+        if (h < low) { low = h; lowAngle = k * Math.PI / 180; }
+    }
+    foreach (var flowLine in vo.FreshFlowLines(ax, az))
+    {
+        Console.WriteLine($"fresh flow, {flowLine.Length} points:");
+        for (int i = 0; i < flowLine.Length; i += i < 30 ? 2 : 10)
+        {
+            var (x, z, w) = flowLine[i];
+            var (m, c, cv) = vo.LavaAt(x, z);
+            Console.WriteLine($"  {i * 40,6} m  r {Math.Sqrt((x - ax) * (x - ax) + (z - az) * (z - az)),5:0}  width {w,4:0}  ground {s.Height(x, z) - sea,7:0.0}  molten {m:0.00}  crust {c:0.00}  cover {cv:0.00}");
+        }
+    }
+    Console.WriteLine($"lowest rim {low - sea:0} m at {lowAngle * 180 / Math.PI:0}°; out that way:");
+    for (double d = 0; d <= inner * 3; d += inner / 8)
+    {
+        double x = ax + Math.Cos(lowAngle) * d, z = az + Math.Sin(lowAngle) * d;
+        var (m, c, cv) = vo.LavaAt(x, z);
+        Console.WriteLine($"  {d,7:0} m  ground {s.Height(x, z) - sea,7:0.0}  molten {m:0.00}  crust {c:0.00}  cover {cv:0.00}");
+    }
+    foreach (var (ux, uz, name) in new[] { (1.0, 0.0, "west→east"), (0.0, 1.0, "south→north") })
+    {
+        Console.WriteLine(name);
+        for (double d = -inner * 1.6; d <= inner * 1.6; d += inner / 10)
+        {
+            double x = ax + ux * d, z = az + uz * d;
+            var (m, c, _) = vo.LavaAt(x, z);
+            Console.WriteLine($"  {d,7:0} m  ground {s.Height(x, z) - sea,7:0.0}  molten {m:0.00}  crust {c:0.00}  lava {s.Sample(x, z).Lava:0.00}");
+        }
+    }
+    return 0;
+}
 // --landform-probes: where the big landforms are in each test world (for captures and Go to spots).
 if (args.Contains("--landform-probes"))
 {
@@ -294,7 +350,7 @@ if (args.Contains("--landform-probes"))
                     for (double dz = -ar; dz <= ar; dz += 50)
                         for (double dx = -ar; dx <= ar; dx += 50)
                         {
-                            var (m, c) = vo.LavaAt(ax + dx, az + dz);
+                            var (m, c, _) = vo.LavaAt(ax + dx, az + dz);
                             if (m > .5) molten++;
                             if (c > .5) crust++;
                             if (m > .3 && dx * dx + dz * dz > Math.Pow(ar * .25, 2) && dx * dx + dz * dz < Math.Pow(ar * .3, 2)) flowAt = (ax + dx, az + dz);

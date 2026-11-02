@@ -146,7 +146,7 @@ public sealed class LavaMap
         {
             for (int i = 0; i < Pixels; i++)
             {
-                var (molten, crust, dx, dz) = volcanoes.LavaFlow(cx - Size / 2 + (i + .5) * step, cz - Size / 2 + (j + .5) * step);
+                var (molten, crust, _, dx, dz) = volcanoes.LavaFlow(cx - Size / 2 + (i + .5) * step, cz - Size / 2 + (j + .5) * step);
                 int k = (j * Pixels + i) * 4;
                 data[k] = (byte)Math.Clamp(molten * 255, 0, 255);
                 data[k + 1] = (byte)Math.Clamp(crust * 255, 0, 255);

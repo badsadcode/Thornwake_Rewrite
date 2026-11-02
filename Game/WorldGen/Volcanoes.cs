@@ -66,6 +66,10 @@ public sealed class Volcanoes : PlanLandform
         public required (double MinX, double MinZ, double MaxX, double MaxZ)[] Chunks;
         public double MinX, MinZ, MaxX, MaxZ;
         public ulong Seed;
+        /// <summary>Revision 32: a fresh flow spilling from the lava lake through a notch in the crater's rim, and the
+        /// lake's level it leaves at (the notch's floor falls 4 m per 100 m from it).</summary>
+        public bool Spill;
+        public double SpillLevel;
     }
 
     private readonly int _revision;
@@ -571,24 +575,42 @@ public sealed class Volcanoes : PlanLandform
     private double TracedFlows(double x, double z, ref double rock)
     {
         if (!_traced) Trace();
-        double g = 0;
+        double g = 0, cut = 0;
         foreach (var v in _volcanoes)
         {
             if (v.Traced == null || x < v.FlowMinX || x > v.FlowMaxX || z < v.FlowMinZ || z > v.FlowMaxZ) continue;
             foreach (var f in v.Traced)
             {
                 if (x < f.MinX || x > f.MaxX || z < f.MinZ || z > f.MaxZ) continue;
-                if (!FlowNearest(f, x, z, out double best, out double width, out _, out _, out _)) continue;
+                if (!FlowNearest(f, x, z, out double best, out double width, out double along, out _, out _)) continue;
                 double edge = width * .5 * (1 + .25 * Noise.Fbm(x, z, 160, 2, 0, f.Seed));
                 double across = 1 - DetMath.Smooth((best - edge * .7) / (edge * .3 + 1));
-                if (across <= 0) continue;
-                double lobe = f.Thickness * across * (1 + .3 * Noise.Fbm(x, z, 120, 2, 0, f.Seed + 1));
-                if (_revision >= 30) lobe += across * 3 * (1 - Math.Abs(Noise.Fbm(x, z, 45, 2, 0, f.Seed + 2))); // (a blocky crust)
-                g = Math.Max(g, lobe);
-                rock = Math.Max(rock, .9 * across);
+                // (revision 32, a spilling flow: no lobe in the lake or the notch, growing in below it)
+                if (f.Spill) across *= DetMath.Smooth((Math.Sqrt(Sq(x - v.X) + Sq(z - v.Z)) - v.Inner * .95) / (v.Inner * .35));
+                double lobe = 0;
+                if (across > 0)
+                {
+                    lobe = f.Thickness * across * (1 + .3 * Noise.Fbm(x, z, 120, 2, 0, f.Seed + 1));
+                    if (_revision >= 30) lobe += across * 3 * (1 - Math.Abs(Noise.Fbm(x, z, 45, 2, 0, f.Seed + 2))); // (a blocky crust)
+                    g = Math.Max(g, lobe);
+                    rock = Math.Max(rock, .9 * across);
+                }
+                if (f.Spill)
+                {
+                    // (revision 32: the notch it leaves the lake by, its walls steep: the lava's surface in it at the lake's
+                    // level, falling 4 m per 100 m — the lobe's thickness cut out below that, or the lava rose where the
+                    // lobe came in)
+                    double wall = 1 - DetMath.Smooth((best - width * .5) / (width * .45 + 1));
+                    if (wall > 0)
+                    {
+                        double floor = f.SpillLevel - .04 * along * (f.X.Length - 1) * 40 - lobe;
+                        double deep = Ground0(v, x, z) - floor;
+                        if (deep > 0) { cut = Math.Max(cut, deep * wall); rock = Math.Max(rock, .9 * wall); }
+                    }
+                }
             }
         }
-        return g;
+        return g - cut;
     }
 
     /// <summary>Traces every lava flow once the plan is final (the first time the ground is asked for one).</summary>
@@ -605,22 +627,51 @@ public sealed class Volcanoes : PlanLandform
                 {
                     var (angle, length, width, thickness) = v.FlowStarts[n];
                     ulong seed = v.Seed + 100 + (ulong)n;
-                    double vr = v.Inner * 1.4 + v.Radius * .05;
+                    // Revision 32 (D259, Tom: "it would slide from that crater"): an active cone's fresh flows leave the
+                    // lava lake over the lowest stretch of the rim within 60° of their direction, through a notch
+                    // (TracedFlows), half as wide there as below; before, they began on the flank beyond the rim.
+                    bool spill = _revision >= 32 && v.Active && n < v.FreshFlows;
+                    if (spill)
+                    {
+                        double low = double.MaxValue, pick = angle;
+                        for (int k = -8; k <= 8; k++)
+                        {
+                            double a = angle + k * Math.PI / 24, h = Ground0(v, v.X + Math.Cos(a) * v.Inner, v.Z + Math.Sin(a) * v.Inner);
+                            if (h < low) { low = h; pick = a; }
+                        }
+                        angle = pick;
+                    }
+                    double vr = spill ? v.Inner * .5 : v.Inner * 1.4 + v.Radius * .05;
                     double x = v.X + Math.Cos(angle) * vr, z = v.Z + Math.Sin(angle) * vr, dx = Math.Cos(angle), dz = Math.Sin(angle);
-                    var xs = new List<double> { x }; var zs = new List<double> { z }; var ws = new List<double> { width };
+                    var xs = new List<double> { x }; var zs = new List<double> { z }; var ws = new List<double> { width * (spill ? .45 : 1) };
                     int flat = 0;
                     for (double run = 0; run < length; run += 40)
                     {
                         double gx = (Ground0(v, x + 20, z) - Ground0(v, x - 20, z)) / 40, gz = (Ground0(v, x, z + 20) - Ground0(v, x, z - 20)) / 40;
                         double grade = Math.Sqrt(gx * gx + gz * gz);
-                        if (grade > 1e-6) { dx = dx * .6 - gx / grade * .4; dz = dz * .6 - gz / grade * .4; }
-                        double turn = .35 * Noise.Fbm(run, n * 977, 600, 2, 0, seed);
+                        double r = Math.Sqrt(Sq(x - v.X) + Sq(z - v.Z));
+                        double turn;
+                        if (_revision >= 32)
+                        {
+                            // (D259: down the fall line on a steep flank, wandering only where the ground flattens; with
+                            // momentum .6 and a waver of up to .35 rad every 40 m the flows ran some 30° across the slope)
+                            double steep = DetMath.Smooth(grade / .15), pull = .35 + .5 * steep;
+                            if (spill && r < v.Inner * 1.2) { dx = Math.Cos(angle); dz = Math.Sin(angle); } // (out through the notch)
+                            else if (grade > 1e-6) { dx = dx * (1 - pull) - gx / grade * pull; dz = dz * (1 - pull) - gz / grade * pull; }
+                            turn = (spill && r < v.Inner * 1.2 ? 0 : .12 * (1 - .7 * steep)) * Noise.Fbm(run, n * 977, 600, 2, 0, seed);
+                        }
+                        else
+                        {
+                            if (grade > 1e-6) { dx = dx * .6 - gx / grade * .4; dz = dz * .6 - gz / grade * .4; }
+                            turn = .35 * Noise.Fbm(run, n * 977, 600, 2, 0, seed);
+                        }
                         double c = Math.Cos(turn), s = Math.Sin(turn), l = Math.Max(1e-9, Math.Sqrt(dx * dx + dz * dz));
                         double nx = (dx * c - dz * s) / l, nz = (dx * s + dz * c) / l;
                         x += nx * 40; z += nz * 40;
                         if (_macro.Sample(WorldPlan.LandChannel, x, z) < .25) break; // (the sea)
-                        flat = grade < .02 ? flat + 1 : 0;
-                        xs.Add(x); zs.Add(z); ws.Add(width * (1 + run / Math.Max(1, length)) * (flat > 0 ? 1.5 : 1));
+                        flat = grade < .02 && !(spill && r < v.Inner * 1.2) ? flat + 1 : 0; // (not in the crater it spills from)
+                        double narrow = spill ? .45 + .55 * DetMath.Smooth((Math.Sqrt(Sq(x - v.X) + Sq(z - v.Z)) - v.Inner * 1.1) / (v.Inner * .6)) : 1;
+                        xs.Add(x); zs.Add(z); ws.Add(width * narrow * (1 + run / Math.Max(1, length)) * (flat > 0 ? 1.5 : 1));
                         if (flat > 6) break; // (spread out on the flat)
                     }
                     if (xs.Count < 5) continue;
@@ -634,7 +685,8 @@ public sealed class Volcanoes : PlanLandform
                         { x0 = Math.Min(x0, xs[i]); z0 = Math.Min(z0, zs[i]); x1 = Math.Max(x1, xs[i]); z1 = Math.Max(z1, zs[i]); }
                         chunks[c] = (x0 - pad, z0 - pad, x1 + pad, z1 + pad);
                     }
-                    var f = new Flow { X = xs.ToArray(), Z = zs.ToArray(), W = ws.ToArray(), Thickness = thickness, Chunks = chunks, Seed = seed };
+                    var f = new Flow { X = xs.ToArray(), Z = zs.ToArray(), W = ws.ToArray(), Thickness = thickness, Chunks = chunks, Seed = seed, Spill = spill };
+                    if (spill) f.SpillLevel = _macro.Sample(WorldPlan.HeightChannel, v.X, v.Z) + Profile(v, v.X, v.Z, true, out _) - _raise.Sample(0, v.X, v.Z) + .3 * v.Depth; // (as LavaLake's level)
                     f.MinX = double.MaxValue; f.MinZ = double.MaxValue; f.MaxX = double.MinValue; f.MaxZ = double.MinValue;
                     foreach (var b in chunks) { f.MinX = Math.Min(f.MinX, b.Item1); f.MinZ = Math.Min(f.MinZ, b.Item2); f.MaxX = Math.Max(f.MaxX, b.Item3); f.MaxZ = Math.Max(f.MaxZ, b.Item4); }
                     v.Traced.Add(f);
@@ -751,6 +803,22 @@ public sealed class Volcanoes : PlanLandform
         return false;
     }
 
+    /// <summary>The fresh flows' lines of the active volcano centred here: a point every 40 m from the vent (revision 32:
+    /// in the lava lake) and the flow's width there.</summary>
+    public IEnumerable<(double X, double Z, double Width)[]> FreshFlowLines(double x0, double z0)
+    {
+        if (!_traced) Trace();
+        foreach (var v in _volcanoes)
+        {
+            if (!v.Active || v.X != x0 || v.Z != z0 || v.Traced == null) continue;
+            for (int n = 0; n < Math.Min(v.FreshFlows, v.Traced.Count); n++)
+            {
+                var f = v.Traced[n];
+                yield return Enumerable.Range(0, f.X.Length).Select(i => (f.X[i], f.Z[i], f.W[i])).ToArray();
+            }
+        }
+    }
+
     /// <summary>The crater's radius of the active volcano centred here (0 if none): the game's plume rises from its rim.</summary>
     public double CraterRadius(double x, double z)
     {
@@ -792,22 +860,23 @@ public sealed class Volcanoes : PlanLandform
     /// across all of it, both cooling along it (a third as hot at its end). For the game's lava look; no effect on the
     /// ground itself.
     /// </summary>
-    public (float Molten, float Crust) LavaAt(double x, double z)
+    public (float Molten, float Crust, float Cover) LavaAt(double x, double z)
     {
-        var (m, c, _, _) = LavaFlow(x, z);
-        return (m, c);
+        var (m, c, cover, _, _) = LavaFlow(x, z);
+        return (m, c, cover);
     }
 
     /// <summary>
     /// <see cref="LavaAt"/> and which way the lava moves there (D252): a fresh flow down its line, its speed (0 … 1) the
     /// flow's heat; the lava lake slowly out from its middle (0.3 at its shore), as its crust creeps from the upwelling to
-    /// the edges.
+    /// the edges. Cover: how much lava lies on the ground, however cool (D259: the crust's heat made the sheet's ragged edge
+    /// eat holes all through a flow's cooled end).
     /// </summary>
-    public (float Molten, float Crust, float DirX, float DirZ) LavaFlow(double x, double z)
+    public (float Molten, float Crust, float Cover, float DirX, float DirZ) LavaFlow(double x, double z)
     {
-        if (_volcanoes.Count == 0 || _revision < 31 || !NearLava(x, z)) return (0, 0, 0, 0);
+        if (_volcanoes.Count == 0 || _revision < 31 || !NearLava(x, z)) return (0, 0, 0, 0, 0);
         if (!_traced) Trace();
-        double molten = 0, crust = 0, dirX = 0, dirZ = 0, lead = 0;
+        double molten = 0, crust = 0, cover = 0, dirX = 0, dirZ = 0, lead = 0;
         foreach (var v in _volcanoes)
         {
             if (!v.Active) continue;
@@ -831,11 +900,12 @@ public sealed class Volcanoes : PlanLandform
                 // toward the cooling edges — a fifth of it drew thin lines)
                 double core = (1 - DetMath.Smooth((best - width * .12) / (width * .16 + 1))) * (.55 + .45 * (1 - DetMath.Smooth(best / (width * .14 + 1))));
                 crust = Math.Max(crust, across * heat);
+                cover = Math.Max(cover, across);
                 molten = Math.Max(molten, core * heat * (1 - DetMath.Smooth((along - .85) / .15)));
                 if (across * heat > lead) { lead = across * heat; dirX = tx * heat; dirZ = tz * heat; }
             }
         }
-        return ((float)molten, (float)crust, (float)dirX, (float)dirZ);
+        return ((float)molten, (float)crust, (float)Math.Max(cover, molten), (float)dirX, (float)dirZ);
     }
 
     /// <summary>

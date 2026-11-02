@@ -428,7 +428,7 @@ public static class TileBuilder
             {
                 int k = j * n + i;
                 double ground = heights[(j + 1) * s2 + i + 1];
-                var (molten, crust, dx, dz) = volcanoes.LavaFlow(x0 + i * spacing, z0 + j * spacing);
+                var (molten, crust, _, dx, dz) = volcanoes.LavaFlow(x0 + i * spacing, z0 + j * spacing);
                 float cover = (float)samples[k].Lava;
                 double lift = lava[k] ? .25 + .35 * cover : -.5;
                 vertices[k] = new Vector3(i * (float)spacing, (float)(ground + lift), j * (float)spacing);

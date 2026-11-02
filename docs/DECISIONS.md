@@ -4015,6 +4015,43 @@ Tom: "Keep working on lava".
     vanish.
 * No terrain change: `CraterRadius` only reads the plan.
 
+## D259 — Lava flows spill from the crater and run downhill (terrain revision 32) (2026-11-02)
+Tom's two dumps (17:05, 17:06): the flowing lava "on a weird angle ... in real life, it would slide from that crater";
+holes through a flow's end. (No, the lava is not simulated like the water: the flows are lines the generator traces down
+the ground once, the movement is the shader's.)
+* **Down the fall line** (revision 32, all traced flows): the trace kept 60 % of its direction every 40 m and wavered up
+  to 0.35 rad, so the persistent waver held the flows some 30° across the slope. Now on a steep flank the pull to the
+  steepest way is 0.85 and the waver at most 0.04 rad; where the ground flattens the pull drops to 0.35 and the waver
+  rises to 0.12 rad, so flows meander only on gentle ground.
+* **From the crater**: an active cone's fresh flows leave the lava lake over the lowest stretch of the rim within 60° of
+  their direction, through a notch cut in the rim (`TracedFlows`): steep walls, its lava's surface at the lake's level
+  falling 4 m per 100 m, the lobe's thickness cut out below it (or the lava rose where the lobe came in); the flow is
+  0.45 of its width there, widening below the rim. Before, they began on the flank beyond the rim.
+* **Revision 31 frozen** as *Terrain version → Build 125* (fixture `terrain-build125.json`, a copy of the current one
+  before this change; builds 124 and 125 both had revision 31).
+* **Cover apart from heat** (`Volcanoes.LavaFlow` returns how much lava lies on the ground, however cool): the sheet's
+  ragged edge used the crust's heat, a third at a flow's end, and ate holes all through it. Plants and props keep off the
+  whole flow too (look only; heights unchanged, all revisions).
+* **A cooling flow crusts over** (`Lava.gdshader`): little melt is no open lava, only rifts and cracks — at a fifth
+  molten it spread a dim red sheet over a flow's whole cooled end.
+* **Flow noise (test)**: Tom pasted a canvas_item lava shader he liked. A canvas_item shader can become a spatial one: only
+  its coordinates change (the point's metres from the volcano, drifting down the flow, instead of the pixel's place on
+  the screen) and its colour goes out as emission. `LavaNoiseFlow.gdshader`, setting *Lava → glowing, flow noise
+  (test)*, with a seamless per-texel noise (`WorldStreamer.LavaNoise`; a smooth one drew flat orange). It is
+  third-party code: its licence is to be checked before it stays. Tom liked it, asked for it to "flow in proper
+  direction", "some of those black spots", "mix both ... the middle of previous lava was brighter orange", "flow slower"
+  and the spots flowing "at different speed":
+  * its drift runs down each flow (the original drifted one fixed way), two copies half a cycle apart cross-fading so it
+    never shears; 1.2× (3× was too fast); the lake's melt only churns (an outward drift growing from its middle stretched
+    the noise into rings);
+  * black crust rafts ride on the melt at their own pace (0.9 m/s at full speed, slower than the melt), their own 30 s
+    cycle (at 8 s they faded in and out), more where it has cooled, plates on the lake; not turned along the flow (the
+    turn drew stair-steps at the mesh's triangle edges);
+  * the hot middle of a flow bright yellow-orange as in `Lava.gdshader` (0.9; 1.3 burned out close up), the pattern
+    showing through.
+* Tool: `--lava-transect=<profile>,<seed>,<x>,<z>[,<revision>]` — the lava round a point, the rim, each fresh flow's line
+  and transects through the nearest active volcano. `Volcanoes.FreshFlowLines`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -172,7 +172,7 @@ public sealed partial class TerrainSampler
                 poolDepth, poolSize, poolChannels, ref height, ref water, ref level);
         PlayerEdits(x, z, ref height, ref water, ref level, ref body);
         double lavaCover = 0;
-        if (_volcanoes != null && water == WaterKind.None) { var (molten, crust) = _volcanoes.LavaAt(x, z); lavaCover = Math.Max(molten, crust); }
+        if (_volcanoes != null && water == WaterKind.None) { lavaCover = _volcanoes.LavaAt(x, z).Cover; }
         return new(_p.SeaLevel + height, land, bare > 0 ? Math.Max(mountainShare, bare) : mountainShare, detail, water, level, body, lakePlume, lavaCover);
     }
 

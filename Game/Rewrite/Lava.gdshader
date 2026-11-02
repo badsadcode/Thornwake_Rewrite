@@ -81,7 +81,9 @@ void fragment() {
 	float isle = smoothstep(-0.06, 0.06, fld.y * 2.2 - 0.25 - (1.0 - lv.x) * 0.55 + form - surge * 0.15);
 	// (the lake: plates of crust with melt in the seams between them, and some open pools where it churns hottest)
 	float pool = smoothstep(0.82, 0.88, churn + 0.1 * swell); // (rare: from 0.72 the lake turned almost all bright again)
-	float open = on_flow ? max(lv.x * (1.0 - isle), lv.x * rift) : lv.x * max(rift, pool);
+	// (a cooling flow crusts over: little melt left is no open lava, only rifts and cracks — at a fifth molten it spread a dim
+	// red sheet over a flow's whole cooled end, D259)
+	float open = on_flow ? max(lv.x * (1.0 - isle) * smoothstep(0.1, 0.45, lv.x), lv.x * rift) : lv.x * max(rift, pool);
 	// Close up, on the open melt: small flakes of skin drifting with it, and streaks stretched along the flow (moved like the
 	// fields: two copies half a cycle apart).
 	float dist0 = length(VERTEX);

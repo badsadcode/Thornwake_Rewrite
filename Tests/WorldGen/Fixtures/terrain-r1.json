@@ -1,7 +1,7 @@
 [
   {
     "Case": "balanced/-9",
-    "Hash": "fca77abe9b90f411b4b2bee98b84365e12dbc85fcb9d2ed0a62e8fefc84e4f5d"
+    "Hash": "3d0b192131d277397e818f527ffde65c5b6d30c6046036c8d202194d70764565"
   },
   {
     "Case": "balanced/42",
@@ -33,7 +33,7 @@
   },
   {
     "Case": "archipelago/7319",
-    "Hash": "d1b0105b7172cb8276b1417e2da25035e994e6a83ba2dfd086e338db8a489fb3"
+    "Hash": "b493383bcb979349f7807f977dbf7e092d8bb110f0a8236996e76335eb003983"
   },
   {
     "Case": "mountainous/-9",
