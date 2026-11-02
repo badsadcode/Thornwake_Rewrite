@@ -257,6 +257,7 @@ public partial class WorldLab : IWorldQuery
         UpdateBuilding(delta, captured);
         UpdatePieces(delta);
         UpdatePrompt();
+        double lavaHeat = UpdateLavaBurn(delta);
         if (NeedsOn)
         {
             var t = _sampler.Sample(PlayerX, PlayerZ);
@@ -268,13 +269,40 @@ public partial class WorldLab : IWorldQuery
             bool sheltered = GameRules.Sheltered(_catalog, _seenObjects, PlayerX, PlayerZ, _player.Position.Y);
             var body = new BodyInput(air, _atmosphere.Wind.Speed * (sheltered ? .3 : 1),
                 sheltered ? 0 : precip * (1 - .7 * Math.Clamp(_atmosphere.Canopy, 0, 1)) * (_atmosphere.Snowing ? .4 : 1),
-                _swimming, GameRules.FireWarmth(_catalog, _seenObjects, PlayerX, PlayerZ), _me.Chopping ? 1 : sprint ? .6 : 0);
+                _swimming, GameRules.FireWarmth(_catalog, _seenObjects, PlayerX, PlayerZ) + lavaHeat, _me.Chopping ? 1 : sprint ? .6 : 0);
             _needs.Step(dh, body);
             if (_needs.Health <= 0 && !_dying) { _dying = true; Act(new ActionRequest(ActionKind.Die, 0, 0, "", 0, 0, 0, 0)); }
             _needsLabel.Text = $"{_needs.Describe()} · Stamina {_stamina:0}{(_winded ? " (out of breath)" : "")} · feels {_needs.FeelsLike(body):0} °C" + (sheltered ? " · sheltered" : "") + (_needs.Health <= 0 ? "\nYou are dying: eat, get warm (a fire)." : "");
         }
         else _needsLabel.Text = "";
         UpdateGameplayViews(delta);
+    }
+
+    private double _lavaSaid = -10;
+
+    /// <summary>
+    /// Per frame (D261): lava underfoot burns — the melt fast (a few seconds on a flow's hot middle or the lake), the crust
+    /// over it slowly (a quick crossing hurts, a walk down a flow does not end well) — whatever the Lava setting draws (the
+    /// world's lava is the same for every look and every player). Returns the heat it gives off (°C, as a fire's warmth).
+    /// </summary>
+    private double UpdateLavaBurn(double delta)
+    {
+        if (_fly || _noclip || _sampler!.Plan.PlanLandforms.OfType<Volcanoes>().FirstOrDefault() is not { } volcanoes) return 0;
+        var (molten, crust, _) = volcanoes.LavaAt(PlayerX, PlayerZ);
+        if (molten <= 0 && crust <= 0) return 0;
+        // (on it, not above it: a jump or a ledge over the lava is safe)
+        if (_player.Position.Y - _sampler.Sample(PlayerX, PlayerZ).Height > 1.5) return 0;
+        double hot = DetMath.Smooth((molten - .05) / .45);
+        double burn = (40 * hot + 2.5 * crust) * delta;
+        _camShake = Math.Max(_camShake, (float)(.25 + .5 * hot));
+        if (_flickerFell - _lavaSaid > 2)
+        {
+            _lavaSaid = _flickerFell;
+            _status = hot > .3 ? "The lava burns you! Get off it." : "The crust is hot through your boots.";
+            GD.Print($"LAVA underfoot: molten {molten:0.00}, crust {crust:0.00}, health {_needs.Health:0}");
+        }
+        if (NeedsOn) _needs.Health = Math.Max(0, _needs.Health - burn);
+        return 40 * Math.Max(hot, crust * .4);
     }
 
     private void ToggleAxe()

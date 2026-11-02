@@ -4073,6 +4073,19 @@ earlier look is *glowing (build 125)*, `Lava.gdshader`):
 * The sheet's swells, ragged edge, rim, far glow and relief as `Lava.gdshader`. Cost: some 35 value-noise lookups per
   pixel, on the lava sheets near an active volcano only.
 
+## D261 — Lava that hurts (2026-11-02)
+An open item since the lava came in (D250). `WorldLab.UpdateLavaBurn`, each PC for its own player, as with a falling
+tree (D113):
+* **Where**: `Volcanoes.LavaAt` under the player, on foot (not flying), within 1.5 m of the ground (a jump over it is safe).
+  The world's lava, not the look: it burns whatever *Lava* draws (the same for every look and every player).
+* **How much**: the melt `40 × Smooth((molten − 0.05) / 0.45)` health a second (on a flow's hot middle, molten 0.88:
+  100 → 15 in two seconds, then death and a new start — measured), the crust 2.5 × crust a second (a quick crossing
+  hurts; a walk down a cooled flow does not end well). In real seconds, so it burns with the clock paused too.
+* **Feel**: a camera shake (stronger on the melt), "The lava burns you! Get off it." / "The crust is hot through your
+  boots." every two seconds, and a `LAVA underfoot` log line with the values. The lava's heat counts as a fire's
+  warmth (up to 40 °C) for the body.
+* With *Hunger and cold* off nothing harms the player (as a falling tree): only the message and the shake.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

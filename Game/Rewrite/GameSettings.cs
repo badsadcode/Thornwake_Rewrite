@@ -215,7 +215,8 @@ public static class GameSettings
     public static readonly Setting Lava = Add(new("fx.lava", "Lighting and effects", "Lava", 0, 2, 1, 1,
         "Molten lava at active volcanoes: a glowing lava lake in the crater, fresh flows glowing down the middle with a dark " +
         "crust cracked open over the heat, an orange light over the crater: melt laced with bright veins churning as it flows, " +
-        "black crust rafts riding on it (D260). Build 125: the lava's earlier look. Off: lava fields stay dark rock (build 123).",
+        "black crust rafts riding on it (D260). Build 125: the lava's earlier look. Off: lava fields stay dark rock (build 123). " +
+        "Only the look: the lava burns whichever is chosen (D261).",
         options: new[] { "off (dark rock)", "glowing", "glowing (build 125)" }));
     public static readonly Setting VolcanoSmoke = Add(new("fx.volcano_smoke", "Lighting and effects", "Volcano smoke", 0, 1, 1, 1,
         "A gas plume rising from an active volcano's lava lake and drifting with the wind, lit by the lava at night.",
