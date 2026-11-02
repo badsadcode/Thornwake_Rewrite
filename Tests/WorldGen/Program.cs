@@ -311,7 +311,7 @@ if (args.FirstOrDefault(a => a.StartsWith("--lava-transect=")) is { } lt)
         {
             var (x, z, w) = flowLine[i];
             var (m, c, cv) = vo.LavaAt(x, z);
-            Console.WriteLine($"  {i * 40,6} m  r {Math.Sqrt((x - ax) * (x - ax) + (z - az) * (z - az)),5:0}  width {w,4:0}  ground {s.Height(x, z) - sea,7:0.0}  molten {m:0.00}  crust {c:0.00}  cover {cv:0.00}");
+            Console.WriteLine($"  {i * 40,6} m  at {x:0},{z:0}  r {Math.Sqrt((x - ax) * (x - ax) + (z - az) * (z - az)),5:0}  width {w,4:0}  ground {s.Height(x, z) - sea,7:0.0}  molten {m:0.00}  crust {c:0.00}  cover {cv:0.00}");
         }
     }
     Console.WriteLine($"lowest rim {low - sea:0} m at {lowAngle * 180 / Math.PI:0}°; out that way:");

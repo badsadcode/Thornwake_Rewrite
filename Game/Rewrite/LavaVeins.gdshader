@@ -1,4 +1,4 @@
-// The veined lava (D260; setting Lava → "glowing, veined"): our own look for the lava sheet, after what Tom liked in a
+// The veined lava (D260; setting Lava → "glowing", the default; "glowing (build 125)" is Lava.gdshader): our own look for the lava sheet, after what Tom liked in a
 // third-party shader he could not keep (D259) — melt laced with bright veins that churn as it flows, black crust rafts
 // riding on it at their own pace, the hot middle of a flow bright orange. Written afresh: ridged value noise, each octave
 // carried down the flow at its own speed (finer ones faster: the melt shears and churns), warped by a field that sways

@@ -200,8 +200,9 @@ public partial class WorldStreamer : Node3D
 
     public ShaderMaterial WaterMaterial => _water;
 
-    /// <summary>The lava sheet's look (setting Lava): Lava.gdshader, or the veined lava (D260).</summary>
-    private static Shader LavaShader() => GD.Load<Shader>(GameSettings.Lava.Index == 2 ? "res://Game/Rewrite/LavaVeins.gdshader" : "res://Game/Rewrite/Lava.gdshader");
+    /// <summary>The lava sheet's look (setting Lava): the veined lava (D260; "glowing", so a saved "glowing" gets it), or
+    /// build 125's, Lava.gdshader.</summary>
+    private static Shader LavaShader() => GD.Load<Shader>(GameSettings.Lava.Index == 2 ? "res://Game/Rewrite/Lava.gdshader" : "res://Game/Rewrite/LavaVeins.gdshader");
 
     private static Shader WaterShader() => GD.Load<Shader>(GameSettings.WaterStyle.Index switch
     {

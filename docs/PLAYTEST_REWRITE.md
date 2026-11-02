@@ -78,6 +78,21 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 126 — lava from the crater, veined lava (terrain revision 32)
+**Host and everyone joining need build 126** (versions must match to connect).
+* **Lava flows from the crater** (after your two dumps): a fresh flow now leaves the lava lake through a notch cut in the
+  crater's rim and runs straight down the cone. It used to start partway down the flank and run some 30° across the
+  slope. Flows wander only where the ground flattens.
+* **Veined lava** (our own, after the shader you liked): bright veins through the melt that churn as it flows down,
+  dark red between them, black crust rafts drifting more slowly than the melt, a brighter orange middle; on the lava
+  lake a churning vein network with crust plates.
+* **No holes at a flow's end**, and a cooled flow is dark crust with glowing cracks instead of a dim red sheet.
+* Try *Go to - lava spilling from the crater*, *Go to - lava lake*, *Go to - lava flow at night* and *Go to - onto a lava
+  flow* (Balanced, seed 7319).
+* Settings: *Lighting and effects → Lava*: *glowing* is now the veined lava; *glowing (build 125)* is the earlier look.
+* Your build 124–125 worlds keep their terrain; *Terrain version → Build 125* gives it to new worlds too.
+* Known: lava doesn't hurt, no eruptions yet.
+
 ## New in build 125 — lava like water, and a volcano plume
 **Host and everyone joining need build 125** (versions must match to connect). Same terrain as build 124.
 * **Lava as its own surface** (after your three dumps): the lava is now a sheet of its own lying on the ground, like the

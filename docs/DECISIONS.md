@@ -4059,7 +4059,8 @@ the ground once, the movement is the shader's.)
 
 ## D260 — The veined lava, our own (2026-11-02)
 Tom: "Yes, write our own" — the look he liked in the flow-noise test (D259) without its code. `LavaVeins.gdshader`,
-setting *Lava → glowing, veined* (the default stays *glowing*, `Lava.gdshader`, until Tom picks):
+setting *Lava → glowing* (Tom: "Default + build 126"; it took the place of *glowing* so a saved choice gets it too, the
+earlier look is *glowing (build 125)*, `Lava.gdshader`):
 * **Veins**: five octaves of ridged value noise (ridge cubed: thin bright lines), each turned its own fixed way (on one
   grid the ridges lined up into squares) and carried down the flow at its own speed (1.4 m/s at full speed, finer octaves
   up to 2.4×: the melt shears and churns), warped by a field that sways in place (its offset in noise space circles
