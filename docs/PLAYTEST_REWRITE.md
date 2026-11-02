@@ -78,6 +78,21 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 128 — scree and boulders (terrain revision 33)
+**Host and everyone joining need build 128** (versions must match to connect).
+* **Scree under the walls**: the rock a wall sheds now lies at its foot. Gorge and canyon walls stand on a concave
+  apron of rubble (about a fifth of the wall's height, deeper in fans); glacial troughs and fjords have cone-shaped
+  fans of rubble at the foot of their walls, spreading out over the valley floor. Escarpments' debris slopes count as
+  scree too.
+* **On the scree**: grey rubble ground, few plants and no trees, strewn with stones you can pick up, rocks and
+  boulders.
+* **Erratics**: the huge lone boulders turn up four times as often in the cold country (taiga, tundra, arctic,
+  alpine, fen), out in the open.
+* Try *Go to - scree under a canyon wall* and *Go to - talus fans in a glacial trough*.
+* Your build 126–127 worlds keep their terrain; *Terrain version → Build 127* gives it to new worlds too (and the old
+  scatter).
+* Not yet: scree in cirques and under mountain walls in general.
+
 ## New in build 127 — lava that hurts, a bigger volcano smoke column
 **Host and everyone joining need build 127** (versions must match to connect). Same terrain as build 126.
 * **Lava hurts**: standing on the molten melt (a flow's glowing middle, the lava lake) burns you down in about three
