@@ -78,6 +78,22 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 127 — lava that hurts, a bigger volcano smoke column
+**Host and everyone joining need build 127** (versions must match to connect). Same terrain as build 126.
+* **Lava hurts**: standing on the molten melt (a flow's glowing middle, the lava lake) burns you down in about three
+  seconds; the crust over it burns slowly, so a quick dash across is survivable, a walk down a flow is not. Flying or
+  jumping over it is safe. You get a camera shake and a warning; the lava also warms you like a fire. It burns whichever
+  *Lava* look you choose. Needs *Simulation → Hunger and cold* on (with it off, only the warning and the shake).
+* **Volcano smoke** (after your note and photos): the puffs now fade in as they leave the crater and fade away slowly
+  instead of vanishing at once. The column is about twice as wide and tall and denser: brown and grey ash with white
+  steam among it, each puff its own shade, sunlit on one side and darker underneath. At night its underside glows red
+  from the lava, dimming up the column (before, the whole plume glowed).
+* Try *Go to - volcano smoke by day* and *Go to - volcano smoke at night* (Balanced, seed 7319), and *Go to - onto a lava
+  flow* with Hunger and cold on.
+* Settings: *Lighting and effects → Volcano smoke → on (build 126)* is the earlier, thinner plume (also the lighter one
+  on the graphics card).
+* Known: no eruptions yet.
+
 ## New in build 126 — lava from the crater, veined lava (terrain revision 32)
 **Host and everyone joining need build 126** (versions must match to connect).
 * **Lava flows from the crater** (after your two dumps): a fresh flow now leaves the lava lake through a notch cut in the
