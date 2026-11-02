@@ -79,6 +79,18 @@ if (args.FirstOrDefault(a => a.StartsWith("--volcano-biomes=")) is { } vbArg)
             Console.WriteLine($"{x:0},{z:0} r {r:0} {(cal ? "caldera" : "cone")}{(act ? " active" : "")}: summit {At(s, x + r * .1, z)} · halfway r33 {At(old, x + r * .55, z)} -> r34 {At(s, x + r * .55, z)} · foot r34 {At(s, x + r * .85, z)}");
     return 0;
 }
+// --stacks=<profile>,<seed>: the sea stacks and arches (D266): candidates, then each rock.
+if (args.FirstOrDefault(a => a.StartsWith("--stacks=")) is { } skArg)
+{
+    var p = skArg[9..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    var stk = s.SeaStacks;
+    Console.WriteLine($"{p[0]}/{p[1]}: {stk?.Candidates ?? 0} coast cells, {stk?.Rocks.Count ?? 0} rocks, placed in {sw.ElapsedMilliseconds} ms");
+    foreach (var r in stk?.Rocks ?? Array.Empty<SeaStacks.Rock>())
+        Console.WriteLine($"  {r.Kind} {r.X:0},{r.Z:0} height {r.Height:0} radius {r.Radius:0} seabed {r.Seabed:0.0} out {r.DirX:0.00},{r.DirZ:0.00}{(r.Span > 0 ? $" span {r.Span:0}" : "")}");
+    return 0;
+}
 if (args.FirstOrDefault(a => a.StartsWith("--canyons=")) is { } cyArg)
 {
     var p = cyArg[10..].Split(',');

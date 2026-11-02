@@ -112,6 +112,14 @@ public sealed partial class TerrainSampler
         return lake >= 0 ? g * DetMath.Smooth((cells - 1.6) / .38) : g;
     }
 
+    private Lazy<SeaStacks?>? _seaStacks;
+
+    /// <summary>Sea stacks and arches (revision 35, landform no. 9): placed from this terrain the first time they are
+    /// asked for (a few thousand samples); null when off or older.</summary>
+    public SeaStacks? SeaStacks => (_seaStacks ??= new Lazy<SeaStacks?>(() =>
+        _style.Revision >= LandformCatalog.SeaStacks.Since && !_style.Landform(LandformCatalog.SeaStacks.Id).Off
+            ? new SeaStacks(this, _style.Landform(LandformCatalog.SeaStacks.Id)) : null)).Value;
+
     public double Height(double x, double z, double minWavelength = 2) => Sample(x, z, minWavelength).Height;
 
     public TerrainSample Sample(double x, double z, double minWavelength = 2)

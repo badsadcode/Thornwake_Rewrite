@@ -26,6 +26,9 @@ public static class RockMeshes
         _meshes = null; _material = null;
     }
 
+    /// <summary>The rocks' material (Rock.gdshader with the rock textures), for other rock meshes (sea stacks, D266).</summary>
+    public static ShaderMaterial Material => _material ??= CreateMaterial();
+
     public static ArrayMesh Get(int kind)
     {
         // 3: cliff slab, 4: huge/shore boulder — chunky, flat-faced (few facets), like blocky rocks.

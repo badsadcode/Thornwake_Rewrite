@@ -149,6 +149,8 @@ Then the fantasy landforms Tom picks (section at the end).
 * **Play**: landmarks from land and sea; sailing hazards and passages.
 * **Build**: the first **rock models** placed by a landform (models with collision, like boulders; placeholders first,
   art later).
+* **Status**: terrain revision 35 (D266): stacks and arches placed off steep, open coasts; procedural placeholder
+  models (stack rings, swept arch), solid near the player. Art later.
 
 ### 10. Headlands and coves
 * **What**: rocky points reaching into the sea, with sheltered beach coves between them.

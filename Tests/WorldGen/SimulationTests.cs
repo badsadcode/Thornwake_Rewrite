@@ -22,6 +22,7 @@ internal static class SimulationTests
         T.Run("Landforms: glacial troughs — flat floors, side rivers falling from hanging valleys, water still descending (revisions 24, 25)", TroughForms, filter);
         T.Run("Landforms: fjords — sea from the coast to the head's shore, between high walls; fjord coasts with islands (revisions 26, 27)", FjordForms, filter);
         T.Run("Landforms: volcanoes — cones over the land, calderas holding a lake, crater lakes closed in, volcanic ground, lava at active ones (revisions 28–31)", VolcanoForms, filter);
+        T.Run("Landforms: sea stacks and arches — in the sea off steep coasts, sea all round, apart, the same every time; the ground unchanged (revision 35)", SeaStackForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1144,6 +1145,37 @@ internal static class SimulationTests
         T.Check(cirques >= 40 && tarns >= 30, $"cirques with tarns ({cirques}, {tarns} of 40)");
         T.Check(under == 0 && leaks == 0, $"tarns lie over lower ground, closed in ({under}, {leaks})");
         T.Check(sameHydrology == worlds, $"the plan's rivers and lakes are as before ({sameHydrology}/{worlds})");
+    }
+
+    /// <summary>D266: every stack and arch stands in the sea (the seabed under it 1.5–30 m deep, sea all round it), none
+    /// overlapping, placed the same twice; several worlds have them, arches among them; the ground is revision 34's.</summary>
+    private static void SeaStackForms()
+    {
+        int rocks = 0, arches = 0, dry = 0, overlap = 0, worlds = 0, same = 0, ground = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("balanced", 7319), ("archipelago", 7319), ("mountainous", 42) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            var list = s.SeaStacks?.Rocks ?? Array.Empty<SeaStacks.Rock>();
+            if (list.Count > 0) worlds++;
+            var again = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style)).SeaStacks?.Rocks ?? Array.Empty<SeaStacks.Rock>();
+            if (again.SequenceEqual(list)) same++;
+            var r34 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 34 }));
+            foreach (var r in list)
+            {
+                rocks++; if (r.Kind == SeaStacks.Kind.Arch) arches++;
+                var t = s.Sample(r.X, r.Z);
+                if (t.Water != WaterKind.Ocean || t.WaterLevel - t.Height < 1) { dry++; T.Note($"{id}/{seed} {r.Kind} at {r.X:0},{r.Z:0}: {t.Water}, {t.WaterLevel - t.Height:0.0} m of water"); }
+                if (t.Height != r34.Sample(r.X, r.Z).Height) ground++;
+                foreach (var o in list)
+                    if (!o.Equals(r) && Math.Sqrt((o.X - r.X) * (o.X - r.X) + (o.Z - r.Z) * (o.Z - r.Z)) < (o.Kind == SeaStacks.Kind.Stack ? o.Radius : 0) + (r.Kind == SeaStacks.Kind.Stack ? r.Radius : 0)) overlap++;
+            }
+        }
+        T.Note($"{rocks} rocks in {worlds} worlds, {arches} arches; {dry} not in the sea, {overlap} overlapping");
+        T.Check(worlds >= 3 && rocks >= 60 && arches >= 4, $"sea stacks and arches in most worlds ({rocks}, {arches}, {worlds})");
+        T.Check(dry == 0, $"all in the sea ({dry})");
+        T.Check(overlap == 0, $"apart ({overlap})");
+        T.Check(same == 4, $"placed the same every time ({same}/4)");
+        T.Check(ground == 0, $"the ground is revision 34's ({ground})");
     }
 
     private static void TroughForms()

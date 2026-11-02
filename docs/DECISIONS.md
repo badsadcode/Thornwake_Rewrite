@@ -4165,6 +4165,29 @@ surrounding biome climb the lower slopes (as rainforest climbs most of the way u
 * The biome map shapes walking-scale terrain (roughness), so it is a terrain revision. Return point: *Terrain version →
   Build 129* (revision 33; fingerprints frozen in `terrain-build129.json`). Tool: `--volcano-biomes=<profile>,<seed>`.
 
+## D266 — Sea stacks and arches: terrain revision 35 (2026-11-02)
+Tom picked landform no. 9 next. The first landform of rock models, not ground (docs/LANDFORMS.md: "placeholders
+first, art later"):
+* **Where** (`Game/WorldGen/SeaStacks.cs`, from `TerrainSampler.SeaStacks`, placed the first time asked: ~50 ms on a
+  worker): plan coast cells where the land 1.5 km inland stands 60 m or more over the sea and the sea lies open in front
+  (nine tenths of 25 points out to 20 km, ±30°); sites 8 km or more apart, about 6 % of the qualifying cells (Balanced
+  7319: 544 cells, 33 sites, 137 rocks). At a site: the shore found by walking out to the first sea, then 2–7 stacks
+  40–350 m out along 800 m of coast, about as high as the cliff behind (55–105 % of the highest ground 100–400 m inland,
+  the far ones worn lower; 22 m where the shore itself is low), radius a fifth to two fifths of the height; now and then
+  (40 %) an arch, its legs along the coast so the opening faces the sea (with its legs one behind the other going out,
+  it read as a lump from the sea). Each on a seabed 1.5–30 m deep with sea at eight points round it. Their own random
+  stream; *Landforms → Sea stacks and arches* sets amount and size.
+* **The ground is unchanged** (revision 35 has revision 34's heights: its fingerprints equal; still a revision so the
+  worlds of builds 130 and before do not grow stacks; *Terrain version → Build 130*).
+* **The models** (`SeaStackView.cs`, placeholders): a stack is rings of 16 points every ~3 m from 3 m under the seabed
+  to its top — jagged by noise, wider in the water, undercut at the waterline, stepped in strata every 5–9 m, tapering
+  over its top quarter to a grassy dome; an arch is a rock tube (12 points round, stouter toward the bottom) swept up a
+  leg, over a stretched half circle and down the other. Flat-shaded in the rocks' material, the biome's rock colour and
+  look. Drawn within 12 km, solid (their faces as a trimesh, both sides) within ~1 km, placed against the scene origin
+  whenever it moves (D264).
+* Test: in the sea with sea all round, apart, placed the same twice, the ground revision 34's (964 rocks, 77 arches in
+  four worlds). Tool: `--stacks=<profile>,<seed>`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -56,6 +56,7 @@ public partial class WorldLab : Node3D
     private WeatherMap? _weatherMap;
     private WindMap? _windMap;
     private LavaMap? _lavaMap;
+    private SeaStackView? _seaStacks;
     private double _windTimer;
     private (double X, double Z, double Speed) _localWind = (1, 0, 5);
     private TerrainSampler? _weatherFieldFor;
@@ -500,6 +501,9 @@ public partial class WorldLab : Node3D
             _lavaMap ??= new LavaMap(this, _camera) { Wind = _atmosphere.Wind };
             var camLava = _camera.GlobalPosition;
             _lavaMap.Update(_sampler, _originX + camLava.X, _originZ + camLava.Z, _originX, _originZ, _shotPath != null);
+            // Sea stacks and arches off steep coasts (terrain revision 35, D266).
+            _seaStacks ??= new SeaStackView(this);
+            _seaStacks.Update(_sampler, _originX + camLava.X, _originZ + camLava.Z, _originX, _originZ);
         }
         if (!GameSettings.WeatherOn.On || _sampler == null)
         {
