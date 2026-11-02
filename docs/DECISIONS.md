@@ -4049,6 +4049,11 @@ the ground once, the movement is the shader's.)
     turn drew stair-steps at the mesh's triangle edges);
   * the hot middle of a flow bright yellow-orange as in `Lava.gdshader` (0.9; 1.3 burned out close up), the pattern
     showing through.
+  * **Taken out again** the same day (Tom: "go back to the previous one, even though I like this one"): the code looks
+    like a port of a Shadertoy shader, whose default licence (CC BY-NC-SA) does not allow a commercial game, and its
+    source and licence are unknown. The game keeps `Lava.gdshader`; the test stays in history at `de2854c`. What Tom
+    liked (the churning veined melt, rafts at their own pace, the bright core) is an idea to write afresh, not code to
+    keep.
 * Tool: `--lava-transect=<profile>,<seed>,<x>,<z>[,<revision>]` — the lava round a point, the rim, each fresh flow's line
   and transects through the nearest active volcano. `Volcanoes.FreshFlowLines`.
 
