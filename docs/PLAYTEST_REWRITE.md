@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 130 — forests up the volcanoes (terrain revision 34)
+**Host and everyone joining need build 130** (versions must match to connect).
+* **Volcanoes in every land** (after your question): volcanoes were always placed by the terrain, in any climate, but
+  their whole cone was painted as the Volcanic biome. Now the land's own biome climbs their lower slopes — jungle up a
+  tropical volcano, forest, taiga or tundra further north, badlands where it is dry. Bare volcanic rock stays on a
+  quiet cone's upper part, on an active cone down to three quarters of the way to its foot, and on a caldera's rim
+  walls and floor.
+* Glacial trough floors stay flat even where badlands or needle rocks reach them.
+* Try *Go to - forest up a quiet volcano (Island seas, seed 7319)*.
+* Your build 128–129 worlds keep their terrain; *Terrain version → Build 129* gives it to new worlds too.
+
 ## New in build 129 — the volcano's smoke stays on the volcano
 **Host and everyone joining need build 129** (versions must match to connect). Same terrain as build 128.
 * **Smoke fixed** (after your two dumps): the ash column no longer stands beside the volcano or jumps from place to
