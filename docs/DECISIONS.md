@@ -4057,6 +4057,21 @@ the ground once, the movement is the shader's.)
 * Tool: `--lava-transect=<profile>,<seed>,<x>,<z>[,<revision>]` — the lava round a point, the rim, each fresh flow's line
   and transects through the nearest active volcano. `Volcanoes.FreshFlowLines`.
 
+## D260 — The veined lava, our own (2026-11-02)
+Tom: "Yes, write our own" — the look he liked in the flow-noise test (D259) without its code. `LavaVeins.gdshader`,
+setting *Lava → glowing, veined* (the default stays *glowing*, `Lava.gdshader`, until Tom picks):
+* **Veins**: five octaves of ridged value noise (ridge cubed: thin bright lines), each turned its own fixed way (on one
+  grid the ridges lined up into squares) and carried down the flow at its own speed (1.4 m/s at full speed, finer octaves
+  up to 2.4×: the melt shears and churns), warped by a field that sways in place (its offset in noise space circles
+  slowly: no drift one fixed way). Two copies half a 10 s cycle apart cross-fade, so it never shears apart; the lake's melt
+  only churns.
+* **Colour by contrast**: dark red between the veins, orange on them, yellow on the brightest in the hot middle; the
+  middle brighter (1.5×), the cooler margins dim but veined. (Lifting the whole middle drew a flat yellow glare.)
+* **Black crust rafts** at their own pace (0.9 m/s, a 30 s cycle), more where it has cooled, plates on the lake, the melt
+  brighter round their edges; they stand up in the relief.
+* The sheet's swells, ragged edge, rim, far glow and relief as `Lava.gdshader`. Cost: some 35 value-noise lookups per
+  pixel, on the lava sheets near an active volcano only.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

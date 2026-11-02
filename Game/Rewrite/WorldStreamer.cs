@@ -136,7 +136,7 @@ public partial class WorldStreamer : Node3D
     private readonly HashSet<TileKey> _failed = new();
     private readonly int _maxJobs = Background.TileJobs;
     private ShaderMaterial _terrain = null!, _water = null!, _farTree = null!;
-    private readonly ShaderMaterial _lava = new() { Shader = GD.Load<Shader>("res://Game/Rewrite/Lava.gdshader") };
+    private readonly ShaderMaterial _lava = new() { Shader = LavaShader() };
     private Mesh _grass = null!, _card = null!;
     private TreeCatalog _trees = null!;
     /// <summary>The tree species' models (crowns for the rain, D213).</summary>
@@ -168,6 +168,7 @@ public partial class WorldStreamer : Node3D
         GameSettings.Changed += s =>
         {
             if (s == GameSettings.WaterStyle) _water.Shader = WaterShader();
+            if (s == GameSettings.Lava) _lava.Shader = LavaShader();
             if (s == GameSettings.GroundTextures) _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
             if (s == GameSettings.GroundVariety) _terrain.SetShaderParameter("ground_variety", GameSettings.GroundVariety.F);
             if (s == GameSettings.GroundRelief) _terrain.SetShaderParameter("ground_relief", GameSettings.GroundRelief.F);
@@ -198,6 +199,9 @@ public partial class WorldStreamer : Node3D
     }
 
     public ShaderMaterial WaterMaterial => _water;
+
+    /// <summary>The lava sheet's look (setting Lava): Lava.gdshader, or the veined lava (D260).</summary>
+    private static Shader LavaShader() => GD.Load<Shader>(GameSettings.Lava.Index == 2 ? "res://Game/Rewrite/LavaVeins.gdshader" : "res://Game/Rewrite/Lava.gdshader");
 
     private static Shader WaterShader() => GD.Load<Shader>(GameSettings.WaterStyle.Index switch
     {
