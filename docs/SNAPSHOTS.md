@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 129** (the volcano's smoke stays on the volcano when the scene origin shifts D264) | `30f7c58` | Thornwake-Rewrite-Preview-129 (v0.9.129) | Versions must match to connect; same terrain as 128 — build 128 = `7199a18` |
 | **Build 128** (scree and boulders: talus under gorge, canyon and trough walls, rubble, erratics in cold biomes D263 — terrain revision 33) | `7199a18` | Thornwake-Rewrite-Preview-128 (v0.9.128) | Versions must match to connect; *Terrain version → Build 127* keeps revision 32 — build 127 = `8c88992` |
 | **Build 127** (lava that hurts D261; the volcano's smoke fades out, a bigger, denser ash column with mixed colours D262) | `8c88992` | Thornwake-Rewrite-Preview-127 (v0.9.127) | Versions must match to connect; same terrain as 126; *Volcano smoke → on (build 126)* — build 126 = `4d63959` |
 | **Build 126** (lava flows spill from the crater through a notch and run downhill, no holes at a flow's end D259 — terrain revision 32; our own veined lava as *Lava → glowing* D260) | `4d63959` | Thornwake-Rewrite-Preview-126 (v0.9.126) | Versions must match to connect; *Terrain version → Build 125* keeps revision 31; *Lava → glowing (build 125)* — build 125 = `d81fa08` |
