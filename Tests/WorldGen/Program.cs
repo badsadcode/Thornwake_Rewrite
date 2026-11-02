@@ -66,6 +66,19 @@ if (args.FirstOrDefault(a => a.StartsWith("--scree-transect=")) is { } st)
     }
     return 0;
 }
+// --volcano-biomes=<profile>,<seed>: each volcano and the biome at its summit and halfway down, revision 33 against the
+// current (D265).
+if (args.FirstOrDefault(a => a.StartsWith("--volcano-biomes=")) is { } vbArg)
+{
+    var p = vbArg[17..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    var old = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 33 }));
+    string At(TerrainSampler t, double x, double z) { var (a, b, sh) = t.Plan.Biomes!.Sample(x, z); return $"{t.Plan.Biomes.Pool[a].Def.Id} {sh:0.00}"; }
+    if (s.Plan.PlanLandforms.OfType<Volcanoes>().FirstOrDefault() is { } vo)
+        foreach (var (x, z, r, cal, act) in vo.Cones())
+            Console.WriteLine($"{x:0},{z:0} r {r:0} {(cal ? "caldera" : "cone")}{(act ? " active" : "")}: summit {At(s, x + r * .1, z)} · halfway r33 {At(old, x + r * .55, z)} -> r34 {At(s, x + r * .55, z)} · foot r34 {At(s, x + r * .85, z)}");
+    return 0;
+}
 if (args.FirstOrDefault(a => a.StartsWith("--canyons=")) is { } cyArg)
 {
     var p = cyArg[10..].Split(',');
@@ -249,7 +262,8 @@ if (args.FirstOrDefault(a => a.StartsWith("--point=")) is { } pt)
     {
         var s = new TerrainSampler(new WorldPlan(s0.Plan.Manifest, style: s0.Plan.Style with { Revision = int.Parse(rv) }));
         var t = s.Sample(px, pz);
-        Console.WriteLine($"revision {rv}: ground {t.Height:0.0}, water {t.Water} {t.WaterLevel:0.0}, detail {t.Detail:0.0}, mountain {t.Mountain:0.00}, lakes {s.Plan.Hydrology.Lakes.Count}, lake near {s.Plan.Hydrology.LakeNear(px, pz)}");
+        var (ba, bb, bs) = s.Plan.Biomes!.Sample(px, pz);
+        Console.WriteLine($"revision {rv}: ground {t.Height:0.0}, water {t.Water} {t.WaterLevel:0.0}, detail {t.Detail:0.0}, mountain {t.Mountain:0.00}, lakes {s.Plan.Hydrology.Lakes.Count}, lake near {s.Plan.Hydrology.LakeNear(px, pz)}, biome {s.Plan.Biomes.Pool[ba].Def.Id} {bs:0.00} / {s.Plan.Biomes.Pool[bb].Def.Id}");
     }
     return 0;
 }

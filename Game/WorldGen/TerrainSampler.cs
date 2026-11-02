@@ -145,8 +145,12 @@ public sealed partial class TerrainSampler
         double bare = 0;
         if (_planForms.Length > 0) { detail += PlanGround(x, z, minWavelength, out bare, out double planScree); scree = Math.Max(scree, planScree); }
         bare = Math.Max(bare, troughRock);
+        double beforeBiome = detail;
         BiomeTerrain(x, z, lx, lz, minWavelength, baseHeight, inland, ref detail, out bool wetland, out double poolCover, out double poolDepth,
             out double poolSize, out double poolChannels, out double flatten);
+        // Revision 34 (D265): a glacial trough's floor is scoured flat of the biome's landforms too, as of the rest of the
+        // walking-scale relief (badlands climbing a caldera's flank onto a trough's floor stood 30–50 m of needles on it).
+        if (troughFlat > 0 && _style.Revision >= 34) detail = beforeBiome + (detail - beforeBiome) * (1 - .85 * troughFlat);
         // Revision 23: cirques, carved after the biome's landforms so their tarns win (a mesa at its largest raised a
         // tarn's floor 67 m over its water).
         if (_cirques != null) detail += _cirques.Carve(x, z, baseHeight + detail, detail);

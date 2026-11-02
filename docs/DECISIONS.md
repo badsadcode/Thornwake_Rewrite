@@ -4144,6 +4144,27 @@ world: moving it at a shift moves its puffs too). Test flag `--extra-rebase` (wi
 1.4 km back and forth between burst shots, the player staying put; before the fix the column jumped 1.4 km each shot,
 after it stays on the crater.
 
+## D265 — The land's biomes climb the volcanoes: terrain revision 34 (2026-11-02)
+Tom: "can volcanoes spawn in the jungle biomes? Would be nice to have volcanoes everywhere and not only in this biome."
+They already could: volcanoes are placed by the land (65 % on mountain shoulders, the rest on open land; one per
+160 × 160 km of land, at most 16), whatever the climate. But since revision 28 the volcanic biome was painted over each
+whole cone to just beyond its foot, so every volcano looked as if it stood in the volcanic biome. Tom chose to let the
+surrounding biome climb the lower slopes (as rainforest climbs most of the way up tropical volcanoes):
+* **BiomeMap** (revision 34): the volcanic biome keeps an active cone to 75 % of its radius (fresh ash and lava), a
+  quiet cone's upper 40 %, a caldera's inner half (rim walls and floor), fading over 15 % of the radius; the land's own
+  biome below (jungle, temperate forest, taiga, tundra, badlands… by its climate). `Volcanoes.Cones()` gives each
+  volcano's kind and activity.
+* On the test worlds: halfway down every quiet cone and most calderas the biome is now the land's (taiga, temperate
+  forest, tundra, badlands); active cones unchanged to well below halfway. None of the test worlds has a volcano in the
+  jungle; the change is the same there. Capture: Archipelago, seed 7319, the cone at -175000,-69000 from 9 km south —
+  forest up its lower slopes, bare volcanic rock and snow above.
+* **Trough floors scoured of biome landforms** (found by the trough test): badlands and needle rocks now reach down a
+  caldera's flank onto a glacial trough's floor (Continental, seed 7319, 31375,-8391), and their spires and mesas stood
+  37–54 m on it — added after the trough flattened the floor's relief. From revision 34 the trough flattens the biome's
+  landforms as it does the rest (to 15 % on the floor).
+* The biome map shapes walking-scale terrain (roughness), so it is a terrain revision. Return point: *Terrain version →
+  Build 129* (revision 33; fingerprints frozen in `terrain-build129.json`). Tool: `--volcano-biomes=<profile>,<seed>`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

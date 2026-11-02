@@ -92,6 +92,12 @@ public sealed class Volcanoes : PlanLandform
         foreach (var v in _volcanoes) yield return (v.X, v.Z, v.Radius, v.Height, v.Caldera);
     }
 
+    /// <summary>Each volcano's middle, radius, whether it is a caldera and whether it is active (biomes: revision 34, D265).</summary>
+    public IEnumerable<(double X, double Z, double Radius, bool Caldera, bool Active)> Cones()
+    {
+        foreach (var v in _volcanoes) yield return (v.X, v.Z, v.Radius, v.Caldera, v.Active);
+    }
+
     /// <summary>Each volcano's middle and what it has (revision 29: a collapsed side, an island, a worn rim) (captures).</summary>
     public IEnumerable<(double X, double Z, string Kind)> Kinds()
     {

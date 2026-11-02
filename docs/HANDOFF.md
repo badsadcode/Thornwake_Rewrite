@@ -5,6 +5,8 @@ Written for the next conversation (the previous one ran out of context). Everyth
 ## Where things stand
 * **Last build Tom has: 129** (v0.9.129, return point `30f7c58`, `dist/Preview-129`): the volcano's smoke stays on the
   volcano when the scene origin shifts (D264; test flag `--extra-rebase`).
+  **Since 129 (not in a build)**: terrain revision 34, the land's biome climbs a volcano's lower slopes (D265);
+  *Terrain version → Build 129* = revision 33.
   Build 128 (v0.9.128, return point `7199a18`, `dist/Preview-128`): terrain revision 33, scree and
   boulders (D263): talus under gorge, canyon and trough walls, scree look and rubble, erratics in cold biomes;
   *Terrain version → Build 127* = revision 32. Launchers "Go to - scree under a canyon wall / talus fans in a glacial
