@@ -9,7 +9,7 @@ public sealed partial class TerrainSampler
     /// <summary>Stage 4, rivers: channel, banks and slope-limited valley sides replace the terrain near a river.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)] // (the split must not cost speed, D227)
     private double Rivers(double x, double z, double minWavelength, double baseHeight, double inland, double detail, ref double riverDamp,
-        ref WaterKind water, ref double level, ref int body, double wall = 0)
+        ref WaterKind water, ref double level, ref int body, ref double scree, double wall = 0)
     {
         // Rivers: channel, banks and slope-limited valley sides replace the terrain near a river; walking-scale detail
         // fades toward it. Two nearby rivers (a confluence) combine continuously: deepest carving wins (softly),
@@ -78,8 +78,10 @@ public sealed partial class TerrainSampler
             double carve = 0, raise = 0, wetInside = 0;
             for (int i = 0; i < count; i++)
             {
+                t_talus = 0;
                 double delta = Profile(reaches[i], terrain, rise, minWavelength * .5, out _, out double inside, x, z, wall) - terrain;
                 if (delta > 0 && _style.MouthBlend > 0) delta *= LeveeFactor(reaches[i]);
+                if (delta < carve) scree = Math.Max(scree, t_talus); // (the talus of the wall that wins: the deepest carve)
                 carve = Math.Min(carve, delta);
                 raise = Math.Max(raise, delta);
                 if (inside > wetInside) { wetInside = inside; water = WaterKind.River; level = reaches[i].Surface; body = reaches[i].Reach; }
@@ -590,13 +592,40 @@ public sealed partial class TerrainSampler
         double lx = x - _ox, lz = z - _oz;
         ulong seed = _bankSeed + 77;
         w += gorge * (4 * Noise.Fbm(lx, lz, 23, 2, 2, seed) + 10 * Noise.Fbm(lx, lz, 95, 2, 2, seed + 1));
+        // Revision 33 (D263): talus — the rock the wall has shed lies at its foot as a concave apron at about 35° (~20° at
+        // its toe, ~45° where it meets the wall), holding the lowest 15–40 % of the wall's height (at most 60 % of its run:
+        // about a fifth on a canyon's 100 m wall), deeper in fans every couple of hundred metres; the wall above stands
+        // steeper by as much (it keeps its ledges).
+        double talusShare = 0, talusRun = 0, height = terrain - bankTop;
+        if (_style.Revision >= 33 && height > 6 && w > 0)
+        {
+            double fan = DetMath.Smooth(.5 + 1.6 * Noise.Fbm(lx, lz, 170, 2, 2, seed + 3));
+            talusShare = gorge * (.15 + .25 * fan);
+            talusRun = Math.Min(talusShare * height / .7, ramp * .6);
+            talusShare = talusRun * .7 / height;
+            if (w < talusRun)
+            {
+                double u = w / talusRun;
+                t_talus = Math.Max(t_talus, gorge * (1 - .4 * DetMath.Smooth((u - .85) / .15)));
+                return bankTop + height * talusShare * (.5 * u + .5 * u * u);
+            }
+            t_talus = Math.Max(t_talus, gorge * .4 * (1 - DetMath.Smooth((w - talusRun) / 6)));
+            // (the wall above starts a quarter of the way into its S-curve: from its flat start it drew a ledge on the
+            // talus's top)
+            w = (.25 + .75 * (w - talusRun) / (ramp - talusRun)) * ramp;
+        }
         double f = DetMath.Smooth(w / ramp);
+        if (talusShare > 0) f = (f - .15625) / .84375; // (Smooth(0.25) = 0.15625: the wall's foot sits on the talus's top)
         double tiers = 3 + 2 * DetMath.Smooth(.5 + 1.2 * Noise.Fbm(lx, lz, 420, 2, 2, seed + 2));
         double q = f * tiers, k = Math.Floor(q), fr = q - k;
         double stepped = Math.Min(1, (k + DetMath.Smooth((fr - .35) / .65)) / tiers);
         f += (stepped - f) * .75 * gorge;
-        return bankTop + (terrain - bankTop) * f;
+        return bankTop + (terrain - bankTop) * (talusShare + (1 - talusShare) * f);
     }
+
+    /// <summary>The talus the last <see cref="GorgeWall"/> calls on this thread found (revision 33), for the river stage to
+    /// report as scree (threaded through the profiles' many optional parameters it would touch every call).</summary>
+    [ThreadStatic] private static double t_talus;
 
     private static double SmoothMin(double a, double b, double k)
     {

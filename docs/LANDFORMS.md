@@ -139,6 +139,9 @@ Then the fantasy landforms Tom picks (section at the end).
 * **Where**: below steep rock (escarpments, gorges, cirques, mountain walls); erratics in glacial country and on moors.
 * **Play**: hard footing, cover, landmarks; stone to gather.
 * **Build**: a local module (scree ground) plus more and bigger boulders in the scatter.
+* **Status**: terrain revision 33 (D263): talus under gorge, canyon and trough walls (fans on trough walls), the
+  escarpments' debris slopes counted as scree; scree look and rubble in the game; erratics in the cold biomes. Not
+  yet: cirques (their talus would run into the tarn), mountain walls in general (no wall line to measure from).
 
 ### 9. Sea stacks and arches
 * **What**: rock pillars and arches standing in the sea off steep coasts.

@@ -1,7 +1,7 @@
 // Rewrite world terrain. Palette taken from the Harthwood valley game (sRGB values, converted to linear below).
 // Vertex data: UV = world xz folded to a 4 km period (noise), UV2.x = grass cover from the plant fields (round 22;
 // the height above sea comes from the world position), UV2.y = terrain edit
-// amount (0 untouched … 1 = 0.5 m or more dug/raised),
+// amount (0 untouched … 1 = 0.5 m or more dug/raised), or below 0: scree (−1 = all loose rock; terrain revision 33, D263),
 // COLOR = (forest cover, mountain share, beach, submerged bed: 0.5 + depth below water / 2 m).
 
 uniform float snow_line = 2700.0;
@@ -243,6 +243,14 @@ void fragment() {
 	// Noor: scree on the steeper slopes of mountains, below the bare rock.
 	if (noor) c = mix(c, gtex(G_SCREE, p) * biome_d.rgb / max(dot(ground_mean[G_SCREE], vec3(0.333)), 0.02),
 		smoothstep(0.2, 0.5, mountain) * smoothstep(0.18, 0.28, slope + (n2 - 0.5) * 0.12) * (1.0 - smoothstep(0.34, 0.46, slope)) * 0.8 * g_near);
+	// Scree (terrain revision 33, D263): the talus under a wall is loose rock however gentle it lies (the slope band above
+	// starts at 35°, a fan's toe lies at 10–30°), in a ragged-edged sheet; Noor's scree up close.
+	float talus = clamp(-UV2.y, 0.0, 1.0);
+	if (talus > 0.0) {
+		vec3 rubble = rock * (0.85 + 0.3 * n3);
+		if (noor) rubble = mix(rubble, gtex(G_SCREE, p) * biome_d.rgb / max(dot(ground_mean[G_SCREE], vec3(0.333)), 0.02), g_near);
+		c = mix(c, rubble, smoothstep(0.15, 0.55, talus + (n2 - 0.5) * 0.3 + (vnoise(p * 0.33) - 0.5) * 0.2) * (1.0 - rocky) * 0.9);
+	}
 	// Wet biomes (swamps): darker, muddier ground.
 	c = mix(c, c * vec3(0.72, 0.7, 0.62), biome_d.a * smoothstep(0.3, 0.7, n2 + 0.2));
 	vec3 sand = mix(vec3(0.800, 0.725, 0.520), vec3(0.700, 0.640, 0.470), n2);             // valley cbb984
@@ -281,7 +289,7 @@ void fragment() {
 	// Ground the player dug or raised: bare, slightly lumpy soil.
 	vec3 soil = mix(vec3(0.36, 0.28, 0.19), vec3(0.45, 0.36, 0.25), n3);
 	if (noor) soil *= mix(vec3(1.0), gdetail(G_DIRT, p), 0.9 * g_detail);
-	c = mix(c, soil, smoothstep(0.05, 0.35, UV2.y + (n2 - 0.5) * 0.08));
+	c = mix(c, soil, smoothstep(0.05, 0.35, max(UV2.y, 0.0) + (n2 - 0.5) * 0.08));
 	// Wetland pool beds (swamps, marshes, fens, bayous): dark peat and silt with sunken leaves and twigs.
 	if (wetland > 0.0) {
 		vec3 peat = mix(vec3(0.15, 0.115, 0.075), vec3(0.24, 0.20, 0.13), n2) * (0.85 + 0.3 * n3);

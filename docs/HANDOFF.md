@@ -6,6 +6,9 @@ Written for the next conversation (the previous one ran out of context). Everyth
 * **Last build Tom has: 127** (v0.9.127, return point `8c88992`, `dist/Preview-127`): lava that hurts (D261: the melt kills in
   seconds, the crust slowly; needs on); the volcano's smoke fades out and is a bigger, denser ash column with mixed
   colours (D262; *Volcano smoke → on (build 126)* = old). New launcher "Go to - volcano smoke by day"; "at night" closer.
+  **Since 127 (not in a build)**: terrain revision 33, scree and boulders (D263): talus under gorge, canyon and trough
+  walls, scree look and rubble, erratics in cold biomes; *Terrain version → Build 127* = revision 32. Spots: canyon wall
+  foot -59540,113985 (Balanced, seed 42), trough fans 52600,-142980 looking south (seed 7319). Tom to judge the look.
   Build 126 (v0.9.126, return point `4d63959`, `dist/Preview-126`): terrain revision 32 — fresh lava
   flows leave the lava lake through a notch in the rim and run down the fall line (D259); lava cover apart from heat (no
   holes at a flow's end); our own veined lava `LavaVeins.gdshader` as *Lava → glowing* (D260; *glowing (build 125)* =

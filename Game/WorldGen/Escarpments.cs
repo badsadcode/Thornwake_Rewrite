@@ -63,7 +63,7 @@ public sealed class Escarpments : PlanLandform
             double x = _profile.CellX(i), z = _profile.CellZ(j), v = 0;
             foreach (var l in _lines)
                 if (x >= l.MinX - l.Depth && x <= l.MaxX + l.Depth && z >= l.MinZ - l.Depth && z <= l.MaxZ + l.Depth)
-                    v = Math.Max(v, Profile(l, x, z, face, mw, false, out _, out _, out _, out _));
+                    v = Math.Max(v, Profile(l, x, z, face, mw, false, out _, out _, out _, out _, out _));
             channels[0][j * macro.Size + i] = (float)v;
         });
         var raised = _profile.Channel(0);
@@ -179,21 +179,21 @@ public sealed class Escarpments : PlanLandform
     /// by how much of the step the eroded raster still has there, so valleys cut through the edge keep their floors.
     /// <paramref name="rock"/> is how bare the ground is there (1 = cliff rock, about 0.65 = scree), for the ground's look.
     /// </summary>
-    public override double Ground(double x, double z, double minWavelength, out double rock)
+    public override double Ground(double x, double z, double minWavelength, out double rock, out double scree)
     {
-        rock = 0;
+        rock = 0; scree = 0;
         if (_lines.Count == 0) return 0;
         int c = Cell(z, _gridMinZ) * _gridSize + Cell(x, _gridMinX);
         int from = _gridStart[c], to = _gridStart[c + 1];
         if (from == to) return 0;
-        double cell = _macro.Cell, best = 0, bestAbs = double.MaxValue, nx = 0, nz = 0, bare = 0;
+        double cell = _macro.Cell, best = 0, bestAbs = double.MaxValue, nx = 0, nz = 0, bare = 0, debris = 0;
         for (int n = from; n < to; n++)
         {
             var l = _lines[_gridLines[n]];
-            double v = Profile(l, x, z, Math.Max(Face(l), minWavelength * .6), minWavelength, true, out double s, out double ux, out double uz, out double r);
+            double v = Profile(l, x, z, Math.Max(Face(l), minWavelength * .6), minWavelength, true, out double s, out double ux, out double uz, out double r, out double sc);
             if (Math.Abs(s) < bestAbs) { bestAbs = Math.Abs(s); nx = ux; nz = uz; }
             if (v > best) { best = v; }
-            bare = Math.Max(bare, r);
+            bare = Math.Max(bare, r); debris = Math.Max(debris, sc);
         }
         double reach = DetMath.Smooth((cell * 2.25 - bestAbs) / (cell * .5));
         if (reach <= 0) return 0;
@@ -205,6 +205,8 @@ public sealed class Escarpments : PlanLandform
         double kept = _macro.Sample(WorldPlan.HeightChannel, topX, topZ) - _macro.Sample(WorldPlan.HeightChannel, footX, footZ);
         double survive = put > 1 ? DetMath.Smooth((kept / put - .3) / .5) : 0;
         rock = bare * reach * survive;
+        // Revision 33 (D263): the debris slope's scree is loose rock the game strews stones over.
+        if (_revision >= 33) scree = debris / .65 * reach * survive;
         return correction * reach * survive;
     }
 
@@ -228,9 +230,9 @@ public sealed class Escarpments : PlanLandform
     /// Also gives the signed distance to the edge, the unit normal toward the plateau and how bare the ground is.
     /// </summary>
     private double Profile(Line l, double x, double z, double face, double minWavelength, bool detail, out double s, out double nx, out double nz,
-        out double rock)
+        out double rock, out double fallen)
     {
-        rock = 0;
+        rock = 0; fallen = 0;
         double t;
         if (_revision >= 19) NearestSmooth(l, x, z, out s, out t, out nx, out nz);
         else Nearest(l, x, z, out s, out t, out nx, out nz);
@@ -248,8 +250,8 @@ public sealed class Escarpments : PlanLandform
         if (feat <= 0) return plain;
         if (_revision >= 19)
         {
-            double v19 = Detail(l, s, t, lx, lz, h, back, minWavelength, out rock);
-            rock *= feat;
+            double v19 = Detail(l, s, t, lx, lz, h, back, minWavelength, out rock, out fallen);
+            rock *= feat; fallen *= feat;
             return plain + (v19 - plain) * feat;
         }
 
@@ -339,7 +341,8 @@ public sealed class Escarpments : PlanLandform
     /// <item>ravines of every size whose rough walls wander and whose line bends as it cuts back; spurs between them.</item>
     /// </list>
     /// </summary>
-    private double Detail(Line l, double s, double t, double lx, double lz, double h, double back, double minWavelength, out double rock)
+    private double Detail(Line l, double s, double t, double lx, double lz, double h, double back, double minWavelength, out double rock,
+        out double fallen)
     {
         double wx = 80 * Noise.Fbm(lx, lz, 360, 3, minWavelength, l.Seed + 8, .55);
         // (two octaves: finer ones bent every contour of the debris slope into wavy bands; the rim's fine roughness
@@ -431,6 +434,7 @@ public sealed class Escarpments : PlanLandform
         double ravineRock = 0;
         for (int r = 0; r < ravines; r++) ravineRock = Math.Max(ravineRock, .8 * cut[r]);
         rock = Math.Max(Math.Max(cliff, scree), ravineRock);
+        fallen = scree;
         return v;
     }
 

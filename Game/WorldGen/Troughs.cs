@@ -786,11 +786,12 @@ public sealed class Troughs
     /// The ground taken down into the troughs here (metres above the sea in and out), blended over 8 m on the floor and up
     /// to 30 m up the wall, so the wall's top is a rounded shoulder. <paramref name="flat"/>: how much of the walking-scale relief to take away (1 on the floor,
     /// fading out up the wall's foot); <paramref name="rock"/>: how bare the wall is; <paramref name="sea"/>: a fjord took
-    /// the ground to within 3 m of the sea (the sea fills it wherever the ground with its relief lies below the sea).
+    /// the ground to within 3 m of the sea (the sea fills it wherever the ground with its relief lies below the sea);
+    /// <paramref name="scree"/>: loose rock at the foot of the walls (revision 33, D263).
     /// </summary>
-    public double Carve(double x, double z, double ground, out double flat, out double rock, out bool sea)
+    public double Carve(double x, double z, double ground, out double flat, out double rock, out bool sea, out double scree)
     {
-        flat = 0; rock = 0; sea = false;
+        flat = 0; rock = 0; sea = false; scree = 0;
         if (_troughs.Count == 0) return ground;
         int cell = Cell(z, _minZ) * _gridSize + Cell(x, _minX);
         double carved = ground;
@@ -806,6 +807,26 @@ public sealed class Troughs
             double cut = DetMath.Smooth((before - carved) / 15);
             flat = Math.Max(flat, cut * (1 - DetMath.Smooth((wall + 20) / 50)));
             rock = Math.Max(rock, .85 * cut * DetMath.Smooth((wall + 10) / 30));
+            // Revision 33 (D263): talus at the foot of the walls — the U's concave foot is scree all along, and fans of it
+            // (up to 30 m deep, every few hundred metres where gullies above shed their rock) spread out over the floor.
+            if (_revision >= 33 && cut > 0 && wall > -90 && wall < 290)
+            {
+                double fan = DetMath.Smooth(.5 + 1.7 * Noise.Fbm(x, z, 260, 2, 0, c.Seed + 9));
+                double toe = 25 + 45 * fan; // (metres out over the floor)
+                // The fan's own slope rises from its toe to a peak at the wall's foot, then eases off over 60 m no faster than
+                // the U steepens — so the ground's slope only ever rises from the floor into the wall, concave like a real
+                // fan (ending sharply, or with an S-curve, the slope fell back to ~25° on the wall's foot: a bench); fading
+                // out higher up more slowly than the wall rises.
+                double top = 30 * fan * fan, ease = 60, peak = 2 * top / (toe + ease);
+                double add = wall <= -toe ? 0 : wall <= 0 ? peak * Sq(wall + toe) / (2 * toe)
+                    : wall <= ease ? peak * toe / 2 + peak * (wall - wall * wall / (2 * ease)) : top;
+                add *= 1 - DetMath.Smooth((wall - 70) / 220);
+                // (never above 70 % of what the trough cut here: on a shallow trough a full fan stood 7 m over the rim)
+                carved += Math.Min(cut * add, .7 * Math.Max(0, before - carved));
+                // (scree on the fans and the wall's foot only: up to 150 m up, a shallow trough's whole green wall turned to
+                // rubble)
+                scree = Math.Max(scree, cut * DetMath.Smooth((wall + toe * fan + 15) / 25) * (1 - DetMath.Smooth((wall - 20 - 40 * fan) / 40)) * (.3 + .7 * fan));
+            }
             if (c.Fjord && carved < 3) sea = true;
         }
         return carved;

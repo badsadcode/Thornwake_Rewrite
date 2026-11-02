@@ -225,7 +225,7 @@ public static class TileBuilder
         var biome1 = new float[vertices.Length * 4];
         var biome2 = new float[vertices.Length * 4];
         var biome3 = new float[vertices.Length * 4];
-        var props = new float[Side * Side * 3]; // biome rock and bush/log multipliers, rock look (ground cover only, no skirts)
+        var props = new float[Side * Side * 4]; // biome rock and bush/log multipliers, rock look, cold country (erratics; ground cover only, no skirts)
         var waterTint = new Vector2[Side * Side]; // biome water tint, packed rgb (x) and strength (y), for the water sheet
         var climate = sampler.Plan.Climate;
         var biomes = sampler.Plan.Biomes;
@@ -249,9 +249,10 @@ public static class TileBuilder
                 uv[k] = new Vector2((float)Fold(x0 + i * spacing), (float)Fold(z0 + j * spacing));
                 // UV2.y: how much the player has dug or raised here (bare soil in the shader).
                 double edited = Math.Abs(sampler.Edits.Delta(x0 + i * spacing, z0 + j * spacing));
-                // UV2.x: grass cover from the plant fields (the shader takes the height above sea from the position).
-                uv2[k] = new Vector2((float)GroundCover.FloraCover(x0 + i * spacing, z0 + j * spacing, floraSeed, spacing * 2, out _, out _, out _, out _),
-                    (float)Math.Min(1, edited * 2));
+                // UV2.x: grass cover from the plant fields (the shader takes the height above sea from the position); UV2.y
+                // below 0: scree (D263; a dug spot wins).
+                uv2[k] = new Vector2((float)(GroundCover.FloraCover(x0 + i * spacing, z0 + j * spacing, floraSeed, spacing * 2, out _, out _, out _, out _) * (1 - .8 * t.Scree)),
+                    edited > 0 ? (float)Math.Min(1, edited * 2) : -(float)t.Scree);
                 // Biome colours, blended between the two best-fitting biomes; snow from the biome and the cold.
                 double wx = x0 + i * spacing, wz = z0 + j * spacing;
                 var (ba, bb, share) = biomes.Sample(wx, wz);
@@ -267,7 +268,7 @@ public static class TileBuilder
                 // cover; GroundCover then drops its fixed 1.7 km line.
                 if (climate.Settings.Biomes) plants *= DetMath.Smooth((temperature + 6) / 6);
                 double lavaFree = 1 - DetMath.Smooth(t.Lava / .1); // (no plants, stones or logs in lava, D257)
-                Put(biome1, k, Mix(A.Dry, B.Dry, sa, sb, dark), Math.Min(1, plants) * lavaFree);
+                Put(biome1, k, Mix(A.Dry, B.Dry, sa, sb, dark), Math.Min(1, plants) * lavaFree * (1 - .8 * t.Scree)); // (little grows on scree, D263)
                 // CUSTOM2: r = map colour packed (debug view), g = the two rock looks (lo + 8·hi), b = weight of hi,
                 // a = rock exposure. Looks are ordered so neighbouring vertices across a border agree on the pair.
                 var mapColour = Mix(A.Map, B.Map, sa, sb, 1);
@@ -278,9 +279,11 @@ public static class TileBuilder
                 biome2[k * 4 + 2] = whi;
                 biome2[k * 4 + 3] = (float)Math.Max(A.Def.Appearance.RockExposure * share + B.Def.Appearance.RockExposure * (1 - share), rocky * 1.6);
                 Put(biome3, k, Mix(A.Rock, B.Rock, sa, sb, 1), A.Def.Water.Wetness * share + B.Def.Water.Wetness * (1 - share));
-                props[k * 3] = (float)((A.Def.Props.Rocks * share + B.Def.Props.Rocks * (1 - share)) * lavaFree);
-                props[k * 3 + 1] = (float)((A.Def.Props.Logs * share + B.Def.Props.Logs * (1 - share)) * lavaFree);
-                props[k * 3 + 2] = share >= .5 ? A.RockTexture : B.RockTexture;
+                props[k * 4] = (float)((A.Def.Props.Rocks * share + B.Def.Props.Rocks * (1 - share)) * lavaFree);
+                props[k * 4 + 1] = (float)((A.Def.Props.Logs * share + B.Def.Props.Logs * (1 - share)) * lavaFree);
+                props[k * 4 + 2] = share >= .5 ? A.RockTexture : B.RockTexture;
+                // Cold country (D263): the glacial biomes' erratics, from terrain revision 33 on.
+                props[k * 4 + 3] = sampler.Plan.Style.Revision >= 33 ? (float)((Cold(A) ? share : 0) + (Cold(B) ? 1 - share : 0)) : 0;
                 waterTint[k] = WaterTint(A, B, share);
             }
         // Skirts: a copy of each edge pushed down, so a coarser neighbour's edge never shows a gap.
@@ -388,6 +391,9 @@ public static class TileBuilder
         var (ba, bb, share) = biomes.Sample(x, z);
         return WaterTint(biomes.Pool[ba], biomes.Pool[bb], share);
     }
+
+    /// <summary>A glacial biome (tagged cold: taiga, tundra, arctic, alpine, fen), where the ice left erratics (D263).</summary>
+    private static bool Cold(ResolvedBiome b) => Array.IndexOf(b.Def.Tags, "cold") >= 0;
 
     private static Vector2 WaterTint(ResolvedBiome a, ResolvedBiome b, double share)
     {

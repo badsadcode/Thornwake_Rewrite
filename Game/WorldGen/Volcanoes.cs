@@ -474,9 +474,9 @@ public sealed class Volcanoes : PlanLandform
     /// of it, 18–30 gullies down its flanks, and the lava flows — raised lobes 6–15 m thick and 150–400 m wide running down the flanks, wavering, bare
     /// rock. <paramref name="rock"/>: summit, crater and caldera walls, flows.
     /// </summary>
-    public override double Ground(double x, double z, double minWavelength, out double rock)
+    public override double Ground(double x, double z, double minWavelength, out double rock, out double scree)
     {
-        rock = 0;
+        rock = 0; scree = 0;
         if (_volcanoes.Count == 0 || _raise == null || _macro == null) return 0;
         double g = 0;
         foreach (var v in _volcanoes)

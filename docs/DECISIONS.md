@@ -4107,6 +4107,33 @@ undersides, white steam among them).
 * Return point: *Volcano smoke → on (build 126)* = `VolcanoSmokeBuild126.gdshader` with the old particle numbers. Cost:
   more and bigger transparent puffs (overdraw near the volcano); build 126's is the lighter option.
 
+## D263 — Scree and boulders: terrain revision 33 (2026-11-02)
+Tom picked landform no. 8 next (docs/LANDFORMS.md). Scree as part of the terrain, where the generator knows the walls
+(as the escarpments' debris slopes, D232), and the game's look and scatter from a new `TerrainSample.Scree` (0–1):
+* **Gorges and canyons** (`TerrainSampler.GorgeWall`, the walls of both since revision 21): a concave talus apron at the
+  foot — ~20° at its toe to ~45° at the wall, about 35° on average — holding the lowest 15–40 % of the wall's height (more
+  in fans every couple of hundred metres), at most 60 % of the wall's run; the wall above stands steeper by as much and
+  starts a quarter of the way into its S-curve (from its flat start it left a ledge on the talus). On the test canyon:
+  16–19 m of talus over ~35 m under a 110 m wall. The river stage reports the winning wall's talus (a thread-static
+  value: the profiles' optional parameters would have needed threading through every call).
+* **Glacial troughs and fjords** (`Troughs.Carve`): the U's foot is already concave (a talus line from the floor stayed
+  above it for 100+ m: buried, the U was gone), so fans of debris up to 30 m deep where a noise over 260 m is high, their
+  toe 25–70 m out over the floor. Profile written out so the slope only rises from the floor into the wall: the fan's own
+  slope peaks at the wall's foot and eases off over 60 m no faster than the U steepens (ending sharply, or as an S-curve,
+  it left a 25° bench); never above 70 % of what the trough cut (a shallow trough's fan stood 7 m over its rim). Scree
+  on the fans and the wall's foot only (up to 150 m up turned a shallow trough's whole green wall to rubble).
+* **Escarpments**: their debris slopes report scree from revision 33 (the terrain is unchanged).
+* **The look**: scree goes to the terrain shader in UV2.y below 0 (the edit amount above it; a dug spot wins): rubble in
+  the biome's rock colour, Noor's scree up close, on any slope under the bare rock (the mountain scree band starts at
+  35°; fans lie at 10–30°); plants thinned to a fifth on it. Mountain share 0.65 there, so no forest (as the escarpments).
+* **Scatter** (`GroundCover`): stones strewn thick on scree (pick-up stones, level 0), rubble of rocks and boulders over
+  it (3.5 m cells, levels 0–1); **erratics**: huge boulders four times as often in the cold biomes (taiga, tundra, arctic,
+  alpine, fen: glacial country and moors), out in the open — from revision 33 on (props now four values a vertex).
+* Not yet: cirques (talus would run into the tarn: water wins, so it would shrink it), mountain walls in general (no wall
+  line to measure from; the shader's slope-band scree stays there).
+* Return point: *Terrain version → Build 127* (revision 32, fingerprints frozen in `terrain-build127.json`). Tool:
+  `--scree-transect=<profile>,<seed>,<x0>,<z0>,<x1>,<z1>,<n>` (revision 32 against the current), `--canyons=<profile>,<seed>`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

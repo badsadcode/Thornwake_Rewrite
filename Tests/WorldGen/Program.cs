@@ -49,6 +49,30 @@ if (args.FirstOrDefault(a => a.StartsWith("--hillshade=")) is { } hs)
     return 0;
 }
 // --transect=profile,seed,x0,z0,x1,z1,steps: heights and detail along a line (to look at a ridge or step).
+// --scree-transect=<profile>,<seed>,<x0>,<z0>,<x1>,<z1>,<n>: revision 32 against the current terrain along a line (D263):
+// height, scree and mountain share at each point. --canyons=<profile>,<seed>: each canyon's river middle and depth.
+if (args.FirstOrDefault(a => a.StartsWith("--scree-transect=")) is { } st)
+{
+    var p = st[17..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    var old = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 32 }));
+    double x0 = double.Parse(p[2]), z0 = double.Parse(p[3]), x1 = double.Parse(p[4]), z1 = double.Parse(p[5]);
+    int n = int.Parse(p[6]);
+    for (int i = 0; i <= n; i++)
+    {
+        double x = x0 + (x1 - x0) * i / n, z = z0 + (z1 - z0) * i / n;
+        var a = old.Sample(x, z); var b = s.Sample(x, z);
+        Console.WriteLine($"{x:0},{z:0}  r32 {a.Height,8:0.0}  r33 {b.Height,8:0.0}  diff {b.Height - a.Height,6:0.0}  scree {b.Scree:0.00}  mountain {a.Mountain:0.00}->{b.Mountain:0.00}  {b.Water}");
+    }
+    return 0;
+}
+if (args.FirstOrDefault(a => a.StartsWith("--canyons=")) is { } cyArg)
+{
+    var p = cyArg[10..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    foreach (var (x, z, d) in s.Plan.Canyons?.Probes() ?? Enumerable.Empty<(double, double, double)>()) Console.WriteLine($"canyon {x:0},{z:0} depth {d:0}");
+    return 0;
+}
 if (args.FirstOrDefault(a => a.StartsWith("--transect=")) is { } tr)
 {
     var p = tr[11..].Split(',');

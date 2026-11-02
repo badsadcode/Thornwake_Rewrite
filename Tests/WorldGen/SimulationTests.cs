@@ -940,7 +940,7 @@ internal static class SimulationTests
                 {
                     double c = h[j * N + i];
                     if (Math.Abs(h[j * N + i - 1] - 2 * c + h[j * N + i + 1]) <= 6 && Math.Abs(h[(j - 1) * N + i] - 2 * c + h[(j + 1) * N + i]) <= 6) continue;
-                    if (all || forms.Any(f => f.Ground(cx - N / 2 + i, cz - N / 2 + j, 2, out _) != 0)) count++;
+                    if (all || forms.Any(f => f.Ground(cx - N / 2 + i, cz - N / 2 + j, 2, out _, out _) != 0)) count++;
                 }
             return count;
         }

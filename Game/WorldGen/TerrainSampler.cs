@@ -15,8 +15,10 @@ public readonly record struct TerrainSample(
     double WaterLevel,   // absolute surface elevation of that water (NaN if dry)
     int WaterBody,       // lake id or river reach id (-1 for sea / none)
     double Plume = 0,    // 0..1 river water mixing into a lake or the sea near a mouth (shading)
-    double Lava = 0);    // 0..1 how much lava covers the ground here (revision 31: an active volcano's lake and fresh flows;
+    double Lava = 0,     // 0..1 how much lava covers the ground here (revision 31: an active volcano's lake and fresh flows;
                          // D257: the game draws it as its own surface and nothing grows in it)
+    double Scree = 0);   // 0..1 loose rock fallen from a wall above (revision 33, D263: escarpments' debris slopes, the talus
+                         // at the foot of gorge, canyon and trough walls) — the game strews stones and boulders over it
 
 /// <summary>
 /// The terrain authority for generated (unedited) ground: a pure, thread-safe function of world position.
@@ -100,11 +102,11 @@ public sealed partial class TerrainSampler
     /// ground just outside a lake's reach would lie dry below its surface); ground they raise may end a lake at a cliff.
     /// <paramref name="bare"/>: how bare their rock and scree is (reported as mountain ground, so it gets rock and scree
     /// textures and no forest).</summary>
-    private double PlanGround(double x, double z, double minWavelength, out double bare)
+    private double PlanGround(double x, double z, double minWavelength, out double bare, out double scree)
     {
         double g = 0;
-        bare = 0;
-        foreach (var form in _planForms) { g += form.Ground(x, z, minWavelength, out double rock); bare = Math.Max(bare, rock); }
+        bare = 0; scree = 0;
+        foreach (var form in _planForms) { g += form.Ground(x, z, minWavelength, out double rock, out double s); bare = Math.Max(bare, rock); scree = Math.Max(scree, s); }
         if (g >= 0) return g;
         int lake = _hydrology.LakeDistance(x, z, out double cells);
         return lake >= 0 ? g * DetMath.Smooth((cells - 1.6) / .38) : g;
@@ -132,8 +134,8 @@ public sealed partial class TerrainSampler
         }
         // Revision 24: glacial troughs, the ground taken down to a flat floor between steep walls (most of the
         // walking-scale relief taken off the floor).
-        double troughFlat = 0, troughRock = 0; bool fjord = false;
-        if (_troughs != null) baseHeight = _troughs.Carve(x, z, baseHeight, out troughFlat, out troughRock, out fjord);
+        double troughFlat = 0, troughRock = 0, scree = 0; bool fjord = false;
+        if (_troughs != null) baseHeight = _troughs.Carve(x, z, baseHeight, out troughFlat, out troughRock, out fjord, out scree);
         Detail(lx, lz, minWavelength, land, mountainShare, out double inland, out double detail, out double roughness);
         if (troughFlat > 0) detail *= 1 - .85 * troughFlat;
         // Revision 26: a fjord's floor below the sea is the sea (the walk ends here, as at the coast: rivers, lakes and
@@ -141,7 +143,7 @@ public sealed partial class TerrainSampler
         if (fjord && baseHeight + detail < 0)
             return new(_p.SeaLevel + baseHeight + detail, land, Math.Max(mountainShare, troughRock), detail, WaterKind.Ocean, _p.SeaLevel, -1, 0);
         double bare = 0;
-        if (_planForms.Length > 0) detail += PlanGround(x, z, minWavelength, out bare);
+        if (_planForms.Length > 0) { detail += PlanGround(x, z, minWavelength, out bare, out double planScree); scree = Math.Max(scree, planScree); }
         bare = Math.Max(bare, troughRock);
         BiomeTerrain(x, z, lx, lz, minWavelength, baseHeight, inland, ref detail, out bool wetland, out double poolCover, out double poolDepth,
             out double poolSize, out double poolChannels, out double flatten);
@@ -151,7 +153,9 @@ public sealed partial class TerrainSampler
         // (3b sites and 3c roads come here once the plan has any: pads and corridors after the landforms, before the
         // water, so rivers and lakes still win. Plan.Sites and Plan.Roads are empty in revision 17.)
         var water = WaterKind.None; double level = double.NaN; int body = -1; double riverDamp = 1;
-        double height = Rivers(x, z, minWavelength, baseHeight, inland, detail, ref riverDamp, ref water, ref level, ref body, Canyons.Wall(canyon));
+        double height = Rivers(x, z, minWavelength, baseHeight, inland, detail, ref riverDamp, ref water, ref level, ref body, ref scree, Canyons.Wall(canyon));
+        // Revision 33: a gorge's talus is bare ground as the escarpments' debris slopes are (scree, not cliff rock).
+        bare = Math.Max(bare, .65 * scree);
         double lakePlume = 0, lakeCells = double.PositiveInfinity;
         Lakes(x, z, ref height, ref water, ref level, ref body, ref lakePlume, ref lakeCells);
         // Revision 23: a cirque's tarn, still water of its own (drawn as a pond), where nothing else is water.
@@ -173,7 +177,8 @@ public sealed partial class TerrainSampler
         PlayerEdits(x, z, ref height, ref water, ref level, ref body);
         double lavaCover = 0;
         if (_volcanoes != null && water == WaterKind.None) { lavaCover = _volcanoes.LavaAt(x, z).Cover; }
-        return new(_p.SeaLevel + height, land, bare > 0 ? Math.Max(mountainShare, bare) : mountainShare, detail, water, level, body, lakePlume, lavaCover);
+        if (water != WaterKind.None) scree = 0;
+        return new(_p.SeaLevel + height, land, bare > 0 ? Math.Max(mountainShare, bare) : mountainShare, detail, water, level, body, lakePlume, lavaCover, scree);
     }
 
     /// <summary>Stage 1a, coast: the macro raster (land, eroded height, mountain share) and the sub-raster coastline wiggle.</summary>

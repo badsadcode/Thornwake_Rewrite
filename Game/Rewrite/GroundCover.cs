@@ -58,7 +58,7 @@ public static partial class GroundCover
             int k = (j * Side + i) * 4;
             // Default biome rock 77766a ≈ (0.47, 0.46, 0.42); vertex stone colour carries that already.
             // Alpha carries the rock look (index + 1) / 8 for Rock.gdshader.
-            float look = PropScale == null ? 0 : PropScale[(j * Side + i) * 3 + 2];
+            float look = PropScale == null ? 0 : PropScale[(j * Side + i) * 4 + 2];
             return new Color(Biome3[k] / .467f, Biome3[k + 1] / .463f, Biome3[k + 2] / .416f, (look + 1) / 8f);
         }
 
@@ -89,7 +89,7 @@ public static partial class GroundCover
         {
             if (PropScale == null) return 1;
             int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
-            return PropScale[(j * Side + i) * 3 + kind];
+            return PropScale[(j * Side + i) * 4 + kind];
         }
 
         /// <summary>Bilinear <see cref="Shore"/> at tile-local (x, z).</summary>
@@ -137,6 +137,13 @@ public static partial class GroundCover
         {
             int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
             return (float)Samples[j * Side + i].Mountain;
+        }
+
+        /// <summary>Loose rock fallen from a wall above (terrain revision 33, D263), nearest vertex.</summary>
+        public float Scree(double x, double z)
+        {
+            int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
+            return (float)Samples[j * Side + i].Scree;
         }
     }
 
@@ -243,7 +250,8 @@ public static partial class GroundCover
             {
                 if (!g.At(x, z, out float height, out float up, out _, out _) || height - sea < .3) return;
                 float steep = 1 - up;
-                if (Unit(h, 1) > (.1f + 1.2f * steep) * a * g.Props(x, z, 0)) return; // more stones on slopes and banks
+                // (more stones on slopes and banks, and strewn thick over scree, D263)
+                if (Unit(h, 1) > (.1f + 1.2f * steep + 2.5f * g.Scree(x, z)) * a * g.Props(x, z, 0)) return;
                 if (removals != null && removals.Contains(ObjectRemovals.Stones, cx, cz)) return; // picked up
                 Place(Stone, x, z, h, .12f, .45f, .35f, PackCell(cx, cz));
             });
@@ -291,16 +299,26 @@ public static partial class GroundCover
             var at = new Vector3((float)x, height - tall * .2f, (float)z) - outward * thick * .45f;
             result.Add(new RockInstance(CliffSlab, new Transform3D(basis, at), g.RockTint(x, z)));
         });
-        // Huge boulders, rare, on fairly open ground.
+        // Huge boulders, rare, on fairly open ground; erratics (D263): four times as many in the glacial biomes, out in the
+        // open (none in forest).
         if (key.Level <= 2)
             Cells(key, 140, seed ^ 0xB16BUL, (x, z, h) =>
             {
-                if (!g.At(x, z, out float height, out float up, out _, out bool wet) || wet || up < .8f || height - sea < 1) return;
-                if (Unit(h, 1) > .22f * a0()) return;
+                if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .8f || height - sea < 1) return;
+                if (Unit(h, 1) > .22f * a0() * (1 + 3 * g.Props(x, z, 3) * (1 - Math.Min(1, forest * 2)))) return;
                 float size = 5 + 7 * Unit(h, 2) * Unit(h, 3);
                 var basis = new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 5) - .5f) * .3f);
                 basis = basis.Scaled(new Vector3(size * (.9f + .4f * Unit(h, 6)), size * (.6f + .35f * Unit(h, 7)), size * (.9f + .4f * Unit(h, 8))));
                 result.Add(new RockInstance(BigBoulder, new Transform3D(basis, new Vector3((float)x, height - size * .25f, (float)z)), g.RockTint(x, z)));
+            });
+        // Scree (D263): rubble over the talus under walls — rocks and boulders of every size, thickest where most has fallen.
+        if (key.Level <= 1)
+            Cells(key, 3.5, seed ^ 0x5C2E33UL, (x, z, h) =>
+            {
+                float scree = g.Scree(x, z);
+                if (scree < .05f || Unit(h, 1) > .8f * scree * a0()) return;
+                bool big = Unit(h, 2) < .18f;
+                Place(big ? Boulder : Rock, x + (Unit(h, 3) - .5f) * 3, z + (Unit(h, 4) - .5f) * 3, h, big ? .9f : .35f, big ? 1.8f : 1.1f, .3f);
             });
         // Rocky shores: in patches along the sea and lakes, blocky rocks at and just above the waterline.
         if (key.Level <= 1)
