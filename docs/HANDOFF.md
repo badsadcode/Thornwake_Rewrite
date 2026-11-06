@@ -3,10 +3,12 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 132** (v0.9.132, return point `9293ad0`, `dist/Preview-132`, one plain folder from now on, D269): sea
+* **Last build Tom has: 133** (v0.9.133, return point `7290b59`, `dist/Preview-133`, one plain folder, D269): terrain revision 37,
+  headlands and coves (D270), spits, sandbars and lagoons (D271). Launchers "Go to - rocky headland / headland and cove /
+  lagoon, from the water / lagoon, from above". Unchecked up close: cove beaches, walking the spits. Next: oxbow lakes
+  and river terraces, alluvial fans, then the water rework (order below).
+  Build 132 (v0.9.132, return point `9293ad0`, `dist/Preview-132`): sea
   arches and stacks as worn rock (D267, D268). Open: foam round their feet, collision untried in play.
-  **Since 132 (not in a build)**: terrain revision 36, headlands and coves (D270); *Terrain version → Build 132* = 35;
-  revision 37, spits, sandbars and lagoons (D271); *Headlands (rev. 36)* = 36. Next: oxbow lakes and river terraces.
   **Order set by Tom**: the landforms that change where water meets land (spits and lagoons, oxbows and terraces, alluvial
   fans) first; then the water rework: separate ocean, river and lake shaders, a mesh part and a setting each, today's
   styles kept selectable, foam round rocks in it. The hard part is where water types meet (mouths, falls).
