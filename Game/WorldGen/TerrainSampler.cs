@@ -71,6 +71,7 @@ public sealed partial class TerrainSampler
     private readonly Troughs? _troughs;
     private readonly Volcanoes? _volcanoes;
     private readonly Headlands? _headlands;
+    private readonly Spits? _spits;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
     private readonly double[] _poolQuantiles, _channelQuantiles;
@@ -94,6 +95,7 @@ public sealed partial class TerrainSampler
         _troughs = plan.Troughs is { Count: > 0 } t ? t : null;
         _volcanoes = _planForms.OfType<Volcanoes>().FirstOrDefault(v => v.Count > 0);
         _headlands = plan.Headlands is { Count: > 0 } h ? h : null;
+        _spits = plan.Spits is { Count: > 0 } sp ? sp : null;
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
@@ -131,7 +133,7 @@ public sealed partial class TerrainSampler
         // (each stage takes and gives plain values — a shared struct cost ~2.5 % of the speed)
         double lx = x - _ox, lz = z - _oz;
         Coast(x, z, lx, lz, minWavelength, out double land, out double macroHeight, out double mountainShare, out double rasterLand, out double coastDistance, out double point, out double cove);
-        if (land <= 0) return Sea(x, z, land, coastDistance);
+        if (land <= 0) return Sea(x, z, land, coastDistance, rasterLand);
         double baseHeight = Continent(land, rasterLand, macroHeight, coastDistance, ref mountainShare);
         // Revision 36: headlands' cliffs and coves' beaches.
         double pointRock = 0;
@@ -223,7 +225,7 @@ public sealed partial class TerrainSampler
     }
 
     /// <summary>Stage 1b, the sea: the sea floor (deepening off the coast, river mouths' channels) — the walk ends here.</summary>
-    private TerrainSample Sea(double x, double z, double land, double coastDistance)
+    private TerrainSample Sea(double x, double z, double land, double coastDistance, double rasterLand)
     {
         // Shore profile (ShoreSlope > 0): the macro ramp alone left hundreds of metres of ankle-deep water and flat
         // beach at this world scale. A beach-like slope (~3.5 %) takes the sea floor to ~25 m within a few hundred
@@ -236,6 +238,13 @@ public sealed partial class TerrainSampler
         // Revision 27: islands and skerries off a fjord coast.
         double isle = _troughs is { HasCoasts: true } ? _troughs.Skerries(x, z, land) : 0;
         seabed += isle;
+        // Revision 37: spits, sandbars and lagoons, placed by their distance from the plan's coastline.
+        if (_spits != null && rasterLand > -_coastBand)
+        {
+            _macro.SampleGradient(WorldPlan.LandChannel, x, z, out double gx, out double gz);
+            double gradient = Math.Sqrt(gx * gx + gz * gz);
+            if (gradient > 1e-12) seabed = _p.SeaLevel + _spits.Seabed(x, z, Math.Max(0, -rasterLand) / gradient, seabed - _p.SeaLevel);
+        }
         if (_style.MouthBlend > 0) seabed = MouthChannel(x, z, seabed, -1, out plume);
         seabed += Edits.Delta(x, z);
         // Revision 16: the coastline wiggle can cut a small pocket of "sea" out of a lake basin near the coast; the

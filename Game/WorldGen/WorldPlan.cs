@@ -43,6 +43,8 @@ public sealed class WorldPlan
     public Troughs? Troughs { get; }
     /// <summary>Headlands and coves (revision 36, landform no. 10); null when off or older.</summary>
     public Headlands? Headlands { get; }
+    /// <summary>Spits, sandbars and lagoons (revision 37, landform no. 11); null when off or older.</summary>
+    public Spits? Spits { get; }
     /// <summary>Settlement sites and the roads between them (docs/WORLDGEN_PLAN.md step 3): empty in revision 17.</summary>
     public IReadOnlyList<WorldSite> Sites { get; } = Array.Empty<WorldSite>();
     public IReadOnlyList<WorldRoad> Roads { get; } = Array.Empty<WorldRoad>();
@@ -183,6 +185,8 @@ public sealed class WorldPlan
         // Headlands (revision 36) keep clear of the final rivers and lakes, fjord coasts and volcanoes.
         if (Style.Revision >= LandformCatalog.Headlands.Since && !Style.Landform(LandformCatalog.Headlands.Id).Off)
             Headlands = new Headlands(this, Style.Landform(LandformCatalog.Headlands.Id));
+        if (Style.Revision >= LandformCatalog.Spits.Since && !Style.Landform(LandformCatalog.Spits.Id).Off)
+            Spits = new Spits(this, Style.Landform(LandformCatalog.Spits.Id));
         stage?.Invoke(3);
         Climate = new Climate(this, Style.Climate);
         stage?.Invoke(4);

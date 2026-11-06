@@ -5,7 +5,8 @@ Written for the next conversation (the previous one ran out of context). Everyth
 ## Where things stand
 * **Last build Tom has: 132** (v0.9.132, return point `9293ad0`, `dist/Preview-132`, one plain folder from now on, D269): sea
   arches and stacks as worn rock (D267, D268). Open: foam round their feet, collision untried in play.
-  **Since 132 (not in a build)**: terrain revision 36, headlands and coves (D270); *Terrain version → Build 132* = 35.
+  **Since 132 (not in a build)**: terrain revision 36, headlands and coves (D270); *Terrain version → Build 132* = 35;
+  revision 37, spits, sandbars and lagoons (D271); *Headlands (rev. 36)* = 36. Next: oxbow lakes and river terraces.
   **Order set by Tom**: the landforms that change where water meets land (spits and lagoons, oxbows and terraces, alluvial
   fans) first; then the water rework: separate ocean, river and lake shaders, a mesh part and a setting each, today's
   styles kept selectable, foam round rocks in it. The hard part is where water types meet (mouths, falls).

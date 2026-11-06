@@ -4250,6 +4250,23 @@ and lake shaders, today's styles kept selectable), which comes after the landfor
   the shore, and fly height counts from it.
 * Return point: *Terrain version → Build 132* (revision 35; fingerprints frozen in `terrain-build132.json`).
 
+## D271 — Spits, sandbars and lagoons: terrain revision 37 (2026-11-06)
+Tom picked landform no. 11 next. `Game/WorldGen/Spits.cs`, placed in the plan; only the sea stage changes: land stays land.
+* **Where**: flat coasts with a gentle sea floor (under 40 m of water 1.5 km out, the land low behind), the coast straight
+  enough all along, well clear of river mouths (1.5 km), lakes, headlands, fjord coasts and volcanoes. About 5 % of the
+  qualifying cells (Balanced 7319: 2441 cells, 20 sites). `docs/LANDFORMS.md` also has them across river mouths: left for
+  later, a river's mouth is the risky case (water wins).
+* **Three kinds**: a spit (45 %) growing 1.8–5.5 km from the shore along the coast, curling back at its tip, the bay behind
+  it open toward the tip; a barrier (35 %) joined to the shore at both ends, an inlet left in it, a lagoon behind; a sandbar
+  (20 %) offshore, broken into shoals, mostly awash.
+* **Measured from the plan's coastline**: a ridge's place is the plan's land value over its gradient (smooth), not the
+  detailed coast, whose fine wiggle would bend it at every scale. No list of coast points is needed, and it stays parallel.
+* **The ridge**: 1.3–2.3 m above the sea with small dunes, 45–95 m half-width to the point it is under water. **The lagoon**:
+  1.2–3.2 m deep. Still sea water, so ocean waves run in it: the water rework can calm it.
+* Test: each kind present; sand where the sea was, none over 5 m; shallows behind; land and river ends exactly as without
+  them. Tool: `--spits=<profile>,<seed>`.
+* Return point: *Terrain version → Headlands (rev. 36)* (`terrain-r36.json`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

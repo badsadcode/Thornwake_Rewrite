@@ -24,6 +24,7 @@ internal static class SimulationTests
         T.Run("Landforms: volcanoes — cones over the land, calderas holding a lake, crater lakes closed in, volcanic ground, lava at active ones (revisions 28–31)", VolcanoForms, filter);
         T.Run("Landforms: sea stacks and arches — in the sea off steep coasts, sea all round, apart, the same every time (revision 35)", SeaStackForms, filter);
         T.Run("Landforms: headlands and coves — the coast moved both ways along stretches, cliffs on the points, low coves, river mouths as before (revision 36)", HeadlandForms, filter);
+        T.Run("Landforms: spits, sandbars and lagoons — sand just above the sea, shallow water behind, land and river mouths untouched (revision 37)", SpitForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1177,6 +1178,43 @@ internal static class SimulationTests
         T.Check(overlap == 0, $"apart ({overlap})");
         T.Check(same == 4, $"placed the same every time ({same}/4)");
         T.Check(ground == 0, $"the ground is revision 34's ({ground})");
+    }
+
+    /// <summary>D271: sites in the worlds, of each kind; sand where the sea was, low, and shallow water made behind it; land
+    /// exactly as without them; every river ends as it did.</summary>
+    private static void SpitForms()
+    {
+        int sites = 0, spits = 0, barriers = 0, bars = 0, sand = 0, high = 0, shallow = 0, landMoved = 0, blocked = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("balanced", 7319), ("continental", 7319), ("archipelago", 7319) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            if (s.Plan.Spits is not { Count: > 0 } sp) continue;
+            double sea = s.Plan.Profile.SeaLevel;
+            var without = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Landforms = Off(LandformCatalog.Spits) }));
+            foreach (var (kind, x, z, tx, tz, length, off) in sp.Probes())
+            {
+                sites++;
+                if (kind == Spits.Kind.Spit) spits++; else if (kind == Spits.Kind.Barrier) barriers++; else bars++;
+                for (double t = -length; t <= length; t += length / 14)
+                    for (double o = -off - 400; o <= off + 400; o += 25)
+                    {
+                        double px = x + tx * t - tz * o, pz = z + tz * t + tx * o;
+                        var a = s.Sample(px, pz, 8); var b = without.Sample(px, pz, 8);
+                        if (b.Water == WaterKind.None && a.Height != b.Height) landMoved++;
+                        if (a.Water == WaterKind.None && b.Water == WaterKind.Ocean) { sand++; if (a.Height - sea > 5) high++; }
+                        if (a.Water == WaterKind.Ocean && b.Water == WaterKind.Ocean && a.WaterLevel - a.Height < 4 && b.WaterLevel - b.Height > 6) shallow++;
+                    }
+            }
+            foreach (var r in s.Plan.Hydrology.Reaches)
+                if (r.EndsInSea && s.Sample(r.Points[^1].X, r.Points[^1].Z).Height != without.Sample(r.Points[^1].X, r.Points[^1].Z).Height) blocked++;
+        }
+        T.Note($"{sites} sites ({spits} spits, {barriers} barriers, {bars} bars): {sand} points of new sand, {high} over 5 m, {shallow} of new shallows; {landMoved} of land changed, {blocked} river ends changed");
+        T.Check(spits >= 5 && barriers >= 5 && bars >= 2, $"each kind in the worlds ({spits}, {barriers}, {bars})");
+        T.Check(sand > 300, $"sand where the sea was ({sand})");
+        T.Check(high == 0, $"just above the sea ({high} over 5 m)");
+        T.Check(shallow > 1000, $"shallow water behind ({shallow})");
+        T.Check(landMoved == 0, $"land untouched ({landMoved})");
+        T.Check(blocked == 0, $"river ends untouched ({blocked})");
     }
 
     /// <summary>D270: stretches in most worlds, along them land where the sea was and sea where the land was, stones of

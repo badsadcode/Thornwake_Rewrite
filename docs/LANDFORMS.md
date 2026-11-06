@@ -165,6 +165,7 @@ Then the fantasy landforms Tom picks (section at the end).
 * **Where**: flat, sandy coasts with a drift along the shore; near river mouths.
 * **Play**: calm water for small boats and fishing, a walkable sand path.
 * **Build**: a coast module laying a sand ridge just above the sea; the water behind stays sea (lagoon look by depth).
+* **Status**: terrain revision 37 (D271): spits, barriers with an inlet, offshore bars. Not across river mouths yet.
 
 ### 12. Oxbow lakes and river terraces
 * **What**: crescent lakes from cut-off river loops; flat steps along the sides of wide river valleys.

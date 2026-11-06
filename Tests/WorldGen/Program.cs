@@ -125,6 +125,17 @@ if (args.FirstOrDefault(a => a.StartsWith("--coast-map=")) is { } cmArg)
     f.Write(image);
     return 0;
 }
+// --spits=<profile>,<seed>: the spits, barriers and sandbars (D271).
+if (args.FirstOrDefault(a => a.StartsWith("--spits=")) is { } spArg)
+{
+    var p = spArg[8..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    Console.WriteLine($"{p[0]}/{p[1]}: {s.Plan.Spits?.Candidates ?? 0} coast cells, {s.Plan.Spits?.Count ?? 0} sites");
+    if (s.Plan.Spits != null)
+        foreach (var (kind, x, z, tx, tz, length, off) in s.Plan.Spits.Probes())
+            Console.WriteLine($"  {kind} {x:0},{z:0} along {tx:0.00},{tz:0.00} length {length:0} off {off:0}");
+    return 0;
+}
 // --headlands=<profile>,<seed>: the stretches of coast with headlands and coves (D270).
 if (args.FirstOrDefault(a => a.StartsWith("--headlands=")) is { } hlArg)
 {
