@@ -4188,6 +4188,22 @@ first, art later"):
 * Test: in the sea with sea all round, apart, placed the same twice, the ground revision 34's (964 rocks, 77 arches in
   four worlds). Tool: `--stacks=<profile>,<seed>`.
 
+## D267 — Sea arches as worn rock, not a tube (2026-11-06)
+Tom on build 131's arches: "Those arches don't look good ... they don't look natural." They were a tube of even
+thickness swept over a half circle: symmetrical and regular, like a horseshoe stuck in the sea. Real ones are a block of
+cliff with a hole worn through it. `SeaStackView.ArchSurface`, the generator's numbers unchanged (no new terrain revision):
+* **The shape** is a solid (signed distance): a block narrowing upward, one leg stout and one slight (which one by
+  chance), its top sloping off to the slight leg; a hole off the middle, leaning, with a flatter roof, a third of the
+  height or more of rock over it; everything bent by slow noise so no line is straight and no curve true.
+* **Worn**: vertical joints cut in, tilted beds as ledges and as bands of paler and darker rock, the waves' notch, 2–5
+  fallen blocks in the water at its feet; grass only on the open top, a dark wet band just over the sea.
+* **The mesh**: surface nets on a 1.5–2.5 m grid (a tube of rings cannot hold a hole in a block), flat-shaded like the
+  stacks. Measured at 1–1.7 m cells: 17–20 thousand triangles and ~0.4 s each, so all rocks are now built on a worker and go
+  in one a frame; the coarser final grid has fewer (not measured again). Stacks are ~600 triangles and unchanged.
+* This is the meshing Tom's voxel idea needs (docs/LANDFORMS.md), though not yet a voxel layer: a fixed model, not
+  part of the ground, not diggable.
+* Return point: build 131 (`3e43997`) has the tube arches.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
