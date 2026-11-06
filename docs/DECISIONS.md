@@ -4239,8 +4239,10 @@ and lake shaders, today's styles kept selectable), which comes after the landfor
 * **The coastline** moves in the coast stage, the same way as its fine wiggle (metres through the land's gradient): a noise
   along the stretch's own direction says point or cove, so points reach straight out, 280–700 m, and coves 160–420 m in,
   rounder and wider; fading out toward the stretch's ends.
-* **Points** stand up from the sea in cliffs (over ~40 m) to 18–60 m, knobbly of their own (the land's walking-scale relief
-  fades out toward the shore, and without this they were smooth domes), bare rock on the cliff band.
+* **Points** are rock (Tom: "rougher points first"; with gentle knobs they were grassy domes with a cliff at the foot, the
+  land's walking-scale relief fading out toward the shore): a low shelf at the waterline, cliffs on a jagged line rising to
+  18–60 m, ridged crags on top, bare on the cliff band and in patches over the top. The patches report as scree (rubble
+  ground, stones, few plants): the terrain draws bare rock only on slopes, and on the tops they stayed grass.
 * **Coves**: the ground let down to a low beach rising 3 %, back to the land's height ~500 m in.
 * **Sea stacks** stand off about half the points (their own streams).
 * Tools: `--headlands=<profile>,<seed>`; `--coast-map=<profile>,<seed>,<x>,<z>,<across>,<revision>,<file.ppm>` draws a shaded map

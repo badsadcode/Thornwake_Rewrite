@@ -142,21 +142,27 @@ public sealed class Headlands
     }
 
     /// <summary>
-    /// The land's height there (metres above the sea in and out): a point stands up in cliffs from the sea to its rock's
-    /// height; a cove's ground is let down to a low, gently rising beach, back to the land's own height ~500 m in.
-    /// <paramref name="coast"/>: metres from the detailed coastline. <paramref name="rock"/>: how bare (the cliffs).
-    /// (A point's top is knobbly of its own: the land's walking-scale relief fades out toward the shore, and without
-    /// this the points were smooth domes.)
+    /// The land's height there (metres above the sea in and out). A point is rock: a low shelf at the waterline, cliffs on a
+    /// jagged line rising to its height, ridged crags on top, bare in patches (D270, Tom: rougher; with gentle knobs the points
+    /// were grassy domes with a cliff at the foot — the land's own walking-scale relief fades out toward the shore). A cove's
+    /// ground is let down to a low, gently rising beach, back to the land's own height ~500 m in.
+    /// <paramref name="coast"/>: metres from the detailed coastline. <paramref name="rock"/>: how bare.
     /// </summary>
-    public static double Relief(double x, double z, double ground, double point, double cove, double coast, out double rock)
+    public static double Relief(double x, double z, double minWavelength, double ground, double point, double cove, double coast, out double rock)
     {
         rock = 0;
         if (point > 0)
         {
-            double c = double.IsInfinity(coast) ? 1 : coast;
-            double knobs = 1 + .32 * Noise.Fbm(x, z, 140, 3, 0, 0x4EADUL);
-            ground = Math.Max(ground, point * knobs * DetMath.Smooth(c / 40) * (.6 + .4 * DetMath.Smooth(c / 350)));
-            rock = .85 * Math.Min(1, point / 12) * (1 - DetMath.Smooth((c - 35) / 50));
+            double c = double.IsInfinity(coast) ? 1000 : coast;
+            double line = c + 28 * Noise.Fbm(x, z, 75, 2, minWavelength, 0x4EAEUL);
+            double crag = Noise.Ridged(x, z, 240, 5, minWavelength, 0x4EADUL, .5) - .3;
+            double cliff = DetMath.Smooth(line / 35);
+            double top = point * (.8 + 1.1 * crag) * cliff * (.7 + .3 * DetMath.Smooth(c / 300));
+            ground = Math.Max(ground, 2.5 * DetMath.Smooth(c / 5) + DetMath.Smooth(c / 8) * top);
+            // Bare: the cliff band, and patches over the top (more on the higher crags).
+            double strength = Math.Min(1, point / 12);
+            double patches = DetMath.Smooth((crag + .1 + .35 * Noise.Fbm(x, z, 110, 2, minWavelength, 0x4EAFUL)) / .3);
+            rock = strength * Math.Max(.85 * (1 - DetMath.Smooth((line - 45) / 45)), .75 * patches * (1 - DetMath.Smooth((c - 420) / 200)));
         }
         if (cove > 0 && !double.IsInfinity(coast))
         {

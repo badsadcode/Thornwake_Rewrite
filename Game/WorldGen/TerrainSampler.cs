@@ -135,7 +135,7 @@ public sealed partial class TerrainSampler
         double baseHeight = Continent(land, rasterLand, macroHeight, coastDistance, ref mountainShare);
         // Revision 36: headlands' cliffs and coves' beaches.
         double pointRock = 0;
-        if (point > 0 || cove > 0) baseHeight = Headlands.Relief(x, z, baseHeight, point, cove, coastDistance, out pointRock);
+        if (point > 0 || cove > 0) baseHeight = Headlands.Relief(x, z, minWavelength, baseHeight, point, cove, coastDistance, out pointRock);
         double canyon = _canyons != null ? _canyons.Uplift(x, z) : 0; // (revision 21: raised land a river has cut through)
         baseHeight += canyon;
         // Revision 26: a fjord's mountain walls, raised like a canyon's land (rivers crossing them cut gorges).
@@ -158,6 +158,7 @@ public sealed partial class TerrainSampler
         double bare = 0;
         if (_planForms.Length > 0) { detail += PlanGround(x, z, minWavelength, out bare, out double planScree); scree = Math.Max(scree, planScree); }
         bare = Math.Max(Math.Max(bare, troughRock), pointRock);
+        scree = Math.Max(scree, pointRock); // (a point's bare rock draws as loose rock: on gentle ground the terrain's bare rock needs a slope)
         double beforeBiome = detail;
         BiomeTerrain(x, z, lx, lz, minWavelength, baseHeight, inland, ref detail, out bool wetland, out double poolCover, out double poolDepth,
             out double poolSize, out double poolChannels, out double flatten);
