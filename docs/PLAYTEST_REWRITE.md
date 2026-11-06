@@ -78,6 +78,16 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 131 — sea stacks and arches (terrain revision 35)
+**Host and everyone joining need build 131** (versions must match to connect). The ground is the same as build 130's.
+* **Sea stacks and arches**: off steep coasts open to the sea stand groups of 2–7 rock pillars, about as high as the
+  cliff behind them, and now and then an arch with its opening facing the sea. They are solid: you can walk or climb
+  into them when you are close. Drawn from up to 12 km away, so they are landmarks from the coast and the sea.
+* These are **placeholder models** (faceted rock in the local biome's colour); real rock art can replace them later.
+* Try *Go to - sea stacks (Balanced, seed 7319)* and *Go to - sea arch (Balanced, seed 7319)*.
+* *New world → Landforms → Sea stacks and arches* turns them off or sets how many and how big.
+* Your build 130 worlds stay without stacks; *Terrain version → Build 130* gives that to new worlds too.
+
 ## New in build 130 — forests up the volcanoes (terrain revision 34)
 **Host and everyone joining need build 130** (versions must match to connect).
 * **Volcanoes in every land** (after your question): volcanoes were always placed by the terrain, in any climate, but
