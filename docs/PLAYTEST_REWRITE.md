@@ -78,6 +78,18 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 132 — sea stacks and arches as worn rock
+**Host and everyone joining need build 132** (versions must match to connect). Same terrain as build 131.
+* **Arches rebuilt** (you: "they don't look natural"): a block of cliff with a hole worn through it, one leg stout and
+  one slight, a top sloping off to one side, a lopsided opening, fallen blocks at its feet.
+* **Stacks rebuilt, four kinds**: flat-topped towers, spires narrowing in steps, broken crowns split by a cleft, and low
+  stumps barely over the waves.
+* **The rock's look**: colour matching the cliffs (they were nearly black), and no more rows of little triangles (the
+  texture repeated every 4 m on rocks 50 m tall). Rock layers, ledges and vertical cracks, a dark wet band over the sea.
+* Still placeholders. Not yet: foam and breaking water round their feet. Not tried in play yet: bumping into them.
+* Try *Go to - sea stacks* and *Go to - sea arch* (Balanced, seed 7319).
+* This build comes as one plain folder: no parts, no zip, no `JOIN.cmd`.
+
 ## New in build 131 — sea stacks and arches (terrain revision 35)
 **Host and everyone joining need build 131** (versions must match to connect). The ground is the same as build 130's.
 * **Sea stacks and arches**: off steep coasts open to the sea stand groups of 2–7 rock pillars, about as high as the
