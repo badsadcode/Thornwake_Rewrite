@@ -3,12 +3,14 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 130** (v0.9.130, return point `67ff664`, `dist/Preview-130`): terrain revision 34, the land's
+* **Last build Tom has: 131** (v0.9.131, return point `3e43997`, `dist/Preview-131`): terrain revision 35, sea stacks and
+  arches (D266; `SeaStacks.cs`, `SeaStackView.cs`, placeholder models); *Terrain version → Build 130* = revision 34.
+  Launchers "Go to - sea stacks / sea arch (Balanced, seed 7319)". Collision on them not yet tried in play. Next
+  landform: headlands and coves. Exports may hang after finishing (`[ DONE ] savepack`): check the files, and check a
+  Godot process's command line before stopping it (Tom's Perun project runs Godot too).
+  Build 130 (v0.9.130, return point `67ff664`, `dist/Preview-130`): terrain revision 34, the land's
   biome climbs a volcano's lower slopes (D265); *Terrain version → Build 129* = revision 33. Launcher "Go to - forest up
   a quiet volcano (Island seas, seed 7319)".
-  **Since 130 (not in a build)**: terrain revision 35, sea stacks and arches (D266; `SeaStacks.cs`, `SeaStackView.cs`);
-  *Terrain version → Build 130* = revision 34. Spots (Balanced, seed 7319): stacks -22332,205176 looking -2.315 (fly 72),
-  an arch -17187,213553 looking -0.2 (fly 68).
   Build 129 (v0.9.129, return point `30f7c58`, `dist/Preview-129`): the volcano's smoke stays on the
   volcano when the scene origin shifts (D264; test flag `--extra-rebase`).
   Build 128 (v0.9.128, return point `7199a18`, `dist/Preview-128`): terrain revision 33, scree and

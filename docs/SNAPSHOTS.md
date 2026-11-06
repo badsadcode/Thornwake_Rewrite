@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 131** (sea stacks and arches off steep coasts, placeholder rock models D266 — terrain revision 35, the ground as 34) | `3e43997` | Thornwake-Rewrite-Preview-131 (v0.9.131) | Versions must match to connect; *Terrain version → Build 130* keeps revision 34 — build 130 = `67ff664` |
 | **Build 130** (the land's biomes climb the volcanoes' lower slopes; trough floors scoured of biome landforms D265 — terrain revision 34) | `67ff664` | Thornwake-Rewrite-Preview-130 (v0.9.130) | Versions must match to connect; *Terrain version → Build 129* keeps revision 33 — build 129 = `30f7c58` |
 | **Build 129** (the volcano's smoke stays on the volcano when the scene origin shifts D264) | `30f7c58` | Thornwake-Rewrite-Preview-129 (v0.9.129) | Versions must match to connect; same terrain as 128 — build 128 = `7199a18` |
 | **Build 128** (scree and boulders: talus under gorge, canyon and trough walls, rubble, erratics in cold biomes D263 — terrain revision 33) | `7199a18` | Thornwake-Rewrite-Preview-128 (v0.9.128) | Versions must match to connect; *Terrain version → Build 127* keeps revision 32 — build 127 = `8c88992` |
