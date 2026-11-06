@@ -41,6 +41,8 @@ public sealed class WorldPlan
     /// <summary>Glacial troughs with hanging valleys (revision 24, landform no. 5) and fjords (revision 26, no. 6); null
     /// when both are off or older.</summary>
     public Troughs? Troughs { get; }
+    /// <summary>Headlands and coves (revision 36, landform no. 10); null when off or older.</summary>
+    public Headlands? Headlands { get; }
     /// <summary>Settlement sites and the roads between them (docs/WORLDGEN_PLAN.md step 3): empty in revision 17.</summary>
     public IReadOnlyList<WorldSite> Sites { get; } = Array.Empty<WorldSite>();
     public IReadOnlyList<WorldRoad> Roads { get; } = Array.Empty<WorldRoad>();
@@ -178,6 +180,9 @@ public sealed class WorldPlan
         bool fjords = Style.Revision >= LandformCatalog.Fjords.Since && !Style.Landform(LandformCatalog.Fjords.Id).Off;
         if (Style.Revision >= LandformCatalog.Troughs.Since && (!Style.Landform(LandformCatalog.Troughs.Id).Off || fjords))
             Troughs = new Troughs(this, Style.Landform(LandformCatalog.Troughs.Id), fjords ? Style.Landform(LandformCatalog.Fjords.Id) : null);
+        // Headlands (revision 36) keep clear of the final rivers and lakes, fjord coasts and volcanoes.
+        if (Style.Revision >= LandformCatalog.Headlands.Since && !Style.Landform(LandformCatalog.Headlands.Id).Off)
+            Headlands = new Headlands(this, Style.Landform(LandformCatalog.Headlands.Id));
         stage?.Invoke(3);
         Climate = new Climate(this, Style.Climate);
         stage?.Invoke(4);

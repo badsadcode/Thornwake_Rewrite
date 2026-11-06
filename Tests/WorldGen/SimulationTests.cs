@@ -22,7 +22,8 @@ internal static class SimulationTests
         T.Run("Landforms: glacial troughs — flat floors, side rivers falling from hanging valleys, water still descending (revisions 24, 25)", TroughForms, filter);
         T.Run("Landforms: fjords — sea from the coast to the head's shore, between high walls; fjord coasts with islands (revisions 26, 27)", FjordForms, filter);
         T.Run("Landforms: volcanoes — cones over the land, calderas holding a lake, crater lakes closed in, volcanic ground, lava at active ones (revisions 28–31)", VolcanoForms, filter);
-        T.Run("Landforms: sea stacks and arches — in the sea off steep coasts, sea all round, apart, the same every time; the ground unchanged (revision 35)", SeaStackForms, filter);
+        T.Run("Landforms: sea stacks and arches — in the sea off steep coasts, sea all round, apart, the same every time (revision 35)", SeaStackForms, filter);
+        T.Run("Landforms: headlands and coves — the coast moved both ways along stretches, cliffs on the points, low coves, river mouths as before (revision 36)", HeadlandForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1159,13 +1160,13 @@ internal static class SimulationTests
             if (list.Count > 0) worlds++;
             var again = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style)).SeaStacks?.Rocks ?? Array.Empty<SeaStacks.Rock>();
             if (again.SequenceEqual(list)) same++;
-            var r34 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 34 }));
+            var r34 = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Landforms = Off(LandformCatalog.Headlands) }));
             foreach (var r in list)
             {
                 rocks++; if (r.Kind == SeaStacks.Kind.Arch) arches++;
                 var t = s.Sample(r.X, r.Z);
                 if (t.Water != WaterKind.Ocean || t.WaterLevel - t.Height < 1) { dry++; T.Note($"{id}/{seed} {r.Kind} at {r.X:0},{r.Z:0}: {t.Water}, {t.WaterLevel - t.Height:0.0} m of water"); }
-                if (t.Height != r34.Sample(r.X, r.Z).Height) ground++;
+                if (s.Plan.Headlands == null && t.Height != r34.Sample(r.X, r.Z).Height) ground++;
                 foreach (var o in list)
                     if (!o.Equals(r) && Math.Sqrt((o.X - r.X) * (o.X - r.X) + (o.Z - r.Z) * (o.Z - r.Z)) < (o.Kind == SeaStacks.Kind.Stack ? o.Radius : 0) + (r.Kind == SeaStacks.Kind.Stack ? r.Radius : 0)) overlap++;
             }
@@ -1176,6 +1177,48 @@ internal static class SimulationTests
         T.Check(overlap == 0, $"apart ({overlap})");
         T.Check(same == 4, $"placed the same every time ({same}/4)");
         T.Check(ground == 0, $"the ground is revision 34's ({ground})");
+    }
+
+    /// <summary>D270: stretches in most worlds, along them land where the sea was and sea where the land was, stones of
+    /// cliff on the points and low ground in the coves; every river still ends where it did, and away from the stretches
+    /// the ground is the same as without them.</summary>
+    private static void HeadlandForms()
+    {
+        int stretches = 0, gained = 0, lost = 0, steep = 0, low = 0, blocked = 0, moved = 0, worlds = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("balanced", 7319), ("archipelago", 7319), ("mountainous", 42) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            if (s.Plan.Headlands is not { Count: > 0 } h) continue;
+            worlds++; stretches += h.Count;
+            var without = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Landforms = Off(LandformCatalog.Headlands) }));
+            foreach (var (x, z, dx, dz, r) in h.Probes().Take(12))
+                for (double t = -r; t <= r; t += r / 16)
+                    for (double o = -900; o <= 900; o += 100)
+                    {
+                        double px = x - dz * t + dx * o, pz = z + dx * t + dz * o;
+                        var a = s.Sample(px, pz, 8); var b = without.Sample(px, pz, 8);
+                        if (a.Water == WaterKind.None && b.Water == WaterKind.Ocean) gained++;
+                        if (a.Water == WaterKind.Ocean && b.Water == WaterKind.None) { lost++; }
+                        if (a.Water == WaterKind.None && a.Mountain > .6 && a.Height - s.Plan.Profile.SeaLevel > 10 && b.Water == WaterKind.Ocean) steep++;
+                        if (a.Water == WaterKind.None && a.Height - s.Plan.Profile.SeaLevel < 2.4) low++;
+                    }
+            // Far from any stretch nothing moved; every river ends in the same water as without them.
+            var rng = new RandomStream(7);
+            for (int n = 0; n < 2000; n++)
+            {
+                double px = s.Plan.Macro.CellX(rng.Int(s.Plan.Macro.Size)), pz = s.Plan.Macro.CellZ(rng.Int(s.Plan.Macro.Size));
+                if (h.Shift(px, pz, out _, out _) == 0 && Math.Abs(s.Height(px, pz) - without.Height(px, pz)) > 1e-9) if (!h.Probes().Any(q => Math.Sqrt((q.X - px) * (q.X - px) + (q.Z - pz) * (q.Z - pz)) < q.Radius + 1500)) moved++;
+            }
+            foreach (var r in s.Plan.Hydrology.Reaches)
+                if (r.EndsInSea && s.Sample(r.Points[^1].X, r.Points[^1].Z).Water != without.Sample(r.Points[^1].X, r.Points[^1].Z).Water) { blocked++; T.Note($"{id}/{seed} reach {r.Id} ends at {r.Points[^1].X:0},{r.Points[^1].Z:0}"); }
+        }
+        T.Note($"{stretches} stretches in {worlds} worlds; {gained} points of new land, {lost} of new sea, {steep} of them cliff rock, {low} low shore; {blocked} river ends changed, {moved} far points moved");
+        T.Check(worlds == 4 && stretches >= 40, $"headlands in the worlds ({stretches}, {worlds})");
+        T.Check(gained > 500 && lost > 500, $"the coast moved both ways ({gained}, {lost})");
+        T.Check(steep > 20, $"rock on the points ({steep}; the band is under 100 m wide, these points 100 m apart)");
+        T.Check(low > 500, $"low shore in the coves ({low})");
+        T.Check(blocked == 0, $"river mouths as before ({blocked})");
+        T.Check(moved == 0, $"nothing moved away from the stretches ({moved})");
     }
 
     private static void TroughForms()

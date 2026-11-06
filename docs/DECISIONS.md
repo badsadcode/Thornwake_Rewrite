@@ -4228,6 +4228,26 @@ zip it." Each build used to leave two game copies (`dist/pkgN`, then the folder 
 game unzipped with its launchers beside it; no `pkgN`, zip, parts or `JOIN.cmd`. The parts were for moving builds through chat
 and GitHub's size limits, and Tom plays from this disk. CLAUDE.md updated. (A build for someone else can be zipped when asked.)
 
+## D270 — Headlands and coves: terrain revision 36 (2026-11-06)
+Tom picked landform no. 10 next, and set the order for the rest: foam waits for the water rework (separate ocean, river
+and lake shaders, today's styles kept selectable), which comes after the landforms that change where water meets land
+(this one; spits, sandbars and lagoons; oxbow lakes and river terraces; alluvial fans). The inland ones can follow it.
+* **Where** (`Game/WorldGen/Headlands.cs`, placed in the plan): stretches of coast 4–10 km in radius, 3 km or more apart,
+  clear of every river mouth (900 m), every lake (twice its round radius + 1.5 km), rivers near the coast, fjord coasts and
+  volcanoes: water wins (checked by a straight line along the coast alone, two river mouths on curved island coasts slipped
+  through, and a point's rock raised dry ground at 47 m over a lake, the spot of Tom's dump 182351: the tests caught both). Balanced 7319: 36 stretches, 91 points. *Landforms → Headlands and coves* sets amount and size.
+* **The coastline** moves in the coast stage, the same way as its fine wiggle (metres through the land's gradient): a noise
+  along the stretch's own direction says point or cove, so points reach straight out, 280–700 m, and coves 160–420 m in,
+  rounder and wider; fading out toward the stretch's ends.
+* **Points** stand up from the sea in cliffs (over ~40 m) to 18–60 m, knobbly of their own (the land's walking-scale relief
+  fades out toward the shore, and without this they were smooth domes), bare rock on the cliff band.
+* **Coves**: the ground let down to a low beach rising 3 %, back to the land's height ~500 m in.
+* **Sea stacks** stand off about half the points (their own streams).
+* Tools: `--headlands=<profile>,<seed>`; `--coast-map=<profile>,<seed>,<x>,<z>,<across>,<revision>,<file.ppm>` draws a shaded map
+  from above (a high camera washes out in haze). Note for captures: a small island's sea floor falls past 1 km within 2 km of
+  the shore, and fly height counts from it.
+* Return point: *Terrain version → Build 132* (revision 35; fingerprints frozen in `terrain-build132.json`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

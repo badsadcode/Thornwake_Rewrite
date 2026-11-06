@@ -78,6 +78,10 @@ public sealed class SeaStacks
             if (!apart) continue;
             if (Site(s, sea, setting, c.X, c.Z, c.Dx, c.Dz, new RandomStream(siteSeed))) sites.Add((c.X, c.Z));
         }
+        // Revision 36: off about half the headlands' points (docs/LANDFORMS.md no. 10), their own streams.
+        if (plan.Headlands is { } headlands)
+            foreach (var (x, z, dx, dz, seed) in headlands.Points())
+                if (Hashing.Unit(seed) < .5 * Math.Min(1, setting.Amount)) Site(s, sea, setting, x, z, dx, dz, new RandomStream(seed));
         // A coarse grid for lookups near a point.
         _minX = macro.MinX; _minZ = macro.MinZ;
         _gridSize = Math.Max(1, (int)Math.Ceiling(macro.Size * macro.Cell / GridCell));

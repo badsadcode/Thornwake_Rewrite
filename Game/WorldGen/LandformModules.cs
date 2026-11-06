@@ -59,7 +59,9 @@ public static class LandformCatalog
 
     public static readonly LandformInfo SeaStacks = new("seastacks", "Sea stacks and arches", "off steep coasts open to the sea", LandformKind.Plan, LandformRule.Coast, 35);
 
-    public static readonly IReadOnlyList<LandformInfo> All = new[] { Escarpments, Waterfalls, Canyons, Cirques, Troughs, Fjords, Volcanoes, SeaStacks, Dunes, Mesas, Spires };
+    public static readonly LandformInfo Headlands = new("headlands", "Headlands and coves", "along stretches of coast, away from rivers", LandformKind.Plan, LandformRule.Coast, 36);
+
+    public static readonly IReadOnlyList<LandformInfo> All = new[] { Escarpments, Waterfalls, Canyons, Cirques, Troughs, Fjords, Volcanoes, SeaStacks, Headlands, Dunes, Mesas, Spires };
 
     /// <summary>The big landforms of a world, in order, run on the macro raster before erosion (each from the terrain
     /// revision that brought it, unless switched off).</summary>

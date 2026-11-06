@@ -158,6 +158,7 @@ Then the fantasy landforms Tom picks (section at the end).
 * **Play**: harbour and fishing-village sites (site hints), sheltered landings.
 * **Build**: a coast module shaping the coastline at a few hundred metres, beaches in the coves; sea stacks
   (no. 9) stand off the points.
+* **Status**: terrain revision 36 (D270). Site hints for harbours not yet (no sites in the plan yet).
 
 ### 11. Spits, sandbars and lagoons
 * **What**: a long sand ridge across a bay or a river mouth with calm, shallow water behind it.

@@ -91,6 +91,50 @@ if (args.FirstOrDefault(a => a.StartsWith("--stacks=")) is { } skArg)
         Console.WriteLine($"  {r.Kind} {r.X:0},{r.Z:0} height {r.Height:0} radius {r.Radius:0} seabed {r.Seabed:0.0} out {r.DirX:0.00},{r.DirZ:0.00}{(r.Span > 0 ? $" span {r.Span:0}" : "")}");
     return 0;
 }
+// --coast-map=<profile>,<seed>,<x>,<z>,<metres across>,<revision>,<file.ppm>: a shaded map from above, 500 pixels across, north up
+// (sea blue by depth, land by height, lit from the north-west; bare rock grey, low beach pale) (D270).
+if (args.FirstOrDefault(a => a.StartsWith("--coast-map=")) is { } cmArg)
+{
+    var p = cmArg[12..].Split(',');
+    var s0 = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    double cx = double.Parse(p[2], CultureInfo.InvariantCulture), cz = double.Parse(p[3], CultureInfo.InvariantCulture), across = double.Parse(p[4], CultureInfo.InvariantCulture);
+    var s = new TerrainSampler(new WorldPlan(s0.Plan.Manifest, style: s0.Plan.Style with { Revision = int.Parse(p[5]) }));
+    const int N = 500;
+    double step = across / N, sea = s.Plan.Profile.SeaLevel;
+    var h = new double[(N + 1) * (N + 1)]; var kinds = new TerrainSample[(N + 1) * (N + 1)];
+    System.Threading.Tasks.Parallel.For(0, N + 1, j =>
+    {
+        for (int i = 0; i <= N; i++) { var t = s.Sample(cx - across / 2 + i * step, cz - across / 2 + j * step, step * 2); kinds[j * (N + 1) + i] = t; h[j * (N + 1) + i] = t.Height; }
+    });
+    var image = new byte[N * N * 3];
+    for (int j = 0; j < N; j++)
+        for (int i = 0; i < N; i++)
+        {
+            int k = j * (N + 1) + i;
+            var t = kinds[k];
+            double light = Math.Clamp(1 + ((h[k] - h[k + 1]) + (h[k] - h[k + N + 1])) / step * .9, .35, 1.5);
+            double r, g, b;
+            if (t.Water != WaterKind.None) { double d = Math.Clamp((t.WaterLevel - t.Height) / 40, 0, 1); r = 60 - 40 * d; g = 150 - 90 * d; b = 190 - 60 * d; light = 1; }
+            else if (t.Height - sea < 2.4) { r = 225; g = 205; b = 150; }
+            else if (t.Mountain > .6) { r = 130; g = 125; b = 118; }
+            else { double u = Math.Clamp((t.Height - sea) / 300, 0, 1); r = 105 + 80 * u; g = 140 + 10 * u; b = 75 + 50 * u; }
+            image[(j * N + i) * 3] = (byte)Math.Clamp(r * light, 0, 255); image[(j * N + i) * 3 + 1] = (byte)Math.Clamp(g * light, 0, 255); image[(j * N + i) * 3 + 2] = (byte)Math.Clamp(b * light, 0, 255);
+        }
+    using var f = File.Create(p[6]);
+    f.Write(System.Text.Encoding.ASCII.GetBytes($"P6 {N} {N} 255\n"));
+    f.Write(image);
+    return 0;
+}
+// --headlands=<profile>,<seed>: the stretches of coast with headlands and coves (D270).
+if (args.FirstOrDefault(a => a.StartsWith("--headlands=")) is { } hlArg)
+{
+    var p = hlArg[12..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    Console.WriteLine($"{p[0]}/{p[1]}: {s.Plan.Headlands?.Count ?? 0} stretches, {s.Plan.Headlands?.Points().Count() ?? 0} points");
+    foreach (var (x, z, dx, dz, r) in s.Plan.Headlands?.Probes() ?? Enumerable.Empty<(double, double, double, double, double)>())
+        Console.WriteLine($"  {x:0},{z:0} out {dx:0.00},{dz:0.00} radius {r:0}");
+    return 0;
+}
 if (args.FirstOrDefault(a => a.StartsWith("--canyons=")) is { } cyArg)
 {
     var p = cyArg[10..].Split(',');

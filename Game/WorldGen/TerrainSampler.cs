@@ -70,6 +70,7 @@ public sealed partial class TerrainSampler
     private readonly Cirques? _cirques;
     private readonly Troughs? _troughs;
     private readonly Volcanoes? _volcanoes;
+    private readonly Headlands? _headlands;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
     private readonly double[] _poolQuantiles, _channelQuantiles;
@@ -92,6 +93,7 @@ public sealed partial class TerrainSampler
         _cirques = plan.Cirques is { Count: > 0 } q ? q : null;
         _troughs = plan.Troughs is { Count: > 0 } t ? t : null;
         _volcanoes = _planForms.OfType<Volcanoes>().FirstOrDefault(v => v.Count > 0);
+        _headlands = plan.Headlands is { Count: > 0 } h ? h : null;
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
@@ -128,9 +130,12 @@ public sealed partial class TerrainSampler
         // carve through everything before them ("water always wins"). The sea ends the walk at the coast stage.
         // (each stage takes and gives plain values — a shared struct cost ~2.5 % of the speed)
         double lx = x - _ox, lz = z - _oz;
-        Coast(x, z, lx, lz, minWavelength, out double land, out double macroHeight, out double mountainShare, out double rasterLand, out double coastDistance);
+        Coast(x, z, lx, lz, minWavelength, out double land, out double macroHeight, out double mountainShare, out double rasterLand, out double coastDistance, out double point, out double cove);
         if (land <= 0) return Sea(x, z, land, coastDistance);
         double baseHeight = Continent(land, rasterLand, macroHeight, coastDistance, ref mountainShare);
+        // Revision 36: headlands' cliffs and coves' beaches.
+        double pointRock = 0;
+        if (point > 0 || cove > 0) baseHeight = Headlands.Relief(x, z, baseHeight, point, cove, coastDistance, out pointRock);
         double canyon = _canyons != null ? _canyons.Uplift(x, z) : 0; // (revision 21: raised land a river has cut through)
         baseHeight += canyon;
         // Revision 26: a fjord's mountain walls, raised like a canyon's land (rivers crossing them cut gorges).
@@ -152,7 +157,7 @@ public sealed partial class TerrainSampler
             return new(_p.SeaLevel + baseHeight + detail, land, Math.Max(mountainShare, troughRock), detail, WaterKind.Ocean, _p.SeaLevel, -1, 0);
         double bare = 0;
         if (_planForms.Length > 0) { detail += PlanGround(x, z, minWavelength, out bare, out double planScree); scree = Math.Max(scree, planScree); }
-        bare = Math.Max(bare, troughRock);
+        bare = Math.Max(Math.Max(bare, troughRock), pointRock);
         double beforeBiome = detail;
         BiomeTerrain(x, z, lx, lz, minWavelength, baseHeight, inland, ref detail, out bool wetland, out double poolCover, out double poolDepth,
             out double poolSize, out double poolChannels, out double flatten);
@@ -196,8 +201,9 @@ public sealed partial class TerrainSampler
     /// <summary>Stage 1a, coast: the macro raster (land, eroded height, mountain share) and the sub-raster coastline wiggle.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)] // (the split must not cost speed, D227)
     private void Coast(double x, double z, double lx, double lz, double minWavelength, out double land, out double macroHeight, out double mountainShare,
-        out double rasterLand, out double coastDistance)
+        out double rasterLand, out double coastDistance, out double point, out double cove)
     {
+        point = 0; cove = 0;
         _macro.Sample(x, z, WorldPlan.LandChannel, WorldPlan.HeightChannel, WorldPlan.MountainChannel, out land, out macroHeight, out mountainShare);
         rasterLand = land;
         // Sub-raster coastline: shift the coast sideways by a fractal distance (metres), converted to land
@@ -208,6 +214,8 @@ public sealed partial class TerrainSampler
             _macro.SampleGradient(WorldPlan.LandChannel, x, z, out double gx, out double gz);
             double gradient = Math.Sqrt(gx * gx + gz * gz);
             double shift = _style.CoastDetailShift * Noise.Fbm(lx, lz, _macro.Cell * 2.5, 7, minWavelength, _coastSeed, .55);
+            // Revision 36: headlands and coves move the coastline further, the same way.
+            if (_headlands != null) shift += _headlands.Shift(x, z, out point, out cove);
             land += shift * gradient * DetMath.Smooth(1 - Math.Abs(land) / _coastBand); // fades out: no step at the band edge
             coastDistance = Math.Abs(land) / Math.Max(gradient, 1e-12);
         }
