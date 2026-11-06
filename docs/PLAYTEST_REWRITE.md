@@ -78,6 +78,21 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 133 — headlands, coves, spits and lagoons (terrain revision 37)
+**Host and everyone joining need build 133** (versions must match to connect).
+* **Headlands and coves**: along stretches of coast, points of rock reach a few hundred metres out to sea, with cliffs on a
+  jagged line, a low shelf at the water, crags and bare patches on top; rounder coves between them, the ground let down to a
+  low beach. Sea stacks stand off about half the points.
+* **Spits, sandbars and lagoons**: on flat coasts, sand just above the sea. A spit grows from the shore along the coast and
+  curls at its tip; a barrier joins the shore at both ends with an inlet, a shallow lagoon behind it; a sandbar lies offshore,
+  broken up and mostly awash. You can walk along them.
+* Rivers and lakes are untouched: all of these keep clear of them. (So no spits across river mouths yet.)
+* Lagoons are still sea water, so waves run in them; calm water comes with the water rework.
+* Try *Go to - rocky headland*, *Go to - headland and cove*, *Go to - lagoon, from the water*, *Go to - lagoon, from above*
+  (Balanced, seed 7319). Cove beaches and walking on the spits are not checked up close yet: tell me what you find.
+* *New world → Landforms* has *Headlands and coves* and *Spits, sandbars and lagoons*.
+* Your build 132 worlds keep their coasts; *Terrain version → Build 132* gives them to new worlds too.
+
 ## New in build 132 — sea stacks and arches as worn rock
 **Host and everyone joining need build 132** (versions must match to connect). Same terrain as build 131.
 * **Arches rebuilt** (you: "they don't look natural"): a block of cliff with a hole worn through it, one leg stout and
