@@ -10,7 +10,7 @@ namespace Thornwake.Rewrite;
 public static class RockMeshes
 {
     private static ArrayMesh[]? _meshes;
-    private static ShaderMaterial? _material;
+    private static ShaderMaterial? _material, _big;
 
     private static ShaderMaterial CreateMaterial()
     {
@@ -23,11 +23,22 @@ public static class RockMeshes
     public static void Release()
     {
         if (_meshes != null) foreach (var mesh in _meshes) mesh.Dispose();
-        _meshes = null; _material = null;
+        _meshes = null; _material = null; _big = null;
     }
 
-    /// <summary>The rocks' material (Rock.gdshader with the rock textures), for other rock meshes (sea stacks, D266).</summary>
-    public static ShaderMaterial Material => _material ??= CreateMaterial();
+    /// <summary>The rocks' material for rocks tens of metres tall (sea stacks and arches, D268): the texture every 19 m and,
+    /// turned, every 5.9 m (repeating every 4 m it drew rows of little triangles over them, like knitting).</summary>
+    public static ShaderMaterial BigMaterial
+    {
+        get
+        {
+            if (_big != null) return _big;
+            _big = CreateMaterial();
+            _big.SetShaderParameter("tile", 19f);
+            _big.SetShaderParameter("second_tile", 5.9f);
+            return _big;
+        }
+    }
 
     public static ArrayMesh Get(int kind)
     {

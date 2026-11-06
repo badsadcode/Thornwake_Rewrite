@@ -4204,6 +4204,30 @@ cliff with a hole worn through it. `SeaStackView.ArchSurface`, the generator's n
   part of the ground, not diggable.
 * Return point: build 131 (`3e43997`) has the tube arches.
 
+## D268 — Sea stacks as worn rock, and the rock's look (2026-11-06)
+Beside the rebuilt arches (D267) the stacks looked like thimbles, all alike. Tom agreed to rework them. The generator's
+numbers are unchanged, no new terrain revision:
+* **Four kinds**, by chance (`SeaStackView.StackModel`), as solids meshed like the arches: a flat-topped tower with sheer
+  sides (40 %), a spire narrowing in steps (22 %), a broken crown split by a cleft and lower on one side (20 %), a low stump
+  barely over the waves, 14–34 % of the height the generator gave and wider (18 %). Blocky in plan, turned its own way,
+  narrowing in ledges, worn and with fallen blocks as the arches; green only on open tops above the spray (not on spires
+  or stumps).
+* **Colour**: 1.45 × the boulders' stone, as the cliffs behind: they stood nearly black before them.
+* **The texture** repeated every 4 m (right for a boulder) and drew rows of little triangles over rocks 50 m tall, like
+  knitting. `Rock.gdshader` got `tile` (default 4: boulders unchanged) and `second_tile`; big rocks use 19 m and, turned, 5.9 m.
+* **Beds** at least three mesh cells tall with smooth steps (as tall as a cell they zigzagged), bands one colour across a
+  quad, wider than the cells.
+* **A hole right through a stack**: flipping each triangle by its own normal turned folded ones inside out; the back
+  faces are culled, so one such triangle let the view through the whole rock. Facing now comes from the grid.
+* Return point: build 131 (`3e43997`). Open: foam and breaking water round their feet (a water job); collision untried in play.
+
+## D269 — One unzipped package per build (2026-11-06)
+Tom: "drop saving one of the packages ... it's filling up my hard drive and I actually only need one. And we don't need to
+zip it." Each build used to leave two game copies (`dist/pkgN`, then the folder unpacked by the join test in
+`dist/Preview-N`) and the zip again in 25 MB parts: over 500 MB a build. From build 132: one folder, `dist/Preview-N`, the
+game unzipped with its launchers beside it; no `pkgN`, zip, parts or `JOIN.cmd`. The parts were for moving builds through chat
+and GitHub's size limits, and Tom plays from this disk. CLAUDE.md updated. (A build for someone else can be zipped when asked.)
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -24,7 +24,8 @@ Standing rules from Tom for any Claude session in this repository (cloud or loca
 * Shaders: Godot does not allow `return` in `fragment()`/`sky()`. Check a changed shader compiles before pushing
   (run the game or a capture and look for `SHADER ERROR` in the log).
 * Each build Tom gets: version bump, row in `docs/SNAPSHOTS.md` (commit = return point), notes in `docs/PLAYTEST_REWRITE.md`.
-  Windows packages are split into 25 MB parts with a `JOIN.cmd` (`tools/make_join_cmd.py`) for sending through chat.
+  One package per build, unzipped: `dist/Preview-N` (the game folder and the launchers). No second copy, zip, parts or
+  `JOIN.cmd`: they filled Tom's disk (D269). Zip a build only when Tom asks to send it to someone.
 * Tom's debug dumps (F-key dump in game) carry a `Reproduce:` line: paste its arguments after `--` to rebuild the exact
   world, place, time and settings.
 

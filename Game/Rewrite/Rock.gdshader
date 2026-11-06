@@ -5,6 +5,8 @@ shader_type spatial;
 render_mode diffuse_burley;
 
 uniform sampler2DArray rock_tex : source_color, filter_nearest_mipmap, repeat_enable;
+uniform float tile = 4.0;        // metres per repeat of the texture
+uniform float second_tile = 0.0; // above 0: a second layer, turned, at this many metres (rocks tens of metres tall, D268)
 // Rain (D212, Wet look by material): wet rock dark and glossy, the tops most; it sheds water and dries first.
 global uniform vec2 rain_wetness;
 global uniform vec4 rain_now;
@@ -22,10 +24,17 @@ void fragment() {
 	vec3 w = pow(abs(world_n), vec3(4.0));
 	w /= w.x + w.y + w.z;
 	vec2 wrap = vec2(4096.0);
-	vec3 tx = texture(rock_tex, vec3(mod(world_pos.zy, wrap) / vec2(4.0, -4.0), look)).rgb;
-	vec3 ty = texture(rock_tex, vec3(mod(world_pos.xz, wrap) / 4.0, look)).rgb;
-	vec3 tz = texture(rock_tex, vec3(mod(world_pos.xy, wrap) / vec2(4.0, -4.0), look)).rgb;
+	vec3 tx = texture(rock_tex, vec3(mod(world_pos.zy, wrap) / vec2(tile, -tile), look)).rgb;
+	vec3 ty = texture(rock_tex, vec3(mod(world_pos.xz, wrap) / tile, look)).rgb;
+	vec3 tz = texture(rock_tex, vec3(mod(world_pos.xy, wrap) / vec2(tile, -tile), look)).rgb;
 	vec3 t = (tx * w.x + ty * w.y + tz * w.z) / 0.5;
+	if (second_tile > 0.0) {
+		mat2 turn = mat2(vec2(0.8, 0.6), vec2(-0.6, 0.8));
+		vec3 sx = texture(rock_tex, vec3(turn * mod(world_pos.zy, wrap) / second_tile, look)).rgb;
+		vec3 sy = texture(rock_tex, vec3(turn * mod(world_pos.xz, wrap) / second_tile, look)).rgb;
+		vec3 sz = texture(rock_tex, vec3(turn * mod(world_pos.xy, wrap) / second_tile, look)).rgb;
+		t = mix(t, (sx * w.x + sy * w.y + sz * w.z) / 0.5, 0.45);
+	}
 	// Colours are sRGB like the terrain palette (which converts at the end too).
 	ALBEDO = pow(clamp(COLOR.rgb * t, 0.0, 1.0), vec3(2.2));
 	ROUGHNESS = 0.9;

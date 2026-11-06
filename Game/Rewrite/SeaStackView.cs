@@ -9,10 +9,10 @@ namespace Thornwake.Rewrite;
 
 /// <summary>
 /// Sea stacks and arches (landform no. 9, D266): the rock the generator places off steep coasts
-/// (<see cref="SeaStacks"/>), built here as procedural placeholder models until the art comes — a stack a column of
-/// jagged rock rings, undercut at the waterline, stepped in strata, tapering to a grassy top; an arch a block of cliff
-/// with a hole worn through it, a solid shape meshed on a worker (D267; a tube swept over a half circle looked man-made).
-/// Flat-shaded in the rocks' material (the biome's rock colour and
+/// (<see cref="SeaStacks"/>), built here as procedural placeholder models until the art comes: solid shapes of worn rock
+/// (signed distance), meshed on a worker — an arch a block of cliff with a hole worn through it (D267; a tube swept over a
+/// half circle looked man-made), a stack a tower, a spire, a broken crown or a low stump (D268; columns of rings looked like
+/// thimbles). Flat-shaded in the rocks' material (the biome's rock colour and
 /// texture). Drawn within 12 km of the camera, solid (their own faces as collision) within 700 m. Each is placed from
 /// its world position against the scene's origin every time that moves (world-space objects left behind at a shift
 /// jumped away, D264).
@@ -90,7 +90,7 @@ public sealed class SeaStackView
         arrays[(int)Mesh.ArrayType.Color] = model.Colors;
         var mesh = new ArrayMesh();
         mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-        mesh.SurfaceSetMaterial(0, RockMeshes.Material);
+        mesh.SurfaceSetMaterial(0, RockMeshes.BigMaterial);
         var faces = model.Vertices;
         var node = new MeshInstance3D { Name = "SeaStack", Mesh = mesh };
         // (an arch's legs lie along its way out to sea: local x)
@@ -138,73 +138,13 @@ public sealed class SeaStackView
 
     private static Model Build(SeaStacks.Rock rock, Color tint)
     {
-        var vertices = new List<Vector3>(); var normals = new List<Vector3>(); var colours = new List<Color>();
-        if (rock.Kind == SeaStacks.Kind.Arch) ArchSurface(rock, tint, vertices, normals, colours);
-        else StackSurface(rock, tint, vertices, normals, colours);
-        return new Model(vertices.ToArray(), normals.ToArray(), colours.ToArray());
+        // (paler than the boulders' stone: at the same colour they stood nearly black before the cliffs, D268)
+        tint = new Color(tint.R * RockLight, tint.G * RockLight, tint.B * RockLight, tint.A);
+        return rock.Kind == SeaStacks.Kind.Arch ? ArchModel(rock, tint) : StackModel(rock, tint);
     }
 
+    private const float RockLight = 1.45f;
     private static readonly Color Stone = new("777a72"), Dark = new("5d605a"), Moss = new("66744f"), Grass = new("5f7a45");
-
-    private static void StackSurface(SeaStacks.Rock rock, Color tint, List<Vector3> vertices, List<Vector3> normals, List<Color> colours)
-    {
-        var rings = StackRings(rock);
-        var rng = new RandomStream(rock.Seed ^ 0x5EA5UL);
-        void Tri(Vector3 a, Vector3 b, Vector3 c, bool top)
-        {
-            var normal = (b - a).Cross(c - a).Normalized();
-            float shade = (float)rng.Unit();
-            var colour = normal.Y > .75f ? (top ? Grass : Moss).Lerp(Stone, .25f + .3f * shade) : Stone.Lerp(Dark, shade * .6f);
-            var tinted = new Color(colour.R * tint.R, colour.G * tint.G, colour.B * tint.B, tint.A);
-            // (Godot front faces are clockwise seen from outside)
-            vertices.Add(a); vertices.Add(c); vertices.Add(b);
-            for (int k = 0; k < 3; k++) { normals.Add(normal); colours.Add(tinted); }
-        }
-        int n = rings[0].Length;
-        for (int k = 0; k + 1 < rings.Count; k++)
-            for (int i = 0; i < n; i++)
-            {
-                int j = (i + 1) % n;
-                Vector3 a = rings[k][i], b = rings[k][j], c = rings[k + 1][j], d = rings[k + 1][i];
-                Tri(a, b, c, false); Tri(a, c, d, false);
-            }
-        // The top: a low dome over the last ring, grassy.
-        var last = rings[^1];
-        var centre = last.Aggregate(Vector3.Zero, (s, v) => s + v) / n + Vector3.Up * (float)(rock.Radius * .12);
-        for (int i = 0; i < n; i++) Tri(last[i], last[(i + 1) % n], centre, true);
-    }
-
-    /// <summary>A stack: rings of 16 points every ~3 m from 3 m under the seabed to its top, counter-clockwise seen from
-    /// above, the radius jagged by noise, undercut at the waterline, stepped every 5–9 m, tapering over its top quarter.</summary>
-    private static List<Vector3[]> StackRings(SeaStacks.Rock rock)
-    {
-        const int N = 16;
-        var rng = new RandomStream(rock.Seed);
-        float h = (float)rock.Height, r0 = (float)rock.Radius, bottom = (float)rock.Seabed - 3;
-        float strata = (float)rng.Between(5, 9), squash = (float)rng.Between(.7, 1);
-        int levels = Math.Clamp((int)Math.Ceiling((h - bottom) / 3), 4, 48);
-        var rings = new List<Vector3[]>();
-        for (int k = 0; k <= levels; k++)
-        {
-            float y = bottom + (h - bottom) * k / levels;
-            float r = r0 * (y < 0 ? 1 + .25f * Mathf.Clamp(-y / 15, 0, 1) : 1);       // wider down in the water
-            r *= 1 - .18f * Mathf.Clamp(1 - Mathf.Abs(y - 1.2f) / 2.5f, 0, 1);        // the waves' notch
-            float layer = Mathf.PosMod(y, strata) / strata;
-            r *= 1 + .07f * (layer < .3f ? 1 : 0);                                    // strata ledges
-            float u = Mathf.Clamp((y - .72f * h) / (.28f * h), 0, 1);
-            r *= 1 - .5f * Mathf.Pow(u, 1.5f);                                        // the top tapers
-            float lx = (float)rock.LeanX * Math.Max(0, y), lz = (float)rock.LeanZ * Math.Max(0, y);
-            var ring = new Vector3[N];
-            for (int i = 0; i < N; i++)
-            {
-                float a = -i * Mathf.Tau / N, ca = Mathf.Cos(a), sa = Mathf.Sin(a);
-                float jag = 1 + .2f * Noise(rock.Seed, ca * 1.6f + 3, y / 7, sa * 1.6f + 3) + .08f * Noise(rock.Seed + 1, ca * 4, y / 2.5f, sa * 4);
-                ring[i] = new Vector3(ca * r * jag + lx, y, sa * r * jag * squash + lz);
-            }
-            rings.Add(ring);
-        }
-        return rings;
-    }
 
     private static float SmoothMax(float a, float b, float k)
     {
@@ -212,14 +152,97 @@ public sealed class SeaStackView
         return Math.Max(a, b) + h * h * k * .25f;
     }
 
+    /// <summary>Worn rock, near the surface only (the noise is the cost): vertical joints cut in, tilted beds as ledges, the
+    /// waves' notch. <paramref name="size"/> scales it to the rock (a stump's joints are not a tower's).</summary>
+    private static float Worn(float d, ulong seed, float x, float y, float z, float tilt, float bed, float size)
+    {
+        if (Math.Abs(d) >= 9 * size) return d;
+        float joints = Math.Abs(Noise(seed + 7, x / (6 * size), y / 32, z / (6 * size))), s = y + tilt * x;
+        d += size * (1.6f * (1 - Math.Min(joints * 5, 1)) - .3f + 1.6f * Noise(seed + 8, x / (8 * size), y / (8 * size), z / (8 * size)) + .6f * Noise(seed + 9, x / (3 * size), y / 3, z / (3 * size)));
+        // (smooth steps, and beds three cells or more tall, set by the callers: sharp ones as tall as a cell drew a knitted zigzag)
+        float f = Mathf.PosMod(s, bed) / bed;
+        d += .7f * size * (-1 + 1.25f * Mathf.SmoothStep(.2f, .42f, f) - 1.25f * Mathf.SmoothStep(.84f, 1, f));
+        d += 1.5f * Mathf.Clamp(1 - Math.Abs(y - 1.2f) / 2.8f, 0, 1);
+        return d;
+    }
+
+    /// <summary>Blocks fallen from a rock, lying in the water: added to its solid.</summary>
+    private static float Fallen(float d, List<(Vector3 At, float R)> blocks, ulong seed, float x, float y, float z)
+    {
+        foreach (var (at, r) in blocks)
+        {
+            float dx = x - at.X, dy = (y - at.Y) * 1.35f, dz = z - at.Z;
+            float block = Mathf.Sqrt(dx * dx + dy * dy + dz * dz) - r;
+            if (block < 3) block += r * .3f * Noise(seed + 10, x / 2.5f, y / 2.5f, z / 2.5f);
+            d = Math.Min(d, block);
+        }
+        return d;
+    }
+
+    /// <summary>
+    /// A stack (D268, Tom's call after the arches; columns of jagged rings looked like thimbles, all alike): one of four
+    /// kinds — a flat-topped tower with sheer sides, a spire narrowing in steps, a broken crown split by a cleft and
+    /// lower on one side, a low stump barely over the waves, wider than it is tall. Blocky in plan, stepped where beds end,
+    /// worn as the arches are, fallen blocks at its feet; green only on an open top well above the spray. As high as
+    /// the generator says, but for the stumps.
+    /// </summary>
+    private static Model StackModel(SeaStacks.Rock rock, Color tint)
+    {
+        var rng = new RandomStream(rock.Seed);
+        ulong seed = rock.Seed;
+        float r = (float)rock.Radius, bottom = (float)rock.Seabed - 3, kind = (float)rng.Unit();
+        bool spire = kind >= .4f && kind < .62f, broken = kind >= .62f && kind < .82f, stump = kind >= .82f;
+        float h = (float)rock.Height * (stump ? (float)rng.Between(.14, .34) : 1);
+        float a = r * (float)rng.Between(.85, 1.25) * (stump ? 1.15f : 1), b = r * (float)rng.Between(.6, 1) * (stump ? 1.15f : 1);
+        float taper = spire ? .62f : stump ? .2f : (float)rng.Between(.08, .22);
+        int ledges = 2 + rng.Int(4);
+        float turn = (float)rng.Unit() * Mathf.Tau, ca = Mathf.Cos(turn), sa = Mathf.Sin(turn);
+        float tilt = (float)rng.Between(-.18, .18), bed = (float)rng.Between(2.6, 4.5), size = Mathf.Clamp(r / 10, .5f, 1.2f);
+        float cleft = a * (float)rng.Between(-.35, .35), leanX = (float)rock.LeanX, leanZ = (float)rock.LeanZ;
+        float reach = r * 2.2f + 8;
+        float cell = Mathf.Clamp(Math.Max(reach * 2, h - bottom) / 30, 1.5f, 3);
+        bed = Math.Max(bed, cell * 3);
+        var blocks = new List<(Vector3 At, float R)>();
+        for (int n = 1 + rng.Int(4); n > 0; n--)
+        {
+            float at = (float)rng.Unit() * Mathf.Tau, far = r * (float)rng.Between(1.05, 1.6);
+            blocks.Add((new Vector3(far * Mathf.Cos(at), (float)rng.Between(-2, 1), far * Mathf.Sin(at)), r * (float)rng.Between(.15, .38)));
+        }
+        float Solid(float x, float y, float z)
+        {
+            float warpAt = 1.6f * r + 6;
+            float px = x + r * .28f * Noise(seed + 2, x / warpAt, y / warpAt, z / warpAt) - leanX * Math.Max(y, 0);
+            float pz = z + r * .28f * Noise(seed + 3, x / warpAt + 7, y / warpAt, z / warpAt) - leanZ * Math.Max(y, 0);
+            float rx = ca * px + sa * pz, rz = ca * pz - sa * px;
+            // Narrowing in steps, each a ledge where a bed ends; wider down in the water.
+            float v = Mathf.Clamp(y / h, 0, 1) * ledges, step = Mathf.Floor(v), rise = v - step;
+            float t = (step + Mathf.Clamp((rise - .72f) / .28f, 0, 1)) / ledges;
+            float scale = (1 - taper * t) * (y < 0 ? 1 + .25f * Mathf.Clamp(-y / 15, 0, 1) : 1);
+            float ax = a * scale, az = b * scale;
+            // Blocky in plan: between a circle and a square.
+            float plan = (Mathf.Pow(Mathf.Pow(Math.Abs(rx) / ax, 3.2f) + Mathf.Pow(Math.Abs(rz) / az, 3.2f), 1 / 3.2f) - 1) * Math.Min(ax, az);
+            // The top: a tilted bed, rough; a spire's falls away from its peak; a broken crown's is split and lower on one side.
+            float top = h + tilt * rx * .7f + .05f * h * Noise(seed + 4, x / (r + 4), 0, z / (r + 4));
+            if (spire) top -= .55f * h * Mathf.Clamp(Mathf.Sqrt(rx * rx + rz * rz) / (r * 1.1f), 0, 1);
+            if (broken)
+            {
+                top -= .22f * h * Mathf.Clamp(rx / a + .3f, 0, 1);
+                top -= .4f * h * Mathf.Clamp(1 - Math.Abs(rx - cleft) / (a * .32f), 0, 1);
+            }
+            float d = SmoothMax(plan, y - top, 2.5f);
+            d = Worn(d, seed, x, y, z, tilt, bed, size);
+            return Fallen(d, blocks, seed, x, y, z);
+        }
+        return Surface(Solid, new Vector3(-reach, bottom, -reach), new Vector3(reach, h * 1.15f + 6, reach), cell, seed, tint, tilt, spire || stump ? 1e9f : Math.Max(.6f * h, 12));
+    }
+
     /// <summary>
     /// An arch (D267, Tom: "they don't look natural"; a tube of even thickness swept over a half circle looked man-made): what
     /// is left of a headland — a block of cliff, one leg stout and one slight, its top sloping off and narrowing upward,
     /// a lopsided hole worn through with a flatter roof, in tilted beds and vertical joints, undercut at the waterline,
-    /// fallen blocks at its feet. A solid shape (signed distance, metres) on a grid of 1.5–2.5 m cells, its surface taken
-    /// with surface nets and flat-shaded; the bottom left open under the seabed. x along the legs, z across.
+    /// fallen blocks at its feet. x along the legs, z across.
     /// </summary>
-    private static void ArchSurface(SeaStacks.Rock rock, Color tint, List<Vector3> vertices, List<Vector3> normals, List<Color> colours)
+    private static Model ArchModel(SeaStacks.Rock rock, Color tint)
     {
         var rng = new RandomStream(rock.Seed);
         ulong seed = rock.Seed;
@@ -231,6 +254,10 @@ public sealed class SeaStackView
         float roof = h - Math.Max(.3f * h, half * 1.3f);                 // the hole's top, under the bridge of rock
         float tilt = (float)rng.Between(-.16, .16), bed = (float)rng.Between(2.6, 4.5);
         float bend = half * (float)rng.Between(-.45, .45);
+        // The grid, past the shape all round but its open bottom.
+        float reach = Math.Max(Math.Abs(x0), x1) + half + 8, across = thick * 1.3f + half * 1.6f + 8;
+        float cell = Mathf.Clamp(Math.Max(reach * 2, h - bottom) / 50, 1.5f, 2.5f); // (at 1 m a small arch was 20,000 triangles)
+        bed = Math.Max(bed, cell * 3);
         // Blocks fallen from it, lying in the water by its legs.
         var blocks = new List<(Vector3 At, float R)>();
         for (int b = 2 + rng.Int(4); b > 0; b--)
@@ -262,40 +289,33 @@ public sealed class SeaStackView
                 hole = (Mathf.Pow(Mathf.Pow(nx, 2.6f) + Mathf.Pow(ny, 2.6f), 1 / 2.6f) - 1) * Math.Min(a, roof + 3);
             }
             d = SmoothMax(d, -hole, 2.5f);
-            // Worn rock near the surface only (the noise is the cost): vertical joints cut in, tilted beds, the waves' notch.
-            if (Math.Abs(d) < 9)
-            {
-                float joints = Math.Abs(Noise(seed + 7, x / 6, y / 32, z / 6)), s = y + tilt * x;
-                d += 1.6f * (1 - Math.Min(joints * 5, 1)) - .3f + 1.6f * Noise(seed + 8, x / 8, y / 8, z / 8) + .6f * Noise(seed + 9, x / 3, y / 3, z / 3);
-                d += .7f * (Mathf.PosMod(s, bed) / bed < .32f ? -1 : .25f);
-                d += 1.5f * Mathf.Clamp(1 - Math.Abs(y - 1.2f) / 2.8f, 0, 1);
-            }
-            foreach (var (at, r) in blocks)
-            {
-                float dx = x - at.X, dy = (y - at.Y) * 1.35f, dz = z - at.Z;
-                float block = Mathf.Sqrt(dx * dx + dy * dy + dz * dz) - r;
-                if (block < 3) block += r * .3f * Noise(seed + 10, x / 2.5f, y / 2.5f, z / 2.5f);
-                d = Math.Min(d, block);
-            }
-            return d;
+            d = Worn(d, seed, x, y, z, tilt, bed, 1);
+            return Fallen(d, blocks, seed, x, y, z);
         }
-        // The grid, past the shape all round but its open bottom.
-        float reach = Math.Max(Math.Abs(x0), x1) + half + 8, across = thick * 1.3f + half * 1.6f + 8;
-        float cell = Mathf.Clamp(Math.Max(reach * 2, h - bottom) / 50, 1.5f, 2.5f); // (at 1 m a small arch was 20,000 triangles)
-        int nx2 = (int)Math.Ceiling(reach * 2 / cell) + 1, ny2 = (int)Math.Ceiling((h * 1.12f + 6 - bottom) / cell) + 1, nz2 = (int)Math.Ceiling(across * 2 / cell) + 1;
-        var field = new float[nx2 * ny2 * nz2];
-        int At(int i, int j, int k) => (k * ny2 + j) * nx2 + i;
-        Vector3 Corner(int i, int j, int k) => new(-reach + i * cell, bottom + j * cell, -across + k * cell);
-        for (int k = 0; k < nz2; k++)
-            for (int j = 0; j < ny2; j++)
-                for (int i = 0; i < nx2; i++) { var p = Corner(i, j, k); field[At(i, j, k)] = Solid(p.X, p.Y, p.Z); }
-        // Surface nets: a point in each cell the surface crosses (the mean of its edges' crossings), a quad across each crossed edge.
+        return Surface(Solid, new Vector3(-reach, bottom, -across), new Vector3(reach, h * 1.12f + 6, across), cell, seed, tint, tilt * side, roof);
+    }
+
+    /// <summary>
+    /// A solid's surface (<paramref name="solid"/>: signed distance in metres, below 0 inside), taken with surface nets on
+    /// a grid of <paramref name="cell"/> metres and flat-shaded, its bottom left open under the seabed: a point in each cell
+    /// the surface crosses (the mean of its edges' crossings), a quad across each crossed edge. The beds show as bands of
+    /// paler and darker rock; dark and wet just over the sea; green only on open tops above <paramref name="grassAbove"/>.
+    /// </summary>
+    private static Model Surface(Func<float, float, float, float> solid, Vector3 min, Vector3 max, float cell, ulong seed, Color tint, float tilt, float grassAbove)
+    {
+        int nx = (int)Math.Ceiling((max.X - min.X) / cell) + 1, ny = (int)Math.Ceiling((max.Y - min.Y) / cell) + 1, nz = (int)Math.Ceiling((max.Z - min.Z) / cell) + 1;
+        var field = new float[nx * ny * nz];
+        int At(int i, int j, int k) => (k * ny + j) * nx + i;
+        Vector3 Corner(int i, int j, int k) => min + new Vector3(i, j, k) * cell;
+        for (int k = 0; k < nz; k++)
+            for (int j = 0; j < ny; j++)
+                for (int i = 0; i < nx; i++) { var p = Corner(i, j, k); field[At(i, j, k)] = solid(p.X, p.Y, p.Z); }
         var point = new int[field.Length];
         Array.Fill(point, -1);
         var points = new List<Vector3>();
-        for (int k = 0; k + 1 < nz2; k++)
-            for (int j = 0; j + 1 < ny2; j++)
-                for (int i = 0; i + 1 < nx2; i++)
+        for (int k = 0; k + 1 < nz; k++)
+            for (int j = 0; j + 1 < ny; j++)
+                for (int i = 0; i + 1 < nx; i++)
                 {
                     var sum = Vector3.Zero; int crossings = 0;
                     for (int e = 0; e < 8; e++)
@@ -312,39 +332,44 @@ public sealed class SeaStackView
                     point[At(i, j, k)] = points.Count;
                     points.Add(sum / crossings);
                 }
+        var vertices = new List<Vector3>(); var normals = new List<Vector3>(); var colours = new List<Color>();
         var shadeRng = new RandomStream(seed ^ 0x5EA5UL);
-        void Tri(Vector3 a, Vector3 b, Vector3 c, Vector3 outward)
+        // (bands wider than the cells, one colour across a quad: bands as narrow as the cells, per triangle, drew a knitted zigzag)
+        float bandHeight = Math.Max(3, cell * 2.6f);
+        void Tri(Vector3 a, Vector3 b, Vector3 c, float band, float shade)
         {
             var normal = (b - a).Cross(c - a);
             if (normal.LengthSquared() < 1e-6f) return;
             normal = normal.Normalized();
-            if (normal.Dot(outward) < 0) { (b, c) = (c, b); normal = -normal; }
             var mid = (a + b + c) / 3;
-            float shade = (float)shadeRng.Unit();
-            // The beds show as bands of paler and darker rock; dark and wet just over the sea; green only on the open top.
-            float band = .5f + .5f * Noise(seed + 11, 0, (mid.Y + tilt * mid.X * side) / 2.4f, 0);
-            var colour = Stone.Lerp(Dark, .05f + .45f * band + .1f * shade);
-            if (normal.Y > .72f) colour = mid.Y > roof ? Grass.Lerp(Stone, .15f + .3f * shade) : Moss.Lerp(colour, .5f);
+            var colour = Stone.Lerp(Dark, .05f + .4f * band + .1f * shade);
+            if (normal.Y > .72f) colour = mid.Y > grassAbove ? Grass.Lerp(Stone, .15f + .3f * shade) : Moss.Lerp(colour, .5f);
             float wet = 1 - Mathf.Clamp((mid.Y - .5f) / 3, 0, 1);
             colour = colour.Lerp(new Color(colour.R * .5f, colour.G * .5f, colour.B * .48f), wet);
             var tinted = new Color(colour.R * tint.R, colour.G * tint.G, colour.B * tint.B, tint.A);
+            // (Godot front faces are clockwise seen from outside)
             vertices.Add(a); vertices.Add(c); vertices.Add(b);
             for (int v = 0; v < 3; v++) { normals.Add(normal); colours.Add(tinted); }
         }
-        void Quad(int a, int b, int c, int d, Vector3 outward)
+        // (facing from the grid: flipping a triangle by its own normal turned folded ones inside out, a hole right through the rock)
+        void Quad(int a, int b, int c, int d, bool flip)
         {
             if (a < 0 || b < 0 || c < 0 || d < 0) return;
-            Tri(points[a], points[b], points[c], outward); Tri(points[a], points[c], points[d], outward);
+            if (flip) (b, d) = (d, b);
+            var mid = (points[a] + points[b] + points[c] + points[d]) / 4;
+            float band = .5f + .5f * Noise(seed + 11, 0, (mid.Y + tilt * mid.X) / bandHeight, 0), shade = (float)shadeRng.Unit();
+            Tri(points[a], points[b], points[c], band, shade); Tri(points[a], points[c], points[d], band, shade);
         }
-        for (int k = 1; k + 1 < nz2; k++)
-            for (int j = 1; j + 1 < ny2; j++)
-                for (int i = 1; i + 1 < nx2; i++)
+        for (int k = 1; k + 1 < nz; k++)
+            for (int j = 1; j + 1 < ny; j++)
+                for (int i = 1; i + 1 < nx; i++)
                 {
                     float here = field[At(i, j, k)];
                     float x = field[At(i + 1, j, k)], y = field[At(i, j + 1, k)], z = field[At(i, j, k + 1)];
-                    if (here < 0 != x < 0) Quad(point[At(i, j - 1, k - 1)], point[At(i, j, k - 1)], point[At(i, j, k)], point[At(i, j - 1, k)], x > here ? Vector3.Right : Vector3.Left);
-                    if (here < 0 != y < 0) Quad(point[At(i - 1, j, k - 1)], point[At(i, j, k - 1)], point[At(i, j, k)], point[At(i - 1, j, k)], y > here ? Vector3.Up : Vector3.Down);
-                    if (here < 0 != z < 0) Quad(point[At(i - 1, j - 1, k)], point[At(i, j - 1, k)], point[At(i, j, k)], point[At(i - 1, j, k)], z > here ? Vector3.Back : Vector3.Forward);
+                    if (here < 0 != x < 0) Quad(point[At(i, j - 1, k - 1)], point[At(i, j, k - 1)], point[At(i, j, k)], point[At(i, j - 1, k)], x < here);
+                    if (here < 0 != y < 0) Quad(point[At(i - 1, j, k - 1)], point[At(i, j, k - 1)], point[At(i, j, k)], point[At(i - 1, j, k)], y > here);
+                    if (here < 0 != z < 0) Quad(point[At(i - 1, j - 1, k)], point[At(i, j - 1, k)], point[At(i, j, k)], point[At(i - 1, j, k)], z < here);
                 }
+        return new Model(vertices.ToArray(), normals.ToArray(), colours.ToArray());
     }
 }
