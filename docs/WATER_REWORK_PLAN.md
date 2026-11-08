@@ -22,10 +22,10 @@ Tom's answers (2026-11-08):
 * Far water (beyond the tile rings) is part of the far-land mesh.
 
 ## Steps
-1. **Split** (no visible change): each tile's water mesh gets three parts — sea, river, lake (ponds with lakes) — each with
+1. **Split** (done, D284; no visible change): each tile's water mesh gets three parts — sea, river, lake (ponds with lakes) — each with
    its own material; all three draw with today's *Water style* until a kind gets a look of its own. Triangles where kinds
    meet go to the part of the higher kind code (as the bank vertices do). The atmosphere's uniforms go to all three.
-2. **Waterfalls**: the river surface ends at the lip with an edge; a falling curtain from the lip to the pool (its own mesh
+2. **Waterfalls** (done, D285, first version): the river surface ends at the lip with an edge; a falling curtain from the lip to the pool (its own mesh
    and shader: streaks, thinning, see-through at the edges), white water and spray at the foot, mist. Fixes the dome.
 3. **River look**: from Experimental 4's river: flow, rapids and standing waves, foam round rocks (already baked), banks;
    options *River water → as Water style / new*.

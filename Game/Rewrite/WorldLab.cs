@@ -57,6 +57,7 @@ public partial class WorldLab : Node3D
     private WindMap? _windMap;
     private LavaMap? _lavaMap;
     private SeaStackView? _seaStacks;
+    private WaterfallView? _waterfalls;
     private double _windTimer;
     private (double X, double Z, double Speed) _localWind = (1, 0, 5);
     private TerrainSampler? _weatherFieldFor;
@@ -526,6 +527,9 @@ public partial class WorldLab : Node3D
             // Sea stacks and arches off steep coasts (terrain revision 35, D266).
             _seaStacks ??= new SeaStackView(this);
             _seaStacks.Update(_sampler, _originX + camLava.X, _originZ + camLava.Z, _originX, _originZ);
+            // Falling water at waterfalls (D285).
+            _waterfalls ??= new WaterfallView(this);
+            _waterfalls.Update(_sampler, _originX + camLava.X, _originZ + camLava.Z, _originX, _originZ);
             if (_rockKitShow == 0 && _generation == null && !_holding) RockKitShowcase();
         }
         if (!GameSettings.WeatherOn.On || _sampler == null)

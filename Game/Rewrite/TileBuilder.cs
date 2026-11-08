@@ -23,7 +23,7 @@ public readonly record struct TreeInstance(int Species, Transform3D Transform);
 /// logs are world objects, not decoration); grass and the draw distances come from the player's settings.
 /// </summary>
 public readonly record struct DetailConfig(double Grass, double ForestCover, double ForestDensity, double Rocks, double Props,
-    int TreeLevels, int FarTreeLevels, bool SimulatedWater = true, int GrassStyle = 1, int MeshDetail = 1, int CardLevels = -1)
+    int TreeLevels, int FarTreeLevels, bool SimulatedWater = true, int GrassStyle = 1, int MeshDetail = 1, int CardLevels = -1, bool FallingWater = true)
 {
 
     public static DetailConfig For(TerrainSampler sampler)
@@ -31,7 +31,7 @@ public readonly record struct DetailConfig(double Grass, double ForestCover, dou
         var style = sampler.Plan.Style;
         return new(GameSettings.GrassDensity.Value, style.ForestCover, style.ForestDensity, style.RockAmount, style.PropAmount,
             TreeField.Enabled ? 1 : 2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index, GameSettings.WaterSimulation.On, GameSettings.GrassStyle.Index,
-            1 << GameSettings.TerrainMesh.Index, CardLevel());
+            1 << GameSettings.TerrainMesh.Index, CardLevel(), GameSettings.Waterfalls.Index == 1);
     }
 
     /// <summary>
@@ -347,7 +347,7 @@ public static class TileBuilder
             // Full trees on the nearest levels; beyond, tree cards, then the terrain shader's forest tint.
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };
-        BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater, sea);
+        BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater, sea, config.FallingWater ? FallSet.For(sampler.Plan) : null, x0, z0);
         if (key.Level <= LavaLevels) BuildLava(sampler, data, samples, heights, s2, spacing, Side, x0, z0);
         if (data.Water is { } builtWater) data.WaterShore = ShoreData(sampler, builtWater.Vertices, builtWater.Colors, heights, s2, samples, x0, z0, spacing, Side);
         var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2, biome1, props, biome3, biome0, climate.Settings.Biomes);
@@ -466,7 +466,8 @@ public static class TileBuilder
         data.Lava = (vertices, colors, flow, normals, indices.ToArray());
     }
 
-    private static void BuildWater(TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing, int n, bool simulated, double seaLevel)
+    private static void BuildWater(TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing, int n, bool simulated, double seaLevel,
+        FallSet? falls = null, double x0 = 0, double z0 = 0)
     {
         var wet = new bool[n * n];
         bool any = false;
@@ -571,8 +572,11 @@ public static class TileBuilder
                 // A square touching dug ground below the water would stretch the sheet down into the hole (walls of
                 // water around a dug river bed); the local simulation draws the water there.
                 if (dug[a] || dug[b] || dug[c] || dug[d]) continue;
-                float code = -1;
-                foreach (int k in new[] { a, b, c, d }) if (Covered(k)) code = Math.Max(code, colors[k].G);
+                // A waterfall's face is left to the falling water (D285): the sheet ran straight from the lip to the pool.
+                float code = -1, low = float.MaxValue, high = float.MinValue;
+                foreach (int k in new[] { a, b, c, d })
+                    if (Covered(k)) { code = Math.Max(code, colors[k].G); low = Math.Min(low, vertices[k].Y); high = Math.Max(high, vertices[k].Y); }
+                if (falls != null && falls.OnFace(x0 + (i + .5) * spacing, z0 + (j + .5) * spacing, low, high)) continue;
                 var part = indices[WaterMaterials.PartOf(code)];
                 part.Add(a); part.Add(b); part.Add(c);
                 part.Add(b); part.Add(d); part.Add(c);

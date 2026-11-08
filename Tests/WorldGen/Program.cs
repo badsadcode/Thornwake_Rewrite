@@ -125,6 +125,30 @@ if (args.FirstOrDefault(a => a.StartsWith("--coast-map=")) is { } cmArg)
     f.Write(image);
     return 0;
 }
+// --falls=<profile>,<seed>[,x,z]: the waterfalls as the water draws them (D285: river stretches dropping 3 m or more,
+// steeper than 1 in 5), nearest to x,z first.
+if (args.FirstOrDefault(a => a.StartsWith("--falls=")) is { } flArg)
+{
+    var p = flArg[8..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    double cx = p.Length > 3 ? double.Parse(p[2], System.Globalization.CultureInfo.InvariantCulture) : 0, cz = p.Length > 3 ? double.Parse(p[3], System.Globalization.CultureInfo.InvariantCulture) : 0;
+    var falls = new List<(double D, string Text)>();
+    foreach (var r in s.Plan.Hydrology.Reaches)
+    {
+        if (r.Distributary) continue;
+        for (int k = 0; k + 1 < r.Points.Length; k++)
+        {
+            double drop = r.Surface[k] - r.Surface[k + 1], len = r.Along[k + 1] - r.Along[k];
+            if (drop < 3 || len <= 0 || drop / len < .2) continue;
+            var a0 = r.Points[k]; var b0 = r.Points[k + 1];
+            falls.Add((Math.Sqrt((a0.X - cx) * (a0.X - cx) + (a0.Z - cz) * (a0.Z - cz)),
+                $"  lip {a0.X:0},{a0.Z:0} foot {b0.X:0},{b0.Z:0} drop {drop:0.0} m over {len:0} m, width {r.Width[k]:0.0} m, level {r.Surface[k]:0.0}"));
+        }
+    }
+    Console.WriteLine($"{p[0]}/{p[1]}: {falls.Count} falls");
+    foreach (var (d, text) in falls.OrderBy(l => l.D).Take(25)) Console.WriteLine($"{text} ({d:0} m away)");
+    return 0;
+}
 // --fans=<profile>,<seed>: the alluvial fans (D283).
 if (args.FirstOrDefault(a => a.StartsWith("--fans=")) is { } faArg)
 {

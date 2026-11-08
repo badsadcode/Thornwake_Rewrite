@@ -182,6 +182,11 @@ public static class GameSettings
         "drifts away with the wind, breaking up into streaks; glassier, deeper water; livelier far sea. Experimental 4: 3A, but " +
         "rough and stormy water reflects less (calm water is the same as 3A). Switch any time to compare.",
         options: new[] { "classic", "experimental", "experimental 2", "experimental 3", "experimental 3A", "experimental 4" }));
+    public static readonly Setting Waterfalls = Add(new("fx.waterfalls", "Lighting and effects", "Waterfalls", 0, 1, 1, 1,
+        "Falling water: the water leaves the river's level at the lip and falls to the pool (sliding down the rock where the " +
+        "rock lies higher), streaked and white, white water spreading on the pool and mist rising at the foot. River sheet " +
+        "(build 137): the river's water running straight down from the lip to the pool, a rounded dome.",
+        options: new[] { "river sheet (build 137)", "falling water" }, rebuild: true));
     public static readonly Setting FoamStyle = Add(new("fx.foam_style", "Lighting and effects", "Foam style", 0, 1, 1, 0,
         "Experimental water foam (2 and later): lace (thin threads along bubble cells, build 38) or net (a thick, fluffy net of " +
         "foam around round clear holes, finer where the foam is fresh, patchy as it thins).", options: new[] { "lace", "net" }));

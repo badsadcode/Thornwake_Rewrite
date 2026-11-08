@@ -4514,6 +4514,28 @@ the style he plays; rivers and waterfalls first.
 * Checked on four views with Experimental 4 (lagoon, waterfall, lake, meander), before and after: the lake identical to the
   pixel; the others differ only as much as two runs of the same code do (the moving sea, floating seeds).
 
+## D285 — Waterfalls: falling water instead of the river's dome (2026-11-08)
+Water rework step 2 (Tom: "Yes, waterfalls"; the dome over a fall's lip, his dump 122648, D275). Render only: the terrain
+and the rivers are as they were (no terrain revision). `Game/Rewrite/Waterfalls.cs`, `WaterFall.gdshader`; setting
+*Waterfalls* (falling water, default / river sheet (build 137)), the tiles rebuilt when it changes.
+* **Which**: every stretch of river between two of its points dropping 3 m or more, steeper than 1 in 5, found from the final
+  rivers (`FallSet`): the waterfalls module's falls and the glacial troughs' alike (275 in Balanced 7319, from 3 m steps on
+  mountain streams to a 172 m drop). The test tool lists them: `--falls=<profile>,<seed>[,x,z]`.
+* **The river's sheet** leaves the face out: near a fall, every square whose water lies between the pool's level and the
+  lip's (by width it left the sheet's ramp showing beside the falling water: the sheet runs out past the river under its
+  banks). The dome sinking just above the lip goes with it.
+* **The curtain**: from 4 m above the lip (draped on the river, fading in) down to the pool, as wide as the river (the
+  pool's width at the foot) plus up to 4 m a side thinning over the rock: free fall from the lip at the river's speed, or
+  sliding down the rock wherever the rock lies higher (first version followed the free fall alone, which reaches the
+  pool's level within ~12 m: on a 37 m ramp the curtain ended a third of the way down); fading out as it reaches the pool.
+  Streaks and clumps running down at the water's speed, glassy at the lip, white with the drop, churning at the pool, thin
+  and broken at its edges, light through it (in a cliff's shade, lit by the sky alone, it was a blue strip). Pulled toward
+  the camera a little with distance (coarse terrain across a steep wall stands above the exact ground), drawn after the
+  water.
+* **At the foot**: white water boiling up and spreading on the pool in patches (a disc a little longer downstream), and mist
+  rising (soft particles, more for a higher fall, within 1.5 km).
+* Built on worker threads for the falls within 4 km. Looks are a first version for Tom to judge.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
