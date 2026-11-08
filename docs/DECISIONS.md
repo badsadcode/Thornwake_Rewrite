@@ -4353,6 +4353,18 @@ Tom on build 134: the rocks "were things that we were missing ... more interesti
   lip, a dome. Left for the water rework (D270's order), noted in HANDOFF.
 * Return point: build 134 (`1d6a12a`).
 
+## D276 — Ambient occlusion that shows; crevice shadow baked into rocks (2026-11-08)
+Tom: "is there no ambient occlusion in the game? ... when they're close to the ground or touching the ground, there should
+be some kind of shadow in crevices." SSAO was on, but with a 1.5 m radius (rocks are tens of metres) and only darkening the
+sky's light (`SsaoLightAffect` 0): outdoors by day the sun carries the light, so it hardly showed.
+* **Ambient occlusion → strong** (the new default; *on (build 134)* and *off* kept): radius 3.5 m, intensity 2.4, power 1.6,
+  detail 0.8, and it darkens direct light by 35 % in creases.
+* **Crevice shadow baked into every rock built as a solid** (sea stacks, arches, cliff blocks): how much rock lies within
+  1, 2.5 and 5 m along each face's normal, up to 70 % darker in cracks, joints and under ledges.
+* Cost: at the gorge 53–60 FPS strong against 51–60 on the old setting (1920×1080); the 20 FPS seen in single shots there is
+  the first moments while tiles load.
+* Return point: build 134 (`1d6a12a`); *Ambient occlusion → on (build 134)*.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -412,6 +412,15 @@ public sealed class SeaStackView
                 }
         var vertices = new List<Vector3>(); var normals = new List<Vector3>(); var colours = new List<Color>();
         var shadeRng = new RandomStream(seed ^ 0x5EA5UL);
+        // Crevice shadow baked in (D276): how much rock lies close above each face along its normal (the solid sampled at 1,
+        // 2.5 and 5 m out), darkening the cracks, joints and the undersides of ledges — screen-space AO cannot reach that far.
+        float Occlusion(Vector3 p, Vector3 n)
+        {
+            float occ = 0;
+            foreach (var (d, w) in new[] { (1f, .5f), (2.5f, .3f), (5f, .2f) })
+                occ += w * Mathf.Clamp((d - solid(p.X + n.X * d, p.Y + n.Y * d, p.Z + n.Z * d)) / d, 0, 1);
+            return 1 - .7f * Mathf.Clamp(occ * 1.4f, 0, 1);
+        }
         // (bands wider than the cells, one colour across a quad: bands as narrow as the cells, per triangle, drew a knitted zigzag)
         float bandHeight = Math.Max(3, cell * 2.6f);
         void Tri(Vector3 a, Vector3 b, Vector3 c, float band, float shade)
@@ -424,6 +433,8 @@ public sealed class SeaStackView
             if (normal.Y > .72f) colour = mid.Y > grassAbove ? Grass.Lerp(Stone, .15f + .3f * shade) : Moss.Lerp(colour, .5f);
             float wet = sea ? 1 - Mathf.Clamp((mid.Y - .5f) / 3, 0, 1) : 0;
             colour = colour.Lerp(new Color(colour.R * .5f, colour.G * .5f, colour.B * .48f), wet);
+            float ao = Occlusion(mid, normal);
+            colour = new Color(colour.R * ao, colour.G * ao, colour.B * ao);
             var tinted = new Color(colour.R * tint.R, colour.G * tint.G, colour.B * tint.B, tint.A);
             // (Godot front faces are clockwise seen from outside)
             vertices.Add(a); vertices.Add(c); vertices.Add(b);

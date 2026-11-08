@@ -547,6 +547,12 @@ public partial class Atmosphere : Node3D
         RenderingServer.DirectionalShadowAtlasSetSize(shadows switch { 1 => 2048, 2 => 4096, _ => 8192 }, true);
         RenderingServer.DirectionalSoftShadowFilterSetQuality(shadows >= 3 ? RenderingServer.ShadowQuality.SoftHigh : RenderingServer.ShadowQuality.SoftLow);
         e.SsaoEnabled = GameSettings.Ssao.On;
+        bool strongAo = GameSettings.Ssao.Index == 2;
+        e.SsaoRadius = strongAo ? 3.5f : 1.5f;
+        e.SsaoIntensity = strongAo ? 2.4f : 1.2f;
+        e.SsaoPower = strongAo ? 1.6f : 1.5f;
+        e.SsaoDetail = strongAo ? .8f : .5f;
+        e.SsaoLightAffect = strongAo ? .35f : 0;
         e.SsilEnabled = GameSettings.Ssil.On;
         e.SsrEnabled = GameSettings.Ssr.On;
         e.GlowEnabled = GameSettings.Glow.Value > 0;
