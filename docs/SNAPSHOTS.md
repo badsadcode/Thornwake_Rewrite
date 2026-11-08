@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 134** (rocks on cliff faces D272, Tom's cliff textures and green on cliffs D273, rounded headland tops D274 -- terrain revision 38) | `1d6a12a` | dist/Preview-134 (v0.9.134), not zipped | Versions must match to connect; *Terrain version → Build 133* keeps revision 37 -- build 133 = `7290b59` |
 | **Build 133** (headlands and coves D270, spits, sandbars and lagoons D271 -- terrain revision 37) | `7290b59` | dist/Preview-133 (v0.9.133), not zipped | Versions must match to connect; *Terrain version → Build 132* keeps revision 35 -- build 132 = `9293ad0` |
 | **Build 132** (sea arches and stacks as worn rock, four kinds of stack, colour and texture of big rocks D267-D268; one plain folder D269) | `9293ad0` | dist/Preview-132 (v0.9.132), not zipped | Versions must match to connect; same terrain as 131 -- build 131 = `3e43997` |
 | **Build 131** (sea stacks and arches off steep coasts, placeholder rock models D266 — terrain revision 35, the ground as 34) | `3e43997` | Thornwake-Rewrite-Preview-131 (v0.9.131) | Versions must match to connect; *Terrain version → Build 130* keeps revision 34 — build 130 = `67ff664` |

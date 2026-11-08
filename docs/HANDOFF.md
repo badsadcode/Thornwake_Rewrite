@@ -3,13 +3,14 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 133** (v0.9.133, return point `7290b59`, `dist/Preview-133`, one plain folder, D269): terrain revision 37,
+* **Last build Tom has: 134** (v0.9.134, return point `1d6a12a`, `dist/Preview-134`): rocks on cliff faces (D272), Tom's six cliff
+  textures, lighter varied rock, bushes, moss and roots (D273), headland cliffs rounded in a rocky shoulder (D274, terrain
+  revision 38). Launchers "Go to - headland cliffs (your dump) / … from above / gorge cliffs". Open: canyon walls and
+  escarpments not rounded; lip rocks' collision untried in play; the gorge fall only partly clear.
+  Build 133 (v0.9.133, return point `7290b59`, `dist/Preview-133`, one plain folder, D269): terrain revision 37,
   headlands and coves (D270), spits, sandbars and lagoons (D271). Launchers "Go to - rocky headland / headland and cove /
   lagoon, from the water / lagoon, from above". Unchecked up close: cove beaches, walking the spits. Next: oxbow lakes
   and river terraces, alluvial fans, then the water rework (order below).
-  **Since 133 (not in a build)**: rocks on cliff faces and no grass strips down them (D272); Tom's six cliff textures on
-  big rocks, lighter and varied rock, bushes, moss and roots on cliff rocks (D273).
-  Terrain revision 38: headland cliffs rounded over at the top (D274); *Terrain version → Build 133* = 37.
   Build 132 (v0.9.132, return point `9293ad0`, `dist/Preview-132`): sea
   arches and stacks as worn rock (D267, D268). Open: foam round their feet, collision untried in play.
   **Order set by Tom**: the landforms that change where water meets land (spits and lagoons, oxbows and terraces, alluvial
