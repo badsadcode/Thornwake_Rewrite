@@ -10,8 +10,8 @@ namespace Thornwake.Rewrite;
 /// blob): each piece a solid with mostly flat faces and bevelled edges — a box, turned and tilted, its corners cut off by a few
 /// random planes — and four kinds of formation built of them: column clusters (tall prisms side by side), slab stacks (flat,
 /// offset layers), tiered piles (stepped blocks with rubble round the foot) and tors (rounded granite blocks with split slabs).
-/// Meshed as the sea stacks are (a signed-distance solid, surface nets, crevice shadow baked in, auto-smooth), in metres, the
-/// formation's foot at y = 0 and its pieces reaching 2 m below to sit in the ground. Each piece is also kept as a box, for
+/// Each piece built as a true polyhedron from its planes (flat faces, bevelled edges, flat-shaded: crisp), the crevice shadow
+/// from the pieces' union as a solid; in metres, the formation's foot at y = 0, its pieces reaching 2 m below into the ground. Each piece is also kept as a box, for
 /// collision.
 /// </summary>
 public static class RockKit
@@ -37,6 +37,87 @@ public static class RockKit
             foreach (var (n, o) in Cuts) d = SmoothMax(d, q.Dot(n) - o, Bevel * .7f);
             return d;
         }
+    }
+
+    private static readonly Color Stone = new("777a72"), Dark = new("5d605a"), Moss = new("66744f");
+    private const float RockLight = 1.45f;
+
+    /// <summary>
+    /// The pieces as polyhedra: each the intersection of its half-spaces — the box's six faces, a chamfer along each of its
+    /// twelve edges (a plane between the two faces, cut in by the bevel), and the corner cuts — its vertices every three
+    /// planes' meeting point inside all the rest, each face the points on its plane in order round them. Flat-shaded, each face
+    /// its own shade (bands of the beds by height), moss on open tops, darker by how much rock lies close above it.
+    /// </summary>
+    private static (Vector3[] Vertices, Vector3[] Normals, Color[] Colors) Polyhedra(List<Block> blocks, Func<float, float, float, float> solid, ulong seed)
+    {
+        var vertices = new List<Vector3>(); var normals = new List<Vector3>(); var colours = new List<Color>();
+        var rng = new RandomStream(seed ^ 0xFACEUL);
+        var axes = new[] { Vector3.Right, Vector3.Left, Vector3.Up, Vector3.Down, Vector3.Back, Vector3.Forward };
+        foreach (var b in blocks)
+        {
+            var planes = new List<(Vector3 N, float D)>();
+            float[] half = { b.Half.X, b.Half.X, b.Half.Y, b.Half.Y, b.Half.Z, b.Half.Z };
+            for (int i = 0; i < 6; i++) planes.Add((axes[i], half[i]));
+            float c = Math.Max(.15f, b.Bevel * .7f);
+            for (int i = 0; i < 6; i++)
+                for (int j = i + 1; j < 6; j++)
+                {
+                    if (j == (i ^ 1)) continue; // (opposite faces)
+                    var n = (axes[i] + axes[j]).Normalized();
+                    planes.Add((n, (half[i] + half[j]) / Mathf.Sqrt2 - c));
+                }
+            foreach (var (n, o) in b.Cuts) planes.Add((n, o));
+            // The corners: every three planes meeting inside all the others.
+            var points = new List<Vector3>();
+            for (int i = 0; i < planes.Count; i++)
+                for (int j = i + 1; j < planes.Count; j++)
+                    for (int k = j + 1; k < planes.Count; k++)
+                    {
+                        var (n1, d1) = planes[i]; var (n2, d2) = planes[j]; var (n3, d3) = planes[k];
+                        float det = n1.Dot(n2.Cross(n3));
+                        if (Math.Abs(det) < 1e-5f) continue;
+                        var q = (n2.Cross(n3) * d1 + n3.Cross(n1) * d2 + n1.Cross(n2) * d3) / det;
+                        bool inside = true;
+                        foreach (var (n, d) in planes) if (n.Dot(q) > d + 1e-3f) { inside = false; break; }
+                        if (inside) points.Add(q);
+                    }
+            foreach (var (n, d) in planes)
+            {
+                // This face's corners (no repeats), in order round its middle.
+                var face = new List<Vector3>();
+                foreach (var q in points)
+                    if (Math.Abs(n.Dot(q) - d) < 2e-3f && !face.Exists(f => f.DistanceSquaredTo(q) < 1e-6f)) face.Add(q);
+                if (face.Count < 3) continue;
+                var mid = Vector3.Zero; foreach (var q in face) mid += q; mid /= face.Count;
+                var u = (Math.Abs(n.Y) < .9f ? Vector3.Up : Vector3.Right).Cross(n).Normalized(); var v = n.Cross(u);
+                face.Sort((p1, p2) => Mathf.Atan2((p1 - mid).Dot(v), (p1 - mid).Dot(u)).CompareTo(Mathf.Atan2((p2 - mid).Dot(v), (p2 - mid).Dot(u))));
+                // Into the formation's space.
+                var wn = (b.Basis * n).Normalized();
+                var wp = face.ConvertAll(q => b.Centre + b.Basis * q);
+                var wmid = b.Centre + b.Basis * mid;
+                if (wmid.Y < -2.4f && wn.Y < -.5f) continue; // (a buried underside)
+                float shade = (float)rng.Unit();
+                float band = .5f + .5f * Mathf.Sin(wmid.Y * 1.3f + (float)rng.Unit() * .6f);
+                var colour = Stone.Lerp(Dark, .08f + .3f * band + .2f * shade);
+                if (wn.Y > .72f) colour = Moss.Lerp(colour, .45f + .2f * shade);
+                // Crevice shadow: how much rock lies close above the face (the union's solid at 0.5, 1.2 and 2.5 m out).
+                float occ = 0;
+                foreach (var (dd, w) in new[] { (.5f, .5f), (1.2f, .3f), (2.5f, .2f) })
+                {
+                    var at = wmid + wn * dd;
+                    occ += w * Mathf.Clamp((dd - solid(at.X, at.Y, at.Z)) / dd, 0, 1);
+                }
+                float ao = 1 - .5f * Mathf.Clamp(occ * 1.4f, 0, 1);
+                var tinted = new Color(colour.R * RockLight * ao, colour.G * RockLight * ao, colour.B * RockLight * ao, 1);
+                // (Godot front faces are clockwise seen from outside: the corners run counter-clockwise round n)
+                for (int t = 1; t + 1 < wp.Count; t++)
+                {
+                    vertices.Add(wp[0]); vertices.Add(wp[t + 1]); vertices.Add(wp[t]);
+                    for (int r = 0; r < 3; r++) { normals.Add(wn); colours.Add(tinted); }
+                }
+            }
+        }
+        return (vertices.ToArray(), normals.ToArray(), colours.ToArray());
     }
 
     private static float SmoothMax(float a, float b, float k)
@@ -182,8 +263,10 @@ public static class RockKit
             // (closed below their buried foot)
             return SmoothMax(d, -2.5f - y, .5f);
         }
-        float cell = Math.Clamp((max.X - min.X + max.Z - min.Z) / 70, .55f, .9f);
-        var model = SeaStackView.KitSurface(Solid, min - Vector3.One * 2, max + Vector3.One * 2, cell, seed);
+        // Crisp (D277, Tom: "crisper faces first"): each piece built from its own planes — a true polyhedron, its faces flat and
+        // its edges bevelled by narrow flat strips — not sampled from the solid (that rounded everything a little: lumps).
+        // The pieces overlap; the solid is kept for the crevice shadow.
+        var model = Polyhedra(blocks, Solid, seed);
         var pieces = new Piece[blocks.Count];
         for (int i = 0; i < blocks.Count; i++) pieces[i] = new Piece(blocks[i].Centre, blocks[i].Half * .92f, blocks[i].Basis);
         return (model, pieces);

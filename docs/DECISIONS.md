@@ -4389,7 +4389,12 @@ not one lumpy blob. `Game/Rewrite/RockKit.cs`, a first pass:
   round it), a third in hollows, more by the biome's rock amount and in mountains, a quarter in forest; a group is one kind
   (from the outcrop's own noise, 82 %), bigger in an outcrop's heart and on crests. Seen near Tom's needle spot: 29 near,
   56 middle, 88 far. Frame rate 58–60 with them, 45–60 without, at a taiga test spot.
-* Open: softer than the references (the faces are not yet crisp planes); not yet used for the cliff rocks and sea stacks.
+* **Crisp** (Tom: "crisper faces first"): sampled from the solid, every face came out a little rounded. Now each piece is
+  built from its own planes — the box's six faces, a chamfer along each of its twelve edges, the corner cuts — as a true
+  polyhedron (its corners every three planes' meeting point inside the rest, each face's corners in order round it),
+  flat-shaded, each face its own shade, moss on open tops, the crevice shadow from the pieces' union as before. The pieces
+  overlap rather than merge, as kit rocks do. Frame rate unchanged (58–60).
+* Open: not yet used for the cliff rocks and sea stacks.
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
