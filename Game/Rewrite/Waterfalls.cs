@@ -114,7 +114,7 @@ public sealed class WaterfallView
     private double _originX = double.NaN, _originZ, _lastX = double.NaN, _lastZ;
     private static ShaderMaterial? _curtain, _foam;
     private static Material? _mistMaterial;
-    private bool _spray = Spray.On;
+    private int _spray = GameSettings.Spray.Index;
 
     public WaterfallView(Node3D parent) { _parent = parent; }
 
@@ -124,7 +124,7 @@ public sealed class WaterfallView
     public void Update(TerrainSampler terrain, double camX, double camZ, double originX, double originZ)
     {
         bool on = GameSettings.Waterfalls.Index == 1;
-        if (_spray != Spray.On) { _spray = Spray.On; Clear(); _building.Clear(); _lastX = double.NaN; }
+        if (_spray != GameSettings.Spray.Index) { _spray = GameSettings.Spray.Index; Clear(); _building.Clear(); _lastX = double.NaN; }
         if (_for != terrain || !on)
         {
             Clear(); _building.Clear(); _lastX = double.NaN;
@@ -362,17 +362,24 @@ public sealed class WaterfallView
             var frame = new Basis(new Vector3((float)fall.Dz, 0, (float)-fall.Dx), Vector3.Up, new Vector3((float)fall.Dx, 0, (float)fall.Dz));
             mist = Spray.Emitter(new Vector3(Math.Max(1.5f, w * .45f), .5f, 1.5f + h * .02f), new Vector3(0, 1, .7f), 40,
                 1.2f + h * .03f, 2.5f + h * .07f, 2.2f + w * .04f + h * .05f, 3.5f + w * .08f + h * .12f, 2.4f, Math.Clamp(3.5f + h * .03f, 3.5f, 7),
-                Math.Clamp((int)(10 + w * 1.6f + h * 1.2f), 12, 180), .25f, .5f, Spray.Tint);
+                Math.Clamp((int)(10 + w * 1.6f + h * 1.2f), 12, 180), .25f, .5f, Spray.Tint, "soft_cloud");
             mist.Basis = frame;
             mist.Position = m.Foot + Vector3.Up * .8f;
             node.AddChild(mist);
             if (h > 8)
             {
                 var off = Spray.Emitter(new Vector3(Math.Max(1, w * .45f), h * .28f, .6f), new Vector3(0, -.2f, 1), 25, .6f, 1.8f,
-                    .9f + w * .02f, 1.8f + w * .04f + h * .02f, 2, 2.6f, Math.Clamp((int)(h * .8f + w * .6f), 8, 90), -.4f, .35f, Spray.Tint);
+                    .9f + w * .02f, 1.8f + w * .04f + h * .02f, 2, 2.6f, Math.Clamp((int)(h * .8f + w * .6f), 8, 90), -.4f, .35f, Spray.Tint, "fine_droplets");
                 off.Basis = frame;
                 off.Position = m.Face;
                 node.AddChild(off);
+                // Mist rising off the pool above the foot's clouds (Tom's rising plume).
+                var plume = Spray.Emitter(new Vector3(Math.Max(1.5f, w * .4f), .5f, 1.5f), new Vector3(0, 1, .3f), 20, .8f, 1.6f + h * .03f,
+                    3 + w * .05f + h * .06f, 5 + w * .08f + h * .1f, 1.8f, Math.Clamp(5 + h * .04f, 5, 9), Math.Clamp((int)(4 + h * .3f + w * .2f), 4, 40),
+                    .35f, .3f, Spray.Tint, "rising_plume");
+                plume.Basis = frame;
+                plume.Position = m.Foot + Vector3.Up * 2 + frame.Z * 3;
+                if (GameSettings.Spray.Index == 2) node.AddChild(plume); else plume.QueueFree();
             }
         }
         else

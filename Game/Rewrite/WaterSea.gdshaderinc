@@ -28,6 +28,11 @@ uniform float wave2_hs = 1.0; // significant wave height (m)
 uniform float wave2_chop = 0.8; // Σ q k A at a point (SpectrumWaves.Chop)
 uniform vec2 world_origin;    // world position of scene (0, 0): regional wave headings and groups are world-anchored
 #ifdef RIVER2
+// Tom's foam textures (D295; Assets/Water, made seamless by tools/seamless_foam.py): one channel, foam density.
+uniform sampler2D foam_lace : filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D foam_patches : filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D foam_streaks : filter_linear_mipmap_anisotropic, repeat_enable;
+uniform int river_foam_tex = 1; // 1: the textures (D295); 0: the drawn foam (D293)
 // Rocks standing in rivers near the camera (D290; WorldStreamer.NearRiverRocks): scene x, z, radius at the waterline, 0.
 uniform vec4 river_rocks[32];
 uniform int river_rock_count = 0;
@@ -527,6 +532,40 @@ vec2 flow_gnoise(vec2 p, vec2 f, float t, float cycle) {
 }
 
 float sq(float x) { return x * x; } // pow(x, 2.0) is undefined for negative x in GLSL (NaN)
+#ifdef RIVER2
+// A foam texture carried by a current that varies from place to place (D295): two copies slid over a short cycle and
+// cross-faded, as flow_noise (no shear), the half-faded pair's contrast restored. Its tile anchored to the world (p is the
+// scene's, which moves when the origin does: the anchor keeps the pattern in place, wrapped every 512 m).
+float tex_flow(sampler2D t, vec2 p, vec2 f, float size, float cycle) {
+	vec2 q = (p + mod(world_origin, vec2(512.0))) / size;
+	float p0 = fract(TIME / cycle), p1 = fract(TIME / cycle + 0.5), w0 = 1.0 - abs(2.0 * p0 - 1.0);
+	float a = texture(t, q - f / size * p0 * cycle).r, b = texture(t, q - f / size * p1 * cycle + vec2(0.37, 0.61)).r;
+	float m = mix(b, a, w0);
+	return clamp((m - 0.35) * inversesqrt(w0 * w0 + (1.0 - w0) * (1.0 - w0)) + 0.35, 0.0, 1.0);
+}
+// Streaks along the current (D295): in local frames anchored to a 16 m grid and blended between its corners (the flow
+// direction times a large position swung patterns into frozen arcs, see the standing waves), each frame's streaks lying along
+// the flow and slid down it.
+float tex_streaks(vec2 p, vec2 fdir, float fs, float size, float stretch) {
+	const float CELL = 16.0;
+	vec2 g = (p + mod(world_origin, vec2(512.0))) / CELL, g0 = floor(g), gf = g - g0;
+	gf = gf * gf * (3.0 - 2.0 * gf);
+	vec2 side = vec2(-fdir.y, fdir.x);
+	const float cycle = 2.0;
+	float p0 = fract(TIME / cycle), p1 = fract(TIME / cycle + 0.5), w0 = 1.0 - abs(2.0 * p0 - 1.0);
+	float sum = 0.0;
+	for (int ci = 0; ci < 4; ci++) {
+		vec2 corner = g0 + vec2(float(ci & 1), float(ci >> 1));
+		float wgt = ((ci & 1) == 1 ? gf.x : 1.0 - gf.x) * ((ci >> 1) == 1 ? gf.y : 1.0 - gf.y);
+		vec2 local = (g - corner) * CELL;
+		vec2 uv = vec2(dot(local, side) / size, dot(local, fdir) / (size * stretch)) + hash2(corner);
+		float drift = fs / (size * stretch) * cycle;
+		float a = texture(foam_streaks, uv - vec2(0.0, drift * p0)).r, b = texture(foam_streaks, uv - vec2(0.0, drift * p1) + vec2(0.5, 0.23)).r;
+		sum += wgt * mix(b, a, w0);
+	}
+	return clamp((sum - 0.3) * 1.3 + 0.3, 0.0, 1.0);
+}
+#endif
 
 // Water around a rock in a current (RIVERS_PLAN step 5), as a height in rock radii: a, c = downstream / across of the
 // rock in radii. A pressure bulge upstream, two V-wake arms opening downstream (narrower in fast water), and a turbulent
@@ -887,7 +926,10 @@ void fragment() {
 				float rd = length(dd) / rr;
 				float up = smoothstep(0.3, -0.9, a);
 				float outer = 1.08 + 0.2 * up + 0.08 * smoothstep(0.2, 1.5, fs) + 0.12 * wob;
-				rk_ring = max(rk_ring, 1.0 - smoothstep(outer - 0.06, outer + 0.06, rd));
+				if (river_foam_tex == 1) // (D295: graded, solid at the rock thinning outward, so the lace shows; wider)
+					rk_ring = max(rk_ring, 1.0 - smoothstep(0.95, outer + 0.45, rd));
+				else
+					rk_ring = max(rk_ring, 1.0 - smoothstep(outer - 0.06, outer + 0.06, rd));
 				// Turbulence behind it, where the water moves: from its sides and middle, narrowing out downstream.
 				float sides = smoothstep(0.1, 0.9, a) * exp(-sq(abs(c) - 0.8 - max(a, 0.0) * 0.08) * 5.0);
 				float middle = smoothstep(0.9, 1.6, a) * exp(-c * c / (0.25 + max(a, 0.0) * 0.1));
@@ -1150,6 +1192,19 @@ void fragment() {
 	vec3 layers = flowing ? foam_flow(p, drift, TIME, amt, dist) : foam_layers(p, drift, TIME, amt, dist);
 	float foam = layers.x, under_foam = layers.y, foam_shade = layers.z;
 #ifdef RIVER2
+	// River foam from Tom's textures (D295): the foam amount reveals the textures — broken patches, and streaks along fast
+	// water — where their density exceeds what the amount leaves out (the texture's own holes and threads stay).
+	if (river_foam_tex == 1 && river > 0.5) {
+		float fs_t = length(current);
+		vec2 fd_t = fs_t > 0.01 ? current / fs_t : wdir;
+		float patches_t = tex_flow(foam_patches, p, current, 6.0, 3.0);
+		float streak_t = tex_streaks(p, fd_t, fs_t, 5.0, 2.5);
+		float tex_d = mix(patches_t, max(patches_t * 0.7, streak_t), smoothstep(0.8, 2.0, fs_t));
+		float th = 1.0 - amt * 1.15;
+		foam = smoothstep(th - 0.06, th + 0.06, tex_d) * smoothstep(0.0, 0.15, amt);
+		foam_shade = 0.82 + 0.18 * tex_d;
+		under_foam = max(under_foam, smoothstep(th - 0.3, th, tex_d) * amt * 0.5);
+	}
 	under_foam = max(under_foam, rv_churned * 0.85);
 #endif
 	float foam_opacity = 1.0;
@@ -1233,6 +1288,17 @@ void fragment() {
 		float fcore = smoothstep(0.9, 1.15, fedge) * (0.45 + 0.55 * fclumps); // right against the stone, broken too
 		float fbody = max(flace * (0.45 + 0.55 * fclumps), max(fclumps * 0.85, fcore));
 		float rfoam = fcover * fbody * near_f * smoothstep(0.2, 0.9, edge_fade);
+		if (river_foam_tex == 1) {
+			// From Tom's lace (D295): the field reveals the lace where its density exceeds what the field leaves out — the
+			// threads first, the cells filling in toward the stone; turbulence behind from the broken patches.
+			float lace_t = tex_flow(foam_lace, p, current, 3.0, 2.4);
+			float patch_t = tex_flow(foam_patches, p + vec2(3.7, 1.9), current, 4.0, 2.4);
+			float dens = max(lace_t, patch_t * smoothstep(0.0, 0.5, rk_tail));
+			float thr = 1.05 - fedge * 1.1;
+			rfoam = smoothstep(thr - 0.07, thr + 0.07, dens) * near_f * smoothstep(0.2, 0.9, edge_fade);
+			flace = dens; fcore = smoothstep(0.85, 1.2, fedge);
+			fclumps = patch_t;
+		}
 		foam = max(foam, rfoam);
 		// See-through where thin (the water shows between the bubbles), nearly opaque in the core.
 		foam_opacity = mix(foam_opacity, mix(0.55, 0.95, max(fcore, fclumps * 0.6)), step(0.001, rfoam));

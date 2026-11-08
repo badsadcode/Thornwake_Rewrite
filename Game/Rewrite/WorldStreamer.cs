@@ -186,6 +186,12 @@ public partial class WorldStreamer : Node3D
         _terrain.SetShaderParameter("flora_tint", GameSettings.GrassStyle.Index == 1 ? 1f : 0f);
         _water = new WaterMaterials(WaterShader());
         _water.SetShader(WaterMaterials.River, RiverShader());
+        // Tom's foam textures for the river water (D295).
+        var riverMat = _water[WaterMaterials.River];
+        riverMat.SetShaderParameter("foam_lace", GD.Load<Texture2D>("res://Assets/Water/river_foam_fine_bubble_lace_tiled.png"));
+        riverMat.SetShaderParameter("foam_patches", GD.Load<Texture2D>("res://Assets/Water/river_foam_broken_patches_tiled.png"));
+        riverMat.SetShaderParameter("foam_streaks", GD.Load<Texture2D>("res://Assets/Water/river_foam_flowing_streaks_tiled.png"));
+        riverMat.SetShaderParameter("river_foam_tex", GameSettings.RiverFoam.Index);
         // Water style (classic / experimental): a material per kind of water (D284), the shader swapped in place, so every
         // uniform the atmosphere sets (waves, sun, reflections) carries over and existing tiles switch at once.
         GameSettings.Changed += s =>
@@ -193,6 +199,7 @@ public partial class WorldStreamer : Node3D
             if (s == GameSettings.WaterStyle || s == GameSettings.RiverWater)
                 for (int p = 0; p < WaterMaterials.Parts; p++) _water.SetShader(p, p == WaterMaterials.River ? RiverShader() : WaterShader());
             if (s == GameSettings.Lava) _lava.Shader = LavaShader();
+            if (s == GameSettings.RiverFoam) _water[WaterMaterials.River].SetShaderParameter("river_foam_tex", GameSettings.RiverFoam.Index);
             if (s == GameSettings.GroundTextures) _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
             if (s == GameSettings.GroundVariety) _terrain.SetShaderParameter("ground_variety", GameSettings.GroundVariety.F);
             if (s == GameSettings.GroundRelief) _terrain.SetShaderParameter("ground_relief", GameSettings.GroundRelief.F);

@@ -186,10 +186,16 @@ public static class GameSettings
         "Rivers: their own water (experimental 4 with the river's changes: foam round stones even in slow water), or as the " +
         "Water setting draws them (build 137). River water also flows at an even speed along each river (faster in the deep " +
         "middle) and fades softly at its banks.", options: new[] { "as Water (build 137)", "river water" }, rebuild: true));
-    public static readonly Setting Spray = Add(new("fx.spray", "Lighting and effects", "Spray and mist", 0, 1, 1, 1,
+    public static readonly Setting RiverFoam = Add(new("fx.river_foam", "Lighting and effects", "River foam", 0, 1, 1, 1,
+        "With River water: the foam round stones and banks, and the white water of rapids, made of Tom's foam textures (bubble " +
+        "lace, broken patches, streaks along fast water), carried by the current; or drawn (as before, D293).",
+        options: new[] { "drawn (D293)", "textures" }));
+    public static readonly Setting Spray = Add(new("fx.spray", "Lighting and effects", "Spray and mist", 0, 2, 1, 2,
         "Billowing spray: clouds of spray and mist rolling up at the foot of waterfalls and off their falling water, lit by the " +
         "sun, and spray where fast river water breaks on stones (costs some frame rate near big falls). Simple mist (build 138): " +
-        "a few soft puffs at the foot of falls.", options: new[] { "simple mist (build 138)", "billowing spray" }));
+        "a few soft puffs at the foot of falls. Textures: the billowing spray made of Tom's mist and spray pictures (soft clouds " +
+        "at the foot, a rising plume, fine droplets off the falling water and round river stones).",
+        options: new[] { "simple mist (build 138)", "billowing spray (drawn)", "billowing spray (textures)" }));
     public static readonly Setting Waterfalls = Add(new("fx.waterfalls", "Lighting and effects", "Waterfalls", 0, 1, 1, 1,
         "Falling water: the water leaves the river's level at the lip and falls to the pool (sliding down the rock where the " +
         "rock lies higher), streaked and white, white water spreading on the pool and mist rising at the foot. River sheet " +

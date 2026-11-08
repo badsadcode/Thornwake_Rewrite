@@ -4679,6 +4679,21 @@ Tom: "I added a new zip file with textures that we might use. I'm not sure if th
   sprites as they are: `Assets/Water/waterfall_*_sprite.png`, 512 px.
 * Not used in the game yet: how they replace the drawn foam and spray is Tom's call.
 
+## D295 — River foam and spray from Tom's textures (2026-11-08)
+Tom: "Yeah, take your approach" (D294's proposal), with a reference sheet of a foam texture pack (a mask channel revealed
+by coverage, flow-UV streaks, noise distortion, tiled detail; no textures taken from it, its usage ideas followed).
+Imported with mipmaps (`Assets/Water/*.import`).
+* **River foam** (setting *River foam*: textures, default / drawn (D293); `RIVER2`): the foam amount reveals a texture
+  where its density exceeds what the amount leaves out, so its own holes, threads and bubbles stay (a mask revealed by
+  coverage). Carried by the current (`tex_flow`: two copies slid and cross-faded, contrast restored; anchored to the world,
+  wrapped every 512 m). Round stones and banks the bubble lace (3 m tile), the ring now graded from solid at the rock to
+  lace outward and a little wider; behind stones the broken patches; rapids' white water from the broken patches (6 m),
+  turning to the streaks along fast water (`tex_streaks`: 5 m across, 2.5× longer along the flow, in frames on a 16 m
+  grid blended between corners so bends do not swing them into arcs), a milky halo where the texture almost shows.
+* **Spray** (setting *Spray and mist* gains *billowing spray (textures)*, the default; *(drawn)* = D292): each puff's shape
+  and inner detail from Tom's sprites, a little of the drawn churn on top: soft clouds at a fall's foot, a rising plume of
+  mist over the pool (new, for falls over 8 m), fine droplets off the falling water and round river stones; lit as before.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

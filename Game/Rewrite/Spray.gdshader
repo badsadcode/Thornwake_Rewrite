@@ -10,6 +10,9 @@ uniform sampler2D depth_tex : hint_depth_texture, filter_nearest, repeat_disable
 uniform float density = 1.0;
 uniform float soft_distance = 1.5;   // metres over which a puff fades into what lies behind it
 uniform float churn = 1.0;           // how much its edge billows (0 a plain soft disc)
+// Tom's mist and spray sprites (D295): the puff's shape and inner detail from the picture instead of the drawn billow.
+uniform sampler2D sprite : source_color, filter_linear_mipmap, repeat_disable;
+uniform bool use_sprite = false;
 
 varying float seed;
 varying float age;
@@ -54,6 +57,12 @@ void fragment()
 	BACKLIGHT = COLOR.rgb * 0.6;         // light through the thin spray
 	ROUGHNESS = 1.0;
 	EMISSION = COLOR.rgb * 0.16;         // never grey in shade: droplets scatter the sky's light every way
+	if (use_sprite) {
+		// (the sprite rotated with the particle by its UV; a little of the drawn churn on top keeps each puff alive)
+		vec4 sp = texture(sprite, UV);
+		body = sp.a * (0.85 + 0.3 * (fbm(q * 2.0 + seed * 13.0 + age * 0.7) - 0.5));
+		ALBEDO = COLOR.rgb * mix(0.8, 1.0, dot(sp.rgb, vec3(0.333)));
+	}
 	float alpha = clamp(body, 0.0, 1.0) * COLOR.a * density;
 	// Soft where it meets the water or rock behind it.
 	float d = textureLod(depth_tex, SCREEN_UV, 0.0).r;

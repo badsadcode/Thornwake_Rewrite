@@ -12,11 +12,26 @@ namespace Thornwake.Rewrite;
 public static class Spray
 {
     private static ShaderMaterial? _material;
+    private static readonly Dictionary<string, ShaderMaterial> Sprites = new();
 
-    public static bool On => GameSettings.Spray.Index == 1;
+    /// <summary>Billowing spray (drawn, D292, or from Tom's sprites, D295); off: the simple mist of build 138.</summary>
+    public static bool On => GameSettings.Spray.Index >= 1;
 
     // (drawn after the water and the falling water: they are see-through too, and drawn later they covered it)
     public static ShaderMaterial Material => _material ??= new ShaderMaterial { Shader = GD.Load<Shader>("res://Game/Rewrite/Spray.gdshader"), RenderPriority = 3 };
+
+    /// <summary>The puff's look: one of Tom's sprites (soft_cloud, rising_plume, fine_droplets, D295) when the setting asks for
+    /// them, else the drawn billow.</summary>
+    public static ShaderMaterial Look(string sprite)
+    {
+        if (GameSettings.Spray.Index != 2) return Material;
+        if (Sprites.TryGetValue(sprite, out var m)) return m;
+        m = new ShaderMaterial { Shader = Material.Shader, RenderPriority = 3 };
+        string file = sprite == "fine_droplets" ? "waterfall_spray_fine_droplets_sprite.png" : $"waterfall_mist_{sprite}_sprite.png";
+        m.SetShaderParameter("sprite", GD.Load<Texture2D>("res://Assets/Water/" + file));
+        m.SetShaderParameter("use_sprite", true);
+        return Sprites[sprite] = m;
+    }
 
     /// <summary>
     /// An emitter: puffs born in a box (half-extents, local to the node), sent off along <paramref name="direction"/> (local),
@@ -24,7 +39,7 @@ public static class Spray
     /// their density rising quickly to <paramref name="peak"/> and fading out over their life.
     /// </summary>
     public static GpuParticles3D Emitter(Vector3 box, Vector3 direction, float spreadDegrees, float speedMin, float speedMax, float sizeMin, float sizeMax,
-        float grow, float lifetime, int amount, float rise, float peak, Color tint)
+        float grow, float lifetime, int amount, float rise, float peak, Color tint, string sprite = "soft_cloud")
     {
         var process = new ParticleProcessMaterial
         {
@@ -51,7 +66,7 @@ public static class Spray
             Name = "Spray",
             Amount = Math.Max(1, amount), Lifetime = lifetime, Preprocess = lifetime, Randomness = .5f,
             ProcessMaterial = process,
-            DrawPass1 = new QuadMesh { Size = Vector2.One, Material = Material },
+            DrawPass1 = new QuadMesh { Size = Vector2.One, Material = Look(sprite) },
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             DrawOrder = GpuParticles3D.DrawOrderEnum.ViewDepth,
             VisibilityAabb = new Aabb(-Vector3.One * reach, Vector3.One * reach * 2 + Vector3.Up * reach),
@@ -74,11 +89,13 @@ public sealed class RiverSpray
     private readonly List<GpuParticles3D> _emitters = new();
     private readonly Vector4[] _near = new Vector4[32];
     private double _timer, _originX = double.NaN, _originZ;
+    private int _look = GameSettings.Spray.Index;
 
     public RiverSpray(Node3D parent) { _parent = parent; }
 
     public void Update(double dt, TerrainSampler terrain, WorldStreamer streamer, double camX, double camZ, double originX, double originZ)
     {
+        if (_look != GameSettings.Spray.Index) { _look = GameSettings.Spray.Index; foreach (var e in _emitters) e.QueueFree(); _emitters.Clear(); }
         bool on = Spray.On && GameSettings.RiverWater.Index == 1;
         if (!on) { foreach (var e in _emitters) e.Visible = false; return; }
         _timer -= dt;
@@ -99,7 +116,7 @@ public sealed class RiverSpray
             float radius = r.Z, strength = Math.Clamp((speed - .9f) / 1.8f, 0, 1);
             if (used >= _emitters.Count)
             {
-                var e = Spray.Emitter(new Vector3(.6f, .15f, .3f), new Vector3(0, 1, .8f), 35, .4f, 1.2f, .5f, 1f, 2.2f, 1.8f, 10, .15f, .5f, Spray.Tint);
+                var e = Spray.Emitter(new Vector3(.6f, .15f, .3f), new Vector3(0, 1, .8f), 35, .4f, 1.2f, .5f, 1f, 2.2f, 1.8f, 10, .15f, .5f, Spray.Tint, "fine_droplets");
                 _parent.AddChild(e);
                 _emitters.Add(e);
             }
