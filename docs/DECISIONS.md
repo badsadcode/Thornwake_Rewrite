@@ -4426,6 +4426,10 @@ shadow twin) cast shadows; the lighter model beyond and the distant tree cards h
 * At Tom's spot (1920×1080): by quality 58 FPS, 700 m 54, 1.2 km 47–49, 2 km 46 then dipping to 36 (the cards' shadows cost);
   the dark share of the middle distance from 19 % to 24 %.
 * The default stays 1.2 km (no card shadows); 2 km is the full look for strong machines.
+* Tom: "some trees not cast shadows, and shadows have different directions": in the shadow pass each card turned to the
+  shadow camera's position, which moves from split to split — they faced all ways, some edge-on. Now in the sun's
+  (orthographic) shadow pass every card faces the sun itself (`TreeImpostor.gdshader`): all shadows one way. (Within ~110 m,
+  the strong ambient occlusion's dark round foot under each tree can also read as a shadow pointing everywhere.)
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder

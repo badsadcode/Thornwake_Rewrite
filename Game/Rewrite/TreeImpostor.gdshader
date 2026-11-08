@@ -40,6 +40,10 @@ void vertex() {
 	vec4 sz = species_size[species];
 	float size = sz.x * scale;
 	vec3 to_camera = CAMERA_POSITION_WORLD - origin;
+	// In the sun's shadow pass (an orthographic view) the card faces the sun itself, every one the same way: facing the
+	// shadow camera's position — which moves from split to split — they turned all ways, some edge-on (no shadow), so the
+	// shadows pointed different ways (D279, Tom).
+	if (PROJECTION_MATRIX[3][3] > 0.5) to_camera = sun_dir_world * 1000.0;
 	vec3 view_dir = normalize(to_camera);
 	// The camera's direction seen from the tree (its own rotation removed) picks the two nearest side views.
 	float phi = atan(to_camera.x, to_camera.z);
