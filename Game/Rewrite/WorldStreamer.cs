@@ -164,11 +164,13 @@ public partial class WorldStreamer : Node3D
         _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
         _terrain.SetShaderParameter("flora_tint", GameSettings.GrassStyle.Index == 1 ? 1f : 0f);
         _water = new WaterMaterials(WaterShader());
+        _water.SetShader(WaterMaterials.River, RiverShader());
         // Water style (classic / experimental): a material per kind of water (D284), the shader swapped in place, so every
         // uniform the atmosphere sets (waves, sun, reflections) carries over and existing tiles switch at once.
         GameSettings.Changed += s =>
         {
-            if (s == GameSettings.WaterStyle) for (int p = 0; p < WaterMaterials.Parts; p++) _water.SetShader(p, WaterShader());
+            if (s == GameSettings.WaterStyle || s == GameSettings.RiverWater)
+                for (int p = 0; p < WaterMaterials.Parts; p++) _water.SetShader(p, p == WaterMaterials.River ? RiverShader() : WaterShader());
             if (s == GameSettings.Lava) _lava.Shader = LavaShader();
             if (s == GameSettings.GroundTextures) _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
             if (s == GameSettings.GroundVariety) _terrain.SetShaderParameter("ground_variety", GameSettings.GroundVariety.F);
@@ -204,6 +206,11 @@ public partial class WorldStreamer : Node3D
     /// <summary>The lava sheet's look (setting Lava): the veined lava (D260; "glowing", so a saved "glowing" gets it), or
     /// build 125's, Lava.gdshader.</summary>
     private static Shader LavaShader() => GD.Load<Shader>(GameSettings.Lava.Index == 2 ? "res://Game/Rewrite/Lava.gdshader" : "res://Game/Rewrite/LavaVeins.gdshader");
+
+    /// <summary>The river part's shader (D286): its own river water, or the Water style's (needs the FFT ocean's renderer: on
+    /// the old-PC renderer the Water style's).</summary>
+    private static Shader RiverShader() => GameSettings.RiverWater.Index == 1 && RenderingServer.GetRenderingDevice() != null
+        ? GD.Load<Shader>("res://Game/Rewrite/WaterRiver.gdshader") : WaterShader();
 
     private static Shader WaterShader() => GD.Load<Shader>(GameSettings.WaterStyle.Index switch
     {

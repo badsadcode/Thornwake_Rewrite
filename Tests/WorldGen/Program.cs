@@ -125,6 +125,22 @@ if (args.FirstOrDefault(a => a.StartsWith("--coast-map=")) is { } cmArg)
     f.Write(image);
     return 0;
 }
+// --river-at=<profile>,<seed>,x,z: the nearest river point, which way the river runs there and how fast it falls.
+if (args.FirstOrDefault(a => a.StartsWith("--river-at=")) is { } raArg)
+{
+    var p = raArg[11..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    double x = double.Parse(p[2], System.Globalization.CultureInfo.InvariantCulture), z = double.Parse(p[3], System.Globalization.CultureInfo.InvariantCulture);
+    if (!s.Plan.Hydrology.NearestRiver(x, z, 2000, out var hit)) { Console.WriteLine("no river within 2 km"); return 0; }
+    var r = s.Plan.Hydrology.Reaches[hit.Reach];
+    int k = 0; double best = double.MaxValue;
+    for (int i = 0; i < r.Points.Length; i++) { double d = (r.Points[i].X - x) * (r.Points[i].X - x) + (r.Points[i].Z - z) * (r.Points[i].Z - z); if (d < best) { best = d; k = i; } }
+    int a0 = Math.Max(0, k - 1), b0 = Math.Min(r.Points.Length - 1, k + 1);
+    double dx = r.Points[b0].X - r.Points[a0].X, dz = r.Points[b0].Z - r.Points[a0].Z, dl = Math.Sqrt(dx * dx + dz * dz);
+    double grade = (r.Surface[a0] - r.Surface[b0]) / Math.Max(1, r.Along[b0] - r.Along[a0]);
+    Console.WriteLine($"reach {r.Id} point {k} at {r.Points[k].X:0},{r.Points[k].Z:0}, {hit.Distance:0} m away; downstream {dx / dl:0.00},{dz / dl:0.00}; width {r.Width[k]:0.0} m, falls {grade * 100:0.0} %, level {r.Surface[k]:0.0}");
+    return 0;
+}
 // --falls=<profile>,<seed>[,x,z]: the waterfalls as the water draws them (D285: river stretches dropping 3 m or more,
 // steeper than 1 in 5), nearest to x,z first.
 if (args.FirstOrDefault(a => a.StartsWith("--falls=")) is { } flArg)

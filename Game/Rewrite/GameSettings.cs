@@ -182,6 +182,9 @@ public static class GameSettings
         "drifts away with the wind, breaking up into streaks; glassier, deeper water; livelier far sea. Experimental 4: 3A, but " +
         "rough and stormy water reflects less (calm water is the same as 3A). Switch any time to compare.",
         options: new[] { "classic", "experimental", "experimental 2", "experimental 3", "experimental 3A", "experimental 4" }));
+    public static readonly Setting RiverWater = Add(new("fx.river_water", "Lighting and effects", "River water", 0, 1, 1, 1,
+        "Rivers: their own water (experimental 4 with the river's changes: foam round stones even in slow water), or as the " +
+        "Water setting draws them (build 137).", options: new[] { "as Water (build 137)", "river water" }));
     public static readonly Setting Waterfalls = Add(new("fx.waterfalls", "Lighting and effects", "Waterfalls", 0, 1, 1, 1,
         "Falling water: the water leaves the river's level at the lip and falls to the pool (sliding down the rock where the " +
         "rock lies higher), streaked and white, white water spreading on the pool and mist rising at the foot. River sheet " +
@@ -235,6 +238,10 @@ public static class GameSettings
         "The big rocks on open ground (D277): the rock kit's formations — column clusters, slab stacks, tiered piles and tors, " +
         "built of chunky pieces, by the land's rock — or single huge boulders (as before build 135).",
         options: new[] { "boulders (build 134)", "rock kit" }, rebuild: true));
+    public static readonly Setting RiverStones = Add(new("fx.river_stones", "Lighting and effects", "River stones", 0, 1, 1, 1,
+        "Stones and boulders standing in rivers (D286), sticking out of the water, in patches as riffles have them, more in " +
+        "mountain streams and shallow water; the current flows round them with a bulge, a wake and foam (Water: experimental 2 " +
+        "and later). Off: rivers as before.", options: new[] { "off (build 137)", "on" }, rebuild: true));
     public static readonly Setting RockShading = Add(new("fx.rock_shading", "Lighting and effects", "Rock shading", 0, 1, 1, 1,
         "How rocks are lit (D275): smooth (auto-smooth, as in Blender: edges sharper than 50° stay crisp, the rest blend) or " +
         "faceted (every face its own flat shade, as before build 135).",

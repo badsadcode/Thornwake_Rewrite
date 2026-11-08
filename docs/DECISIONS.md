@@ -4536,6 +4536,27 @@ and the rivers are as they were (no terrain revision). `Game/Rewrite/Waterfalls.
   rising (soft particles, more for a higher fall, within 1.5 km).
 * Built on worker threads for the falls within 4 km. Looks are a first version for Tom to judge.
 
+## D286 — Foam ran upstream (fixed); river water of its own; stones in rivers (2026-11-08)
+Water rework step 3, first part. Tom: "I'm not sure if the river has a flow in the right direction ... where the waterfall is
+flowing up the stream", and "rivers also deserve some stones here and there sticking out, so the water flows around it,
+makes foam".
+* **Foam ran against its drift** (a bug, every experimental style): the foam patterns were read at position + drift × time,
+  which moves a pattern against the drift — rivers' foam ran upstream (on a fall's fast face most of all), the open sea's
+  foam and its pattern over the simulated foam drifted upwind, the aerated crest streaks too. Now position − drift × time
+  (as the ripples always were: their current was right). `WaterSea.gdshaderinc` (styles 2–4) and `WaterExperimental`.
+  (Two wind-ripple layers still move as before, one each way in one of them — not foam, left.)
+* **River water** (setting *River water*: river water, default / as Water (build 137)): the river part (D284) draws with
+  `WaterRiver.gdshader`, experimental 4 with `RIVER2`; on the old-PC renderer the Water style's. So far: foam round rocks
+  in slow water too (a broken ring where the water piles against the rock and slides round it, streaks trailing behind,
+  clumps drifting downstream: the wakes' foam started only above ~0.6 m/s), laid after the thin-film fade (which took it
+  away exactly at a rock's waterline), and lit by the sky like any white surface (the water's sky reflection is drawn at the
+  sky's full brightness and drowned the foam in shade).
+* **River stones** (setting *River stones*, on by default, tiles rebuilt): in river water under 2.2 m deep, sized to the
+  depth so 0.15–0.8 m stands out (up to 4 m across), in patches like riffles, more in mountain streams and shallow water;
+  none on a fall's face or a chute steeper than 15 %. Levels 0–1, solid like other rocks; the water draws their bulge,
+  wake and foam (`TileBuilder.ObstacleWakes`, styles 2+). About 120 in the area round the test spot, mostly in streams.
+* Test tool: `--river-at=<profile>,<seed>,x,z` (the river there: which way it runs, its width and fall).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

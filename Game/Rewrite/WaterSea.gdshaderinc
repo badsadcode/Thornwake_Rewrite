@@ -699,7 +699,8 @@ vec2 foam3a(vec2 q, vec2 dn, float t, float amount, float fresh, float footprint
 vec3 foam_layers(vec2 p, vec2 drift, float t, float amount, float dist) {
 	float speed = length(drift);
 	vec2 dn = speed > 1e-3 ? drift / speed : vec2(1.0, 0.0);
-	return foam_at(p + drift * t, dn, 1.3 + 1.4 * smoothstep(0.1, 1.5, speed), t, amount, dist);
+	// (p - drift * t: the pattern then moves along the drift; p + drift * t moved it against it, foam drifting upwind, D286)
+	return foam_at(p - drift * t, dn, 1.3 + 1.4 * smoothstep(0.1, 1.5, speed), t, amount, dist);
 }
 // Foam carried by a current that varies from place to place (rivers, plumes; round 20): two copies scrolled over a short
 // cycle and cross-faded (no shear, see flow_noise), unrotated; the streaks come from smearing taps up the local current.
@@ -708,8 +709,9 @@ vec3 foam_flow(vec2 p, vec2 drift, float t, float amount, float dist) {
 	const float cycle = 7.0;
 	float p0 = fract(t / cycle), p1 = fract(t / cycle + 0.5);
 	float w0 = 1.0 - abs(2.0 * p0 - 1.0);
-	vec3 a = foam_at(p + drift * p0 * cycle, vec2(1.0, 0.0), 1.0, t, amount, dist);
-	vec3 b = foam_at(p + drift * p1 * cycle + vec2(31.7, 12.3), vec2(1.0, 0.0), 1.0, t, amount, dist);
+	// (minus: carried downstream; with plus the rivers' foam ran upstream — Tom: a waterfall "flowing up the stream", D286)
+	vec3 a = foam_at(p - drift * p0 * cycle, vec2(1.0, 0.0), 1.0, t, amount, dist);
+	vec3 b = foam_at(p - drift * p1 * cycle + vec2(31.7, 12.3), vec2(1.0, 0.0), 1.0, t, amount, dist);
 	vec3 m = mix(b, a, w0);
 	// Two half-faded masks average to a grey wash: restore the contrast at mid-fade.
 	m.x = mix(m.x, clamp((m.x - 0.2) * inversesqrt(w0 * w0 + (1.0 - w0) * (1.0 - w0)) + 0.2, 0.0, 1.0), 0.5);
@@ -865,6 +867,16 @@ void fragment() {
 			float drift = mix(noise(vec2(a * 0.9 - t1 * fs * 0.7 + 5.1, c * 1.7)), noise(vec2(a * 0.9 - t0 * fs * 0.7, c * 1.7)), ow0);
 			obstacle_foam = strength * (bulge * 0.7 * smoothstep(0.6, 2.0, fs) + arm * 0.35 * smoothstep(0.8, 2.0, fs) * smoothstep(0.45, 0.8, drift)
 				+ core * 0.6 * smoothstep(0.45, 0.8, drift));
+#ifdef RIVER2
+			// River water (D286, Tom: stones "so the water flows around it, makes foam"): foam even in slow water — a broken
+			// ring where the water piles against the rock and slides round its sides, streaks trailing behind it, fading out
+			// downstream (in slow water the wakes above made none).
+			float gentle = oweight * smoothstep(0.05, 0.5, fs);
+			float ring = exp(-sq(max(0.0, length(vec2(a + 0.2, c)) - 1.0)) * 3.0) * (0.6 + 0.4 * smoothstep(0.5, -0.8, a));
+			float trail = smoothstep(0.0, 1.0, a) * exp(-sq(abs(c) - 0.7 - a * 0.08) * 2.5) * exp(-max(a, 0.0) * 0.22);
+			float breakup = smoothstep(0.3, 0.65, drift);
+			obstacle_foam = max(obstacle_foam, gentle * (ring * (0.6 + 0.4 * breakup) + trail * breakup * 0.8));
+#endif
 		}
 		// Wide rivers: wind waves too (fetch = the river's width), steeper where the wind blows against the current.
 		float wide = smoothstep(25.0, 150.0, fetch);
@@ -1087,7 +1099,7 @@ void fragment() {
 		float fresh = smoothstep(0.35, 0.85, field_foam);
 		float old = smoothstep(0.03, 0.4, field_foam) * (1.0 - fresh);
 		vec2 fd = wdir * (0.25 + 0.25 * wind_speed);
-		vec2 fq = pq + fd * TIME;
+		vec2 fq = pq - fd * TIME; // (minus: the pattern moves with the wind, as the simulated foam does; plus slid it upwind, D286)
 		vec2 lip2 = foam3a(fq, wdir, TIME, max(cap * 0.95, fresh * 0.8), max(cap, fresh), footprint);
 		vec2 streak2 = foam3a(fq * 0.85 + vec2(37.1, 11.3), wdir, TIME, old * 0.72, 0.0, footprint);
 		float lip = lip2.x;
@@ -1118,9 +1130,17 @@ void fragment() {
 	foam = foam * (1.0 / (1.0 + dist / 400.0) * 0.5 + 0.5) * smoothstep(0.2, 0.9, edge_fade)
 #endif
 		* smoothstep(0.01, 0.12, contact_depth); // the thinnest swash film carries no solid foam
+#ifdef RIVER2
+	// Foam round rocks in rivers (D286): after the thin-film fade above, which took it away exactly at a rock's waterline,
+	// broken into clumps that drift downstream.
+	if (river > 0.5 && obstacle_foam > 0.05) {
+		float clumps = smoothstep(0.4, 0.75, flow_noise(p * 1.7, current * 0.8, TIME, 2.5) * 0.65 + noise(p * 4.3 + 1.7) * 0.35);
+		foam = max(foam, smoothstep(0.2, 0.7, obstacle_foam) * mix(0.45, 1.0, clumps) * (1.0 - smoothstep(25.0, 120.0, dist)));
+	}
+#endif
 
 	// Aerated crests in rough weather: milky streaks over the wave tops (softer than foam, not masked).
-	float aerated = (sea + lake * 0.4) * smoothstep(0.15, 1.0, crest + 0.4 * (noise(p * 0.12 + wdir * TIME * 0.3) - 0.5))
+	float aerated = (sea + lake * 0.4) * smoothstep(0.15, 1.0, crest + 0.4 * (noise(p * 0.12 - wdir * TIME * 0.3) - 0.5))
 		* smoothstep(0.4, 0.9, sea_state) * 0.65 * (0.55 + 0.45 * noise(p * 0.8 - TIME * 0.2)) / (1.0 + dist / 800.0);
 #ifdef EXP3A
 	aerated *= 0.6;
@@ -1190,6 +1210,11 @@ void fragment() {
 	ALBEDO = mix(scatter * murk * (1.0 - fresnel) * 0.75 + milky * 0.45 * (1.0 - fresnel), foam_col, fo);
 	EMISSION = (transmitted * (1.0 - fresnel) + reflected * fresnel + glow * (1.0 - fresnel) + sun_color * glint * 3.0
 		+ sss_color * sun_color * under_foam * 0.12) * (1.0 - fo);
+#ifdef RIVER2
+	// Foam lit by the sky like any white surface (D286): the water's sky reflection is drawn at the sky's full brightness,
+	// the engine lights the foam's albedo far less in shade, so foam round rocks in a shaded stream read as no foam at all.
+	EMISSION += foam_col * (sky_horizon + sky_zenith) * 0.5 * fo;
+#endif
 	// (round 25: the engine's own specular adds the plain sky's reflection on top of ours; where the screen-space
 	// reflection found the shore or mountains it painted them over with sky — Tom's alpine lake mirrored nothing)
 	SPECULAR = 0.5 * (1.0 - fo) * (1.0 - 0.9 * hit.a);

@@ -300,6 +300,34 @@ public static partial class GroundCover
                 Place(Boulder, ox, oz, hh, 1f, 2.5f, .4f);
             }
         });
+        // River stones (D286, Tom: "rivers also deserve some stones here and there sticking out, so the water flows around
+        // it, makes foam"): in river water under 2.2 m deep, sized to the depth so 0.15–0.8 m stands out of the water, in
+        // patches (riffles) about 60 m across, more in mountain streams and shallow water; none on a fall's face or a steep
+        // chute (the water there drops over 15 cm a metre). The water draws their wakes and foam (TileBuilder.ObstacleWakes).
+        if (key.Level <= 1 && GameSettings.RiverStones.Index == 1)
+            Cells(key, 7, seed ^ 0x51ED5UL, (x, z, h) =>
+            {
+                int i = (int)Math.Round(x / g.Spacing), j = (int)Math.Round(z / g.Spacing);
+                if (i < 1 || j < 1 || i >= g.Side - 1 || j >= g.Side - 1) return;
+                var t = g.Samples[j * g.Side + i];
+                if (t.Water != WaterKind.River || !g.At(x, z, out float ground, out _, out _, out _)) return;
+                double depth = t.WaterLevel - ground;
+                if (depth < .05 || depth > 2.2) return;
+                double steep = 0;
+                foreach (int k in new[] { j * g.Side + i - 1, j * g.Side + i + 1, (j - 1) * g.Side + i, (j + 1) * g.Side + i })
+                    if (g.Samples[k].Water == WaterKind.River) steep = Math.Max(steep, Math.Abs(g.Samples[k].WaterLevel - t.WaterLevel) / g.Spacing);
+                if (steep > .15) return;
+                double wx = key.MinX + x, wz = key.MinZ + z;
+                float patch = (float)DetMath.Smooth((Noise.Fbm(wx, wz, 60, 2, 0, seed ^ 0x51EDUL) + .1) / .25);
+                float shallow = (float)(1 - depth / 2.2), mountain = g.Mountain(x, z);
+                if (Unit(h, 1) > (.16f + .8f * mountain + .6f * shallow) * patch * a) return;
+                float rise = .15f + .65f * Unit(h, 2) * Unit(h, 3);
+                float tall = (float)Math.Min(3.6, (depth + rise) / .75f), wide = Math.Min(4f, tall * (1.1f + .5f * Unit(h, 4)));
+                var basis = new Basis(Vector3.Up, Unit(h, 7) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 8) - .5f) * .4f);
+                basis = basis.Scaled(new Vector3(wide * (.8f + .4f * Unit(h, 9)), tall, wide * (.8f + .4f * Unit(h, 11))));
+                // (a quarter of it buried in the bed: its top stands at three quarters of its height over the bed)
+                result.Add(new RockInstance(wide > 1.6f ? Boulder : Rock, new Transform3D(basis, new Vector3((float)x, ground + tall * .25f, (float)z)), g.RockTint(x, z)));
+            });
         // Rock walls on cliff faces: big flat-faced slabs set into the face, hiding the stretched ground (nearest tiles
         // only: coarser tiles' ground is too far from the real face to seat them).
         if (key.Level == 0)

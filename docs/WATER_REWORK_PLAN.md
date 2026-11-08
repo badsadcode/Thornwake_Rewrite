@@ -27,7 +27,7 @@ Tom's answers (2026-11-08):
    meet go to the part of the higher kind code (as the bank vertices do). The atmosphere's uniforms go to all three.
 2. **Waterfalls** (done, D285, first version): the river surface ends at the lip with an edge; a falling curtain from the lip to the pool (its own mesh
    and shader: streaks, thinning, see-through at the edges), white water and spray at the foot, mist. Fixes the dome.
-3. **River look**: from Experimental 4's river: flow, rapids and standing waves, foam round rocks (already baked), banks;
+3. **River look** (started, D286: its own shader and setting, stones in rivers with foam, the foam's direction fixed): from Experimental 4's river: flow, rapids and standing waves, foam round rocks (already baked), banks;
    options *River water → as Water style / new*.
 4. **Where kinds meet**: river mouths into the sea and lakes cross-faded over a few metres (both parts drawn there, each
    fading by its share), so each kind can have its own shader without a seam.

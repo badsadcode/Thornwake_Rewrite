@@ -284,7 +284,7 @@ vec2 flow_slope(vec2 p, vec2 f, float t, float dist) {
 float foam_mask(vec2 p, vec2 drift, float t, float amount, float dist) {
 	if (amount <= 0.001) return 0.0;
 	float near = 1.0 - smoothstep(12.0, 70.0, dist); // fine bubbles only close up (they alias into blocks far away)
-	vec2 q = p + drift * t;
+	vec2 q = p - drift * t; // (minus: along the drift; plus ran rivers' foam upstream and sea foam upwind, D286)
 	q += (vec2(noise(q * 0.21), noise(q * 0.21 + 5.7)) - 0.5) * 3.0; // swirl
 	float fbm = noise(q * 0.55) * 0.5 + noise(q * 1.6 + t * 0.1) * 0.3 + mix(0.5, noise(q * 4.4 - t * 0.2), near) * 0.2;
 	float bubbles = noise(q * 6.5 + t * 0.4) * noise(q * 11.0 - t * 0.3); // fine bubbly speckle (no cell outlines)
