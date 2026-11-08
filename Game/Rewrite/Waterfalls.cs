@@ -67,6 +67,10 @@ public sealed class FallSet
 
     private static int Cell(double v) => (int)Math.Floor(v / GridCell);
 
+    /// <summary>How far past a fall's river sides its face is cut from the river's sheet and the falling water reaches (D292:
+    /// 3 m, a quarter of the width on wide rivers — the sheet on a wide fall's slope spreads further past its banks).</summary>
+    public static double Margin(Fall f) => Math.Max(3, f.Width * .25);
+
     /// <summary>Whether a square of the water's sheet is part of a fall's face: near a fall (from a little above its lip to a
     /// little past its foot, up to 3 m beyond the river's sides) with water between the pool's level and the lip's
     /// (<paramref name="low"/>, <paramref name="high"/>: its corners' lowest and highest). By the water's level, not by the
@@ -80,7 +84,7 @@ public sealed class FallSet
             double px = x - f.LipX, pz = z - f.LipZ, along = px * f.Dx + pz * f.Dz, across = Math.Abs(px * f.Dz - pz * f.Dx);
             // (D290: 3 m past the river's sides and from 4 m above the lip: 20 m and 15 m cut a V-shaped notch in the water above)
             // (from 1.5 m above the lip: the curtain overlaps it from 3 m above, fading in — D291, a gap showed as a line)
-            if (along < -1.5 || along > f.Length + 12 || across > f.WidthAt(along) * .5 + 3) continue;
+            if (along < -1.5 || along > f.Length + 12 || across > f.WidthAt(along) * .5 + Margin(f)) continue;
             // (any corner between the two levels: the dome over the lip sinks a little below the lip's level already)
             if (low < f.Top - .25 && high > f.Bottom + .25) return true;
         }
@@ -110,6 +114,7 @@ public sealed class WaterfallView
     private double _originX = double.NaN, _originZ, _lastX = double.NaN, _lastZ;
     private static ShaderMaterial? _curtain, _foam;
     private static Material? _mistMaterial;
+    private bool _spray = Spray.On;
 
     public WaterfallView(Node3D parent) { _parent = parent; }
 
@@ -119,6 +124,7 @@ public sealed class WaterfallView
     public void Update(TerrainSampler terrain, double camX, double camZ, double originX, double originZ)
     {
         bool on = GameSettings.Waterfalls.Index == 1;
+        if (_spray != Spray.On) { _spray = Spray.On; Clear(); _building.Clear(); _lastX = double.NaN; }
         if (_for != terrain || !on)
         {
             Clear(); _building.Clear(); _lastX = double.NaN;
@@ -171,7 +177,7 @@ public sealed class WaterfallView
 
     /// <summary>A fall's curtain and foam disc, in metres from the lip across (y absolute, as the terrain's).</summary>
     private sealed record Model(Vector3[] Vertices, Vector3[] Normals, Vector2[] Uv, Vector2[] Uv2, Color[] Colors, int[] Indices,
-        Vector3[] FoamVertices, Vector2[] FoamUv, Color[] FoamColors, int[] FoamIndices, Vector3 Foot, float Spread);
+        Vector3[] FoamVertices, Vector2[] FoamUv, Color[] FoamColors, int[] FoamIndices, Vector3 Foot, float Spread, Vector3 Face, float Width);
 
     private static Model Build(TerrainSampler terrain, FallSet.Fall f)
     {
@@ -180,8 +186,8 @@ public sealed class WaterfallView
         // dumps 214522/214703).
         // D291: 3.5 m more a side, fading and fraying there — the river's sheet is cut 3 m past the river's sides and the curtain
         // stopped short of that: a clear cut-off between them (Tom: "the sides are too regular. There's a clear cutoff").
-        const double Margin = 3.5;
-        double Wide(double h) => Math.Max(2, f.Width * (1 + .25 * Math.Clamp(h / Math.Max(1, f.Length), 0, 1)) + 1) + 2 * Margin;
+        double margin = FallSet.Margin(f) + .5;
+        double Wide(double h) => Math.Max(2, f.Width * (1 + .25 * Math.Clamp(h / Math.Max(1, f.Length), 0, 1)) + 1) + 2 * margin;
         double width = Wide(0);
         double ax = f.Dz, az = -f.Dx; // across the fall (to its right)
         double lipLevel = terrain.Sample(f.LipX, f.LipZ).WaterLevel;
@@ -219,7 +225,7 @@ public sealed class WaterfallView
             {
                 double h = steps[r], off = (u - .5) * Wide(h);
                 double x = f.LipX + f.Dx * h + ax * off, z = f.LipZ + f.Dz * h + az * off;
-                double y, onRock = 0;
+                double y, onRock = 0, wall = 0;
                 if (h < 0)
                 {
                     double level = terrain.Sample(x, z).WaterLevel;
@@ -227,11 +233,19 @@ public sealed class WaterfallView
                 }
                 else
                 {
-                    // One height across the fall per row, the centre line's (D290: each column following the rock beside it
-                    // curled the sheet round the gorge's walls).
-                    double free = lipLevel - 4.9 * (h / v0) * (h / v0), centre = Centre(h);
-                    y = Math.Max(centre, bottom - .25);
-                    onRock = DetMath.Smooth((centre - free) / .5);
+                    // Each column falls freely or slides on the rock under it (D292, Tom: the wide fall "goes through the
+                    // terrain": with one height per row, D290, a 74 m fall over a curved slope cut into it and hovered over it),
+                    // but no higher than the centre's path by more than a metre: where the rock beside rises into a wall the
+                    // column fades out instead of climbing it (each column following its rock up curled the sheet round the
+                    // gorge's walls, D290).
+                    double free = lipLevel - 4.9 * (h / v0) * (h / v0), centre = Centre(h), ground = terrain.Height(x, z) + .3;
+                    double own = Math.Max(free, ground);
+                    // (only outside the river's own width: inside it bumps of the rock stood a metre over the centre's path and
+                    // the fade cut holes in the falling water)
+                    double outside = DetMath.Smooth((Math.Abs(off) - f.WidthAt(h) * .5 + 1) / 2);
+                    wall = DetMath.Smooth((own - centre - 1) / 2.5) * outside;
+                    y = Math.Max(own - (own - Math.Min(own, centre + 1)) * outside, bottom - .25);
+                    onRock = DetMath.Smooth((ground - free) / .5);
                 }
                 var p = new Vector3((float)(x - f.LipX), (float)y, (float)(z - f.LipZ));
                 double drop = Math.Max(0, lipLevel - y), speed = Math.Sqrt(v0 * v0 + 2 * 9.8 * drop);
@@ -247,9 +261,24 @@ public sealed class WaterfallView
                 double foot = DetMath.Smooth((y - bottom) / -Math.Max(1, (lipLevel - bottom) * .15) + 1); // (1 near the pool)
                 // (fading out as it reaches the pool: drawn after the water, its rows lying under the pool showed as a glassy sheet)
                 double fromSide = Math.Min(u, 1 - u) * Wide(h);
-                double edge = DetMath.Smooth(fromSide / Margin) * DetMath.Smooth((h + Upstream) / (Upstream - 1))
-                    * (h > 0 ? DetMath.Smooth((y - bottom + .1) / .6) : 1);
+                double edge = DetMath.Smooth(fromSide / margin) * DetMath.Smooth((h + Upstream) / (Upstream - 1))
+                    * (h > 0 ? DetMath.Smooth((y - bottom + .1) / .6) : 1) * (1 - wall);
                 colors[k] = new Color((float)Math.Min(1, speed / 25), (float)foot, (float)onRock, (float)edge);
+            }
+        }
+        // Columns that end on the dry bank above the pool (the sides of a wide fall over a V-shaped gorge: every column has the
+        // centre's rows, so a side column stopped part-way down the bank) fade out over the lower half of their way down instead
+        // of ending in a hard line along the bank (D292, Tom's marked screenshot).
+        for (int c = 0; c < cols; c++)
+        {
+            double high = vertices[(rows - 1) * cols + c].Y - bottom;
+            if (high < .4) continue;
+            double strength = DetMath.Smooth((high - .4) / 2.5);
+            for (int r = 0; r < rows; r++)
+            {
+                double t = (double)r / Math.Max(1, rows - 1);
+                int k = r * cols + c;
+                colors[k].A *= (float)(1 - strength * DetMath.Smooth((t - .35) / .6));
             }
         }
         var normals = new Vector3[vertices.Length];
@@ -272,6 +301,10 @@ public sealed class WaterfallView
         for (int r = 0; r < rows; r++)
             if (vertices[r * cols + cols / 2].Y <= bottom + .05) { footPoint = vertices[r * cols + cols / 2] with { Y = (float)(bottom + .04) }; break; }
         float spread = (float)Math.Clamp(width * .45 + (lipLevel - bottom) * .15, 4, 35);
+        // Half-way down the falling water, its centre (the face's spray, D292).
+        var face = footPoint;
+        for (int r = 0; r < rows; r++)
+            if (vertices[r * cols + cols / 2].Y <= (lipLevel + bottom) * .5) { face = vertices[r * cols + cols / 2]; break; }
         // The foam disc: rings round the foot, a little longer downstream.
         const int rings = 8, spokes = 28;
         var fv = new List<Vector3> { footPoint }; var fuv = new List<Vector2> { Vector2.Zero }; var fc = new List<Color> { new(1, 1, 1, 1) };
@@ -293,7 +326,7 @@ public sealed class WaterfallView
                 int a = 1 + (ring - 1) * spokes + s, b = 1 + (ring - 1) * spokes + (s + 1) % spokes, c = a + spokes, d = b + spokes;
                 fi.Add(a); fi.Add(c); fi.Add(b); fi.Add(b); fi.Add(c); fi.Add(d);
             }
-        return new Model(vertices, normals, uv, uv2, colors, indices.ToArray(), fv.ToArray(), fuv.ToArray(), fc.ToArray(), fi.ToArray(), footPoint, spread);
+        return new Model(vertices, normals, uv, uv2, colors, indices.ToArray(), fv.ToArray(), fuv.ToArray(), fc.ToArray(), fi.ToArray(), footPoint, spread, face, (float)f.Width);
     }
 
     private void Add((int, int) key, FallSet.Fall fall, Model m, double originX, double originZ)
@@ -321,8 +354,32 @@ public sealed class WaterfallView
             foam.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, a);
         }
         node.AddChild(new MeshInstance3D { Mesh = foam, MaterialOverride = _foam, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
-        var mist = Mist(m.Foot, m.Spread, fall);
-        node.AddChild(mist);
+        GpuParticles3D mist;
+        if (Spray.On)
+        {
+            // Billowing spray (D292): rolling up at the foot and drifting downstream; finer spray off the face of a high fall.
+            float h = (float)fall.Height, w = m.Width;
+            var frame = new Basis(new Vector3((float)fall.Dz, 0, (float)-fall.Dx), Vector3.Up, new Vector3((float)fall.Dx, 0, (float)fall.Dz));
+            mist = Spray.Emitter(new Vector3(Math.Max(1.5f, w * .45f), .5f, 1.5f + h * .02f), new Vector3(0, 1, .7f), 40,
+                1.2f + h * .03f, 2.5f + h * .07f, 2.2f + w * .04f + h * .05f, 3.5f + w * .08f + h * .12f, 2.4f, Math.Clamp(3.5f + h * .03f, 3.5f, 7),
+                Math.Clamp((int)(10 + w * 1.6f + h * 1.2f), 12, 180), .25f, .5f, Spray.Tint);
+            mist.Basis = frame;
+            mist.Position = m.Foot + Vector3.Up * .8f;
+            node.AddChild(mist);
+            if (h > 8)
+            {
+                var off = Spray.Emitter(new Vector3(Math.Max(1, w * .45f), h * .28f, .6f), new Vector3(0, -.2f, 1), 25, .6f, 1.8f,
+                    .9f + w * .02f, 1.8f + w * .04f + h * .02f, 2, 2.6f, Math.Clamp((int)(h * .8f + w * .6f), 8, 90), -.4f, .35f, Spray.Tint);
+                off.Basis = frame;
+                off.Position = m.Face;
+                node.AddChild(off);
+            }
+        }
+        else
+        {
+            mist = Mist(m.Foot, m.Spread, fall);
+            node.AddChild(mist);
+        }
         _parent.AddChild(node);
         _shown[key] = (node, fall, mist);
     }

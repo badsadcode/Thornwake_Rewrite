@@ -58,6 +58,7 @@ public partial class WorldLab : Node3D
     private LavaMap? _lavaMap;
     private SeaStackView? _seaStacks;
     private WaterfallView? _waterfalls;
+    private RiverSpray? _riverSpray;
     private double _windTimer;
     private (double X, double Z, double Speed) _localWind = (1, 0, 5);
     private TerrainSampler? _weatherFieldFor;
@@ -530,6 +531,9 @@ public partial class WorldLab : Node3D
             // Falling water at waterfalls (D285).
             _waterfalls ??= new WaterfallView(this);
             _waterfalls.Update(_sampler, _originX + camLava.X, _originZ + camLava.Z, _originX, _originZ);
+            // Spray where fast river water breaks on stones (D292).
+            _riverSpray ??= new RiverSpray(this);
+            _riverSpray.Update(GetProcessDeltaTime(), _sampler, _streamer, _originX + camLava.X, _originZ + camLava.Z, _originX, _originZ);
             if (_rockKitShow == 0 && _generation == null && !_holding) RockKitShowcase();
         }
         if (!GameSettings.WeatherOn.On || _sampler == null)

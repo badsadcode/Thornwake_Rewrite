@@ -4637,6 +4637,25 @@ cutoff."
 * Tom's reference for later (`uncharted.gif`, Uncharted 4): billowing, sunlit clouds of spray and mist over falling water
   and rapids, for waterfalls and rivers both — "Not now, but maybe".
 
+## D292 — Billowing spray and mist; the wide fall's sides on the terrain (2026-11-08)
+Tom: "Yes, spray and mist" (after his Uncharted 4 reference, `uncharted.gif`: billowing sunlit spray over falls and rapids),
+"Let me guess, the wide waterfall is a flat plane with a texture ... It goes through the terrain", and a screenshot with
+the curtain's sides marked in red.
+* **Spray** (setting *Spray and mist*: billowing spray, default / simple mist (build 138)): `Spray.gdshader`, particles drawn
+  as soft billowing puffs (a lumpy edge rolling as they age), lit as balls of droplets (toward the sun bright, beneath in
+  shade, light through them, never grey: they scatter the sky's light), fading where they meet water or rock; drawn after
+  the water and the falling water. `Spray.cs`: at each fall's foot clouds rolling up and drifting downstream, sized by its
+  height and width; off the face of falls over 8 m, finer spray; on rivers (*River water*), small puffs on the upstream face
+  of stones where the current runs over ~0.9 m/s (a pool of 16 emitters on the nearest stones). At the wide fall the frame
+  rate with spray 52, without 50–51 (no measurable cost there).
+* **The curtain** (Tom's question): a mesh sheet following the water's path, not a flat plane; it lies 0.3 m over the
+  rock. D290's single height per row made a 74 m fall over a curved slope cut into it; now each column falls free or slides
+  on the rock under it, held to within a metre of the centre's path outside the river's own width, fading where the rock
+  beside rises into a wall. Columns that end on the dry bank above the pool (the sides of a wide fall over a V-shaped gorge:
+  each column has the centre's rows) fade out over the lower half of their way down instead of ending in a hard line along
+  the bank (Tom's red lines). The river's sheet is cut past the fall's sides by 3 m or a quarter of the river's width (wide
+  falls' sheets spread further under their banks), and the curtain reaches half a metre beyond that.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

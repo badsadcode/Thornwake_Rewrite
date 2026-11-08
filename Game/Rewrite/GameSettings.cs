@@ -186,6 +186,10 @@ public static class GameSettings
         "Rivers: their own water (experimental 4 with the river's changes: foam round stones even in slow water), or as the " +
         "Water setting draws them (build 137). River water also flows at an even speed along each river (faster in the deep " +
         "middle) and fades softly at its banks.", options: new[] { "as Water (build 137)", "river water" }, rebuild: true));
+    public static readonly Setting Spray = Add(new("fx.spray", "Lighting and effects", "Spray and mist", 0, 1, 1, 1,
+        "Billowing spray: clouds of spray and mist rolling up at the foot of waterfalls and off their falling water, lit by the " +
+        "sun, and spray where fast river water breaks on stones (costs some frame rate near big falls). Simple mist (build 138): " +
+        "a few soft puffs at the foot of falls.", options: new[] { "simple mist (build 138)", "billowing spray" }));
     public static readonly Setting Waterfalls = Add(new("fx.waterfalls", "Lighting and effects", "Waterfalls", 0, 1, 1, 1,
         "Falling water: the water leaves the river's level at the lip and falls to the pool (sliding down the rock where the " +
         "rock lies higher), streaked and white, white water spreading on the pool and mist rising at the foot. River sheet " +
