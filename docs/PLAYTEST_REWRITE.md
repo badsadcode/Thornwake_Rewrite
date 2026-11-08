@@ -78,6 +78,26 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 138 — oxbow lakes, river terraces, alluvial fans; falling water, river water, stones in rivers
+**Host and everyone joining need build 138** (versions must match to connect). **New terrain** (revision 41): *Terrain
+version → Build 137* keeps the old ground.
+* **Oxbow lakes**: crescent lakes beside slow lowland rivers, the loops a river left behind. Try *Go to - oxbow lake*.
+* **River terraces**: flat steps cut into the sides of broad river valleys (subtle, best in low sun). *Go to - river terraces*.
+* **Alluvial fans**: gravel aprons where steep streams reach flat land, mostly in dry country (subtle, as you chose).
+  *Go to - alluvial fan, from above*.
+* **Waterfalls**: the rounded dome over a fall's lip is gone; the water falls (or slides down the rock) to the pool, white
+  as it falls, foam spreading and mist rising at the foot. *Waterfalls → river sheet (build 137)* is the old look.
+  *Go to - wide waterfall*, *Go to - hanging valley's fall*.
+* **Foam no longer runs backwards**: in every experimental water style the foam moved against the current (up rivers, up a
+  fall's face — your sighting) and against the wind at sea. Fixed.
+* **River water** (new setting, on): rivers have their own water (from experimental 4): a lacy foam ring hugging stones and
+  banks, turbulence behind stones, an even speed along each river (faster in the deep middle), caustics on the bed drifting
+  downstream, softer edges at the banks. *River water → as Water (build 137)* is the old one.
+* **River stones** (new setting, on): stones sticking out of rivers, in riffles, more in mountain streams; stones along steep
+  banks hide the zigzag waterline. *Go to - stream with stones*, *Go to - lowland river with stones*.
+* Plants on cliff rocks sit on the rock's real top and edge; the hanging grass is strands, not a flat sheet.
+* Behind the scenes: each tile's water is now in sea, river and lake parts (the start of separate water for each).
+
 ## New in build 137 — trees cast shadows far away
 **Host and everyone joining need build 137** (versions must match to connect). Same terrain as build 136.
 * **Tree shadows reach as far as the shadow distance** (your dumps: 700 m and 2 km looked the same, because only trees within
