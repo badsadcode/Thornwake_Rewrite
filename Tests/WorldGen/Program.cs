@@ -125,6 +125,36 @@ if (args.FirstOrDefault(a => a.StartsWith("--coast-map=")) is { } cmArg)
     f.Write(image);
     return 0;
 }
+// --river-spots=<profile>,<seed>: sample river spots of each kind (mouths into the sea and lakes, confluences, wide, steep).
+if (args.FirstOrDefault(a => a.StartsWith("--river-spots=")) is { } rsArg)
+{
+    var p = rsArg[14..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    var hy = s.Plan.Hydrology;
+    void Line(string kind, RiverReach r, int k)
+    {
+        int a0 = Math.Max(0, k - 1), b0 = Math.Min(r.Points.Length - 1, k + 1);
+        double dx = r.Points[b0].X - r.Points[a0].X, dz = r.Points[b0].Z - r.Points[a0].Z, dl = Math.Max(1e-6, Math.Sqrt(dx * dx + dz * dz));
+        double grade = (r.Surface[a0] - r.Surface[b0]) / Math.Max(1, r.Along[b0] - r.Along[a0]);
+        Console.WriteLine($"  {kind,-12} {r.Points[k].X:0},{r.Points[k].Z:0} downstream {dx / dl:0.00},{dz / dl:0.00} (yaw {Math.Atan2(dx, -dz):0.00}) width {r.Width[k]:0} m falls {grade * 100:0.0} %");
+    }
+    int seaN = 0, lakeN = 0, confN = 0, wideN = 0, steepN = 0;
+    foreach (var r in hy.Reaches)
+    {
+        if (r.Distributary || r.Points.Length < 6) continue;
+        int n = r.Points.Length;
+        if (r.EndsInSea && seaN < 3 && r.Width[n - 3] > 20) { Line("sea mouth", r, n - 3); seaN++; }
+        if (r.EndLake >= 0 && lakeN < 3 && r.Width[n - 2] > 8) { Line("lake mouth", r, n - 2); lakeN++; }
+        if (r.DownstreamReach >= 0 && confN < 3 && r.Width[n - 1] > 10) { Line("confluence", r, n - 2); confN++; }
+        if (wideN < 3 && r.Width[n / 2] > 60) { Line("wide", r, n / 2); wideN++; }
+        for (int k = 2; k < n - 2 && steepN < 4; k += 3)
+        {
+            double g = (r.Surface[k - 1] - r.Surface[k + 1]) / Math.Max(1, r.Along[k + 1] - r.Along[k - 1]);
+            if (g > .04 && g < .15 && r.Width[k] > 8) { Line("rapids", r, k); steepN++; break; }
+        }
+    }
+    return 0;
+}
 // --river-at=<profile>,<seed>,x,z: the nearest river point, which way the river runs there and how fast it falls.
 if (args.FirstOrDefault(a => a.StartsWith("--river-at=")) is { } raArg)
 {

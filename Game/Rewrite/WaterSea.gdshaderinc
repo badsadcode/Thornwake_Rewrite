@@ -815,6 +815,7 @@ void fragment() {
 	float bed_slope = length(bed_grad);
 	float rocky = sea * smoothstep(0.12, 0.35, bed_slope) * (1.0 - smoothstep(2.0, 9.0, vertex_depth)) * (0.4 + sea_state) * exposure;
 	float standing = 0.0, bank_foam = 0.0, obstacle_foam = 0.0; // river: standing-wave crests and bank turbulence (foam, below)
+	float rv_churned = 0.0; // rapids' milky, air-churned water (RIVER2, D293)
 	float rk_ring = 0.0, rk_tail = 0.0; // round each rock in a river: its ring and the turbulence behind it (RIVER2, D290)
 	float plume_flow = 0.0, mouth_meet = 0.0, dbg_obstacle = 0.0; // river mouths: the outgoing current's share, waves meeting it
 	if (river > 0.5) {
@@ -1119,7 +1120,15 @@ void fragment() {
 	} else if (river > 0.5) {
 		float fs = length(current);
 		// Whitewater where the current is fast, more so over shallow beds (rocks, riffles).
+#ifdef RIVER2
+		// (D293: from 1.2 m/s, full at 2.6: a 7 % mountain stream reads as rapids, not a pond with stones)
+		float rapids = smoothstep(1.2, 2.6, fs) * (0.65 + 0.35 * (1.0 - smoothstep(0.3, 1.5, vertex_depth)));
+		// Churned water is milky: air through it hides the bed (rapids were glass-clear), more where it is fastest.
+		float churned = smoothstep(1.1, 2.4, fs) * (0.55 + 0.45 * flow_noise(p * 0.35, current * 0.6, TIME, 3.0));
+		rv_churned = churned;
+#else
 		float rapids = smoothstep(1.0, 2.8, fs) * (0.6 + 0.4 * (1.0 - smoothstep(0.3, 1.5, vertex_depth)));
+#endif
 		// Whitewater comes in pulses and patches, not a uniform sheet.
 		float pulse = 0.65 + 0.35 * flow_noise(p * 0.08, current * 0.05, TIME, 12.0);
 		// In patches drifting with the current (a whole fast river turned into one white sheet).
@@ -1140,6 +1149,9 @@ void fragment() {
 	bool flowing = river > 0.5 || plume_flow > 0.01;
 	vec3 layers = flowing ? foam_flow(p, drift, TIME, amt, dist) : foam_layers(p, drift, TIME, amt, dist);
 	float foam = layers.x, under_foam = layers.y, foam_shade = layers.z;
+#ifdef RIVER2
+	under_foam = max(under_foam, rv_churned * 0.85);
+#endif
 	float foam_opacity = 1.0;
 #ifdef EXP3A
 	if (sea > 0.5) {

@@ -794,7 +794,8 @@ public static class TileBuilder
                 if (rivers != null && ReachFlow(rivers, samples[k].WaterBody, x0 + water[k].X, z0 + water[k].Z, hints, out double tx, out double tz, out double grade, out double channel))
                 {
                     double waterDepth = samples[k].WaterLevel - samples[k].Height;
-                    speed = Math.Clamp(.45 + Math.Sqrt(Math.Max(0, grade)) * 5, .45, 3.5) * (.55 + .45 * Math.Clamp(waterDepth / Math.Max(.3, channel), 0, 1));
+                    // (D293: × 8, was 5 — a 7 % stream ran 1–1.8 m/s and looked like a pond; now ~2.5 m/s, a 0.1 % lowland river ~0.7)
+                    speed = Math.Clamp(.45 + Math.Sqrt(Math.Max(0, grade)) * 8, .45, 3.5) * (.55 + .45 * Math.Clamp(waterDepth / Math.Max(.3, channel), 0, 1));
                     dx += tx * 2; dz += tz * 2;
                     double dl = Math.Sqrt(dx * dx + dz * dz);
                     if (dl > 1e-6) { dx /= dl; dz /= dl; }

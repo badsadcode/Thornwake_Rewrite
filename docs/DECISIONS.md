@@ -4656,6 +4656,17 @@ the curtain's sides marked in red.
   the bank (Tom's red lines). The river's sheet is cut past the fall's sides by 3 m or a quarter of the river's width (wide
   falls' sheets spread further under their banks), and the curtain reaches half a metre beyond that.
 
+## D293 — Rapids that look like rapids (2026-11-08)
+Tom: "Keep fixing rivers". A survey of six river spots in Balanced 7319 (two rapids, a confluence, a 96 m wide river, a
+sea mouth, a lake mouth; test tool `--river-spots=<profile>,<seed>`) showed streams falling 7 % looking like calm,
+glass-clear pools with stones in them.
+* **Speed**: a river's current is √(fall per metre) × 8 + 0.45 m/s (was × 5, D287), up to 3.5, faster in the deep middle:
+  a 7 % stream ~2.5 m/s (was 1–1.8), a 3 % one ~1.8, a 0.1 % lowland river ~0.7.
+* **Churned water** (`RIVER2`): from ~1.1 m/s the water turns milky (air through it hides the bed), in patches drifting
+  with the current, up to 85 % at 2.4 m/s; white water from 1.2 m/s, full at 2.6 (was 1.0–2.8, reached too late).
+* Not changed: the reddish band along river banks (the bank's ground look) and the river's flat surface (no wave motion
+  in the mesh yet; Tom: "Not yet").
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
