@@ -3,7 +3,11 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Since build 137, on `main`, not in a build yet**: plants on cliff rocks on the rock's real top and edge, the fringe as
+* **Last build Tom has: 138** (v0.9.138, return point `e6802dc`, `dist/Preview-138`): everything below up to D289.
+  Launchers "Go to - oxbow lake / river terraces / alluvial fan, from above / wide waterfall / stream with stones / lowland
+  river with stones". Tom asked whether rivers move their mesh (they do not: only the sea's and lakes' vertices move; river
+  motion is all per pixel) — a possible next step for the river look.
+* **Since build 137** (now in build 138): plants on cliff rocks on the rock's real top and edge, the fringe as
   strands (D280); terrain revision 39, oxbow lakes (D281; `Tests/WorldGen` `--oxbows=balanced,7319` lists them, e.g.
   14738,-119952); terrain revision 40, river terraces (D282; seen best at Balanced 7319, -61180,48330 looking south over
   the meander); terrain revision 41, alluvial fans (D283; `--fans=balanced,7319` lists them; seen at Balanced 7319 near
