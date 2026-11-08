@@ -148,9 +148,30 @@ public sealed class Headlands
     /// ground is let down to a low, gently rising beach, back to the land's own height ~500 m in.
     /// <paramref name="coast"/>: metres from the detailed coastline. <paramref name="rock"/>: how bare.
     /// </summary>
-    public static double Relief(double x, double z, double minWavelength, double ground, double point, double cove, double coast, out double rock)
+    /// <param name="rounded">Revision 38 (D274, Tom: the cliffs' "top edge, the sharp edge, doesn't look all that good"): the
+    /// cliff steep, then rolling over into the top in a tight, rough, bare shoulder (over 0.25·H + 5 m) — before, it reached its
+    /// full height within ~8 m of the shore and stopped there in a knife edge.</param>
+    /// <param name="moved">How far the stretches moved the coastline here (m): with <paramref name="rounded"/>, wherever they
+    /// moved it the land comes down to the sea in the same rounded cliff — moved out, the land's height rises with the land
+    /// value, very fast (on the points it stood in sheer walls 30 m high within 18 m of the sea); moved in, the sea cut into
+    /// land tens of metres high (the walls of Tom's dumps 214200 and 214234).</param>
+    public static double Relief(double x, double z, double minWavelength, double ground, double point, double cove, double coast, out double rock,
+        bool rounded = false, double moved = 0)
     {
         rock = 0;
+        double shoulder = 0;
+        if (rounded && moved != 0 && ground > 3 && !double.IsInfinity(coast))
+        {
+            // (a tight shoulder, rough and bare: over 0.6·H + 8 m the roll-over was a smooth grassy ramp that broke the cliff —
+            // Tom: "way too smooth ... while there are still sharp edges"; and full as soon as the coast moved 15 m, so it is
+            // the same along the whole stretch)
+            double run = .25 * ground + 5, u = DetMath.Clamp((coast - 1.5) / run, 0, 1), v = 1 - u;
+            double rough = (Noise.Ridged(x, z, 18, 3, minWavelength, 0x4EB0UL, .5) - .45) * Math.Min(6, .12 * ground);
+            double cap = 2.5 * DetMath.Smooth(coast / 5) + (ground - 2.5) * (1 - v * v * v) + rough * 4 * u * v;
+            double k = DetMath.Smooth(Math.Abs(moved) / 15);
+            ground += (Math.Min(ground, cap) - ground) * k;
+            shoulder = k * (1 - DetMath.Smooth((coast - run) / 6));
+        }
         if (point > 0)
         {
             double c = double.IsInfinity(coast) ? 1000 : coast;
@@ -158,12 +179,20 @@ public sealed class Headlands
             double crag = Noise.Ridged(x, z, 240, 5, minWavelength, 0x4EADUL, .5) - .3;
             double cliff = DetMath.Smooth(line / 35);
             double top = point * (.8 + 1.1 * crag) * cliff * (.7 + .3 * DetMath.Smooth(c / 300));
-            ground = Math.Max(ground, 2.5 * DetMath.Smooth(c / 5) + DetMath.Smooth(c / 8) * top);
+            if (rounded)
+            {
+                // h = top · (1 − (1 − u)³), u over a run growing with the height: ~75° at the foot, ~60° a third of the way
+                // across, rolling over to level at the top (a convex shoulder, no lip).
+                double run = .25 * Math.Max(top, 0) + 5, u = DetMath.Clamp((c - 1.5) / run, 0, 1), v = 1 - u;
+                ground = Math.Max(ground, 2.5 * DetMath.Smooth(c / 5) + top * (1 - v * v * v));
+            }
+            else ground = Math.Max(ground, 2.5 * DetMath.Smooth(c / 5) + DetMath.Smooth(c / 8) * top);
             // Bare: the cliff band, and patches over the top (more on the higher crags).
             double strength = Math.Min(1, point / 12);
             double patches = DetMath.Smooth((crag + .1 + .35 * Noise.Fbm(x, z, 110, 2, minWavelength, 0x4EAFUL)) / .3);
             rock = strength * Math.Max(.85 * (1 - DetMath.Smooth((line - 45) / 45)), .75 * patches * (1 - DetMath.Smooth((c - 420) / 200)));
         }
+        rock = Math.Max(rock, .8 * shoulder);
         if (cove > 0 && !double.IsInfinity(coast))
         {
             double beach = 1.2 + .03 * coast, k = cove * (1 - DetMath.Smooth((coast - 180) / 340));

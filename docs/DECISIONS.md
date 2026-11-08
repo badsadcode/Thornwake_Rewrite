@@ -4315,6 +4315,23 @@ rock ... flat planes with a texture", "the rocks are too dark, too brown ... bre
   0.4–1.5 m above the edge. Better, but the edge still shows between them: rocks alone do not hide it.
 * Cost: 60 FPS at 1920×1080 at Tom's headland, the gorge, the stacks (the cap). Return point: build 133 (`7290b59`).
 
+## D274 — Headland cliffs rounded over at the top: terrain revision 38 (2026-11-08)
+Tom: "the top edge, the sharp edge, doesn't look all that good" — rocks along it (D273) did not hide it. He chose to round
+the cliff tops. Where the headlands' stretches move the coastline the walls come from three things, so all three:
+* **Moved out** (the points): the land's height follows the land value, which rises very fast where the coast was pushed
+  out — sheer walls 30 m high within 18 m of the sea, a flat top behind (most of Tom's dumps). **Moved in** (coves, between
+  points): the sea cut into land tens of metres high. Wherever a stretch moved the coast (weighted by how far, 60 m to full),
+  the land is now capped by a rounded cliff of its own height: `h = 2.5·S(c/5) + (H − 2.5)·(1 − (1 − u)³)` plus ridged
+  roughness on the shoulder, u = c over a run of 0.25·H + 5 m, full as soon as the coast moved 15 m; the shoulder bare rock.
+  (A first run of 0.6·H + 8 m, weighted to full only at 60 m, made a smooth grassy ramp that broke the cliff while other
+  stretches kept their edge — Tom: "way too smooth ... while there are still sharp edges".)
+* **The points' own rock** (`Headlands.Relief`) rises by the same tight curve (before: full height within ~8 m, a knife edge).
+* The cliff rocks and their lip rocks (D272–D273) now sit on that shoulder.
+* Seen at Tom's spots: the near cliffs roll over into the top; a cliff further off still shows a straight edge (the crags'
+  ridged noise makes sharp crests of its own). Other generator cliffs (canyon walls, escarpments) are not rounded yet.
+* Tool: `--scree-transect=…,<revision>` compares any revision. Return point: *Terrain version → Build 133* (revision 37,
+  `terrain-build133.json`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

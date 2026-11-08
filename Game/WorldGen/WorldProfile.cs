@@ -144,12 +144,12 @@ public sealed record TerrainStyle
     /// plateaus (D232); 19 = escarpments without fins, combs or worm-like rills, mesa tiers only on real uplift (D235); 20 = waterfalls and the
     /// rapids below them (D238); 21 = gorges and canyons, gorge walls with ledges (D239); 22 = canyon ends and depth
     /// measured in space (no cliff where a meander brings a canyon's end beside its middle), no wetland pools on ground a
-    /// river has cut down (D240); 23 = cirques with a tarn (D241); 24 = glacial troughs with hanging valleys (D242); 25 = no trough fall from a river rising just above it (D243); 26 = fjords (D244); 27 = fjord coasts (D245); 28 = volcanoes and calderas (D246); 29 = volcanoes tuned (D247); 30 = volcano detail (D248); 31 = active volcanoes, lava lakes (D250); 32 = fresh lava flows spill from the crater through a notch and run down the fall line (D259); 33 = scree: talus under gorge, canyon and trough walls (D263); 34 = the land's biome climbs a volcano's lower slopes (D265); 35 = sea stacks and arches (rock models; the ground is 34's, D266); 36 = headlands and coves (D270); 37 = spits, sandbars and lagoons (D271).</summary>
+    /// river has cut down (D240); 23 = cirques with a tarn (D241); 24 = glacial troughs with hanging valleys (D242); 25 = no trough fall from a river rising just above it (D243); 26 = fjords (D244); 27 = fjord coasts (D245); 28 = volcanoes and calderas (D246); 29 = volcanoes tuned (D247); 30 = volcano detail (D248); 31 = active volcanoes, lava lakes (D250); 32 = fresh lava flows spill from the crater through a notch and run down the fall line (D259); 33 = scree: talus under gorge, canyon and trough walls (D263); 34 = the land's biome climbs a volcano's lower slopes (D265); 35 = sea stacks and arches (rock models; the ground is 34's, D266); 36 = headlands and coves (D270); 37 = spits, sandbars and lagoons (D271); 38 = headland cliffs rounded over at the top (D274).</summary>
     public int Revision { get; init; } = CurrentRevision;
 
     /// <summary>The terrain revision new worlds get. Worlds record theirs (<c>--revision=</c>), so a new revision never
     /// changes an existing world (D229).</summary>
-    public const int CurrentRevision = 37;
+    public const int CurrentRevision = 38;
 
     /// <summary>Landform module settings by module id (revision 17 on; missing = as designed). See <see cref="LandformCatalog"/>.</summary>
     public IReadOnlyDictionary<string, LandformSetting>? Landforms { get; init; }
