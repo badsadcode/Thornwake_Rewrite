@@ -4310,6 +4310,9 @@ rock ... flat planes with a texture", "the rocks are too dark, too brown ... bre
   the face, standing a few metres above the edge, a bush or moss on it now and then — these stand on walkable ground, so
   they collide (a box inside the block; kinds 11–13); no cliff rock where a river runs on the lip, the face or the foot
   within 30 m either way along the wall (12 m missed falls beside 35 m rocks).
+* Then Tom: the lip rocks "too big ... stick out a little bit too much" (the bottom and middle of the cliff fine): two or
+  three small rocks along each cell's stretch of the edge (1.4–3.5 m tall, flat, leaning out over the face), their tops
+  0.4–1.5 m above the edge. Better, but the edge still shows between them: rocks alone do not hide it.
 * Cost: 60 FPS at 1920×1080 at Tom's headland, the gorge, the stacks (the cap). Return point: build 133 (`7290b59`).
 
 ## Planned — Biomes, later phases

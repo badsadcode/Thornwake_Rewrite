@@ -380,22 +380,26 @@ public static partial class GroundCover
                     result.Add(new RockInstance(CliffRock + (key.Level == 0 ? 0 : 3) + (int)(Unit(hh, 10) * 2.999f), new Transform3D(basis, at), tint));
                     if (plants != null) Greenery(plants, g, x, z, hh, at, along, outward, wide, tall, thick);
                 }
-                // A rock across the lip (Tom: "on the cliff, the sharp edge is still visible"): half in the top, half over the
-                // face, standing a few metres above the edge, so the straight line where the top meets the wall is broken.
-                if (Unit(h, 14) < .7f)
+                // The lip broken up (Tom: "the sharp edge is still visible", then "the rocks are too big there ... stick out a
+                // little bit too much"): two or three small rocks along each cell's stretch of the edge, flat rather than tall,
+                // leaning out over the face, their tops only 0.4–1.5 m above the edge — a broken, weathered rim, not boulders on top.
+                for (int n = 0, lips = 2 + (int)(Unit(h, 14) * 2); n < lips; n++)
                 {
-                    ulong lh = Hashing.Mix(h + 0x11BUL);
-                    float lipTall = Math.Clamp(wall * .22f, 3, 9) * (.7f + .6f * Unit(lh, 1));
-                    float lipWide = lipTall * (1.4f + 1.2f * Unit(lh, 2)), lipThick = lipWide * (.6f + .3f * Unit(lh, 3));
-                    var lipAtPos = new Vector3((float)x, lip + lipTall * (.05f + .2f * Unit(lh, 4)), (float)z) - outward * (lipAt + lipThick * (.05f + .15f * Unit(lh, 5)))
-                        + along * (Unit(lh, 6) - .5f) * 5;
-                    var lipTilt = new Basis(along, (Unit(lh, 7) - .5f) * .3f) * new Basis(outward, (Unit(lh, 8) - .5f) * .25f) * new Basis(Vector3.Up, Unit(lh, 9) * Mathf.Tau);
+                    ulong lh = Hashing.Mix(h + 0x11BUL + (ulong)n * 0x9E3BUL);
+                    if (Unit(lh, 12) > .85f) continue;
+                    float lipTall = Math.Clamp(wall * .08f, 1.4f, 3.5f) * (.7f + .5f * Unit(lh, 1));
+                    float lipWide = lipTall * (1.6f + 1.2f * Unit(lh, 2)), lipThick = lipWide * (.55f + .3f * Unit(lh, 3));
+                    // (the block's top is 0.42 of its height above its middle)
+                    float top = lip + .4f + 1.1f * Unit(lh, 4);
+                    var lipAtPos = new Vector3((float)x, top - lipTall * .42f, (float)z) - outward * (lipAt - lipThick * (.05f + .25f * Unit(lh, 5)))
+                        + along * ((n + Unit(lh, 6)) / lips - .5f) * cellSize * 1.3f;
+                    var lipTilt = new Basis(along, (Unit(lh, 7) - .5f) * .25f) * new Basis(outward, .1f + .15f * Unit(lh, 8)) * new Basis(Vector3.Up, Unit(lh, 9) * Mathf.Tau);
                     var tintL = g.RockTint(x, z);
                     float shadeL = .82f + .36f * Unit(lh, 10);
                     result.Add(new RockInstance((key.Level == 0 ? CliffLip : CliffRock + 3) + (int)(Unit(lh, 11) * 2.999f),
                         new Transform3D(lipTilt * new Basis(along * lipWide, Vector3.Up * lipTall, outward * lipThick), lipAtPos),
                         new Color(tintL.R * shadeL, tintL.G * shadeL, tintL.B * shadeL, tintL.A)));
-                    if (plants != null) Greenery(plants, g, x, z, lh, lipAtPos, along, outward, lipWide, lipTall, lipThick);
+                    if (plants != null && n == 0) Greenery(plants, g, x, z, lh, lipAtPos, along, outward, lipWide, lipTall, lipThick);
                 }
                 if (Unit(h, 9) < .35f)
                 {
