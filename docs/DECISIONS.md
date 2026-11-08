@@ -4590,6 +4590,17 @@ Tom: "Keep tuning first", then "Maybe the issue is jagged shore. It's very sharp
 * **Fewer stones in calm lowland rivers** (half the shallow-water share; mountain streams as before).
 * Animated captures (24 frames, 0.1 s) of a gorge stream and a lowland river for Tom, `--extra-yaws=0,…,0 --extra-every=0.1`.
 
+## D289 — River foam lacier and moving; river caustics carried by the current (2026-11-08)
+Tom, on D288's clips: the foam "a little bit too solid. Too uniform and still a little bit static behind the rocks and
+around them", and the caustics "I believe they are doing something wrong". River water only (`RIVER2`).
+* **Foam**: no longer a solid white band. A lace of bubble threads at two sizes and broken clumps, carried by the current
+  (two copies sliding 2.4 s and cross-faded, as the ripples), solid only in broken patches right against a stone, partly
+  see-through where thin (55–95 % opacity), its edge wobbling with the moving water, a fainter milky halo outside.
+* **Caustics**: the net of light on a river's bed shimmered in place with cells over a metre wide; now finer (cells about
+  half the size) and carried downstream by the current (two copies over 3 s, cross-faded, the half-faded pair brightened
+  back), fading in a little deeper (3–15 cm) and with depth.
+* Clips again for Tom (lowland river from closer, gorge stream).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

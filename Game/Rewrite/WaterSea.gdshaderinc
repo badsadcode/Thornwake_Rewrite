@@ -952,6 +952,20 @@ void fragment() {
 	// Transmitted light: the bed through clear shallows, absorbed with depth; biome tint inside the absorption.
 	vec3 ground = textureLod(screen_tex, ruv, 0.0).rgb;
 	float caustic = caustics(bottom_world.xz * 0.6, TIME * 1.3) * smoothstep(0.0, 0.1, depth_below) * exp(-depth_below * 0.35);
+#ifdef RIVER2
+	// River caustics (D289, Tom: the caustics are "doing something wrong"): they shimmered in place, cells over a metre wide;
+	// a river's moving surface carries its net of light downstream — finer lines, two copies carried by the current and
+	// cross-faded (no shear), stronger where the current is.
+	if (river > 0.5) {
+		vec2 cq = bottom_world.xz * 1.1;
+		const float ccycle = 3.0;
+		float c0 = fract(TIME / ccycle), c1 = fract(TIME / ccycle + 0.5), cw = 1.0 - abs(2.0 * c0 - 1.0);
+		vec2 cf = current * 1.1;
+		float rc = mix(caustics(cq - cf * c1 * ccycle + vec2(7.3, 2.1), TIME * 0.9), caustics(cq - cf * c0 * ccycle, TIME * 0.9), cw);
+		rc *= inversesqrt(cw * cw + (1.0 - cw) * (1.0 - cw)) * 0.85; // (a half-faded pair is dimmer: restore it)
+		caustic = mix(caustic, rc * smoothstep(0.03, 0.15, depth_below) * exp(-depth_below * 0.5), river);
+	}
+#endif
 	ground += caustic * caustic_strength * 0.3 * vec3(1.0, 0.97, 0.85) * (0.4 + ground) * caustic_light; // (sunlight focused: dims with the sun)
 #ifdef EXP3A
 	vec3 transmittance = exp(-absorption * path * mix(1.0, 2.2, river) * mix(1.0, 0.8, sea)); // (clearer sea shallows)
@@ -1150,7 +1164,7 @@ void fragment() {
 		// The ring: where the water is only a few centimetres over whatever lies behind it — round a stone's real shape,
 		// along the bank — a band of foam hugging it (wider where the current presses on it).
 		float ring = (1.0 - smoothstep(0.05, 0.22 + 0.1 * n1 + 0.08 * smoothstep(0.2, 1.5, fsp), contact_depth)) * ring_at;
-		float rfield = ring * 1.1;
+		float rfield = ring * 1.05;
 		// Behind a stone, in the current: turbulence — churned, broken water trailing downstream from its sides and middle.
 		if (ob_w > 0.01) {
 			float oa = ob_a, oc = ob_c;
@@ -1161,16 +1175,28 @@ void fragment() {
 			float tail = max(sides, middle) * (1.0 - smoothstep(2.0, 7.0, oa)) * ob_w * ob_w * smoothstep(0.08, 0.5, fsp);
 			rfield = max(rfield, tail * (0.3 + 1.0 * n2));
 		}
-		// Cartoony: a crisp, wobbling edge rather than a soft fade; a few bubble holes near the edge.
-		float fedge = rfield + 0.18 * (n1 - 0.5) + 0.1 * (n2 - 0.5);
-		float rfoam = smoothstep(0.42, 0.47, fedge);
-		float rbubbles = cells(p * 3.0 + vec2(n1, n2) * 1.5, TIME * 0.4);
-		rfoam *= 1.0 - 0.7 * (1.0 - smoothstep(0.05, 0.14, rbubbles)) * (1.0 - smoothstep(0.5, 0.7, fedge));
-		rfoam *= near_f * smoothstep(0.2, 0.9, edge_fade);
+		// The foam's body (D289, Tom: "a little bit too solid. Too uniform and still a little bit static"): a lace of bubble
+		// threads and broken clumps carried by the current, solid only right against the stone, partly see-through; its
+		// edge keeps moving with the water.
+		float fedge = rfield + 0.24 * (n1 - 0.5) + 0.14 * (n2 - 0.5);
+		float fcover = smoothstep(0.36, 0.5, fedge);
+		const float lcycle = 2.4;
+		float l0 = fract(TIME / lcycle), l1 = fract(TIME / lcycle + 0.5), lw = 1.0 - abs(2.0 * l0 - 1.0);
+		vec2 lq = p * 2.4 + vec2(n1, n2) * 1.2;
+		vec2 lf = current * 2.4;
+		float fe1 = mix(cells(lq - lf * l1 * lcycle + vec2(3.1, 7.7), TIME * 0.5), cells(lq - lf * l0 * lcycle, TIME * 0.5), lw);
+		float fe2 = mix(cells(lq * 2.3 - lf * 2.3 * l1 * lcycle + vec2(1.3, 9.1), TIME * 0.8), cells(lq * 2.3 - lf * 2.3 * l0 * lcycle, TIME * 0.8), lw);
+		float flace = max(1.0 - smoothstep(0.0, 0.16, fe1), (1.0 - smoothstep(0.0, 0.12, fe2)) * 0.8);
+		float fclumps = smoothstep(0.45, 0.7, n2 * 0.6 + n1 * 0.4);
+		float fcore = smoothstep(0.9, 1.15, fedge) * (0.45 + 0.55 * fclumps); // right against the stone, broken too
+		float fbody = max(flace * (0.55 + 0.45 * fclumps), max(fclumps * 0.75, fcore));
+		float rfoam = fcover * fbody * near_f * smoothstep(0.2, 0.9, edge_fade);
 		foam = max(foam, rfoam);
-		foam_shade = mix(foam_shade, mix(0.86, 1.0, smoothstep(0.0, 0.2, rbubbles) * 0.5 + 0.5 * n1), rfoam);
+		// See-through where thin (the water shows between the bubbles), nearly opaque in the core.
+		foam_opacity = mix(foam_opacity, mix(0.55, 0.95, max(fcore, fclumps * 0.6)), step(0.001, rfoam));
+		foam_shade = mix(foam_shade, mix(0.8, 1.0, max(flace, fcore) * 0.7 + 0.3 * n1), rfoam);
 		// A milky halo just outside the foam's edge.
-		under_foam = max(under_foam, smoothstep(0.3, 0.42, fedge) * (1.0 - rfoam) * 0.45 * near_f);
+		under_foam = max(under_foam, smoothstep(0.28, 0.45, fedge) * (1.0 - rfoam) * 0.4 * near_f);
 	}
 #endif
 
