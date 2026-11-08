@@ -22,7 +22,7 @@ public static class RockMeshes
     /// <summary>Free the cached meshes (scene exit): static Godot resources outliving the engine crash on shutdown.</summary>
     public static void Release()
     {
-        if (_meshes != null) foreach (var mesh in _meshes) mesh.Dispose();
+        if (_meshes != null) foreach (var mesh in System.Linq.Enumerable.Distinct(_meshes)) mesh.Dispose();
         _meshes = null; _material = null; _big = null;
     }
 
@@ -46,6 +46,7 @@ public static class RockMeshes
             _big.SetShaderParameter("cliff_first", new[] { 0, 3, 2, 3, 4, 1 });
             _big.SetShaderParameter("cliff_second", new[] { 1, 1, 4, 5, 0, 2 });
             _big.SetShaderParameter("cliff_means", new[] { .275f, .427f, .395f, .514f, .269f, .468f });
+            _big.SetShaderParameter("cliff_contrast", new[] { .55f, .85f, .85f, .85f, .7f, .85f });
             _big.SetShaderParameter("big_look", 1f);
             return _big;
         }
@@ -57,8 +58,13 @@ public static class RockMeshes
         // face (D272), tens of metres: worn blocks like the sea stacks (as lumps they looked stuck on), in the big rocks'
         // material (the texture at 19 m and 5.9 m, not 4 m).
         // 8–10: the same blocks coarse (~a quarter of the triangles), for the middle distance.
-        _meshes ??= new[] { Build(Kinds[0]), Build(Kinds[1]), Build(Kinds[2]), Build(Kinds[3]), Build(Kinds[4]), Block(0xB10C1UL), Block(0xB10C2UL), Block(0xB10C3UL),
-            Block(0xB10C1UL, 4.4f), Block(0xB10C2UL, 4.4f), Block(0xB10C3UL, 4.4f) };
+        // 11–13: the near blocks again, for the rocks across a cliff's lip (they collide).
+        if (_meshes == null)
+        {
+            var near = new[] { Block(0xB10C1UL), Block(0xB10C2UL), Block(0xB10C3UL) };
+            _meshes = new[] { Build(Kinds[0]), Build(Kinds[1]), Build(Kinds[2]), Build(Kinds[3]), Build(Kinds[4]), near[0], near[1], near[2],
+                Block(0xB10C1UL, 4.4f), Block(0xB10C2UL, 4.4f), Block(0xB10C3UL, 4.4f), near[0], near[1], near[2] };
+        }
         return _meshes[Math.Clamp(kind, 0, _meshes.Length - 1)];
     }
 

@@ -61,6 +61,14 @@ public static class ObjectCollision
         }
         foreach (var rock in data.Rocks)
         {
+            // A rock across a cliff's lip stands on walkable ground: a box a little inside the block (D273).
+            if (rock.Kind >= GroundCover.CliffLip)
+            {
+                var lb = rock.Transform.Basis;
+                var box = new Vector3(lb.X.Length() * .8f, lb.Y.Length() * .82f, lb.Z.Length() * .65f);
+                yield return new CollisionShape3D { Shape = new BoxShape3D { Size = box }, Transform = new Transform3D(lb.Orthonormalized(), rock.Transform.Origin) };
+                continue;
+            }
             if (rock.Kind is GroundCover.Stone or GroundCover.CliffSlab || rock.Kind >= GroundCover.CliffRock) continue; // slabs and cliff rocks lie on the (colliding) cliff
             var b = rock.Transform.Basis;
             float size = (b.X.Length() + b.Y.Length() + b.Z.Length()) / 3;

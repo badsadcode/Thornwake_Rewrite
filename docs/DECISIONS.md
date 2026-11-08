@@ -4304,6 +4304,12 @@ rock ... flat planes with a texture", "the rocks are too dark, too brown ... bre
 * **Green on the cliffs** (level 0, with the cliff dressing; flat cards and the bog shrub's leaves): a small bush on a cliff
   rock's top ledge, grass or moss hanging over its front edge, roots out of the face beside it (more where it is wooded); as
   much as the place grows plants, none under the spray.
+* **After Tom's look** ("I like the direction", but the canyon's texture "a little bit too contrasty", "on the cliff, the
+  sharp edge is still visible", "the rocks are covering the waterfall"): each texture's contrast toned (his cliff rock to
+  55 %, mossy 70 %, the rest 85 %); a rock across the lip at 70 % of the cliff rocks' cells, half in the top and half over
+  the face, standing a few metres above the edge, a bush or moss on it now and then — these stand on walkable ground, so
+  they collide (a box inside the block; kinds 11–13); no cliff rock where a river runs on the lip, the face or the foot
+  within 30 m either way along the wall (12 m missed falls beside 35 m rocks).
 * Cost: 60 FPS at 1920×1080 at Tom's headland, the gorge, the stacks (the cap). Return point: build 133 (`7290b59`).
 
 ## Planned — Biomes, later phases

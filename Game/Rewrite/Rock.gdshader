@@ -16,6 +16,7 @@ uniform float cliff_tile = 0.0;
 uniform int cliff_first[6];
 uniform int cliff_second[6];
 uniform float cliff_means[6];
+uniform float cliff_contrast[6]; // (1 as drawn; Tom: his cliff rock "a little bit too contrasty" in a canyon)
 varying flat float cliff_layer;
 // Big rocks less bland (D273, Tom: "too dark, too brown ... break the blandness"): most of the biome's tint taken out, a
 // little lighter, pale lichen in patches (now and then orange), dark streaks where water runs down.
@@ -65,6 +66,7 @@ void fragment() {
 		vec3 cx = texture(cliff_tex, vec3(mod(world_pos.zy, wrap) / vec2(cliff_tile, -cliff_tile), cliff_layer)).rgb;
 		vec3 cz = texture(cliff_tex, vec3(mod(world_pos.xy, wrap) / vec2(cliff_tile, -cliff_tile), cliff_layer)).rgb;
 		vec3 cliff = (cx * w.x + cz * w.z) / max(sides, 1e-4) / cliff_means[int(cliff_layer)];
+		cliff = mix(vec3(1.0), cliff, cliff_contrast[int(cliff_layer)]);
 		cliff = mix(vec3(dot(cliff, vec3(0.333))), cliff, 0.45); // (less colour: the sandstone at full came out a hot orange-red)
 		t = mix(t, cliff, smoothstep(0.2, 0.6, sides));
 	}

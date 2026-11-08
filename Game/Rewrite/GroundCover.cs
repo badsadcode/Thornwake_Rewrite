@@ -23,6 +23,8 @@ public readonly record struct RockInstance(int Kind, Transform3D Transform, Colo
 public static partial class GroundCover
 {
     public const int Stone = 0, Rock = 1, Boulder = 2, CliffSlab = 3, BigBoulder = 4, CliffRock = 5; // (5–7: three cliff blocks, 8–10 coarse)
+    /// <summary>Kinds 11–13: the cliff blocks across a cliff's lip, standing on walkable ground: these collide (ObjectCollision).</summary>
+    public const int CliffLip = 11;
     public const int Bush = 0, BerryBush = 1, Stump = 2, Log = 3;
     public static readonly string[] RockKinds = { "stone", "rock", "boulder" };
 
@@ -137,6 +139,19 @@ public static partial class GroundCover
         {
             int i = Math.Clamp((int)Math.Round(x / Spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(z / Spacing), 0, Side - 1);
             return (float)Samples[j * Side + i].Mountain;
+        }
+
+        /// <summary>A river (or a fall's pool) on the line through (x, z) along (ax, az), out to <paramref name="half"/> metres
+        /// either way, every 3 m (a fall is a few metres wide), for the cliff rocks.</summary>
+        public bool RiverAlong(double x, double z, double ax, double az, double half)
+        {
+            for (double t = -half; t <= half; t += 3)
+            {
+                int i = (int)Math.Round((x + ax * t) / Spacing), j = (int)Math.Round((z + az * t) / Spacing);
+                if (i < 0 || j < 0 || i >= Side || j >= Side) continue;
+                if (Samples[j * Side + i].Water is WaterKind.River or WaterKind.Pond) return true;
+            }
+            return false;
         }
 
         /// <summary>Loose rock fallen from a wall above (terrain revision 33, D263), nearest vertex.</summary>
@@ -334,6 +349,13 @@ public static partial class GroundCover
                 float wall = lip - foot;
                 // (a cliff, not a steep hillside: steeper than ~50° from the lip to the foot)
                 if (wall < (key.Level == 0 ? 8 : 15) || wall < 1.2f * (lipAt + footAt) || Unit(h, 1) > .9f * a0()) return;
+                // (none over a waterfall, Tom: the rocks covered a fall: no river on the lip, the face or the foot across the
+                // width a rock may span — 12 m either way missed falls beside rocks 35 m wide)
+                {
+                    var al = Vector3.Up.Cross(outward).Normalized();
+                    if (g.RiverAlong(x - outward.X * lipAt, z - outward.Z * lipAt, al.X, al.Z, 30) || g.RiverAlong(x, z, al.X, al.Z, 30)
+                        || g.RiverAlong(x + outward.X * footAt, z + outward.Z * footAt, al.X, al.Z, 30)) return;
+                }
                 // Up a tall wall, several rocks one above another (one per ~25 m), each standing half out of the face (set a third
                 // in, most were buried in it); along it, about one per its own width (every cell's rock overlapping its
                 // neighbours' took the frame rate from 60 to 16).
@@ -357,6 +379,23 @@ public static partial class GroundCover
                     tint = new Color(tint.R * shade * (1 + warm), tint.G * shade, tint.B * shade * (1 - warm), tint.A);
                     result.Add(new RockInstance(CliffRock + (key.Level == 0 ? 0 : 3) + (int)(Unit(hh, 10) * 2.999f), new Transform3D(basis, at), tint));
                     if (plants != null) Greenery(plants, g, x, z, hh, at, along, outward, wide, tall, thick);
+                }
+                // A rock across the lip (Tom: "on the cliff, the sharp edge is still visible"): half in the top, half over the
+                // face, standing a few metres above the edge, so the straight line where the top meets the wall is broken.
+                if (Unit(h, 14) < .7f)
+                {
+                    ulong lh = Hashing.Mix(h + 0x11BUL);
+                    float lipTall = Math.Clamp(wall * .22f, 3, 9) * (.7f + .6f * Unit(lh, 1));
+                    float lipWide = lipTall * (1.4f + 1.2f * Unit(lh, 2)), lipThick = lipWide * (.6f + .3f * Unit(lh, 3));
+                    var lipAtPos = new Vector3((float)x, lip + lipTall * (.05f + .2f * Unit(lh, 4)), (float)z) - outward * (lipAt + lipThick * (.05f + .15f * Unit(lh, 5)))
+                        + along * (Unit(lh, 6) - .5f) * 5;
+                    var lipTilt = new Basis(along, (Unit(lh, 7) - .5f) * .3f) * new Basis(outward, (Unit(lh, 8) - .5f) * .25f) * new Basis(Vector3.Up, Unit(lh, 9) * Mathf.Tau);
+                    var tintL = g.RockTint(x, z);
+                    float shadeL = .82f + .36f * Unit(lh, 10);
+                    result.Add(new RockInstance((key.Level == 0 ? CliffLip : CliffRock + 3) + (int)(Unit(lh, 11) * 2.999f),
+                        new Transform3D(lipTilt * new Basis(along * lipWide, Vector3.Up * lipTall, outward * lipThick), lipAtPos),
+                        new Color(tintL.R * shadeL, tintL.G * shadeL, tintL.B * shadeL, tintL.A)));
+                    if (plants != null) Greenery(plants, g, x, z, lh, lipAtPos, along, outward, lipWide, lipTall, lipThick);
                 }
                 if (Unit(h, 9) < .35f)
                 {
