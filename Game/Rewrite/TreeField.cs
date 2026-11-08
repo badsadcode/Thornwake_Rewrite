@@ -307,7 +307,9 @@ public sealed partial class TreeField : Node3D
             }
             else
             {
-                mmi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+                // (the lighter model beyond the near ring casts its own shadow when the shadows reach that far — D279, Tom: "the
+                // shadow distance ... for the trees ... is still really low": only the near ring, 110 m, cast any)
+                mmi.CastShadow = shadows && GameSettings.ShadowDistance.Index > 0 ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off;
                 if (data.Near) mmi.VisibilityRangeBegin = Math.Max(0, NearRange - LodBand - lodPad);
                 mmi.VisibilityRangeEnd = DetailRange + Fade + diagonal; // beyond: impostors (the shader fades the edge)
                 if (data.Near && shadows && !detailedShadows)
@@ -336,7 +338,10 @@ public sealed partial class TreeField : Node3D
             multi.Buffer = data.Impostors;
             node.AddChild(new MultiMeshInstance3D
             {
-                Multimesh = multi, MaterialOverride = _impostors.Material, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                // (distant trees cast a shadow at the far shadow distances: in the shadow pass the card faces the sun, so its
+                // shadow is the tree's silhouette from there, D279)
+                Multimesh = multi, MaterialOverride = _impostors.Material,
+                CastShadow = shadows && GameSettings.ShadowDistance.Index >= 3 ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
                 Layers = RenderLayers.TreeImpostors, VisibilityRangeEnd = ImpostorRange + Fade + diagonal,
             });
         }

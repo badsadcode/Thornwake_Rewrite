@@ -4416,6 +4416,17 @@ sunlight, it doesn't show at all"), "the shadows end up too close ... I just can
   with the ground and sunk deeper on a slope.
 * Return point: build 135 (`8e5a174`).
 
+## D279 — Trees cast shadows as far as the shadows reach (2026-11-08)
+Tom's dumps 153107 (700 m) and 153117 (2 km): "almost no difference", "I don't think 2 km is actually 2 km". The shadow map
+did reach 2 km, but nothing out there cast into it: only the near ring of trees (110 m, the detailed model and its lighter
+shadow twin) cast shadows; the lighter model beyond and the distant tree cards had shadows off.
+* The lighter tree model (to the detailed-tree range, ~400 m) casts shadows from *Shadow distance → 700 m* on; the distant
+  tree cards (impostors, to ~1.6 km) at *2 km* (in the shadow pass the card faces the sun, so its shadow is the tree's
+  silhouette from there). The setting now rebuilds the tree cells when changed.
+* At Tom's spot (1920×1080): by quality 58 FPS, 700 m 54, 1.2 km 47–49, 2 km 46 then dipping to 36 (the cards' shadows cost);
+  the dark share of the middle distance from 19 % to 24 %.
+* The default stays 1.2 km (no card shadows); 2 km is the full look for strong machines.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

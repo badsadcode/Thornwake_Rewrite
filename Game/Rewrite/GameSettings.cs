@@ -162,8 +162,9 @@ public static class GameSettings
         "Sun shadow quality and distance.", options: OffLowMediumHigh));
     public static readonly Setting ShadowDistance = Add(new("fx.shadow_distance", "Lighting and effects", "Shadow distance", 0, 3, 1, 2,
         "How far the sun's shadows reach (D278, Tom: \"the shadows end up too close\"). By quality: 90 / 200 / 450 m as the " +
-        "Shadows setting (before build 136). Further costs some sharpness up close and some frame time.",
-        options: new[] { "by quality (build 135)", "700 m", "1.2 km", "2 km" }));
+        "Shadows setting (before build 136). Further costs some sharpness up close and some frame time. Trees beyond the " +
+        "near ring cast shadows from 700 m on, distant tree cards at 2 km (D279).",
+        options: new[] { "by quality (build 135)", "700 m", "1.2 km", "2 km" }, rebuild: true));
     public static readonly Setting Ssao = Add(new("fx.ssao", "Lighting and effects", "Ambient occlusion (SSAO)", 0, 2, 1, 1,
         "Soft contact shadows in creases and under objects. Strong (D276, Tom: \"is there no ambient occlusion in the game?\"): " +
         "a wider reach (rocks are tens of metres) and it darkens sunlight in creases too — the build 134 one darkened only the " +
