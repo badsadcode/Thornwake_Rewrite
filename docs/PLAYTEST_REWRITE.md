@@ -78,6 +78,25 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 134 — rocky cliffs (terrain revision 38)
+**Host and everyone joining need build 134** (versions must match to connect).
+* **Rocks on cliff faces** (after your dumps): every cliff, a headland, canyon, gorge, escarpment or trough wall, gets worn
+  rock blocks sized to the wall, several up a tall one, fallen blocks at the foot. Sheer faces no longer show strips of
+  grass down them.
+* **Your cliff textures** on the sides of the big rocks (sea stacks, arches, cliff rocks), made seamless: your cliff rock,
+  alpine rock, slate, granite, mossy stone and sandstone, by the land's rock type, whole stretches sharing one. Lighter,
+  less brown rock, each block its own shade, lichen and water streaks.
+* **Green on the cliffs**: small bushes on ledges, grass and moss hanging over edges, roots out of the rock, close up.
+* **The cliff edge**: small rocks along the lip, and headland cliffs now roll over at the top in a tight, rough, rocky
+  shoulder instead of a knife edge. Canyon walls and escarpments still have their old edge.
+* No rocks over waterfalls (a river at the lip or the foot keeps its wall clear).
+* The rocks along the lip are solid (the ones on the face lean on the cliff, which is solid itself): try walking along a
+  cliff top.
+* Try *Go to - headland cliffs (your dump)*, *Go to - headland cliffs, from above (your dump)*, *Go to - gorge cliffs*
+  (Mountain kingdoms) and the earlier sea stack and waterfall launchers.
+* Your build 133 worlds keep their terrain; *Terrain version → Build 133* gives it to new worlds too (the rocks, textures and
+  plants show in every terrain version).
+
 ## New in build 133 — headlands, coves, spits and lagoons (terrain revision 37)
 **Host and everyone joining need build 133** (versions must match to connect).
 * **Headlands and coves**: along stretches of coast, points of rock reach a few hundred metres out to sea, with cliffs on a
