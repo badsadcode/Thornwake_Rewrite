@@ -72,6 +72,7 @@ public sealed partial class TerrainSampler
     private readonly Volcanoes? _volcanoes;
     private readonly Headlands? _headlands;
     private readonly Spits? _spits;
+    private readonly Oxbows? _oxbows;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
     private readonly double[] _poolQuantiles, _channelQuantiles;
@@ -96,6 +97,7 @@ public sealed partial class TerrainSampler
         _volcanoes = _planForms.OfType<Volcanoes>().FirstOrDefault(v => v.Count > 0);
         _headlands = plan.Headlands is { Count: > 0 } h ? h : null;
         _spits = plan.Spits is { Count: > 0 } sp ? sp : null;
+        _oxbows = plan.Oxbows is { Count: > 0 } ob ? ob : null;
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
@@ -181,6 +183,9 @@ public sealed partial class TerrainSampler
         Lakes(x, z, ref height, ref water, ref level, ref body, ref lakePlume, ref lakeCells);
         // Revision 23: a cirque's tarn, still water of its own (drawn as a pond), where nothing else is water.
         if (_cirques != null && water == WaterKind.None && _cirques.Tarn(x, z, height, out double tarn)) { water = WaterKind.Pond; level = tarn; }
+        // Revision 39: oxbow lakes, still water of their own beside lowland rivers (drawn as ponds), where nothing else is water.
+        bool oxbowNear = false;
+        if (_oxbows != null && water == WaterKind.None && _oxbows.Apply(x, z, ref height, out double oxbow, out oxbowNear)) { water = WaterKind.Pond; level = oxbow; }
         // Revision 29: a caldera's lake fills all of its floor below the water.
         if (_volcanoes != null && water == WaterKind.None && _volcanoes.InCaldera(x, z, out double cx, out double cz)
             && _hydrology.LakeNear(cx, cz) is >= 0 and var caldera && height < _hydrology.Lakes[caldera].Level - _p.SeaLevel)
@@ -192,7 +197,7 @@ public sealed partial class TerrainSampler
         // Revision 22: no pools where a river has cut the ground down by over 2 m (valley sides, canyon and gorge walls),
         // against the ground as the river stage sees it (the walking-scale relief is damped near rivers: big landforms
         // there are not a cut). Pools filled the flat ledges of canyon walls (Tom's dump 21:59:22, build 118).
-        if (wetland && poolCover > 0 && water == WaterKind.None && (_style.Revision < 22 || baseHeight + detail * riverDamp - height < 2))
+        if (wetland && poolCover > 0 && water == WaterKind.None && !oxbowNear && (_style.Revision < 22 || baseHeight + detail * riverDamp - height < 2))
             Pools(lx, lz, x, z, minWavelength, baseHeight, roughness, mountainShare, inland, flatten, land, riverDamp, lakeCells, poolCover,
                 poolDepth, poolSize, poolChannels, ref height, ref water, ref level);
         PlayerEdits(x, z, ref height, ref water, ref level, ref body);

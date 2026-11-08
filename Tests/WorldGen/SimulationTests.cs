@@ -25,6 +25,7 @@ internal static class SimulationTests
         T.Run("Landforms: sea stacks and arches — in the sea off steep coasts, sea all round, apart, the same every time (revision 35)", SeaStackForms, filter);
         T.Run("Landforms: headlands and coves — the coast moved both ways along stretches, cliffs on the points, low coves, river mouths as before (revision 36)", HeadlandForms, filter);
         T.Run("Landforms: spits, sandbars and lagoons — sand just above the sea, shallow water behind, land and river mouths untouched (revision 37)", SpitForms, filter);
+        T.Run("Landforms: oxbow lakes — crescents of still water beside lowland rivers, closed round, rivers and lakes unchanged (revision 39)", OxbowForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1178,6 +1179,68 @@ internal static class SimulationTests
         T.Check(overlap == 0, $"apart ({overlap})");
         T.Check(same == 4, $"placed the same every time ({same}/4)");
         T.Check(ground == 0, $"the ground is revision 34's ({ground})");
+    }
+
+    /// <summary>D281: oxbow lakes in the worlds; their middle (on the arc, away from the opening) is still water at their level;
+    /// round them the ground stands over the water (no edge the water would spill over); every river and lake sample the same
+    /// as without them.</summary>
+    private static void OxbowForms()
+    {
+        int lakes = 0, wet = 0, dry = 0, low = 0, rim = 0, changed = 0, worlds = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("balanced", 7319), ("continental", 7319), ("mountainous", 42) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            if (s.Plan.Oxbows is not { Count: > 0 } ob) continue;
+            worlds++;
+            var without = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Landforms = Off(LandformCatalog.Oxbows) }));
+            foreach (var (x, z, r, w, level, nx, nz, open) in ob.Probes())
+            {
+                lakes++;
+                // The far side of the crescent (away from the river): water at its level.
+                var t = s.Sample(x + nx * r, z + nz * r);
+                if (t.Water == WaterKind.Pond && Math.Abs(t.WaterLevel - level) < 1e-6) wet++; else { dry++; T.Note($"{id}/{seed} oxbow at {x:0},{z:0}: {t.Water} {t.WaterLevel:0.0} (level {level:0.0})"); }
+                // Round it: walking out across the crescent, the first dry ground past its water stands over the water (inward and
+                // outward), so nowhere would the water spill.
+                for (int a = 0; a < 24; a++)
+                {
+                    double ang = a * Math.Tau / 24, cx = Math.Cos(ang), cz = Math.Sin(ang);
+                    if (-(cx * nx + cz * nz) > Math.Cos(open) - .1) continue;
+                    foreach (int dir in new[] { 1, -1 })
+                    {
+                        bool inWater = false;
+                        for (double d = 0; d <= r * .1 + w + 20; d += 1.5)
+                        {
+                            double rr = r + dir * (d - r * .1 - w * .6);
+                            var u = s.Sample(x + cx * rr, z + cz * rr);
+                            if (u.Water == WaterKind.Pond && Math.Abs(u.WaterLevel - level) < 1e-6) { inWater = true; continue; }
+                            if (!inWater) continue;
+                            rim++;
+                            if (u.Water == WaterKind.None && u.Height < level - .05) { low++; if (low < 6) T.Note($"{id}/{seed} oxbow at {x:0},{z:0}: edge {u.Height - level:0.00} m under the water"); }
+                            break;
+                        }
+                    }
+                }
+            }
+            // Rivers and lakes as without them (on a coarse lattice over the land).
+            var rng = new RandomStream(11);
+            for (int n = 0; n < 3000; n++)
+            {
+                double px = s.Plan.Macro.CellX(rng.Int(s.Plan.Macro.Size)) + rng.Between(-300, 300), pz = s.Plan.Macro.CellZ(rng.Int(s.Plan.Macro.Size)) + rng.Between(-300, 300);
+                var a = without.Sample(px, pz);
+                if (a.Water is WaterKind.River or WaterKind.Lake && s.Sample(px, pz) is var b && (b.Water != a.Water || b.WaterLevel != a.WaterLevel)) changed++;
+            }
+            foreach (var r in s.Plan.Hydrology.Reaches)
+                for (int i = 0; i < r.Points.Length; i += 7)
+                {
+                    var a = without.Sample(r.Points[i].X, r.Points[i].Z); var b = s.Sample(r.Points[i].X, r.Points[i].Z);
+                    if (a.Water != b.Water || (a.Water != WaterKind.None && a.WaterLevel != b.WaterLevel) || (a.Water != WaterKind.None && a.Height != b.Height)) { changed++; if (changed < 5) T.Note($"{id}/{seed} reach {r.Id} point {r.Points[i].X:0},{r.Points[i].Z:0}: {a.Water} {a.Height:0.00} → {b.Water} {b.Height:0.00}"); }
+                }
+        }
+        T.Note($"{lakes} oxbow lakes in {worlds} worlds: {wet} wet at their far side, {dry} not; {low} of {rim} rim points under the water; {changed} river or lake points changed");
+        T.Check(worlds == 4 && lakes >= 40, $"oxbow lakes in the worlds ({lakes}, {worlds})");
+        T.Check(dry == 0, $"water in them ({dry})");
+        T.Check(low == 0, $"closed round ({low})");
+        T.Check(changed == 0, $"rivers and lakes unchanged ({changed})");
     }
 
     /// <summary>D271: sites in the worlds, of each kind; sand where the sea was, low, and shallow water made behind it; land

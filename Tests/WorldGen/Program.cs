@@ -125,6 +125,16 @@ if (args.FirstOrDefault(a => a.StartsWith("--coast-map=")) is { } cmArg)
     f.Write(image);
     return 0;
 }
+// --oxbows=<profile>,<seed>: the oxbow lakes (D281).
+if (args.FirstOrDefault(a => a.StartsWith("--oxbows=")) is { } obArg)
+{
+    var p = obArg[9..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    Console.WriteLine($"{p[0]}/{p[1]}: {s.Plan.Oxbows?.Count ?? 0} oxbow lakes");
+    foreach (var (x, z, r, w, level, nx, nz, open) in s.Plan.Oxbows?.Probes() ?? Enumerable.Empty<(double, double, double, double, double, double, double, double)>())
+        Console.WriteLine($"  {x:0},{z:0} radius {r:0} width {w:0} level {level:0.0} toward river {-nx:0.00},{-nz:0.00}");
+    return 0;
+}
 // --spits=<profile>,<seed>: the spits, barriers and sandbars (D271).
 if (args.FirstOrDefault(a => a.StartsWith("--spits=")) is { } spArg)
 {

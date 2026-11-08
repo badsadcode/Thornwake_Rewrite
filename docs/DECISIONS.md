@@ -4442,6 +4442,23 @@ Tom's dump 154929: the overhanging grass "spawn in really weird places, like in 
   each a narrow slice of the texture with its own length and spread, following the curve over the lip and down, in two layers
   (the back shorter): a tuft. Used for the hanging grass, moss and roots (the terrain lips' dressing too).
 
+## D281 — Oxbow lakes, terrain revision 39 (2026-11-08)
+Landform no. 12, first half (Tom: "Start with whatever you feel would be the best"; his order puts the landforms where water
+meets land before the water rework). `Game/WorldGen/Oxbows.cs`, placed in the plan after the rivers are final.
+* **Where**: beside gentle stretches (under 1.5 m a km) of lowland rivers 10–140 m wide, at least 3 km long, not
+  distributaries; on flat land (not mountain, not over 7 m above the water), clear of other rivers, lakes, the sea and each
+  other (all 16 points of the crescent and its middle checked). About one per 9 km of such river at Amount 1.
+* **Shape**: a crescent (a circle 2.4–4.2 river widths across, 70–420 m, lightly wobbled) 60–160 m from the river, its
+  open side toward it, the horns tapering to nothing; a shallow bed 1.5–3.2 m deep. Still water a little above the river's
+  level (drawn as a pond, as the cirques' tarns: the lake shader for now, the water rework gives it its own look).
+* **Closed**: round it the ground is raised to half a metre over the water where it lies lower, so it cannot spill; the
+  fens' and wetlands' own pools stay out of the rim (they cut it down).
+* **Water wins**: the plan's rivers and lakes are untouched, the crescent only where nothing else is water.
+* Test `Landforms: oxbow lakes` (4 worlds, 1375 oxbows): every far side wet at its level, no rim point under the water, no
+  river or lake sample changed. *Terrain version → Build 137* = revision 38 (fingerprints frozen in `terrain-build137.json`;
+  the fingerprints' sample points miss every oxbow, so revision 39's read the same — the oxbow test is what guards them).
+* River terraces (the other half of no. 12) next, then alluvial fans.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

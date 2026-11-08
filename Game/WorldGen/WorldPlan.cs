@@ -45,6 +45,8 @@ public sealed class WorldPlan
     public Headlands? Headlands { get; }
     /// <summary>Spits, sandbars and lagoons (revision 37, landform no. 11); null when off or older.</summary>
     public Spits? Spits { get; }
+    /// <summary>Oxbow lakes beside lowland rivers (revision 39, landform no. 12); null when off or older.</summary>
+    public Oxbows? Oxbows { get; }
     /// <summary>Settlement sites and the roads between them (docs/WORLDGEN_PLAN.md step 3): empty in revision 17.</summary>
     public IReadOnlyList<WorldSite> Sites { get; } = Array.Empty<WorldSite>();
     public IReadOnlyList<WorldRoad> Roads { get; } = Array.Empty<WorldRoad>();
@@ -187,6 +189,8 @@ public sealed class WorldPlan
             Headlands = new Headlands(this, Style.Landform(LandformCatalog.Headlands.Id));
         if (Style.Revision >= LandformCatalog.Spits.Since && !Style.Landform(LandformCatalog.Spits.Id).Off)
             Spits = new Spits(this, Style.Landform(LandformCatalog.Spits.Id));
+        if (Style.Revision >= LandformCatalog.Oxbows.Since && !Style.Landform(LandformCatalog.Oxbows.Id).Off)
+            Oxbows = new Oxbows(this, Style.Landform(LandformCatalog.Oxbows.Id));
         stage?.Invoke(3);
         Climate = new Climate(this, Style.Climate);
         stage?.Invoke(4);
