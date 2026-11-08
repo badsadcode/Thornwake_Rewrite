@@ -9,6 +9,7 @@ Written for the next conversation (the previous one ran out of context). Everyth
   escarpments not rounded; lip rocks' collision untried in play; the gorge fall only partly clear.
   **Since 134 (not in a build)**: rocks closed, all cliff rocks solid, sized to needles, six shapes, *Rock shading* (D275).
   Ambient occlusion that shows, crevice shadow in rocks (D276); the rock kit, first pass (D277, `RockKit.cs`, `--rock-kit`).
+  **Later, after the terrain (Tom)**: generating forests (stands, edges, clearings, by the land), not only scattered trees.
   For the water rework: the water over a waterfall's lip is a rounded dome (Tom's dump 122648). Tom asked how rocks behave
   when he digs: they are placed from the tile's ground, edits included, so they move or vanish as a cliff is dug — to fix
   with mining (rocks fixed at generation, mined for stone and a little ore; Tom: later).

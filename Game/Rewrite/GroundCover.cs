@@ -426,6 +426,39 @@ public static partial class GroundCover
                     result.Add(new RockInstance(Boulder, new Transform3D(new Basis(Vector3.Up, Unit(h, 11) * Mathf.Tau).Scaled(new Vector3(block, block * .7f, block)), foot3), g.RockTint(x, z)));
                 }
             });
+        // The rock kit's formations (D277; setting Rock formations), in place of the huge boulders. Where (Tom: "the distribution
+        // ... needs to be smarter"): in outcrops — patches of rocky ground a few hundred metres across, from a world noise, so
+        // formations come in groups with open ground between — on crests and hilltops more than in hollows and valley floors,
+        // more where the land is rocky (the biome's rock amount) and in the mountains, few in forest; a lone one now and then
+        // outside them. A group is one kind (from the outcrop's own noise, by the land's rock: columns where it is basalt or
+        // mountain, slab stacks in sandstone and layered country, tors in granite and mossy country, tiered piles mixed in),
+        // now and then another among them; 0.6–1.4 of their built size, seated in the ground.
+        if (key.Level <= 2 && GameSettings.RockFormations.Index == 1)
+            Cells(key, 55, seed ^ 0xF0E3UL, (x, z, h) =>
+            {
+                if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .68f || height - sea < 1.5f) return;
+                double wx = g.X0 + x, wz = g.Z0 + z;
+                float outcrop = (float)DetMath.Smooth((Noise.Value(wx / 520, wz / 520, 0x0C7C0UL) * .7 + Noise.Value(wx / 170, wz / 170, 0x0C7C1UL) * .3 - .55) / .14);
+                // Crest or hollow: this point against the ground 35 m round it (rises above it: a crest).
+                float round = 0; int n = 0;
+                for (int a = 0; a < 4; a++)
+                    if (g.At(x + 35 * Math.Cos(a * Math.PI / 2), z + 35 * Math.Sin(a * Math.PI / 2), out float hr, out _, out _, out _)) { round += hr; n++; }
+                float crest = n > 0 ? Math.Clamp((height - round / n) / 6, -1, 1) : 0;
+                float mountain = g.Mountain(x, z);
+                float chance = (.025f + .6f * outcrop * (1 + .8f * crest)) * a0() * Math.Min(2.2f, g.Props(x, z, 0)) * (1 + mountain)
+                    * (1 - .75f * Math.Min(1, forest * 1.5f)) * (crest < -.3f ? .3f : 1);
+                if (Unit(h, 1) > chance) return;
+                int look = (int)Math.Round(g.Props(x, z, 2));
+                float roll = Unit(h, 9) < .82f ? (float)Noise.Value(wx / 520, wz / 520, 0x0C7C2UL) : Unit(h, 10);
+                RockKit.Kind kind = mountain > .45f || look == 2 ? (roll < .7f ? RockKit.Kind.Columns : RockKit.Kind.Tiered)
+                    : look is 3 or 0 ? (roll < .6f ? RockKit.Kind.Slabs : RockKit.Kind.Tiered)
+                    : roll < .65f ? RockKit.Kind.Tor : roll < .85f ? RockKit.Kind.Tiered : RockKit.Kind.Columns;
+                // (bigger in the outcrops' hearts and on crests, smaller at their edges)
+                float s = (.55f + .55f * Unit(h, 2) * Unit(h, 3)) * (.75f + .35f * outcrop + .15f * Math.Max(0, crest));
+                var fb = new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(new Vector3(s, s, s));
+                result.Add(new RockInstance(Formation + (int)kind * RockKit.Variants + (int)(Unit(h, 5) * (RockKit.Variants - .001f)),
+                    new Transform3D(fb, new Vector3((float)x, height - (.6f + 2.5f * (1 - up)) * s, (float)z)), g.RockTint(x, z)));
+            });
         // Huge boulders, rare, on fairly open ground; erratics (D263): four times as many in the glacial biomes, out in the
         // open (none in forest).
         if (key.Level <= 2)
@@ -433,22 +466,7 @@ public static partial class GroundCover
             {
                 if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .8f || height - sea < 1) return;
                 if (Unit(h, 1) > .22f * a0() * (1 + 3 * g.Props(x, z, 3) * (1 - Math.Min(1, forest * 2)))) return;
-                // The rock kit's formations in place of the huge boulders (D277; setting Rock formations): their kind by the land's
-                // rock (columns where it is basalt or mountains, slab stacks where it is sandstone or layered, tors in granite and
-                // mossy country, tiered piles mixed in), 0.6–1.4 of their built size, seated 1.5 m in.
-                if (GameSettings.RockFormations.Index == 1)
-                {
-                    int look = (int)Math.Round(g.Props(x, z, 2));
-                    float roll = Unit(h, 9), mountain = g.Mountain(x, z);
-                    RockKit.Kind kind = mountain > .45f || look == 2 ? (roll < .7f ? RockKit.Kind.Columns : RockKit.Kind.Tiered)
-                        : look is 3 or 0 ? (roll < .6f ? RockKit.Kind.Slabs : RockKit.Kind.Tiered)
-                        : roll < .65f ? RockKit.Kind.Tor : roll < .85f ? RockKit.Kind.Tiered : RockKit.Kind.Columns;
-                    float s = .6f + .8f * Unit(h, 2) * Unit(h, 3);
-                    var fb = new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(new Vector3(s, s, s));
-                    result.Add(new RockInstance(Formation + (int)kind * RockKit.Variants + (int)(Unit(h, 5) * (RockKit.Variants - .001f)),
-                        new Transform3D(fb, new Vector3((float)x, height - .6f * s, (float)z)), g.RockTint(x, z)));
-                    return;
-                }
+                if (GameSettings.RockFormations.Index == 1) return; // (the rock kit's formations below instead, D277)
                 float size = 5 + 7 * Unit(h, 2) * Unit(h, 3);
                 var basis = new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau) * new Basis(Vector3.Right, (Unit(h, 5) - .5f) * .3f);
                 basis = basis.Scaled(new Vector3(size * (.9f + .4f * Unit(h, 6)), size * (.6f + .35f * Unit(h, 7)), size * (.9f + .4f * Unit(h, 8))));

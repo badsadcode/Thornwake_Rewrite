@@ -4383,8 +4383,13 @@ not one lumpy blob. `Game/Rewrite/RockKit.cs`, a first pass:
   tiered piles mixed in; 0.6–1.4 of their built size. Shadows on; collision a box per piece.
 * Setting *Rock formations* (*rock kit* / *boulders (build 134)*). Test flag `--rock-kit`: all 16 in a 4 × 4 grid in front
   of the camera (rows: columns, slabs, tiered, tors).
-* Open: softer than the references (the faces are not yet crisp planes); rare in the world; not yet used for the cliff
-  rocks and sea stacks. Tom to judge the look.
+* Tom: "I like what I'm seeing", but "more of them" and the distribution "needs to be smarter": a pass of their own on a
+  55 m lattice, in **outcrops** — patches a few hundred metres across from a world noise, so formations come in groups with
+  open ground between — up to ~60 % of the cells there, 2.5 % outside; more on crests (the point against the ground 35 m
+  round it), a third in hollows, more by the biome's rock amount and in mountains, a quarter in forest; a group is one kind
+  (from the outcrop's own noise, 82 %), bigger in an outcrop's heart and on crests. Seen near Tom's needle spot: 29 near,
+  56 middle, 88 far. Frame rate 58–60 with them, 45–60 without, at a taiga test spot.
+* Open: softer than the references (the faces are not yet crisp planes); not yet used for the cliff rocks and sea stacks.
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
