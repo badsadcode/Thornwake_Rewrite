@@ -4499,7 +4499,8 @@ Landform no. 13 (Tom: "Alluvial fans"), the last of the landforms where water me
   its gravel's thickness, gravel on three quarters of the fan points, 5 of 36170 4 m slopes over 35° that were under 25°
   (the streams' steep banks it meets steepen a little), 0 river or lake samples changed. *Terrain version → Terraces (before
   alluvial fans; not in a build)* = revision 40 (`terrain-r40.json`).
-* Open: how strong the gravel looks (the scree look reads as brown earth from the air) is Tom's call.
+* Tom, asked whether to make them easier to recognise (a clearer cone with an edge, paler stonier gravel, fewer trees):
+  "Leave them subtle". The look stays as built.
 
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
