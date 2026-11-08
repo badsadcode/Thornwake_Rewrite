@@ -3,12 +3,14 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 134** (v0.9.134, return point `1d6a12a`, `dist/Preview-134`): rocks on cliff faces (D272), Tom's six cliff
+* **Last build Tom has: 135** (v0.9.135, return point `8e5a174`, `dist/Preview-135`): rocks closed and solid, sized to needles
+  (D275), ambient occlusion that shows (D276), the rock kit in outcrops with crisp pieces (D277). Tom may go back to the
+  boulders or meet in between (his words): *Rock formations* switches. Launchers "Go to - all 16 rock formations, test grid /
+  needle rocks". Open: crisp faces for cliff rocks and sea stacks; waterfall dome water (water rework); forests (after terrain).
+  Build 134 (v0.9.134, return point `1d6a12a`, `dist/Preview-134`): rocks on cliff faces (D272), Tom's six cliff
   textures, lighter varied rock, bushes, moss and roots (D273), headland cliffs rounded in a rocky shoulder (D274, terrain
   revision 38). Launchers "Go to - headland cliffs (your dump) / … from above / gorge cliffs". Open: canyon walls and
   escarpments not rounded; lip rocks' collision untried in play; the gorge fall only partly clear.
-  **Since 134 (not in a build)**: rocks closed, all cliff rocks solid, sized to needles, six shapes, *Rock shading* (D275).
-  Ambient occlusion that shows, crevice shadow in rocks (D276); the rock kit, first pass (D277, `RockKit.cs`, `--rock-kit`).
   **Later, after the terrain (Tom)**: generating forests (stands, edges, clearings, by the land), not only scattered trees.
   For the water rework: the water over a waterfall's lip is a rounded dome (Tom's dump 122648). Tom asked how rocks behave
   when he digs: they are placed from the tile's ground, edits included, so they move or vanish as a cliff is dug — to fix
