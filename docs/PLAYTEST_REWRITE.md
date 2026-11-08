@@ -78,6 +78,20 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 135 — the rock kit, solid rocks, ambient occlusion
+**Host and everyone joining need build 135** (versions must match to connect). Same terrain as build 134.
+* **The rock kit** (after your references): rock formations built of chunky pieces with crisp flat faces and bevelled
+  edges — column clusters, slab stacks, tiered piles and tors — in outcrop groups of one kind, mostly on crests and
+  hilltops, by the land's rock (columns in mountains and basalt, slab stacks in sandstone, tors in granite and moss
+  country). They replace the single huge boulders; you can climb them (each piece is solid). *Lighting and effects → Rock
+  formations → boulders (build 134)* brings the old boulders back.
+* **Ambient occlusion that shows**: soft shadow in creases and where things meet the ground, by day too; rocks have their
+  cracks and ledges darkened. *Ambient occlusion → on (build 134)* is the old one.
+* **Rock fixes** (your dumps): no more looking into rocks (holes closed), every cliff rock is solid, no rocks stuck on the
+  needles, six cliff rock shapes. *Rock shading* (smooth or faceted) is a new setting.
+* Not yet: the waterfall's rounded water (for the water rework), crisp faces on the cliff rocks and sea stacks.
+* Try *Go to - all 16 rock formations, test grid* (a row per kind, lined up for you to compare) and *Go to - needle rocks*.
+
 ## New in build 134 — rocky cliffs (terrain revision 38)
 **Host and everyone joining need build 134** (versions must match to connect).
 * **Rocks on cliff faces** (after your dumps): every cliff, a headland, canyon, gorge, escarpment or trough wall, gets worn
