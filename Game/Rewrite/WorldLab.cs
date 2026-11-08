@@ -178,6 +178,7 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--extra-every=")) _extraEvery = float.Parse(arg[14..], CultureInfo.InvariantCulture);
             if (arg == "--extra-rebase") _extraRebase = true;
             if (arg == "--rock-kit") _rockKitShow = 0;
+            if (arg == "--debug-ssao") GetViewport().DebugDraw = Viewport.DebugDrawEnum.Ssao; // (test: the AO buffer)
             if (arg.StartsWith("--extra-yaws=")) foreach (var y in arg[13..].Split(',')) _extraYaws.Add(float.Parse(y, CultureInfo.InvariantCulture));
             if (arg.StartsWith("--view=")) { var v = arg[7..].Split(','); _shotView = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture), float.Parse(v[2], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--msaa=")) GetViewport().Msaa3D = arg[7..] switch { "0" => Viewport.Msaa.Disabled, "4" => Viewport.Msaa.Msaa4X, _ => Viewport.Msaa.Msaa2X };

@@ -4396,6 +4396,26 @@ not one lumpy blob. `Game/Rewrite/RockKit.cs`, a first pass:
   overlap rather than merge, as kit rocks do. Frame rate unchanged (58–60).
 * Open: not yet used for the cliff rocks and sea stacks.
 
+## D278 — Ambient occlusion in sunlight, shadow distance, natural rock kit (2026-11-08)
+Tom on build 135: the rock kit "a little bit too simplified. Too regular ... too artificial", "sometimes they feel like they
+shouldn't be standing like that", "I still don't see that ambient occlusion" ("in the shadows, it shows up more, while in full
+sunlight, it doesn't show at all"), "the shadows end up too close ... I just can't see the setting for it".
+* **Why no AO in sunlight**: Godot weighs SSAO's *light affect* (how much it darkens direct light) by the *AO channel affect*,
+  0 by default: direct light was never darkened, only the sky's — so it showed in shadow and vanished in sun, as Tom saw.
+  Strong AO now sets the channel affect to 1, light affect 0.45, intensity 4.5, power 2.8, radius 2.6 m, detail 1.4. At a
+  rock in full sun: its foot 35 % darker, open ground 10 %. Also Tom's saved `fx.ssao=1` was build 134's weak one (D276 put
+  strong at 2): options reordered (off / strong / on (build 134)) so his saved choice gets strong. Test flag `--debug-ssao`
+  shows the AO buffer.
+* **Shadow distance** (*Lighting and effects*, new): by quality (90 / 200 / 450 m, as before) or 700 m, 1.2 km (default),
+  2 km; with a far reach the first three splits stay small (4 %, 12 %, 35 %) so near shadows stay sharp, splits blended.
+  In a dense forest 40–46 FPS at every distance (distant tree cards cast none).
+* **Rock kit less regular**: each piece's six faces turned each its own way (sides leaning in toward the top, tops sloping),
+  2–4 extra corner cuts, deeper; chamfers along the edges between those general faces.
+* **Stable**: a tor's upper blocks rest centred on a lower one, smaller and sunk into it (before: anywhere at any height,
+  overhanging); slab stacks keep each layer's middle over the one below; formations not on slopes over ~35°, leaning a third
+  with the ground and sunk deeper on a slope.
+* Return point: build 135 (`8e5a174`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -160,11 +160,15 @@ public static class GameSettings
         "build 32. Costly with dense grass: benchmark it.", options: new[] { "off", "on" }, rebuild: true));
     public static readonly Setting Shadows = Add(new("fx.shadows", "Lighting and effects", "Shadows", 0, 3, 1, 2,
         "Sun shadow quality and distance.", options: OffLowMediumHigh));
-    public static readonly Setting Ssao = Add(new("fx.ssao", "Lighting and effects", "Ambient occlusion (SSAO)", 0, 2, 1, 2,
+    public static readonly Setting ShadowDistance = Add(new("fx.shadow_distance", "Lighting and effects", "Shadow distance", 0, 3, 1, 2,
+        "How far the sun's shadows reach (D278, Tom: \"the shadows end up too close\"). By quality: 90 / 200 / 450 m as the " +
+        "Shadows setting (before build 136). Further costs some sharpness up close and some frame time.",
+        options: new[] { "by quality (build 135)", "700 m", "1.2 km", "2 km" }));
+    public static readonly Setting Ssao = Add(new("fx.ssao", "Lighting and effects", "Ambient occlusion (SSAO)", 0, 2, 1, 1,
         "Soft contact shadows in creases and under objects. Strong (D276, Tom: \"is there no ambient occlusion in the game?\"): " +
         "a wider reach (rocks are tens of metres) and it darkens sunlight in creases too — the build 134 one darkened only the " +
         "sky's light, which outdoors by day hardly shows.",
-        options: new[] { "off", "on (build 134)", "strong" }));
+        options: new[] { "off", "strong", "on (build 134)" }));
     public static readonly Setting Ssil = Add(new("fx.ssil", "Lighting and effects", "Bounce light (SSIL)", 0, 1, 1, 0,
         "Screen-space indirect light: colour bleeding from sunlit surfaces. Costs some frame time."));
     public static readonly Setting WaterStyle = Add(new("fx.water_style", "Lighting and effects", "Water", 0, 5, 1, 0,

@@ -543,16 +543,27 @@ public partial class Atmosphere : Node3D
         var vp = GetViewport();
         int shadows = GameSettings.Shadows.Index;
         Sun.ShadowEnabled = shadows > 0;
-        Sun.DirectionalShadowMaxDistance = shadows switch { 1 => 90, 2 => 200, _ => 450 };
+        Sun.DirectionalShadowMaxDistance = GameSettings.ShadowDistance.Index switch { 1 => 700, 2 => 1200, 3 => 2000, _ => shadows switch { 1 => 90, 2 => 200, _ => 450 } };
+        // (with a far reach the near splits stay small, so close shadows stay sharp: 4 %, 12 %, 35 % of the distance)
+        bool far = GameSettings.ShadowDistance.Index > 0;
+        Sun.DirectionalShadowSplit1 = far ? .04f : .1f; Sun.DirectionalShadowSplit2 = far ? .12f : .2f; Sun.DirectionalShadowSplit3 = far ? .35f : .5f;
+        Sun.DirectionalShadowBlendSplits = far;
         RenderingServer.DirectionalShadowAtlasSetSize(shadows switch { 1 => 2048, 2 => 4096, _ => 8192 }, true);
         RenderingServer.DirectionalSoftShadowFilterSetQuality(shadows >= 3 ? RenderingServer.ShadowQuality.SoftHigh : RenderingServer.ShadowQuality.SoftLow);
         e.SsaoEnabled = GameSettings.Ssao.On;
-        bool strongAo = GameSettings.Ssao.Index == 2;
-        e.SsaoRadius = strongAo ? 3.5f : 1.5f;
-        e.SsaoIntensity = strongAo ? 2.4f : 1.2f;
-        e.SsaoPower = strongAo ? 1.6f : 1.5f;
-        e.SsaoDetail = strongAo ? .8f : .5f;
-        e.SsaoLightAffect = strongAo ? .35f : 0;
+        bool strongAo = GameSettings.Ssao.Index == 1;
+        // (Godot's SSAO is faint outdoors: its buffer showed almost white at intensity 2.4 — Tom still saw none; pushed hard,
+        // and it darkens direct light too: the sun carries the light by day)
+        e.SsaoRadius = strongAo ? 2.6f : 1.5f;
+        e.SsaoIntensity = strongAo ? 4.5f : 1.2f;
+        e.SsaoPower = strongAo ? 2.8f : 1.5f;
+        e.SsaoDetail = strongAo ? 1.4f : .5f;
+        e.SsaoHorizon = strongAo ? .04f : .06f;
+        e.SsaoSharpness = .98f;
+        e.SsaoLightAffect = strongAo ? .45f : 0;
+        // (Godot weighs the light affect by the AO channel affect, 0 by default: without it direct light was never darkened —
+        // the reason Tom saw no ambient occlusion by day, D278)
+        e.SsaoAOChannelAffect = strongAo ? 1f : 0;
         e.SsilEnabled = GameSettings.Ssil.On;
         e.SsrEnabled = GameSettings.Ssr.On;
         e.GlowEnabled = GameSettings.Glow.Value > 0;

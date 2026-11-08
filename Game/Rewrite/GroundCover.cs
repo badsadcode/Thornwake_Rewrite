@@ -436,7 +436,8 @@ public static partial class GroundCover
         if (key.Level <= 2 && GameSettings.RockFormations.Index == 1)
             Cells(key, 55, seed ^ 0xF0E3UL, (x, z, h) =>
             {
-                if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .68f || height - sea < 1.5f) return;
+                // (not on slopes over ~35°: set upright there, the downhill side stood on nothing)
+                if (!g.At(x, z, out float height, out float up, out float forest, out bool wet) || wet || up < .82f || height - sea < 1.5f) return;
                 double wx = g.X0 + x, wz = g.Z0 + z;
                 float outcrop = (float)DetMath.Smooth((Noise.Value(wx / 520, wz / 520, 0x0C7C0UL) * .7 + Noise.Value(wx / 170, wz / 170, 0x0C7C1UL) * .3 - .55) / .14);
                 // Crest or hollow: this point against the ground 35 m round it (rises above it: a crest).
@@ -455,9 +456,13 @@ public static partial class GroundCover
                     : roll < .65f ? RockKit.Kind.Tor : roll < .85f ? RockKit.Kind.Tiered : RockKit.Kind.Columns;
                 // (bigger in the outcrops' hearts and on crests, smaller at their edges)
                 float s = (.55f + .55f * Unit(h, 2) * Unit(h, 3)) * (.75f + .35f * outcrop + .15f * Math.Max(0, crest));
-                var fb = new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau).Scaled(new Vector3(s, s, s));
+                // (leaning a third of the way with the ground, sunk deeper on a slope, so no side stands on air)
+                var normal = g.NormalAt(x, z);
+                var lean = new Basis(Vector3.Up.Cross(normal).LengthSquared() > 1e-6f ? Vector3.Up.Cross(normal).Normalized() : Vector3.Right,
+                    Vector3.Up.AngleTo(normal) * .35f);
+                var fb = (lean * new Basis(Vector3.Up, Unit(h, 4) * Mathf.Tau)).Scaled(new Vector3(s, s, s));
                 result.Add(new RockInstance(Formation + (int)kind * RockKit.Variants + (int)(Unit(h, 5) * (RockKit.Variants - .001f)),
-                    new Transform3D(fb, new Vector3((float)x, height - (.6f + 2.5f * (1 - up)) * s, (float)z)), g.RockTint(x, z)));
+                    new Transform3D(fb, new Vector3((float)x, height - (.6f + 6f * (1 - up)) * s, (float)z)), g.RockTint(x, z)));
             });
         // Huge boulders, rare, on fairly open ground; erratics (D263): four times as many in the glacial biomes, out in the
         // open (none in forest).

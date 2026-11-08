@@ -27,13 +27,17 @@ public static class RockKit
     {
         public Vector3 Centre, Half;
         public Basis Basis, Inverse;
+        /// <summary>Its six faces (D277, after Tom: "too regular ... too artificial"): each a box face turned a little its own
+        /// way — the sides leaning in toward the top (tapered) or out, the top sloping — so no two faces are square to each other.</summary>
+        public (Vector3 N, float D)[] Faces = Array.Empty<(Vector3, float)>();
         public (Vector3 N, float D)[] Cuts = Array.Empty<(Vector3, float)>();
         public float Bevel, Reach;
 
         public float Distance(Vector3 p)
         {
             var q = Inverse * (p - Centre);
-            float d = SmoothMax(SmoothMax(Math.Abs(q.X) - Half.X, Math.Abs(q.Y) - Half.Y, Bevel), Math.Abs(q.Z) - Half.Z, Bevel);
+            float d = float.MinValue;
+            foreach (var (n, o) in Faces) d = d == float.MinValue ? q.Dot(n) - o : SmoothMax(d, q.Dot(n) - o, Bevel);
             foreach (var (n, o) in Cuts) d = SmoothMax(d, q.Dot(n) - o, Bevel * .7f);
             return d;
         }
@@ -55,16 +59,17 @@ public static class RockKit
         var axes = new[] { Vector3.Right, Vector3.Left, Vector3.Up, Vector3.Down, Vector3.Back, Vector3.Forward };
         foreach (var b in blocks)
         {
-            var planes = new List<(Vector3 N, float D)>();
-            float[] half = { b.Half.X, b.Half.X, b.Half.Y, b.Half.Y, b.Half.Z, b.Half.Z };
-            for (int i = 0; i < 6; i++) planes.Add((axes[i], half[i]));
+            var planes = new List<(Vector3 N, float D)>(b.Faces);
             float c = Math.Max(.15f, b.Bevel * .7f);
             for (int i = 0; i < 6; i++)
                 for (int j = i + 1; j < 6; j++)
                 {
                     if (j == (i ^ 1)) continue; // (opposite faces)
-                    var n = (axes[i] + axes[j]).Normalized();
-                    planes.Add((n, (half[i] + half[j]) / Mathf.Sqrt2 - c));
+                    // A chamfer along the edge where two faces meet: on that edge n_i·p = d_i and n_j·p = d_j, so (n_i + n_j)·p =
+                    // d_i + d_j; moved in by c.
+                    var (ni, di) = b.Faces[i]; var (nj, dj) = b.Faces[j];
+                    var sum = ni + nj; float len = sum.Length();
+                    planes.Add((sum / len, (di + dj) / len - c));
                 }
             foreach (var (n, o) in b.Cuts) planes.Add((n, o));
             // The corners: every three planes meeting inside all the others.
@@ -137,6 +142,18 @@ public static class RockKit
         void Add(Vector3 centre, Vector3 half, float turn, float tilt, int cuts, float bevel)
         {
             var basis = new Basis(Vector3.Up, turn) * new Basis(Vector3.Right, (float)rng.Between(-tilt, tilt)) * new Basis(Vector3.Forward, (float)rng.Between(-tilt, tilt));
+            // The faces turned each their own way: sides leaning in toward the top (mostly), the top and bottom sloping.
+            var faces = new (Vector3, float)[6];
+            var axes0 = new[] { Vector3.Right, Vector3.Left, Vector3.Up, Vector3.Down, Vector3.Back, Vector3.Forward };
+            float[] h0 = { half.X, half.X, half.Y, half.Y, half.Z, half.Z };
+            for (int f = 0; f < 6; f++)
+            {
+                var n = axes0[f];
+                if (f is 2 or 3) n += new Vector3((float)rng.Between(-.22, .22), 0, (float)rng.Between(-.22, .22));
+                else n += Vector3.Up * (float)rng.Between(-.06, .3) + (f < 2 ? Vector3.Back : Vector3.Right) * (float)rng.Between(-.16, .16);
+                faces[f] = (n.Normalized(), h0[f] * (float)rng.Between(.88, 1.05));
+            }
+            cuts += rng.Int(3);
             var list = new List<(Vector3, float)>();
             for (int c = 0; c < cuts; c++)
             {
@@ -144,9 +161,9 @@ public static class RockKit
                 var corner = new Vector3(rng.Unit() < .5 ? -1 : 1, rng.Unit() < .65 ? 1 : -1, rng.Unit() < .5 ? -1 : 1);
                 var n = (corner + new Vector3((float)rng.Between(-.5, .5), (float)rng.Between(-.4, .4), (float)rng.Between(-.5, .5))).Normalized();
                 float full = Math.Abs(n.X) * half.X + Math.Abs(n.Y) * half.Y + Math.Abs(n.Z) * half.Z;
-                list.Add((n, full * (float)rng.Between(.55, .82)));
+                list.Add((n, full * (float)rng.Between(.48, .8)));
             }
-            blocks.Add(new Block { Centre = centre, Half = half, Basis = basis, Inverse = basis.Inverse(), Cuts = list.ToArray(), Bevel = bevel,
+            blocks.Add(new Block { Centre = centre, Half = half, Basis = basis, Inverse = basis.Inverse(), Faces = faces, Cuts = list.ToArray(), Bevel = bevel,
                 Reach = half.Length() + bevel + 1 });
         }
         float Rubble(float spread, int count, float size)
@@ -188,7 +205,9 @@ public static class RockKit
                 for (int i = 0; i < layers; i++)
                 {
                     float t = (float)rng.Between(.8, 1.5);
-                    off += new Vector3((float)rng.Between(-1.2, 1.2), 0, (float)rng.Between(-.9, .9));
+                    // (each layer set off from the one below, but its middle always over it)
+                    off += new Vector3((float)rng.Between(-1, 1), 0, (float)rng.Between(-.8, .8));
+                    off = new Vector3(Math.Clamp(off.X, -w * .3f, w * .3f), 0, Math.Clamp(off.Z, -d * .3f, d * .3f));
                     Add((off + new Vector3(0, y + t, 0)).Rotated(Vector3.Up, turn), new Vector3(w, t, d), turn + (float)rng.Between(-.25, .25), .05f, 4, t * .35f);
                     y += t * 2 - .15f;
                     w *= (float)rng.Between(.72, .92); d *= (float)rng.Between(.72, .95);
@@ -225,15 +244,27 @@ public static class RockKit
             }
             default:
             {
-                // A tor: big rounded granite blocks piled two or three high, a slab split off and lying beside.
-                int count = 3 + rng.Int(3);
-                float y = -1.2f;
-                for (int i = 0; i < count; i++)
+                // A tor: big rounded granite blocks, a few on the ground side by side and one or two resting on them — each upper
+                // block centred over the one below, smaller, sunk into it (Tom: some "feel like they shouldn't be standing like
+                // that": blocks set anywhere at any height overhung their support), a slab split off and lying beside.
+                int ground = 2 + rng.Int(2);
+                var bases = new List<(Vector3 At, Vector3 Half)>();
+                for (int i = 0; i < ground; i++)
                 {
-                    float s = (float)rng.Between(2.6, 4.2) * (1 - .1f * i);
-                    var at = new Vector3((float)rng.Between(-3.5, 3.5), y + s * .7f, (float)rng.Between(-2.5, 2.5));
-                    Add(at, new Vector3(s * (float)rng.Between(1, 1.5), s * (float)rng.Between(.6, .85), s * (float)rng.Between(.8, 1.2)), (float)rng.Unit() * Mathf.Tau, .18f, 2, s * .55f);
-                    if (rng.Unit() < .55) y += s * 1.1f;
+                    float s = (float)rng.Between(2.8, 4.2);
+                    var hh = new Vector3(s * (float)rng.Between(1, 1.4), s * (float)rng.Between(.55, .8), s * (float)rng.Between(.8, 1.15));
+                    var at = new Vector3(i * 4.5f - (ground - 1) * 2.25f + (float)rng.Between(-1, 1), hh.Y * .75f - 1.3f, (float)rng.Between(-1.5, 1.5));
+                    Add(at, hh, (float)rng.Unit() * Mathf.Tau, .12f, 2, s * .5f);
+                    bases.Add((at, hh));
+                }
+                for (int up = 0, n = 1 + rng.Int(2); up < n; up++)
+                {
+                    var (bAt, bHalf) = bases[rng.Int(bases.Count)];
+                    float s = Math.Min(bHalf.X, bHalf.Z) * (float)rng.Between(.6, .85);
+                    var hh = new Vector3(s * (float)rng.Between(1, 1.3), s * (float)rng.Between(.5, .7), s * (float)rng.Between(.8, 1.1));
+                    var at = bAt + new Vector3((float)rng.Between(-.3, .3) * bHalf.X, bHalf.Y + hh.Y * .8f, (float)rng.Between(-.3, .3) * bHalf.Z);
+                    Add(at, hh, (float)rng.Unit() * Mathf.Tau, .1f, 2, s * .5f);
+                    bases.Add((at, hh));
                 }
                 for (int i = 0, slabs = 1 + rng.Int(2); i < slabs; i++)
                 {
