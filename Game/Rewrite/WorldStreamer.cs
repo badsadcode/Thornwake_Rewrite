@@ -84,6 +84,27 @@ public partial class WorldStreamer : Node3D
     private long _revision;
     private double _originX, _originZ;
     private readonly Dictionary<TileKey, Node3D> _tiles = new();
+    // Rocks standing in rivers on the level-0/1 tiles drawn now (D290): world x, z, radius.
+    private readonly Dictionary<TileKey, List<Vector3>> _riverRocks = new();
+
+    /// <summary>The rocks standing in rivers nearest a world point (up to <paramref name="into"/>'s length, within
+    /// <paramref name="range"/> metres), in scene coordinates (x, z, radius, 0); returns how many.</summary>
+    public int NearRiverRocks(double x, double z, Vector4[] into, double range = 150)
+    {
+        var found = new List<(double D, Vector3 R)>();
+        foreach (var list in _riverRocks.Values)
+            foreach (var r in list)
+            {
+                double dx = r.X - x, dz = r.Y - z, d = dx * dx + dz * dz;
+                if (d < range * range) found.Add((d, r));
+            }
+        found.Sort((a, b) => a.D.CompareTo(b.D));
+        int n = Math.Min(into.Length, found.Count);
+        for (int i = 0; i < n; i++)
+            into[i] = new Vector4((float)(found[i].R.X - _originX), (float)(found[i].R.Y - _originZ), found[i].R.Z, 0);
+        for (int i = n; i < into.Length; i++) into[i] = Vector4.Zero;
+        return n;
+    }
     // What can be gathered on the level-0 tiles drawn now (D113): loose stones and berry bushes with fruit, by lattice
     // cell, at their world place (E finds the nearest).
     private readonly Dictionary<TileKey, List<(int Layer, long Cx, long Cz, double X, double Y, double Z, int Kind, Transform3D Local)>> _gatherables = new();
@@ -297,6 +318,7 @@ public partial class WorldStreamer : Node3D
             if (task.IsFaulted) { _failed.Add(key); GD.PushError(task.Exception?.ToString() ?? "tile build failed"); continue; }
             if (revision != _revision || !_desired.Contains(key)) continue;
             var commit = Stopwatch.StartNew();
+            _riverRocks.Remove(key); // (before the commit, which records the new tile's)
             var node = Commit(task.Result);
             LastBuildMs = task.Result.BuildMs;
             if (_tiles.Remove(key, out var old)) { RemoveChild(old); old.QueueFree(); Triangles -= _tileTriangles[key]; }
@@ -378,7 +400,7 @@ public partial class WorldStreamer : Node3D
             foreach (var key in _tiles.Keys.Where(k => !_desired.Contains(k)).ToList())
             {
                 var node = _tiles[key]; RemoveChild(node); node.QueueFree(); DropCollision(key);
-                _tiles.Remove(key); Triangles -= _tileTriangles[key]; _tileTriangles.Remove(key); _tileRevision.Remove(key); _gatherables.Remove(key);
+                _tiles.Remove(key); Triangles -= _tileTriangles[key]; _tileTriangles.Remove(key); _tileRevision.Remove(key); _gatherables.Remove(key); _riverRocks.Remove(key);
             }
     }
 
@@ -513,6 +535,7 @@ public partial class WorldStreamer : Node3D
         foreach (var kind in data.WetPlants.GroupBy(d => d.Kind))
             root.AddChild(Multi(PlaceholderPlants.WetPlant(kind.Key), kind.Select(d => d.Transform).ToArray(), GeometryInstance3D.ShadowCastingSetting.Off,
                 (kind.Key == PlaceholderPlants.BogShrub ? 220 : 150) * GameSettings.ScatterDistance.F, layer: RenderLayers.Plants));
+        if (data.RiverRocks.Count > 0) _riverRocks[data.Key] = data.RiverRocks; else _riverRocks.Remove(data.Key);
         foreach (var kind in data.Rocks.GroupBy(r => r.Kind))
             root.AddChild(Multi(RockMeshes.Get(kind.Key), kind.Select(r => r.Transform).ToArray(),
                 // (cliff rocks cast none: they sit in their cliff's own shadow, and casting cost 53 → 38 FPS at a headland, D272)

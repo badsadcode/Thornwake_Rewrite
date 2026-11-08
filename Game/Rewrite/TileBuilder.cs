@@ -155,6 +155,8 @@ public sealed class TileData
     /// <summary>Wetland plants (PlaceholderPlants.WetPlant kinds), tile-local.</summary>
     public List<RockInstance> WetPlants { get; set; } = new();
     public List<RockInstance> Rocks { get; set; } = new();
+    /// <summary>Rocks standing in river water, out of it (D290): world x, z and radius at the waterline, for the river's foam.</summary>
+    public List<Vector3> RiverRocks { get; set; } = new();
     public List<RockInstance> Props { get; set; } = new();
     public List<FarTree> FarTrees { get; set; } = new();
     public double BuildMs { get; set; }
@@ -366,6 +368,21 @@ public static class TileBuilder
             key.Level == 0 && config.Props > 0 ? data.Drapes : null);
         if (data.Water is { } riverWater && data.WaterShore is { } shore && data.Rocks is { Count: > 0 } rocks)
             ObstacleWakes(riverWater.Vertices, riverWater.Colors, riverWater.Flow, shore, rocks);
+        if (key.Level <= 1 && data.Rocks is { Count: > 0 } inRivers)
+            foreach (var rock in inRivers)
+            {
+                if (rock.Kind is not (GroundCover.Rock or GroundCover.Boulder)) continue;
+                var o = rock.Transform.Origin;
+                int i = Math.Clamp((int)Math.Round(o.X / spacing), 0, Side - 1), j = Math.Clamp((int)Math.Round(o.Z / spacing), 0, Side - 1);
+                var t = samples[j * Side + i];
+                if (t.Water != WaterKind.River) continue;
+                var b = rock.Transform.Basis;
+                double top = o.Y + b.Y.Length() * .5, level = t.WaterLevel;
+                if (top < level + .05 || o.Y - b.Y.Length() * .5 > level) continue;
+                // (the meshes span ±0.5 per unit scale; at the waterline a little narrower than at the middle)
+                float radius = (b.X.Length() + b.Z.Length()) * .25f * (float)Math.Clamp(.75 + .5 * (top - level) / (b.Y.Length() + 1e-6), .75, 1);
+                data.RiverRocks.Add(new Vector3((float)(x0 + o.X), (float)(z0 + o.Z), radius));
+            }
         if (key.Level <= 1 && config.Props > 0) data.Props = GroundCover.Props(key, grid, sea, coverSeed, config.Props, sampler.Removals);
         if (key.Level <= 1 && config.Grass > 0) data.WetPlants = GroundCover.WetPlants(key, grid, sea, coverSeed, biomes, Math.Min(1.5, config.Grass), floating: !populations || key.Level > 0);
         if (key.Level >= (config.CardLevels >= 0 ? config.CardLevels : config.TreeLevels) && key.Level <= config.FarTreeLevels)

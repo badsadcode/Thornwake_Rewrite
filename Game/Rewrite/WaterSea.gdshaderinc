@@ -27,6 +27,11 @@ uniform float wave2_phase[64]; // per wave: phase including the float origin (Sp
 uniform float wave2_hs = 1.0; // significant wave height (m)
 uniform float wave2_chop = 0.8; // Σ q k A at a point (SpectrumWaves.Chop)
 uniform vec2 world_origin;    // world position of scene (0, 0): regional wave headings and groups are world-anchored
+#ifdef RIVER2
+// Rocks standing in rivers near the camera (D290; WorldStreamer.NearRiverRocks): scene x, z, radius at the waterline, 0.
+uniform vec4 river_rocks[32];
+uniform int river_rock_count = 0;
+#endif
 uniform vec4 wake_points[24]; // wakes (Wakes.cs): scene x, z, birth time (ocean_time), strength (relative speed)
 uniform vec4 wake_flow[24];   // per wake point: velocity relative to the water x, z; the local current x, z
 uniform vec2 wake_centre = vec2(1e9); // the wakes' source now (rings are only looked for near it)
@@ -810,7 +815,7 @@ void fragment() {
 	float bed_slope = length(bed_grad);
 	float rocky = sea * smoothstep(0.12, 0.35, bed_slope) * (1.0 - smoothstep(2.0, 9.0, vertex_depth)) * (0.4 + sea_state) * exposure;
 	float standing = 0.0, bank_foam = 0.0, obstacle_foam = 0.0; // river: standing-wave crests and bank turbulence (foam, below)
-	float ob_a = 99.0, ob_c = 0.0, ob_w = 0.0; // the nearest rock's frame (downstream, across in rock radii) and weight (RIVER2)
+	float rk_ring = 0.0, rk_tail = 0.0; // round each rock in a river: its ring and the turbulence behind it (RIVER2, D290)
 	float plume_flow = 0.0, mouth_meet = 0.0, dbg_obstacle = 0.0; // river mouths: the outgoing current's share, waves meeting it
 	if (river > 0.5) {
 		// Rivers are water with a destination (Noor; docs/RIVERS_PLAN.md): every layer follows the current.
@@ -856,11 +861,43 @@ void fragment() {
 			* (1.0 - smoothstep(0.3, 1.0, footprint));
 		slope += flow_gnoise(p * 2.4 + 9.0, current * 0.4, TIME, 2.0) * 2.4 * 0.025 * margin;
 		bank_foam = margin * smoothstep(0.55, 0.8, flow_noise(p * 0.9, current * 0.3, TIME, 3.0)) * 0.55;
+#ifdef RIVER2
+		// Rocks standing in the current, per pixel from their real place and size (D290, Tom: "blocky foam"): the frame
+		// baked on the water mesh's vertices a metre apart drew the foam's edges along its triangles. Each rock its own
+		// frame (the sums never switch from one rock to another at a line).
+		{
+			const float ocycle = 4.0;
+			float op0 = fract(TIME / ocycle), op1 = fract(TIME / ocycle + 0.5), ow0 = 1.0 - abs(2.0 * op0 - 1.0);
+			float t0 = op0 * ocycle, t1 = op1 * ocycle + 2.1;
+			float wob = noise(p * 1.3 + vec2(TIME * 0.7, -TIME * 0.5)) - 0.5;
+			for (int i = 0; i < river_rock_count; i++) {
+				vec4 rk = river_rocks[i];
+				vec2 dd = p - rk.xy;
+				float rr = max(rk.z, 0.25);
+				if (dot(dd, dd) > sq(rr * 8.0 + 2.0)) continue;
+				float a = dot(dd, fdir) / rr, c = dot(dd, fside) / rr, e = 0.1;
+				float strength = smoothstep(0.1, 1.0, fs);
+				if (strength > 0.0) {
+					float ha = mix((obstacle_h(a + e, c, fs, t1) - obstacle_h(a - e, c, fs, t1)), (obstacle_h(a + e, c, fs, t0) - obstacle_h(a - e, c, fs, t0)), ow0) / (2.0 * e);
+					float hc = mix((obstacle_h(a, c + e, fs, t1) - obstacle_h(a, c - e, fs, t1)), (obstacle_h(a, c + e, fs, t0) - obstacle_h(a, c - e, fs, t0)), ow0) / (2.0 * e);
+					slope += (fdir * ha + fside * hc) * strength;
+				}
+				// The ring: round the rock's waterline, wider upstream where the water piles against it, its edge wobbling.
+				float rd = length(dd) / rr;
+				float up = smoothstep(0.3, -0.9, a);
+				float outer = 1.08 + 0.2 * up + 0.08 * smoothstep(0.2, 1.5, fs) + 0.12 * wob;
+				rk_ring = max(rk_ring, 1.0 - smoothstep(outer - 0.06, outer + 0.06, rd));
+				// Turbulence behind it, where the water moves: from its sides and middle, narrowing out downstream.
+				float sides = smoothstep(0.1, 0.9, a) * exp(-sq(abs(c) - 0.8 - max(a, 0.0) * 0.08) * 5.0);
+				float middle = smoothstep(0.9, 1.6, a) * exp(-c * c / (0.25 + max(a, 0.0) * 0.1));
+				rk_tail = max(rk_tail, max(sides, middle) * (1.0 - smoothstep(1.8, 4.5 + 1.5 * smoothstep(0.3, 1.5, fs), a)) * smoothstep(0.08, 0.5, fs));
+			}
+		}
+#else
 		// Rocks standing in the current (TileBuilder.ObstacleWakes: CUSTOM0 = downstream, across in rock radii, weight).
 		float oweight = exposure;
 		if (oweight > 0.01 && fs > 0.15) {
 			float a = bed_grad.x, c = bed_grad.y, e = 0.1;
-			ob_a = a; ob_c = c; ob_w = oweight;
 			float strength = smoothstep(0.15, 1.2, fs) * oweight;
 			// TIME * fs sheared across the wake where the speed varies (rings that never move): two short cycles, cross-faded.
 			const float ocycle = 4.0;
@@ -880,6 +917,7 @@ void fragment() {
 				+ core * 0.6 * smoothstep(0.45, 0.8, drift));
 
 		}
+#endif
 		// Wide rivers: wind waves too (fetch = the river's width), steeper where the wind blows against the current.
 		float wide = smoothstep(25.0, 150.0, fetch);
 		if (wide > 0.0) {
@@ -1161,20 +1199,12 @@ void fragment() {
 		// Detail drifting with the current: two noises for the edge's wobble and the turbulence's clumps.
 		float n1 = flow_noise(p * 1.4, current * 0.9, TIME, 3.0);
 		float n2 = flow_noise(p * 3.6 + 4.1, current * 0.9, TIME, 2.2);
-		// The ring: where the water is only a few centimetres over whatever lies behind it — round a stone's real shape,
-		// along the bank — a band of foam hugging it (wider where the current presses on it).
-		float ring = (1.0 - smoothstep(0.05, 0.22 + 0.1 * n1 + 0.08 * smoothstep(0.2, 1.5, fsp), contact_depth)) * ring_at;
-		float rfield = ring * 1.05;
-		// Behind a stone, in the current: turbulence — churned, broken water trailing downstream from its sides and middle.
-		if (ob_w > 0.01) {
-			float oa = ob_a, oc = ob_c;
-			float sides = smoothstep(0.2, 1.0, oa) * exp(-sq(abs(oc) - 0.75 - max(oa, 0.0) * 0.1) * 4.0);
-			float middle = smoothstep(0.9, 1.6, oa) * exp(-oc * oc / (0.3 + max(oa, 0.0) * 0.15));
-			// (the weight squared: where it fades — between two rocks, the wake's ends — the frame blended across triangles
-			// drew straight-edged white shapes, D288)
-			float tail = max(sides, middle) * (1.0 - smoothstep(2.0, 7.0, oa)) * ob_w * ob_w * smoothstep(0.08, 0.5, fsp);
-			rfield = max(rfield, tail * (0.3 + 1.0 * n2));
-		}
+		// The ring round rocks (D290: round, from the rock's place and size; the contact with the rock's low-poly outline
+		// drew it angular), and a thin one along the banks from the water's contact (fainter: its line follows the grid).
+		float ring = (1.0 - smoothstep(0.05, 0.16 + 0.08 * n1, contact_depth)) * ring_at * 0.55;
+		float rfield = max(rk_ring * 1.05, ring);
+		// Turbulence behind a rock: broken, churned water in clumps.
+		rfield = max(rfield, rk_tail * (0.2 + 0.85 * n2));
 		// The foam's body (D289, Tom: "a little bit too solid. Too uniform and still a little bit static"): a lace of bubble
 		// threads and broken clumps carried by the current, solid only right against the stone, partly see-through; its
 		// edge keeps moving with the water.
@@ -1186,10 +1216,10 @@ void fragment() {
 		vec2 lf = current * 2.4;
 		float fe1 = mix(cells(lq - lf * l1 * lcycle + vec2(3.1, 7.7), TIME * 0.5), cells(lq - lf * l0 * lcycle, TIME * 0.5), lw);
 		float fe2 = mix(cells(lq * 2.3 - lf * 2.3 * l1 * lcycle + vec2(1.3, 9.1), TIME * 0.8), cells(lq * 2.3 - lf * 2.3 * l0 * lcycle, TIME * 0.8), lw);
-		float flace = max(1.0 - smoothstep(0.0, 0.16, fe1), (1.0 - smoothstep(0.0, 0.12, fe2)) * 0.8);
+		float flace = max(1.0 - smoothstep(0.0, 0.1, fe1), (1.0 - smoothstep(0.0, 0.08, fe2)) * 0.6);
 		float fclumps = smoothstep(0.45, 0.7, n2 * 0.6 + n1 * 0.4);
 		float fcore = smoothstep(0.9, 1.15, fedge) * (0.45 + 0.55 * fclumps); // right against the stone, broken too
-		float fbody = max(flace * (0.55 + 0.45 * fclumps), max(fclumps * 0.75, fcore));
+		float fbody = max(flace * (0.45 + 0.55 * fclumps), max(fclumps * 0.85, fcore));
 		float rfoam = fcover * fbody * near_f * smoothstep(0.2, 0.9, edge_fade);
 		foam = max(foam, rfoam);
 		// See-through where thin (the water shows between the bubbles), nearly opaque in the core.

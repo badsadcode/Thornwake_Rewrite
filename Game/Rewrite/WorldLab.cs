@@ -824,6 +824,7 @@ public partial class WorldLab : Node3D
 
     // Wakes in the water around the player (experimental 2 draws them).
     private readonly Wakes _wakes = new();
+    private readonly Vector4[] _riverRocks = new Vector4[32];
     private Vector2 _wakeCurrent;
     private double _wakeCurrentAge = 1;
 
@@ -837,6 +838,14 @@ public partial class WorldLab : Node3D
         if (inWater && _wakeCurrentAge > .2) { _wakeCurrent = Wakes.CurrentAt(_sampler!, PlayerX, PlayerZ); _wakeCurrentAge = 0; }
         _wakes.Update(dt, _atmosphere.OceanTime, _player.Position, _player.Velocity, inWater, inWater ? _wakeCurrent : Vector2.Zero);
         _wakes.Apply(_streamer.WaterMaterial, _player.Position);
+        // Rocks standing in rivers near the camera, for the river water's foam round them (D290).
+        {
+            var cam = _camera.GlobalPosition;
+            int n = _streamer.NearRiverRocks(_originX + cam.X, _originZ + cam.Z, _riverRocks);
+            var river = _streamer.WaterMaterial[WaterMaterials.River];
+            river.SetShaderParameter("river_rocks", _riverRocks);
+            river.SetShaderParameter("river_rock_count", n);
+        }
     }
 
     private void Rebase(double x, double z, bool force = false)

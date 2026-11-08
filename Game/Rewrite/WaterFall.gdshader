@@ -66,10 +66,14 @@ void fragment()
 		float aeration = clamp(COLOR.r * 4.0 + COLOR.b * 0.4, 0.0, 1.0);
 		float white = smoothstep(0.35, 0.6, streak + 0.35 * aeration - 0.2 + COLOR.g * 0.5);
 		white = max(white, COLOR.g * smoothstep(0.3, 0.7, s2 + 0.3));
-		albedo = mix(deep_color, white_color, white);
-		// Thinning and breaking up toward the edges and where the strands part.
+		// Strands of white and gaps of darker, glassier water between them (D290: an even pale sheet read as a plank).
+		float strands = smoothstep(0.42, 0.62, s2 * 0.6 + s1 * 0.4);
+		white = clamp(white * (0.55 + 0.6 * strands), 0.0, 1.0);
+		albedo = mix(deep_color * 0.8, white_color, white);
+		// Ragged edges: the sides fray where the strands part, moving down with the water.
+		float fray = smoothstep(0.0, 0.55, COLOR.a + 0.55 * (streak - 0.55) + 0.25 * (clumps - 0.5));
 		float body = smoothstep(0.25, 0.55, streak + 0.4 * (COLOR.a - 0.5));
-		alpha = clamp((0.35 + 0.6 * max(body, white)) * COLOR.a, 0.0, 0.97);
+		alpha = clamp((0.4 + 0.6 * max(body, white)) * fray, 0.0, 0.97);
 		rough = mix(0.05, 0.7, white);
 		// Relief from the strands and clumps for the light to catch (bump from screen-space derivatives: the mesh has no
 		// tangents).

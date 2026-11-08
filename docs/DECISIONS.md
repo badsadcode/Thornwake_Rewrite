@@ -4601,6 +4601,24 @@ around them", and the caustics "I believe they are doing something wrong". River
   back), fading in a little deeper (3–15 cm) and with depth.
 * Clips again for Tom (lowland river from closer, gorge stream).
 
+## D290 — River foam from the rocks' real place; waterfalls as wide as their stream (2026-11-08)
+Tom's dumps 213930–214703 (build 138): "blocky foam. It still doesn't look right. Weird waterfalls the water flow seems
+to be okay now"; and "we need to fix the rivers first" (before the other water kinds).
+* **Blocky foam round stones**: each rock's frame (downstream, across) was baked on the water mesh's vertices a metre apart
+  and blended across its triangles, so the foam behind a stone ended in straight triangle edges (214353, a wide straight-
+  edged field), and the ring came from the contact with the rock's low-poly outline (angular, 213930). Now the rocks
+  standing in river water (`TileData.RiverRocks`: world x, z, waterline radius; level 0–1 tiles) are handed to the river
+  water each frame, the 32 nearest within 150 m (`WorldStreamer.NearRiverRocks`, uniform `river_rocks`), and the river
+  shader works per pixel from each rock's real place: a round ring at its waterline, wider upstream where the water piles
+  against it, its edge wobbling; the bulge and wake ripples; turbulence behind it out to ~2–6 radii. The contact ring stays
+  only along banks, fainter. The lace inside thinner (it read as cracked glass).
+* **Waterfalls** (214522/214703: a 5 m stream got a ~20 m sheet curled round the gorge's wall, a V-shaped notch cut in the
+  water above): the curtain is as wide as the river at the lip (+1 m, a quarter wider toward the foot), one height across
+  each row (the centre line's: falling free or sliding on the rock), not each column following the rock beside it; the
+  river's sheet is cut only 3 m past the river's sides and from 4 m above the lip. The curtain's falling strands stronger,
+  white against glassier gaps, its edges fraying with the strands.
+* Dump 214029's dark streaks were the local rain (H), not the river.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

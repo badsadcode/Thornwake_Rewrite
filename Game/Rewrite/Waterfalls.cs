@@ -68,7 +68,7 @@ public sealed class FallSet
     private static int Cell(double v) => (int)Math.Floor(v / GridCell);
 
     /// <summary>Whether a square of the water's sheet is part of a fall's face: near a fall (from a little above its lip to a
-    /// little past its foot, up to 20 m beyond the river's sides) with water between the pool's level and the lip's
+    /// little past its foot, up to 3 m beyond the river's sides) with water between the pool's level and the lip's
     /// (<paramref name="low"/>, <paramref name="high"/>: its corners' lowest and highest). By the water's level, not by the
     /// river's width: the sheet runs out past the river under its banks, and its ramp showed beside the falling water.</summary>
     public bool OnFace(double x, double z, double low, double high)
@@ -78,7 +78,8 @@ public sealed class FallSet
         {
             var f = _falls[i];
             double px = x - f.LipX, pz = z - f.LipZ, along = px * f.Dx + pz * f.Dz, across = Math.Abs(px * f.Dz - pz * f.Dx);
-            if (along < -15 || along > f.Length + 15 || across > f.WidthAt(along) * .5 + 20) continue;
+            // (D290: 3 m past the river's sides and from 4 m above the lip: 20 m and 15 m cut a V-shaped notch in the water above)
+            if (along < -4 || along > f.Length + 12 || across > f.WidthAt(along) * .5 + 3) continue;
             // (any corner between the two levels: the dome over the lip sinks a little below the lip's level already)
             if (low < f.Top - .25 && high > f.Bottom + .25) return true;
         }
@@ -98,7 +99,7 @@ public sealed class FallSet
 /// </summary>
 public sealed class WaterfallView
 {
-    private const double DrawRange = 4000, MistRange = 1500, Upstream = 4;
+    private const double DrawRange = 4000, MistRange = 1500, Upstream = 2;
     private readonly Node3D _parent;
     private readonly Dictionary<(int, int), (Node3D Node, FallSet.Fall Fall, GpuParticles3D? Mist)> _shown = new();
     private readonly Dictionary<(int, int), (Task<Model> Job, FallSet.Fall Fall)> _building = new();
@@ -173,9 +174,10 @@ public sealed class WaterfallView
 
     private static Model Build(TerrainSampler terrain, FallSet.Fall f)
     {
-        // (up to 4 m over each side, thinning over the rock: the sheet's cut reaches past the river; as wide as the pool at the
-        // foot; a narrow stream's no wider than half again itself, or it read as a plank)
-        double Wide(double h) => Math.Max(3, f.WidthAt(h) + Math.Clamp(f.Width * .5, 1.5, 8));
+        // As wide as the river at the lip, a little wider toward the foot (falling water spreads), thinning at its sides (D290:
+        // the pool's width at the foot and 4 m more a side made a 5 m stream a 20 m sheet wrapped round the cliff — Tom's
+        // dumps 214522/214703).
+        double Wide(double h) => Math.Max(2, f.Width * (1 + .25 * Math.Clamp(h / Math.Max(1, f.Length), 0, 1)) + 1);
         double width = Wide(0);
         double ax = f.Dz, az = -f.Dx; // across the fall (to its right)
         double lipLevel = terrain.Sample(f.LipX, f.LipZ).WaterLevel;
@@ -220,10 +222,11 @@ public sealed class WaterfallView
                 }
                 else
                 {
-                    double free = lipLevel - 4.9 * (h / v0) * (h / v0), ground = terrain.Height(x, z) + .3;
-                    y = Math.Max(free, ground);
-                    onRock = DetMath.Smooth((ground - free) / .5);
-                    y = Math.Max(y, bottom - .25);
+                    // One height across the fall per row, the centre line's (D290: each column following the rock beside it
+                    // curled the sheet round the gorge's walls).
+                    double free = lipLevel - 4.9 * (h / v0) * (h / v0), centre = Centre(h);
+                    y = Math.Max(centre, bottom - .25);
+                    onRock = DetMath.Smooth((centre - free) / .5);
                 }
                 var p = new Vector3((float)(x - f.LipX), (float)y, (float)(z - f.LipZ));
                 if (r > 0) pathLength += (p - last).Length();
@@ -234,7 +237,7 @@ public sealed class WaterfallView
                 double drop = Math.Max(0, lipLevel - y), speed = Math.Sqrt(v0 * v0 + 2 * 9.8 * drop);
                 double foot = DetMath.Smooth((y - bottom) / -Math.Max(1, (lipLevel - bottom) * .15) + 1); // (1 near the pool)
                 // (fading out as it reaches the pool: drawn after the water, its rows lying under the pool showed as a glassy sheet)
-                double edge = Math.Min(DetMath.Smooth(u / .12), DetMath.Smooth((1 - u) / .12)) * DetMath.Smooth((h + Upstream) / Upstream)
+                double edge = Math.Min(DetMath.Smooth(u / .3), DetMath.Smooth((1 - u) / .3)) * DetMath.Smooth((h + Upstream) / Upstream)
                     * (h > 0 ? DetMath.Smooth((y - bottom + .1) / .6) : 1);
                 colors[k] = new Color((float)Math.Min(1, speed / 25), (float)foot, (float)onRock, (float)edge);
             }
