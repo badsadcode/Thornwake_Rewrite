@@ -396,7 +396,7 @@ public static partial class GroundCover
                     float shade = .82f + .36f * Unit(hh, 12), warm = (Unit(hh, 13) - .5f) * .12f; // (each its own: all one tint was bland)
                     tint = new Color(tint.R * shade * (1 + warm), tint.G * shade, tint.B * shade * (1 - warm), tint.A);
                     result.Add(new RockInstance((key.Level == 0 ? CliffRock : CliffCoarse) + (int)(Unit(hh, 10) * (CliffShapes - .001f)), new Transform3D(basis, at), tint));
-                    if (plants != null) Greenery(plants, g, x, z, hh, at, along, outward, wide, tall, thick);
+                    if (plants != null) Greenery(plants, g, x, z, hh, result[^1].Kind, result[^1].Transform);
                 }
                 // The lip broken up (Tom: "the sharp edge is still visible", then "the rocks are too big there ... stick out a
                 // little bit too much"): two or three small rocks along each cell's stretch of the edge, flat rather than tall,
@@ -417,7 +417,7 @@ public static partial class GroundCover
                     result.Add(new RockInstance((key.Level == 0 ? CliffLip : CliffCoarse) + (int)(Unit(lh, 11) * (CliffShapes - .001f)),
                         new Transform3D(lipTilt * new Basis(along * lipWide, Vector3.Up * lipTall, outward * lipThick), lipAtPos),
                         new Color(tintL.R * shadeL, tintL.G * shadeL, tintL.B * shadeL, tintL.A)));
-                    if (plants != null && n == 0) Greenery(plants, g, x, z, lh, lipAtPos, along, outward, lipWide, lipTall, lipThick);
+                    if (plants != null && n == 0) Greenery(plants, g, x, z, lh, result[^1].Kind, result[^1].Transform);
                 }
                 if (Unit(h, 9) < .35f)
                 {
@@ -522,41 +522,69 @@ public static partial class GroundCover
 
     /// <summary>
     /// A little green on a tall cliff's rock (D273, Tom: "small plants, small bushes, maybe some roots sticking out of the
-    /// rock ... flat planes with a texture"): a small bush on its top ledge, grass or moss hanging over its front edge,
-    /// roots out of the face beside it — as many as the place grows plants (the biome's plant cover; roots more where it
-    /// is wooded), none under the spray. Cards from the cliff dressing (PlaceholderPlants.Drape).
+    /// rock ... flat planes with a texture"): a small bush on its top, grass or moss hanging over its front edge, roots out of
+    /// the face below that edge — as many as the place grows plants (the biome's plant cover; roots more where it is wooded),
+    /// none under the spray. Placed on the block's real worn top and edge (D280: on a guessed box they hung from nothing).
     /// </summary>
-    private static void Greenery(List<RockInstance> plants, in Grid g, double x, double z, ulong h, Vector3 at, Vector3 along, Vector3 outward,
-        float wide, float tall, float thick)
+    private static void Greenery(List<RockInstance> plants, in Grid g, double x, double z, ulong h, int kind, Transform3D rock)
     {
         float cover = Math.Min(1, g.Plants(x, z) * 1.2f + .15f);
         g.At(x, z, out _, out _, out float forest, out _);
-        if (at.Y + tall * .45f < 4) return;
-        var right = along;
-        // A bush on the top ledge, set back from its front edge.
+        if (rock.Origin.Y + rock.Basis.Y.Length() * .4f < 4) return;
+        // The block's front (its local +z) as a world direction across, along its length (local x) as the strands' width.
+        var front = new Vector3(rock.Basis.Z.X, 0, rock.Basis.Z.Z);
+        var along = new Vector3(rock.Basis.X.X, 0, rock.Basis.X.Z);
+        if (front.LengthSquared() < 1e-6f || along.LengthSquared() < 1e-6f) return;
+        front = front.Normalized(); along = along.Normalized();
+        // A bush on the top, where it is fairly level.
         if (Unit(h, 20) < .55f * cover)
         {
-            float s = 1.1f + 1.6f * Unit(h, 21);
-            var top = at + Vector3.Up * tall * .43f + outward * thick * (.05f + .2f * Unit(h, 22)) + along * (Unit(h, 23) - .5f) * wide * .5f;
-            plants.Add(new RockInstance(2, new Transform3D(new Basis(Vector3.Up, Unit(h, 24) * Mathf.Tau).Scaled(new Vector3(s, s * (.7f + .5f * Unit(h, 25)), s)), top)));
+            float lx = (Unit(h, 22) - .5f) * .6f, lz = (Unit(h, 23) - .6f) * .5f, y = RockMeshes.TopHeight(kind, lx, lz);
+            float ya = RockMeshes.TopHeight(kind, lx + .08f, lz), yb = RockMeshes.TopHeight(kind, lx, lz + .08f);
+            if (!float.IsNaN(y) && !float.IsNaN(ya) && !float.IsNaN(yb) && Math.Abs(ya - y) < .05f && Math.Abs(yb - y) < .05f)
+            {
+                float s = 1.1f + 1.6f * Unit(h, 21);
+                var spot = rock * new Vector3(lx, y - .01f, lz);
+                plants.Add(new RockInstance(2, new Transform3D(new Basis(Vector3.Up, Unit(h, 24) * Mathf.Tau).Scaled(new Vector3(s, s * (.7f + .5f * Unit(h, 25)), s)), spot)));
+            }
         }
-        // Grass or moss hanging over its front edge.
+        // Grass or moss hanging over the front edge: walking out along the top until it drops away.
         int hangs = (int)(Unit(h, 26) * 3 * cover);
         for (int i = 0; i < hangs; i++)
         {
             ulong k = Hashing.Mix(h + (ulong)(i + 7) * 0x51A7UL);
+            if (!Edge(kind, (Unit(k, 4) - .5f) * .8f, out var edge)) continue;
             float length = 1.2f + 2.2f * Unit(k, 1), width = 1.2f + 1.4f * Unit(k, 2);
-            var lip = at + Vector3.Up * tall * (.32f + .12f * Unit(k, 3)) + outward * thick * .42f + along * (Unit(k, 4) - .5f) * wide * .7f;
-            var basis = new Basis(right * width, Vector3.Up * length, outward * (.9f + .4f * Unit(k, 5)));
-            plants.Add(new RockInstance(Unit(k, 6) < .5f ? 3 : 0, new Transform3D(basis, lip)));
+            var lip = rock * edge + Vector3.Down * .1f;
+            plants.Add(new RockInstance(Unit(k, 6) < .5f ? 3 : 0, new Transform3D(new Basis(along * width, Vector3.Up * length, front * (.9f + .4f * Unit(k, 5))), lip)));
         }
-        // Roots out of the face beside it, more where it is wooded.
-        if (Unit(h, 27) < (.15f + .5f * forest) * cover)
+        // Roots out of the face below an edge, more where it is wooded.
+        if (Unit(h, 27) < (.15f + .5f * forest) * cover && Edge(kind, (Unit(h, 30) - .5f) * .8f, out var under))
         {
             float length = 1.5f + 2.5f * Unit(h, 28), width = 1 + 1.2f * Unit(h, 29);
-            var spot = at + along * (wide * (.45f + .2f * Unit(h, 30)) * (Unit(h, 31) < .5f ? -1 : 1)) + Vector3.Up * tall * (Unit(h, 32) - .3f) * .5f;
-            plants.Add(new RockInstance(1, new Transform3D(new Basis(right * width, Vector3.Up * length, outward), spot)));
+            var spot = rock * (under + new Vector3(0, -.08f - .15f * Unit(h, 31), -.02f));
+            plants.Add(new RockInstance(1, new Transform3D(new Basis(along * width, Vector3.Up * length, front), spot)));
         }
+    }
+
+    /// <summary>A cliff block's front edge at local x (unit space): the last point of its top, walking out along +z, before it
+    /// drops by over a tenth of the block or ends.</summary>
+    private static bool Edge(int kind, float lx, out Vector3 edge)
+    {
+        edge = default;
+        float last = float.NaN, lastZ = 0;
+        for (float lz = -.2f; lz <= .95f; lz += .04f)
+        {
+            float y = RockMeshes.TopHeight(kind, lx, lz);
+            if (float.IsNaN(y) || (!float.IsNaN(last) && last - y > .1f))
+            {
+                if (float.IsNaN(last) || lastZ < .05f) return false;
+                edge = new Vector3(lx, last, lastZ);
+                return true;
+            }
+            last = y; lastZ = lz;
+        }
+        return false;
     }
 
     /// <summary>

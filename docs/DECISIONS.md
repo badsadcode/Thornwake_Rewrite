@@ -4431,6 +4431,17 @@ shadow twin) cast shadows; the lighter model beyond and the distant tree cards h
   (orthographic) shadow pass every card faces the sun itself (`TreeImpostor.gdshader`): all shadows one way. (Within ~110 m,
   the strong ambient occlusion's dark round foot under each tree can also read as a shadow pointing everywhere.)
 
+## D280 — Plants on cliff rocks where the rock is; the fringe as strands (2026-11-08)
+Tom's dump 154929: the overhanging grass "spawn in really weird places, like in midair sometimes ... we need better models".
+* **Where**: they were placed on a guessed box (the rock's middle plus fractions of its size), but each cliff rock is a worn,
+  tapered, turned block, so its real top and front edge are elsewhere. Now each block shape's top is measured once from its
+  own mesh (`RockMeshes.TopHeight`: its upward triangles rasterised over a 40 × 40 grid of its unit footprint — the vertices
+  alone left most cells empty and nothing was placed): a bush stands where the top is level, a fringe hangs from the front
+  edge (walking out along the top until it drops away), roots come out of the face just under that edge.
+* **The model**: one flat sheet of the pixel texture read as a stretched picture. `PlaceholderPlants.Fringe`: nine strands,
+  each a narrow slice of the texture with its own length and spread, following the curve over the lip and down, in two layers
+  (the back shorter): a tuft. Used for the hanging grass, moss and roots (the terrain lips' dressing too).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

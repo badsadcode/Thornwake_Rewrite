@@ -77,7 +77,7 @@ public static class PlaceholderPlants
             b.Blob("T_Bog_Leaves_64", new Vector3(.45f, .22f, .3f), new Vector3(.45f, .3f, .4f), 912, .04f);
             b.Blob("T_Bog_Leaves_64", new Vector3(-.4f, .2f, .25f), new Vector3(.4f, .28f, .38f), 913, .04f);
         }
-        else b.Drape(kind == 0 ? "T_Drape_Grass_64" : kind == 3 ? "T_Moss_32" : "T_Roots_64", kind != 1, kind == 1 ? .015f : .05f);
+        else b.Fringe(kind == 0 ? "T_Drape_Grass_64" : kind == 3 ? "T_Moss_32" : "T_Roots_64", kind != 1, kind == 1 ? .015f : .05f, 970 + kind);
         return Drapes[kind] = b.Commit();
     }
 
@@ -548,6 +548,39 @@ public static class PlaceholderPlants
                     int a = baseIndex + i * 3 + k, b = a + 1, c = a + 3, d = c + 1;
                     s.I.AddRange(new[] { a, c, b, b, c, d });
                 }
+        }
+
+        /// <summary>
+        /// A fringe hanging over an edge (D280, Tom: "we need better models for them" — one flat sheet read as a stretched
+        /// picture): nine strands of their own lengths, each a narrow slice of the texture following the curve over the lip and
+        /// down, spread a little toward their tips, in two layers (the back one shorter), so it is a tuft, not a sheet. Hangs from
+        /// the local origin (the lip) down the face, +z out from it, about 1.8 wide and up to 2.1 long.
+        /// </summary>
+        public void Fringe(string texture, bool leaves, float sway, int seed)
+        {
+            var s = S(texture, leaves, sway);
+            var rng = new Random(seed);
+            var profile = new[] { (0f, -.25f, .02f), (.22f, .25f, -.12f), (.55f, .3f, -.75f), (1f, .14f, -2.1f) }; // (v, z out, y)
+            for (int n = 0; n < 9; n++)
+            {
+                bool back = n >= 6;
+                float x0 = back ? (n - 7) * .55f : (n - 2.5f) * .34f + (float)(rng.NextDouble() - .5) * .12f;
+                float width = (back ? .5f : .3f) * (.8f + .4f * (float)rng.NextDouble());
+                float length = (back ? .45f : .55f) + .45f * (float)rng.NextDouble(), spread = (float)(rng.NextDouble() - .5) * .35f;
+                float u0 = (float)rng.NextDouble() * (1 - width / 1.8f), u1 = u0 + width / 1.8f, out0 = back ? -.06f : .02f * n % .06f;
+                int baseIndex = s.V.Count;
+                foreach (var (v, z, y) in profile)
+                {
+                    float t = Math.Max(0, -y) / 2.1f, yy = y * length, x = x0 + spread * t;
+                    s.Add(new Vector3(x - width * .5f, yy, z + out0), Vector3.Back, new Vector2(u0, v), v);
+                    s.Add(new Vector3(x + width * .5f, yy, z + out0), Vector3.Back, new Vector2(u1, v), v);
+                }
+                for (int r = 0; r < profile.Length - 1; r++)
+                {
+                    int a = baseIndex + r * 2, b = a + 1, c = a + 2, d = a + 3;
+                    s.I.AddRange(new[] { a, c, b, b, c, d });
+                }
+            }
         }
 
         /// <summary>Two crossed hanging cards (moss, vines) from <paramref name="top"/>; v = 0 at the top.</summary>

@@ -93,6 +93,53 @@ public static class RockMeshes
         return _meshes[Math.Clamp(kind, 0, _meshes.Length - 1)];
     }
 
+    /// <summary>
+    /// A cliff block's top (D280): over its unit footprint (x, z in −1 … 1) the highest point of its mesh, 40 × 40 cells (NaN
+    /// where nothing) — so plants sit on the block's real worn top and hang from its real edge (placed on a guessed box, they
+    /// floated in the air: Tom). Built once per shape, thread-safe.
+    /// </summary>
+    public static float TopHeight(int kind, float x, float z)
+    {
+        int shape = (kind - GroundCover.CliffRock) % GroundCover.CliffShapes;
+        var top = Tops(shape);
+        int i = (int)((x + 1) * 20), j = (int)((z + 1) * 20);
+        if (i < 0 || j < 0 || i >= 40 || j >= 40) return float.NaN;
+        return top[j * 40 + i];
+    }
+
+    private static readonly float[]?[] TopCache = new float[]?[GroundCover.CliffShapes];
+
+    private static float[] Tops(int shape)
+    {
+        lock (TopCache)
+        {
+            if (TopCache[shape] is { } ready) return ready;
+            var (vertices, _, _) = SeaStackView.CliffBlock(0xB10C1UL + (ulong)shape, 2.2f, shape);
+            var top = new float[40 * 40];
+            Array.Fill(top, float.NaN);
+            // (each upward-facing triangle rasterised over the cells it covers: the vertices alone, 0.11 apart, left most of the
+            // 0.05 cells empty)
+            for (int t = 0; t + 2 < vertices.Length; t += 3)
+            {
+                Vector3 a = vertices[t], b = vertices[t + 1], c = vertices[t + 2];
+                float det = (b.X - a.X) * (c.Z - a.Z) - (c.X - a.X) * (b.Z - a.Z);
+                if (Math.Abs(det) < 1e-9f) continue;
+                int i0 = Math.Max(0, (int)((Math.Min(a.X, Math.Min(b.X, c.X)) + 1) * 20)), i1 = Math.Min(39, (int)((Math.Max(a.X, Math.Max(b.X, c.X)) + 1) * 20));
+                int j0 = Math.Max(0, (int)((Math.Min(a.Z, Math.Min(b.Z, c.Z)) + 1) * 20)), j1 = Math.Min(39, (int)((Math.Max(a.Z, Math.Max(b.Z, c.Z)) + 1) * 20));
+                for (int j = j0; j <= j1; j++)
+                    for (int i = i0; i <= i1; i++)
+                    {
+                        float px = (i + .5f) / 20 - 1, pz = (j + .5f) / 20 - 1;
+                        float u = ((b.X - px) * (c.Z - pz) - (c.X - px) * (b.Z - pz)) / det, v = ((c.X - px) * (a.Z - pz) - (a.X - px) * (c.Z - pz)) / det, w = 1 - u - v;
+                        if (u < -1e-4f || v < -1e-4f || w < -1e-4f) continue;
+                        float y = a.Y * u + b.Y * v + c.Y * w;
+                        if (float.IsNaN(top[j * 40 + i]) || y > top[j * 40 + i]) top[j * 40 + i] = y;
+                    }
+            }
+            return TopCache[shape] = top;
+        }
+    }
+
     private static RockKit.Piece[][]? _pieces;
     private static readonly object PiecesLock = new();
 
