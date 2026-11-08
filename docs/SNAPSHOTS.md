@@ -4,6 +4,7 @@ Every snapshot is a commit on `main` of this repository (until 2026-10-09 the `r
 
 | Snapshot | Commit | Windows build | How to get it back |
 |---|---|---|---|
+| **Build 137** (trees cast shadows as far as the shadow distance, tree card shadows all face the sun D279 -- same terrain as 136) | `b2267d4` | dist/Preview-137 (v0.9.137), not zipped | Versions must match to connect; *Shadow distance → by quality (build 135)* -- build 136 = `2e7b7f4` |
 | **Build 136** (ambient occlusion in sunlight, Shadow distance setting, natural and stable rock kit D278 -- same terrain as 135) | `2e7b7f4` | dist/Preview-136 (v0.9.136), not zipped | Versions must match to connect; *Ambient occlusion → on (build 134)*, *Shadow distance → by quality (build 135)* -- build 135 = `8e5a174` |
 | **Build 135** (rocks closed and solid, sized to needles, six shapes, Rock shading D275; ambient occlusion that shows D276; the rock kit D277 -- same terrain as 134) | `8e5a174` | dist/Preview-135 (v0.9.135), not zipped | Versions must match to connect; *Rock formations → boulders (build 134)*, *Ambient occlusion → on (build 134)* -- build 134 = `1d6a12a` |
 | **Build 134** (rocks on cliff faces D272, Tom's cliff textures and green on cliffs D273, rounded headland tops D274 -- terrain revision 38) | `1d6a12a` | dist/Preview-134 (v0.9.134), not zipped | Versions must match to connect; *Terrain version → Build 133* keeps revision 37 -- build 133 = `7290b59` |

@@ -3,7 +3,9 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 136** (v0.9.136, return point `2e7b7f4`, `dist/Preview-136`): ambient occlusion in sunlight (Godot's AO
+* **Last build Tom has: 137** (v0.9.137, return point `b2267d4`, `dist/Preview-137`): trees cast shadows as far as the shadow
+  distance; tree card shadows face the sun (D279). 2 km is costly (~46 FPS, dips to 36 at the savanna spot).
+  Build 136 (v0.9.136, return point `2e7b7f4`, `dist/Preview-136`): ambient occlusion in sunlight (Godot's AO
   channel affect), Shadow distance (default 1.2 km), rock kit less regular and stable (D278).
   Build 135 (v0.9.135, return point `8e5a174`, `dist/Preview-135`): rocks closed and solid, sized to needles
   (D275), ambient occlusion that shows (D276), the rock kit in outcrops with crisp pieces (D277). Tom may go back to the
