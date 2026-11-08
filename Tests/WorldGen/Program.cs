@@ -125,6 +125,16 @@ if (args.FirstOrDefault(a => a.StartsWith("--coast-map=")) is { } cmArg)
     f.Write(image);
     return 0;
 }
+// --fans=<profile>,<seed>: the alluvial fans (D283).
+if (args.FirstOrDefault(a => a.StartsWith("--fans=")) is { } faArg)
+{
+    var p = faArg[7..].Split(',');
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    Console.WriteLine($"{p[0]}/{p[1]}: {s.Plan.Fans?.Count ?? 0} alluvial fans");
+    foreach (var (x, z, ax, az, r, half, thick) in s.Plan.Fans?.Probes() ?? Enumerable.Empty<(double, double, double, double, double, double, double)>())
+        Console.WriteLine($"  apex {x:0},{z:0} toward {ax:0.00},{az:0.00} length {r:0} half-angle {half * 180 / Math.PI:0}° gravel {thick:0.0} m rain {s.Plan.Climate.At(x, z, 0).Precipitation:0} mm");
+    return 0;
+}
 // --oxbows=<profile>,<seed>: the oxbow lakes (D281).
 if (args.FirstOrDefault(a => a.StartsWith("--oxbows=")) is { } obArg)
 {

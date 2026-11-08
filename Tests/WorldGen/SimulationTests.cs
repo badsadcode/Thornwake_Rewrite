@@ -27,6 +27,7 @@ internal static class SimulationTests
         T.Run("Landforms: spits, sandbars and lagoons — sand just above the sea, shallow water behind, land and river mouths untouched (revision 37)", SpitForms, filter);
         T.Run("Landforms: oxbow lakes — crescents of still water beside lowland rivers, closed round, rivers and lakes unchanged (revision 39)", OxbowForms, filter);
         T.Run("Landforms: river terraces — level steps up broad valley sides, gentle risers, rivers and lakes unchanged (revision 40)", TerraceForms, filter);
+        T.Run("Landforms: alluvial fans — gravel cones where mountain streams reach a plain, gentle, rivers and lakes unchanged (revision 41)", FanForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1180,6 +1181,76 @@ internal static class SimulationTests
         T.Check(overlap == 0, $"apart ({overlap})");
         T.Check(same == 4, $"placed the same every time ({same}/4)");
         T.Check(ground == 0, $"the ground is revision 34's ({ground})");
+    }
+
+    /// <summary>D283: alluvial fans in the worlds; each raises the ground beside its stream half-way down (off the stream's
+    /// trench), never by more than its gravel's thickness, with gravel on it; hardly any slope over 35° that was gentle (the
+    /// streams' steep banks it meets steepen a little); every river and lake sample the same as without them.</summary>
+    private static void FanForms()
+    {
+        int fans = 0, raised = 0, flat = 0, over = 0, steep = 0, slopes = 0, gravel = 0, onFan = 0, changed = 0, worlds = 0, dry = 0;
+        double most = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("balanced", 7319), ("continental", 7319), ("mountainous", 42) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            if (s.Plan.Fans is not { Count: > 0 } fs) continue;
+            worlds++;
+            var without = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Landforms = Off(LandformCatalog.Fans) }));
+            foreach (var (x, z, ax, az, radius, half, thick) in fs.Probes())
+            {
+                fans++;
+                if (s.Plan.Climate.At(x, z, 0).Precipitation < 600) dry++;
+                // Half-way down, a third of the way out to each side: higher than without, under the apex.
+                double best = 0;
+                foreach (double side in new[] { -1.0, 1.0 })
+                {
+                    double ang = side * half * .35, ca = Math.Cos(ang), sa = Math.Sin(ang);
+                    double px = x + (ax * ca - az * sa) * radius * .45, pz = z + (az * ca + ax * sa) * radius * .45;
+                    var a = s.Sample(px, pz); var b = without.Sample(px, pz);
+                    if (a.Water == WaterKind.None) best = Math.Max(best, a.Height - b.Height);
+                    if (a.Height - b.Height > thick + .01) over++;
+                }
+                if (best > 1) raised++; else flat++;
+                most = Math.Max(most, best);
+                // A lattice over the fan, 4 m apart: slopes, gravel.
+                for (int i = -40; i <= 40; i += 4)
+                    for (int j = 0; j <= 80; j += 4)
+                    {
+                        double u = j / 80.0 * radius, v = i / 40.0 * radius * Math.Sin(half) * (u / radius + .1);
+                        double px = x + ax * u - az * v, pz = z + az * u + ax * v;
+                        var a0 = s.Sample(px, pz); var a1 = s.Sample(px + 4, pz); var b0 = without.Sample(px, pz); var b1 = without.Sample(px + 4, pz);
+                        if (Math.Abs(a0.Height - b0.Height) < .3) continue;
+                        onFan++;
+                        if (a0.Scree > .2) gravel++;
+                        if (a0.Water != WaterKind.None || a1.Water != WaterKind.None || b0.Water != WaterKind.None || b1.Water != WaterKind.None) continue;
+                        slopes++;
+                        double ga = Math.Abs(a1.Height - a0.Height) / 4, gb = Math.Abs(b1.Height - b0.Height) / 4;
+                        if (ga > .7 && gb < .47) { steep++; if (steep <= 5) T.Note($"{id}/{seed} fan at {x:0},{z:0}: {Math.Atan(ga) * 180 / Math.PI:0}° at {px:0},{pz:0} (without {Math.Atan(gb) * 180 / Math.PI:0}°)"); }
+                    }
+            }
+            // Rivers and lakes as without them (on a coarse lattice over the land, and along every river).
+            var rng = new RandomStream(11);
+            for (int k = 0; k < 3000; k++)
+            {
+                double px = s.Plan.Macro.CellX(rng.Int(s.Plan.Macro.Size)) + rng.Between(-300, 300), pz = s.Plan.Macro.CellZ(rng.Int(s.Plan.Macro.Size)) + rng.Between(-300, 300);
+                var a = without.Sample(px, pz);
+                if (a.Water is WaterKind.Lake && s.Sample(px, pz) is var b && (b.Water != a.Water || b.WaterLevel != a.WaterLevel)) changed++;
+            }
+            foreach (var r in s.Plan.Hydrology.Reaches)
+                for (int i = 0; i < r.Points.Length; i += 5)
+                {
+                    var a = without.Sample(r.Points[i].X, r.Points[i].Z); var b = s.Sample(r.Points[i].X, r.Points[i].Z);
+                    if (a.Water != b.Water || !(a.WaterLevel == b.WaterLevel || double.IsNaN(a.WaterLevel) && double.IsNaN(b.WaterLevel))) changed++;
+                }
+        }
+        T.Note($"{fans} fans in {worlds} worlds ({dry} under 600 mm a year): {raised} raised half-way down (most {most:0.0} m), {flat} not; {over} over their thickness; " +
+            $"gravel on {gravel} of {onFan} fan points; {steep} of {slopes} 4 m slopes over 35° that were under 25°; {changed} river or lake points changed");
+        T.Check(worlds >= 3 && fans >= 12, $"fans in the worlds ({fans}, {worlds})");
+        T.Check(raised >= fans * .7, $"raised ({raised} of {fans})");
+        T.Check(over == 0, $"no thicker than laid ({over})");
+        T.Check(gravel >= onFan * .3, $"gravel ({gravel} of {onFan})");
+        T.Check(steep <= slopes / 500, $"gentle ({steep} of {slopes})");
+        T.Check(changed == 0, $"rivers and lakes unchanged ({changed})");
     }
 
     /// <summary>D282: cross-sections of broad valleys, with and without terraces: some stepped, with more level benches (16 m

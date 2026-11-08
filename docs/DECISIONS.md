@@ -4481,6 +4481,26 @@ Landform no. 12, second half (Tom: "Yes, terraces"). `Game/WorldGen/Terraces.cs`
   vs 2136, natural flats included), 87 of 66901 2 m stretches over 42° that were not (the pools' edges), 0 river or lake
   samples changed. *Terrain version → Oxbows (before river terraces; not in a build)* = revision 39 (`terrain-r39.json`).
 
+## D283 — Alluvial fans, terrain revision 41 (2026-11-08)
+Landform no. 13 (Tom: "Alluvial fans"), the last of the landforms where water meets land before the water rework.
+`Game/WorldGen/Fans.cs`, placed in the plan after the climate (it reads the rain), laid on the ground before the rivers.
+* **Where**: the apex is the first point on a stream (3–45 m wide) where it falls over 3 % above and eases to under 0.6 % (and
+  under a quarter of that) below, onto land that is not mountain (the plan's mountain share marks only the high ranges:
+  rivers start below them, so 7 of 681 rivers ever reached it). Not where the stream leaves a gorge, not over a canyon, a lake
+  or the sea, not over another fan. 40 % of such places get one below ~300 mm of rain a year, 6 % above ~1500 (Amount
+  scales it): about 40 a world, more than half in dry country.
+* **Shape**: an apron 300–800 m long opening 80–120° downstream, 5–12 m of gravel at its head (easing in over the first
+  150 m from the stream's mouth) thinning to nothing at its toe, its edge wandering; dry channels radiate over it (up to
+  0.8 m deep, ~55 m apart); gravel on it, drawn as the scree look. The first model filled the plain up to a cone built down
+  from just above the stream: the plain beside a stream lies above the river's level, so the cone lay under the ground and
+  only 13 of 45 fans showed.
+* **Rivers win**: they cut through it (a trench near the apex, a fan-head trench); every river and lake sample unchanged.
+* Test `Landforms: alluvial fans` (4 worlds, 154 fans, 88 under 600 mm): 144 raise the ground half-way down, none more than
+  its gravel's thickness, gravel on three quarters of the fan points, 5 of 36170 4 m slopes over 35° that were under 25°
+  (the streams' steep banks it meets steepen a little), 0 river or lake samples changed. *Terrain version → Terraces (before
+  alluvial fans; not in a build)* = revision 40 (`terrain-r40.json`).
+* Open: how strong the gravel looks (the scree look reads as brown earth from the air) is Tom's call.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

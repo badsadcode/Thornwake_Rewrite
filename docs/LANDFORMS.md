@@ -180,6 +180,8 @@ Then the fantasy landforms Tom picks (section at the end).
 * **Where**: at mountain fronts, especially in dry country.
 * **Play**: gentle routes into the mountains; gravel and stones.
 * **Build**: a local module building a cone at the mountain foot; the stream spreads over it.
+* **Status**: terrain revision 41 (D283): gravel aprons where streams ease out of steep country, mostly in dry land, with dry
+  channels; the stream itself is not split (rivers are the plan's).
 
 ### 14. Moraines and kettle lakes
 * **What**: rolling ridges of old glacial debris and small round lakes between them.

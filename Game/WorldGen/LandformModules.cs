@@ -67,7 +67,9 @@ public static class LandformCatalog
 
     public static readonly LandformInfo Terraces = new("terraces", "River terraces", "in broad river valleys", LandformKind.Plan, LandformRule.Water, 40);
 
-    public static readonly IReadOnlyList<LandformInfo> All = new[] { Escarpments, Waterfalls, Canyons, Cirques, Troughs, Fjords, Volcanoes, SeaStacks, Headlands, Spits, Oxbows, Terraces, Dunes, Mesas, Spires };
+    public static readonly LandformInfo Fans = new("fans", "Alluvial fans", "where mountain streams reach a plain, mostly in dry country", LandformKind.Plan, LandformRule.Water, 41);
+
+    public static readonly IReadOnlyList<LandformInfo> All = new[] { Escarpments, Waterfalls, Canyons, Cirques, Troughs, Fjords, Volcanoes, SeaStacks, Headlands, Spits, Oxbows, Terraces, Fans, Dunes, Mesas, Spires };
 
     /// <summary>The big landforms of a world, in order, run on the macro raster before erosion (each from the terrain
     /// revision that brought it, unless switched off).</summary>

@@ -74,6 +74,7 @@ public sealed partial class TerrainSampler
     private readonly Spits? _spits;
     private readonly Oxbows? _oxbows;
     private readonly Terraces? _terraces;
+    private readonly Fans? _fans;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
     private readonly double[] _poolQuantiles, _channelQuantiles;
@@ -100,6 +101,7 @@ public sealed partial class TerrainSampler
         _spits = plan.Spits is { Count: > 0 } sp ? sp : null;
         _oxbows = plan.Oxbows is { Count: > 0 } ob ? ob : null;
         _terraces = plan.Terraces;
+        _fans = plan.Fans is { Count: > 0 } fa ? fa : null;
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
@@ -156,6 +158,8 @@ public sealed partial class TerrainSampler
         // walking-scale relief taken off the floor).
         double troughFlat = 0, troughRock = 0, scree = 0; bool fjord = false;
         if (_troughs != null) baseHeight = _troughs.Carve(x, z, baseHeight, out troughFlat, out troughRock, out fjord, out scree);
+        // Revision 41: alluvial fans lay gravel on the plain at mountain fronts (before the rivers, which cut through).
+        if (_fans != null) { baseHeight = _fans.Fill(x, z, baseHeight, out double gravel); scree = Math.Max(scree, gravel); }
         Detail(lx, lz, minWavelength, land, mountainShare, out double inland, out double detail, out double roughness);
         if (troughFlat > 0) detail *= 1 - .85 * troughFlat;
         // Revision 26: a fjord's floor below the sea is the sea (the walk ends here, as at the coast: rivers, lakes and

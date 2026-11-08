@@ -49,6 +49,8 @@ public sealed class WorldPlan
     public Oxbows? Oxbows { get; }
     /// <summary>River terraces in broad valleys (revision 40, landform no. 12); null when off or older.</summary>
     public Terraces? Terraces { get; }
+    /// <summary>Alluvial fans at mountain fronts (revision 41, landform no. 13); null when off or older.</summary>
+    public Fans? Fans { get; }
     /// <summary>Settlement sites and the roads between them (docs/WORLDGEN_PLAN.md step 3): empty in revision 17.</summary>
     public IReadOnlyList<WorldSite> Sites { get; } = Array.Empty<WorldSite>();
     public IReadOnlyList<WorldRoad> Roads { get; } = Array.Empty<WorldRoad>();
@@ -197,6 +199,9 @@ public sealed class WorldPlan
             Terraces = new Terraces(this, Style.Landform(LandformCatalog.Terraces.Id));
         stage?.Invoke(3);
         Climate = new Climate(this, Style.Climate);
+        // Fans (revision 41) read the climate (more in dry country); they change no raster the climate reads.
+        if (Style.Revision >= LandformCatalog.Fans.Since && !Style.Landform(LandformCatalog.Fans.Id).Off)
+            Fans = new Fans(this, Climate, Style.Landform(LandformCatalog.Fans.Id));
         stage?.Invoke(4);
         Biomes = new BiomeMap(this, Climate, Style.Climate.Biomes ? biomes ?? BiomeRegistry.Current ?? BiomeRegistry.ClassicOnly : BiomeRegistry.ClassicOnly);
         BuildMilliseconds = timer.Elapsed.TotalMilliseconds;
