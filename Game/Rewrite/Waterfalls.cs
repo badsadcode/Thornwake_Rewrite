@@ -79,7 +79,8 @@ public sealed class FallSet
             var f = _falls[i];
             double px = x - f.LipX, pz = z - f.LipZ, along = px * f.Dx + pz * f.Dz, across = Math.Abs(px * f.Dz - pz * f.Dx);
             // (D290: 3 m past the river's sides and from 4 m above the lip: 20 m and 15 m cut a V-shaped notch in the water above)
-            if (along < -4 || along > f.Length + 12 || across > f.WidthAt(along) * .5 + 3) continue;
+            // (from 1.5 m above the lip: the curtain overlaps it from 3 m above, fading in — D291, a gap showed as a line)
+            if (along < -1.5 || along > f.Length + 12 || across > f.WidthAt(along) * .5 + 3) continue;
             // (any corner between the two levels: the dome over the lip sinks a little below the lip's level already)
             if (low < f.Top - .25 && high > f.Bottom + .25) return true;
         }
@@ -99,7 +100,7 @@ public sealed class FallSet
 /// </summary>
 public sealed class WaterfallView
 {
-    private const double DrawRange = 4000, MistRange = 1500, Upstream = 2;
+    private const double DrawRange = 4000, MistRange = 1500, Upstream = 3;
     private readonly Node3D _parent;
     private readonly Dictionary<(int, int), (Node3D Node, FallSet.Fall Fall, GpuParticles3D? Mist)> _shown = new();
     private readonly Dictionary<(int, int), (Task<Model> Job, FallSet.Fall Fall)> _building = new();
@@ -169,7 +170,7 @@ public sealed class WaterfallView
     // ---- the meshes
 
     /// <summary>A fall's curtain and foam disc, in metres from the lip across (y absolute, as the terrain's).</summary>
-    private sealed record Model(Vector3[] Vertices, Vector3[] Normals, Vector2[] Uv, Color[] Colors, int[] Indices,
+    private sealed record Model(Vector3[] Vertices, Vector3[] Normals, Vector2[] Uv, Vector2[] Uv2, Color[] Colors, int[] Indices,
         Vector3[] FoamVertices, Vector2[] FoamUv, Color[] FoamColors, int[] FoamIndices, Vector3 Foot, float Spread);
 
     private static Model Build(TerrainSampler terrain, FallSet.Fall f)
@@ -177,7 +178,10 @@ public sealed class WaterfallView
         // As wide as the river at the lip, a little wider toward the foot (falling water spreads), thinning at its sides (D290:
         // the pool's width at the foot and 4 m more a side made a 5 m stream a 20 m sheet wrapped round the cliff — Tom's
         // dumps 214522/214703).
-        double Wide(double h) => Math.Max(2, f.Width * (1 + .25 * Math.Clamp(h / Math.Max(1, f.Length), 0, 1)) + 1);
+        // D291: 3.5 m more a side, fading and fraying there — the river's sheet is cut 3 m past the river's sides and the curtain
+        // stopped short of that: a clear cut-off between them (Tom: "the sides are too regular. There's a clear cutoff").
+        const double Margin = 3.5;
+        double Wide(double h) => Math.Max(2, f.Width * (1 + .25 * Math.Clamp(h / Math.Max(1, f.Length), 0, 1)) + 1) + 2 * Margin;
         double width = Wide(0);
         double ax = f.Dz, az = -f.Dx; // across the fall (to its right)
         double lipLevel = terrain.Sample(f.LipX, f.LipZ).WaterLevel;
@@ -205,11 +209,12 @@ public sealed class WaterfallView
         int cols = Math.Clamp((int)Math.Ceiling(Math.Max(width, Wide(f.Length)) / 1.2), 2, 60) + 1, rows = steps.Count;
         var vertices = new Vector3[cols * rows];
         var uv = new Vector2[cols * rows];
+        var uv2 = new Vector2[cols * rows];
         var colors = new Color[cols * rows];
         for (int c = 0; c < cols; c++)
         {
             double u = (double)c / (cols - 1);
-            double pathLength = 0; Vector3 last = default;
+            double pathLength = 0, travel = 0, lastSpeed = v0; Vector3 last = default;
             for (int r = 0; r < rows; r++)
             {
                 double h = steps[r], off = (u - .5) * Wide(h);
@@ -229,15 +234,20 @@ public sealed class WaterfallView
                     onRock = DetMath.Smooth((centre - free) / .5);
                 }
                 var p = new Vector3((float)(x - f.LipX), (float)y, (float)(z - f.LipZ));
-                if (r > 0) pathLength += (p - last).Length();
-                last = p;
+                double drop = Math.Max(0, lipLevel - y), speed = Math.Sqrt(v0 * v0 + 2 * 9.8 * drop);
+                // Travel time from the top (D291): the streaks are drawn at (travel time − clock), so they move at the water's own
+                // speed everywhere. At (metres − speed × clock) the pattern sheared as the water sped up and, after a while of
+                // play, crawled up the fall (Tom: "one part of the water flow flows up").
+                if (r > 0) { double seg = (p - last).Length(); pathLength += seg; travel += seg / Math.Max(.5, .5 * (speed + lastSpeed)); }
+                last = p; lastSpeed = speed;
                 int k = r * cols + c;
                 vertices[k] = p;
                 uv[k] = new Vector2((float)(u * width), (float)pathLength);
-                double drop = Math.Max(0, lipLevel - y), speed = Math.Sqrt(v0 * v0 + 2 * 9.8 * drop);
+                uv2[k] = new Vector2((float)travel, 0);
                 double foot = DetMath.Smooth((y - bottom) / -Math.Max(1, (lipLevel - bottom) * .15) + 1); // (1 near the pool)
                 // (fading out as it reaches the pool: drawn after the water, its rows lying under the pool showed as a glassy sheet)
-                double edge = Math.Min(DetMath.Smooth(u / .3), DetMath.Smooth((1 - u) / .3)) * DetMath.Smooth((h + Upstream) / Upstream)
+                double fromSide = Math.Min(u, 1 - u) * Wide(h);
+                double edge = DetMath.Smooth(fromSide / Margin) * DetMath.Smooth((h + Upstream) / (Upstream - 1))
                     * (h > 0 ? DetMath.Smooth((y - bottom + .1) / .6) : 1);
                 colors[k] = new Color((float)Math.Min(1, speed / 25), (float)foot, (float)onRock, (float)edge);
             }
@@ -272,7 +282,7 @@ public sealed class WaterfallView
                 double down = Math.Cos(ang), stretch = 1 + .6 * Math.Max(0, down);
                 double ox = (f.Dx * Math.Cos(ang) + ax * Math.Sin(ang)) * rr * stretch, oz = (f.Dz * Math.Cos(ang) + az * Math.Sin(ang)) * rr * stretch;
                 fv.Add(footPoint + new Vector3((float)ox, 0, (float)oz));
-                fuv.Add(new Vector2((float)ox, (float)oz));
+                fuv.Add(new Vector2((float)(Math.Cos(ang) * rr * stretch), (float)(Math.Sin(ang) * rr * stretch))); // (downstream, across)
                 fc.Add(new Color(1, 1, 1, (float)(1 - (double)ring / rings)));
             }
         var fi = new List<int>();
@@ -283,7 +293,7 @@ public sealed class WaterfallView
                 int a = 1 + (ring - 1) * spokes + s, b = 1 + (ring - 1) * spokes + (s + 1) % spokes, c = a + spokes, d = b + spokes;
                 fi.Add(a); fi.Add(c); fi.Add(b); fi.Add(b); fi.Add(c); fi.Add(d);
             }
-        return new Model(vertices, normals, uv, colors, indices.ToArray(), fv.ToArray(), fuv.ToArray(), fc.ToArray(), fi.ToArray(), footPoint, spread);
+        return new Model(vertices, normals, uv, uv2, colors, indices.ToArray(), fv.ToArray(), fuv.ToArray(), fc.ToArray(), fi.ToArray(), footPoint, spread);
     }
 
     private void Add((int, int) key, FallSet.Fall fall, Model m, double originX, double originZ)
@@ -297,7 +307,7 @@ public sealed class WaterfallView
         {
             a.Resize((int)Mesh.ArrayType.Max);
             a[(int)Mesh.ArrayType.Vertex] = m.Vertices; a[(int)Mesh.ArrayType.Normal] = m.Normals;
-            a[(int)Mesh.ArrayType.TexUV] = m.Uv; a[(int)Mesh.ArrayType.Color] = m.Colors; a[(int)Mesh.ArrayType.Index] = m.Indices;
+            a[(int)Mesh.ArrayType.TexUV] = m.Uv; a[(int)Mesh.ArrayType.TexUV2] = m.Uv2; a[(int)Mesh.ArrayType.Color] = m.Colors; a[(int)Mesh.ArrayType.Index] = m.Indices;
             curtain.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, a);
         }
         node.AddChild(new MeshInstance3D { Mesh = curtain, MaterialOverride = _curtain, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });

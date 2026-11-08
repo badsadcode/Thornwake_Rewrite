@@ -4619,6 +4619,24 @@ to be okay now"; and "we need to fix the rivers first" (before the other water k
   white against glassier gaps, its edges fraying with the strands.
 * Dump 214029's dark streaks were the local rain (H), not the river.
 
+## D291 — Falling water: no upward crawl, no cut-off lines, a glassy lip (2026-11-08)
+Tom, watching the wide fall's captures: "One part of the water flow flows up, and the sides are too regular. There's a clear
+cutoff."
+* **Flowing up**: the curtain's strands were drawn at (metres down − speed × clock); the water speeds up as it falls, so
+  the pattern sheared more the longer the game ran and crawled upward where it accelerated (the bug rivers' ripples had,
+  D59). Now each vertex carries its travel time from the top (UV2.x, seconds), the strands are drawn at (travel time −
+  clock): everywhere at the water's own speed, stretching as it accelerates, never shearing.
+* **The foam at the foot** spread out in rings every way, also back up toward the fall; now it churns and is carried off
+  downstream (its UV is the fall's frame: downstream, across).
+* **Cut-offs**: the river's sheet was cut from 4 m above the lip and the curtain began 2 m above it (a line across the
+  river with neither); now the cut starts 1.5 m above and the curtain 3 m above, fading in. At the sides the sheet is cut
+  3 m past the river and the curtain stopped short; now it reaches 3.5 m past the river's sides, fading out over them, its
+  edges fraying with the strands.
+* **A glassy lip**: white once the water falls at 6–13 m/s (a metre or few below the lip) or slides on rock; from ~5 m/s it
+  was white at the lip.
+* Tom's reference for later (`uncharted.gif`, Uncharted 4): billowing, sunlit clouds of spray and mist over falling water
+  and rapids, for waterfalls and rivers both — "Not now, but maybe".
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
