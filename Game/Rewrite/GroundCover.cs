@@ -374,7 +374,10 @@ public static partial class GroundCover
                         if (!g.At(px, pz, out float hp, out _, out _, out _) || hp < foot + wall * .55f) { extent = Math.Min(extent, d); break; }
                     }
                 float widest = 2 * extent * .85f + 2;
-                for (int i = 0; i < count; i++)
+                // A needle or a narrow spur (a wall under ~24 m across): no rocks on it at all — however small, on something that
+                // slender they looked stuck on, about to fall off (Tom); only a block fallen at its foot now and then.
+                bool slender = extent < 12;
+                for (int i = 0; i < (slender ? 0 : count); i++)
                 {
                     ulong hh = Hashing.Mix(h + (ulong)(i + 1) * 0x2F1BUL);
                     float tall = Math.Min(wall * (.35f + .3f * Unit(hh, 2)), wall / count * 1.6f + 4);
@@ -396,7 +399,7 @@ public static partial class GroundCover
                 // The lip broken up (Tom: "the sharp edge is still visible", then "the rocks are too big there ... stick out a
                 // little bit too much"): two or three small rocks along each cell's stretch of the edge, flat rather than tall,
                 // leaning out over the face, their tops only 0.4–1.5 m above the edge — a broken, weathered rim, not boulders on top.
-                for (int n = 0, lips = 2 + (int)(Unit(h, 14) * 2); n < lips; n++)
+                for (int n = 0, lips = slender ? 0 : 2 + (int)(Unit(h, 14) * 2); n < lips; n++)
                 {
                     ulong lh = Hashing.Mix(h + 0x11BUL + (ulong)n * 0x9E3BUL);
                     if (Unit(lh, 12) > .85f) continue;

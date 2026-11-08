@@ -4341,6 +4341,8 @@ Tom on build 134: the rocks "were things that we were missing ... more interesti
   player, a box a little inside the block (before, only the lip's).
 * **The needle rocks**: sized to the wall's height, a slender needle got a cap wider than itself. Now each rock is no wider
   than the wall runs either way (measured along it at mid-height, up to 40 m), and no taller than 2.2 × its width.
+  Then Tom: "sometimes they feel like they should fall off": on a needle or a narrow spur (the wall under ~24 m across) no
+  rocks at all now, only a block fallen at the foot now and then.
 * **More rock formations**: six block shapes instead of three — two blocks, stepped in ledges, wider at the top (an
   overhang), split by a cleft, rounded — each its own seed; slabs come from thin instances of them.
 * **Rock shading** setting (`fx.rock_shading`, *Lighting and effects*): smooth (auto-smooth as in Blender: faces within 50°
