@@ -78,6 +78,13 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 137 — trees cast shadows far away
+**Host and everyone joining need build 137** (versions must match to connect). Same terrain as build 136.
+* **Tree shadows reach as far as the shadow distance** (your dumps: 700 m and 2 km looked the same, because only trees within
+  ~110 m cast any). At *Shadow distance 700 m* and up, trees out to ~400 m cast shadows; at *2 km* the distant tree cards do
+  too, all pointing the same way. 2 km costs frame rate (about 46, dips toward 36 at your savanna spot); 1.2 km stays default.
+* Close to you, the dark soft patch round the foot of each tree is the ambient occlusion, not a shadow.
+
 ## New in build 136 — ambient occlusion in sunlight, shadow distance, natural rock formations
 **Host and everyone joining need build 136** (versions must match to connect). Same terrain as build 135.
 * **Ambient occlusion now works in sunlight** (you saw it only in shadow, and right: a Godot setting left at 0 kept it off the
