@@ -61,8 +61,9 @@ public static class ObjectCollision
         }
         foreach (var rock in data.Rocks)
         {
-            // A rock across a cliff's lip stands on walkable ground: a box a little inside the block (D273).
-            if (rock.Kind >= GroundCover.CliffLip)
+            // Cliff rocks: a box a little inside the block (D273 the lip's; D275 all — Tom walked into one on a face, which stood
+            // well out from the colliding cliff).
+            if (rock.Kind >= GroundCover.CliffRock)
             {
                 var lb = rock.Transform.Basis;
                 var box = new Vector3(lb.X.Length() * .8f, lb.Y.Length() * .82f, lb.Z.Length() * .65f);

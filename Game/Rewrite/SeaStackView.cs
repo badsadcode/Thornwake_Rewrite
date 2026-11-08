@@ -30,6 +30,9 @@ public sealed class SeaStackView
 
     public SeaStackView(Node3D parent) { _parent = parent; }
 
+    /// <summary>Rebuild every rock shown (the Rock shading setting changed).</summary>
+    public void Reshade() { Clear(); _building.Clear(); _lastX = double.NaN; }
+
     /// <summary>Rocks shown now (diagnostics).</summary>
     public int Shown => _shown.Count;
 
@@ -140,7 +143,39 @@ public sealed class SeaStackView
     {
         // (paler than the boulders' stone: at the same colour they stood nearly black before the cliffs, D268)
         tint = new Color(tint.R * RockLight, tint.G * RockLight, tint.B * RockLight, tint.A);
-        return rock.Kind == SeaStacks.Kind.Arch ? ArchModel(rock, tint) : StackModel(rock, tint);
+        var model = rock.Kind == SeaStacks.Kind.Arch ? ArchModel(rock, tint) : StackModel(rock, tint);
+        return model with { Normals = Shade(model.Vertices, model.Normals) };
+    }
+
+    /// <summary>The rocks' normals by the Rock shading setting (D275): faceted as built, or auto-smoothed.</summary>
+    public static Vector3[] Shade(Vector3[] vertices, Vector3[] normals) =>
+        GameSettings.RockShading.Index == 1 ? AutoSmooth(vertices, normals, 50) : normals;
+
+    /// <summary>
+    /// Auto-smooth, as Blender's: each corner of a flat-shaded triangle soup (three vertices a triangle, one normal each) takes
+    /// the mean of the faces meeting at its position that lie within <paramref name="degrees"/> of its own face; sharper
+    /// edges stay crisp.
+    /// </summary>
+    public static Vector3[] AutoSmooth(Vector3[] vertices, Vector3[] normals, float degrees)
+    {
+        float limit = Mathf.Cos(Mathf.DegToRad(degrees));
+        var at = new Dictionary<(long, long, long), List<int>>();
+        (long, long, long) Key(Vector3 p) => ((long)Math.Round(p.X * 1e4), (long)Math.Round(p.Y * 1e4), (long)Math.Round(p.Z * 1e4));
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            var key = Key(vertices[i]);
+            if (!at.TryGetValue(key, out var list)) at[key] = list = new List<int>();
+            list.Add(i);
+        }
+        var result = new Vector3[normals.Length];
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            var own = normals[i];
+            var sum = Vector3.Zero;
+            foreach (int j in at[Key(vertices[i])]) if (normals[j].Dot(own) >= limit) sum += normals[j];
+            result[i] = sum.LengthSquared() > 1e-12f ? sum.Normalized() : own;
+        }
+        return result;
     }
 
     private const float RockLight = 1.45f;
@@ -229,11 +264,11 @@ public sealed class SeaStackView
                 top -= .22f * h * Mathf.Clamp(rx / a + .3f, 0, 1);
                 top -= .4f * h * Mathf.Clamp(1 - Math.Abs(rx - cleft) / (a * .32f), 0, 1);
             }
-            float d = SmoothMax(plan, y - top, 2.5f);
+            float d = SmoothMax(SmoothMax(plan, y - top, 2.5f), bottom - y, 1); // (closed below: open, the uneven seabed showed into it)
             d = Worn(d, seed, x, y, z, tilt, bed, size);
             return Fallen(d, blocks, seed, x, y, z);
         }
-        return Surface(Solid, new Vector3(-reach, bottom, -reach), new Vector3(reach, h * 1.15f + 6, reach), cell, seed, tint, tilt, spire || stump ? 1e9f : Math.Max(.6f * h, 12));
+        return Surface(Solid, new Vector3(-reach, bottom - 3 * cell, -reach), new Vector3(reach, h * 1.15f + 6, reach), cell, seed, tint, tilt, spire || stump ? 1e9f : Math.Max(.6f * h, 12));
     }
 
     /// <summary>
@@ -243,31 +278,40 @@ public sealed class SeaStackView
     /// then made unit size and centred, to be scaled per rock. Vertex colours as the stacks' (the instance gives the biome's
     /// tint and rock look), no sea's wet band.
     /// </summary>
-    public static (Vector3[] Vertices, Vector3[] Normals, Color[] Colors) CliffBlock(ulong seed, float cell = 2.2f)
+    /// <param name="shape">D275 (Tom: "more different variants of rock formations"): 0–1 blocks, 2 stepped in ledges, 3 wider at the
+    /// top (an overhang), 4 split by a cleft, 5 rounded; a slab (thin) is any of them scaled thin by its instance.</param>
+    public static (Vector3[] Vertices, Vector3[] Normals, Color[] Colors) CliffBlock(ulong seed, float cell = 2.2f, int shape = 0)
     {
         var rng = new RandomStream(seed);
         float a = (float)rng.Between(8, 10), b = (float)rng.Between(6, 9), h = 20;
+        if (shape == 4) a = (float)rng.Between(9, 10.5);
         float tilt = (float)rng.Between(-.2, .2), bed = (float)rng.Between(4.5, 6.5), taper = (float)rng.Between(.05, .2);
         float turn = (float)rng.Unit() * Mathf.Tau, ca = Mathf.Cos(turn), sa = Mathf.Sin(turn);
+        float power = shape == 5 ? 2.1f : 3.2f, cleft = (float)rng.Between(-2.5, 2.5);
+        int ledges = 2 + rng.Int(2);
         float Solid(float x, float y, float z)
         {
             float px = x + 2.4f * Noise(seed + 2, x / 14, y / 14, z / 14), pz = z + 2.4f * Noise(seed + 3, x / 14 + 7, y / 14, z / 14);
             float rx = ca * px + sa * pz, rz = ca * pz - sa * px;
             float t = Mathf.Clamp(y / h, 0, 1), scale = 1 - taper * (t > .55f ? 1 : t / .55f * .3f);
-            float plan = (Mathf.Pow(Mathf.Pow(Math.Abs(rx) / (a * scale), 3.2f) + Mathf.Pow(Math.Abs(rz) / (b * scale), 3.2f), 1 / 3.2f) - 1) * Math.Min(a, b) * scale;
+            if (shape == 2) { float v = t * ledges, step = Mathf.Floor(v); scale = 1 - .38f * (step + Mathf.Clamp((v - step - .75f) / .25f, 0, 1)) / ledges; }
+            if (shape == 3) scale = .82f + .3f * Mathf.SmoothStep(.2f, .85f, t);
+            float plan = (Mathf.Pow(Mathf.Pow(Math.Abs(rx) / (a * scale), power) + Mathf.Pow(Math.Abs(rz) / (b * scale), power), 1 / power) - 1) * Math.Min(a, b) * scale;
             float top = h * .92f + tilt * rx * .6f + 1.2f * Noise(seed + 4, x / 8, 0, z / 8);
-            float d = SmoothMax(SmoothMax(plan, y - top, 2), .5f - y, 2);
+            float d = SmoothMax(SmoothMax(plan, y - top, shape == 5 ? 6 : 2), .5f - y, 2);
+            if (shape == 4) d = Math.Max(d, (1.6f - Math.Abs(rx - cleft)) * Mathf.SmoothStep(4, 9, y));
             float joints = Math.Abs(Noise(seed + 7, x / 5, y / 25, z / 5)), s = y + tilt * x;
             d += 1.3f * (1 - Math.Min(joints * 5, 1)) - .25f + 1.1f * Noise(seed + 8, x / 6, y / 6, z / 6) + .4f * Noise(seed + 9, x / 2.5f, y / 2.5f, z / 2.5f);
             float f = Mathf.PosMod(s, bed) / bed;
             d += .6f * (-1 + 1.25f * Mathf.SmoothStep(.2f, .42f, f) - 1.25f * Mathf.SmoothStep(.84f, 1, f));
             return d;
         }
-        // (2.2 m cells: at 1.3 m a wall's hundreds of blocks took the frame rate from 60 to 16)
-        var model = Surface(Solid, new Vector3(-15, -1.5f, -15), new Vector3(15, 24, 15), cell, seed, new Color(RockLight, RockLight, RockLight, 1), tilt, 1e9f, sea: false);
+        // (2.2 m cells: at 1.3 m a wall's hundreds of blocks took the frame rate from 60 to 16; ±19 m: at ±15 the worn sides of
+        // the widest blocks reached the grid's edge, and surface nets leave no face there — holes Tom looked into)
+        var model = Surface(Solid, new Vector3(-19, -3, -19), new Vector3(19, 26, 19), cell, seed, new Color(RockLight, RockLight, RockLight, 1), tilt, 1e9f, sea: false);
         var vertices = new Vector3[model.Vertices.Length];
         for (int i = 0; i < vertices.Length; i++) vertices[i] = (model.Vertices[i] - new Vector3(0, h * .5f, 0)) / h;
-        return (vertices, model.Normals, model.Colors);
+        return (vertices, Shade(vertices, model.Normals), model.Colors);
     }
 
     /// <summary>
@@ -322,11 +366,11 @@ public sealed class SeaStackView
                 float nx = hx / a, ny = hy / (roof + 3 + 2.5f * Noise(seed + 6, x / 9, 0, z / 9));
                 hole = (Mathf.Pow(Mathf.Pow(nx, 2.6f) + Mathf.Pow(ny, 2.6f), 1 / 2.6f) - 1) * Math.Min(a, roof + 3);
             }
-            d = SmoothMax(d, -hole, 2.5f);
+            d = SmoothMax(SmoothMax(d, -hole, 2.5f), bottom - y, 1); // (closed below)
             d = Worn(d, seed, x, y, z, tilt, bed, 1);
             return Fallen(d, blocks, seed, x, y, z);
         }
-        return Surface(Solid, new Vector3(-reach, bottom, -across), new Vector3(reach, h * 1.12f + 6, across), cell, seed, tint, tilt * side, roof);
+        return Surface(Solid, new Vector3(-reach, bottom - 3 * cell, -across), new Vector3(reach, h * 1.12f + 6, across), cell, seed, tint, tilt * side, roof);
     }
 
     /// <summary>

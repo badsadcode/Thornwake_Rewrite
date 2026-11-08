@@ -218,6 +218,10 @@ public static class GameSettings
         "black crust rafts riding on it (D260). Build 125: the lava's earlier look. Off: lava fields stay dark rock (build 123). " +
         "Only the look: the lava burns whichever is chosen (D261).",
         options: new[] { "off (dark rock)", "glowing", "glowing (build 125)" }));
+    public static readonly Setting RockShading = Add(new("fx.rock_shading", "Lighting and effects", "Rock shading", 0, 1, 1, 1,
+        "How rocks are lit (D275): smooth (auto-smooth, as in Blender: edges sharper than 50° stay crisp, the rest blend) or " +
+        "faceted (every face its own flat shade, as before build 135).",
+        options: new[] { "faceted", "smooth (auto-smooth)" }));
     public static readonly Setting VolcanoSmoke = Add(new("fx.volcano_smoke", "Lighting and effects", "Volcano smoke", 0, 2, 1, 1,
         "A gas plume rising from an active volcano's lava lake and drifting with the wind, lit by the lava at night; each " +
         "puff fades in, thins as it rises and fades away (D262). Build 126: puffs that vanished at once, the whole plume " +

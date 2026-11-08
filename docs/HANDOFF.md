@@ -7,6 +7,10 @@ Written for the next conversation (the previous one ran out of context). Everyth
   textures, lighter varied rock, bushes, moss and roots (D273), headland cliffs rounded in a rocky shoulder (D274, terrain
   revision 38). Launchers "Go to - headland cliffs (your dump) / … from above / gorge cliffs". Open: canyon walls and
   escarpments not rounded; lip rocks' collision untried in play; the gorge fall only partly clear.
+  **Since 134 (not in a build)**: rocks closed, all cliff rocks solid, sized to needles, six shapes, *Rock shading* (D275).
+  For the water rework: the water over a waterfall's lip is a rounded dome (Tom's dump 122648). Tom asked how rocks behave
+  when he digs: they are placed from the tile's ground, edits included, so they move or vanish as a cliff is dug — to fix
+  with mining (rocks fixed at generation, mined for stone and a little ore; Tom: later).
   Build 133 (v0.9.133, return point `7290b59`, `dist/Preview-133`, one plain folder, D269): terrain revision 37,
   headlands and coves (D270), spits, sandbars and lagoons (D271). Launchers "Go to - rocky headland / headland and cove /
   lagoon, from the water / lagoon, from above". Unchecked up close: cove beaches, walking the spits. Next: oxbow lakes

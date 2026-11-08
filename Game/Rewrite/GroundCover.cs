@@ -22,9 +22,11 @@ public readonly record struct RockInstance(int Kind, Transform3D Transform, Colo
 /// </summary>
 public static partial class GroundCover
 {
-    public const int Stone = 0, Rock = 1, Boulder = 2, CliffSlab = 3, BigBoulder = 4, CliffRock = 5; // (5–7: three cliff blocks, 8–10 coarse)
-    /// <summary>Kinds 11–13: the cliff blocks across a cliff's lip, standing on walkable ground: these collide (ObjectCollision).</summary>
-    public const int CliffLip = 11;
+    public const int Stone = 0, Rock = 1, Boulder = 2, CliffSlab = 3, BigBoulder = 4;
+    /// <summary>Rocks of tall cliffs (D272–D275): <see cref="CliffShapes"/> block shapes from <see cref="CliffRock"/> on (near
+    /// tiles), the same coarse from <see cref="CliffCoarse"/> (the middle distance), and again from <see cref="CliffLip"/> for the
+    /// rocks across a cliff's lip. All of them collide near the player (ObjectCollision).</summary>
+    public const int CliffShapes = 6, CliffRock = 5, CliffCoarse = CliffRock + CliffShapes, CliffLip = CliffCoarse + CliffShapes;
     public const int Bush = 0, BerryBush = 1, Stump = 2, Log = 3;
     public static readonly string[] RockKinds = { "stone", "rock", "boulder" };
 
@@ -362,11 +364,22 @@ public static partial class GroundCover
                 int count = 1 + (int)(wall / 25);
                 float cellSize = key.Level == 0 ? 7 : 10;
                 var along = Vector3.Up.Cross(outward).Normalized();
+                // How far the wall runs either way (D275, Tom: on the needle rocks the rocks were far too big — sized to the
+                // wall's height, they capped a slender needle in a block wider than itself): no rock wider than that.
+                float extent = 40;
+                foreach (int sgn in new[] { -1, 1 })
+                    for (float d = 3; d <= 40; d += 3)
+                    {
+                        double px = x - outward.X * lipAt * .5f + along.X * d * sgn, pz = z - outward.Z * lipAt * .5f + along.Z * d * sgn;
+                        if (!g.At(px, pz, out float hp, out _, out _, out _) || hp < foot + wall * .55f) { extent = Math.Min(extent, d); break; }
+                    }
+                float widest = 2 * extent * .85f + 2;
                 for (int i = 0; i < count; i++)
                 {
                     ulong hh = Hashing.Mix(h + (ulong)(i + 1) * 0x2F1BUL);
                     float tall = Math.Min(wall * (.35f + .3f * Unit(hh, 2)), wall / count * 1.6f + 4);
-                    float wide = Math.Clamp(tall * (.9f + .8f * Unit(hh, 3)), 5, 35), thick = wide * (.5f + .25f * Unit(hh, 4));
+                    float wide = Math.Min(Math.Clamp(tall * (.9f + .8f * Unit(hh, 3)), 5, 35), widest), thick = wide * (.5f + .25f * Unit(hh, 4));
+                    tall = Math.Min(tall, wide * 2.2f);
                     if (Unit(hh, 11) > cellSize * 2.4f / wide) continue;
                     // Where the face is at the rock's middle height (a straight face from the lip to the foot).
                     float y = foot + tall * .4f + (wall - tall * .8f) * ((i + Unit(hh, 5)) / count), share = Math.Clamp((lip - y) / wall, 0, 1);
@@ -377,7 +390,7 @@ public static partial class GroundCover
                     var tint = g.RockTint(x, z);
                     float shade = .82f + .36f * Unit(hh, 12), warm = (Unit(hh, 13) - .5f) * .12f; // (each its own: all one tint was bland)
                     tint = new Color(tint.R * shade * (1 + warm), tint.G * shade, tint.B * shade * (1 - warm), tint.A);
-                    result.Add(new RockInstance(CliffRock + (key.Level == 0 ? 0 : 3) + (int)(Unit(hh, 10) * 2.999f), new Transform3D(basis, at), tint));
+                    result.Add(new RockInstance((key.Level == 0 ? CliffRock : CliffCoarse) + (int)(Unit(hh, 10) * (CliffShapes - .001f)), new Transform3D(basis, at), tint));
                     if (plants != null) Greenery(plants, g, x, z, hh, at, along, outward, wide, tall, thick);
                 }
                 // The lip broken up (Tom: "the sharp edge is still visible", then "the rocks are too big there ... stick out a
@@ -388,7 +401,7 @@ public static partial class GroundCover
                     ulong lh = Hashing.Mix(h + 0x11BUL + (ulong)n * 0x9E3BUL);
                     if (Unit(lh, 12) > .85f) continue;
                     float lipTall = Math.Clamp(wall * .08f, 1.4f, 3.5f) * (.7f + .5f * Unit(lh, 1));
-                    float lipWide = lipTall * (1.6f + 1.2f * Unit(lh, 2)), lipThick = lipWide * (.55f + .3f * Unit(lh, 3));
+                    float lipWide = Math.Min(lipTall * (1.6f + 1.2f * Unit(lh, 2)), widest), lipThick = lipWide * (.55f + .3f * Unit(lh, 3));
                     // (the block's top is 0.42 of its height above its middle)
                     float top = lip + .4f + 1.1f * Unit(lh, 4);
                     var lipAtPos = new Vector3((float)x, top - lipTall * .42f, (float)z) - outward * (lipAt - lipThick * (.05f + .25f * Unit(lh, 5)))
@@ -396,7 +409,7 @@ public static partial class GroundCover
                     var lipTilt = new Basis(along, (Unit(lh, 7) - .5f) * .25f) * new Basis(outward, .1f + .15f * Unit(lh, 8)) * new Basis(Vector3.Up, Unit(lh, 9) * Mathf.Tau);
                     var tintL = g.RockTint(x, z);
                     float shadeL = .82f + .36f * Unit(lh, 10);
-                    result.Add(new RockInstance((key.Level == 0 ? CliffLip : CliffRock + 3) + (int)(Unit(lh, 11) * 2.999f),
+                    result.Add(new RockInstance((key.Level == 0 ? CliffLip : CliffCoarse) + (int)(Unit(lh, 11) * (CliffShapes - .001f)),
                         new Transform3D(lipTilt * new Basis(along * lipWide, Vector3.Up * lipTall, outward * lipThick), lipAtPos),
                         new Color(tintL.R * shadeL, tintL.G * shadeL, tintL.B * shadeL, tintL.A)));
                     if (plants != null && n == 0) Greenery(plants, g, x, z, lh, lipAtPos, along, outward, lipWide, lipTall, lipThick);

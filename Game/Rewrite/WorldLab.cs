@@ -828,6 +828,7 @@ public partial class WorldLab : Node3D
 
     private void OnSettingChanged(Setting s)
     {
+        if (s == GameSettings.RockShading) { RockMeshes.Reshade(); _seaStacks?.Reshade(); }
         if (s.Rebuild) _streamer.Refresh();
         if (_net?.Server != null && GameSettings.AffectsWorld(s)) _net.Server.SettingsChanged();
     }

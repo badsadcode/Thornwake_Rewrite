@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 
 namespace Thornwake.Rewrite;
@@ -23,7 +24,7 @@ public static class RockMeshes
     public static void Release()
     {
         if (_meshes != null) foreach (var mesh in System.Linq.Enumerable.Distinct(_meshes)) mesh.Dispose();
-        _meshes = null; _material = null; _big = null;
+        _meshes = null; _builders = null; _material = null; _big = null;
     }
 
     /// <summary>The rocks' material for rocks tens of metres tall (sea stacks and arches, D268; cliff rocks, D272): the texture
@@ -52,20 +53,54 @@ public static class RockMeshes
         }
     }
 
+    /// <summary>Each mesh and how to build it, so the Rock shading setting can rebuild them in place (the tiles' instances keep them).</summary>
+    private static List<(ArrayMesh Mesh, Func<(Vector3[], Vector3[], Color[])> Make, Material Material)>? _builders;
+
     public static ArrayMesh Get(int kind)
     {
-        // 3: cliff slab, 4: huge/shore boulder — chunky, flat-faced (few facets), like blocky rocks; 5–7: rocks of a tall cliff's
-        // face (D272), tens of metres: worn blocks like the sea stacks (as lumps they looked stuck on), in the big rocks'
-        // material (the texture at 19 m and 5.9 m, not 4 m).
-        // 8–10: the same blocks coarse (~a quarter of the triangles), for the middle distance.
-        // 11–13: the near blocks again, for the rocks across a cliff's lip (they collide).
+        // 3: cliff slab, 4: huge/shore boulder — chunky, flat-faced (few facets), like blocky rocks; from CliffRock on: rocks of a
+        // tall cliff's face (D272), tens of metres: worn blocks like the sea stacks (as lumps they looked stuck on), six shapes
+        // (D275), in the big rocks' material (the texture at 19 m and 5.9 m, not 4 m); from CliffCoarse the same coarse (~a
+        // quarter of the triangles) for the middle distance; from CliffLip the near ones again, for the rocks across a lip.
         if (_meshes == null)
         {
-            var near = new[] { Block(0xB10C1UL), Block(0xB10C2UL), Block(0xB10C3UL) };
-            _meshes = new[] { Build(Kinds[0]), Build(Kinds[1]), Build(Kinds[2]), Build(Kinds[3]), Build(Kinds[4]), near[0], near[1], near[2],
-                Block(0xB10C1UL, 4.4f), Block(0xB10C2UL, 4.4f), Block(0xB10C3UL, 4.4f), near[0], near[1], near[2] };
+            _builders = new();
+            ArrayMesh Add(Func<(Vector3[], Vector3[], Color[])> make, Material material)
+            {
+                var mesh = new ArrayMesh();
+                Fill(mesh, make(), material);
+                _builders.Add((mesh, make, material));
+                return mesh;
+            }
+            _material ??= CreateMaterial();
+            var list = new List<ArrayMesh>();
+            for (int k = 0; k < 5; k++) { int kk = k; list.Add(Add(() => Icosphere(Kinds[kk]), _material)); }
+            var near = new List<ArrayMesh>();
+            for (int k = 0; k < GroundCover.CliffShapes; k++) { int kk = k; near.Add(Add(() => SeaStackView.CliffBlock(0xB10C1UL + (ulong)kk, 2.2f, kk), BigMaterial)); }
+            list.AddRange(near);
+            for (int k = 0; k < GroundCover.CliffShapes; k++) { int kk = k; list.Add(Add(() => SeaStackView.CliffBlock(0xB10C1UL + (ulong)kk, 4.4f, kk), BigMaterial)); }
+            list.AddRange(near);
+            _meshes = list.ToArray();
         }
         return _meshes[Math.Clamp(kind, 0, _meshes.Length - 1)];
+    }
+
+    /// <summary>Rebuild every rock mesh in place (the Rock shading setting changed): the tiles' instances keep the same meshes.</summary>
+    public static void Reshade()
+    {
+        if (_builders == null) return;
+        foreach (var (mesh, make, material) in _builders) { mesh.ClearSurfaces(); Fill(mesh, make(), material); }
+    }
+
+    private static void Fill(ArrayMesh mesh, (Vector3[] Vertices, Vector3[] Normals, Color[] Colors) data, Material material)
+    {
+        var arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = data.Vertices;
+        arrays[(int)Mesh.ArrayType.Normal] = data.Normals;
+        arrays[(int)Mesh.ArrayType.Color] = data.Colors;
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        mesh.SurfaceSetMaterial(0, material);
     }
 
     private static readonly (int Subdivisions, uint Seed, float Roughness)[] Kinds =
@@ -94,25 +129,10 @@ public static class RockMeshes
         return array;
     }
 
-    private static ArrayMesh Block(ulong seed, float cell = 2.2f)
-    {
-        var (vertices, normals, colours) = SeaStackView.CliffBlock(seed, cell);
-        var arrays = new Godot.Collections.Array();
-        arrays.Resize((int)Mesh.ArrayType.Max);
-        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
-        arrays[(int)Mesh.ArrayType.Normal] = normals;
-        arrays[(int)Mesh.ArrayType.Color] = colours;
-        var mesh = new ArrayMesh();
-        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-        mesh.SurfaceSetMaterial(0, BigMaterial);
-        return mesh;
-    }
-
-    private static ArrayMesh Build((int Subdivisions, uint Seed, float Roughness) kind, bool big = false)
+    private static (Vector3[], Vector3[], Color[]) Icosphere((int Subdivisions, uint Seed, float Roughness) kind)
     {
         var v = Shape(kind, out var f, out var rng);
-        var st = new SurfaceTool();
-        st.Begin(Mesh.PrimitiveType.Triangles);
+        var vertices = new List<Vector3>(); var normals = new List<Vector3>(); var colours = new List<Color>();
         var stone = new Color("777a72"); var dark = new Color("5d605a"); var moss = new Color("66744f");
         foreach (var (ia, ib0, ic0) in f)
         {
@@ -122,14 +142,12 @@ public static class RockMeshes
             if (normal.Dot(centroid) < 0) { (b, c) = (c, b); normal = -normal; } // outward
             float shade = rng.Randf();
             var colour = normal.Y > .75f ? moss.Lerp(stone, .4f + .3f * shade) : stone.Lerp(dark, shade * .6f);
-            st.SetColor(colour);
             // Godot front faces are clockwise seen from outside: a, c, b for a counter-clockwise outward face.
-            st.SetNormal(normal); st.AddVertex(v[a]); st.SetNormal(normal); st.AddVertex(v[c]); st.SetNormal(normal); st.AddVertex(v[b]);
+            vertices.Add(v[a]); vertices.Add(v[c]); vertices.Add(v[b]);
+            for (int k = 0; k < 3; k++) { normals.Add(normal); colours.Add(colour); }
         }
-        var mesh = st.Commit();
-        _material ??= CreateMaterial();
-        mesh.SurfaceSetMaterial(0, big ? BigMaterial : _material);
-        return mesh;
+        var vs = vertices.ToArray();
+        return (vs, SeaStackView.Shade(vs, normals.ToArray()), colours.ToArray());
     }
 
     /// <summary>A jittered icosphere with a flattened bottom; the generator continues into the mesh's face shading.</summary>

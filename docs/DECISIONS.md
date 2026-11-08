@@ -4332,6 +4332,25 @@ the cliff tops. Where the headlands' stretches move the coastline the walls come
 * Tool: `--scree-transect=…,<revision>` compares any revision. Return point: *Terrain version → Build 133* (revision 37,
   `terrain-build133.json`).
 
+## D275 — Rocks closed, solid, sized to needles, six shapes, auto-smooth (2026-11-08)
+Tom on build 134: the rocks "were things that we were missing ... more interesting and beautiful", and dumps 122339–122749:
+* **Holes into the rocks**: the cliff blocks were meshed on a grid ±15 m round a block up to ~10 m wide plus worn sides;
+  surface nets leave no face where the shape reaches the grid's edge, so some had holes Tom looked into. Grid ±19 m; the
+  stacks' and arches' solids now closed below their foot (open, the uneven seabed showed into them).
+* **Walking into a rock** on a face (they stood well out from the colliding cliff): every cliff rock now collides near the
+  player, a box a little inside the block (before, only the lip's).
+* **The needle rocks**: sized to the wall's height, a slender needle got a cap wider than itself. Now each rock is no wider
+  than the wall runs either way (measured along it at mid-height, up to 40 m), and no taller than 2.2 × its width.
+* **More rock formations**: six block shapes instead of three — two blocks, stepped in ledges, wider at the top (an
+  overhang), split by a cleft, rounded — each its own seed; slabs come from thin instances of them.
+* **Rock shading** setting (`fx.rock_shading`, *Lighting and effects*): smooth (auto-smooth as in Blender: faces within 50°
+  of each other share a normal at their corners, sharper edges stay crisp; the default) or faceted (as before). All rock
+  meshes rebuild in place when it changes. On these textured rocks the difference is small: the texture carries most of the
+  look.
+* Not done here: the rounded water over a waterfall's lip (dump 122648): the river's water sheet follows the bed over the
+  lip, a dome. Left for the water rework (D270's order), noted in HANDOFF.
+* Return point: build 134 (`1d6a12a`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
