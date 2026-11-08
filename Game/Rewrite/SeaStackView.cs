@@ -237,6 +237,40 @@ public sealed class SeaStackView
     }
 
     /// <summary>
+    /// A block of worn cliff rock for the rocks set into tall cliff faces (D272; RockMeshes kinds 5–10, the last three coarse
+    /// for the middle distance): built 20 m across as the
+    /// stacks are (blocky in plan, narrowing in a ledge or two, a rough tilted top, beds and vertical joints), closed below,
+    /// then made unit size and centred, to be scaled per rock. Vertex colours as the stacks' (the instance gives the biome's
+    /// tint and rock look), no sea's wet band.
+    /// </summary>
+    public static (Vector3[] Vertices, Vector3[] Normals, Color[] Colors) CliffBlock(ulong seed, float cell = 2.2f)
+    {
+        var rng = new RandomStream(seed);
+        float a = (float)rng.Between(8, 10), b = (float)rng.Between(6, 9), h = 20;
+        float tilt = (float)rng.Between(-.2, .2), bed = (float)rng.Between(4.5, 6.5), taper = (float)rng.Between(.05, .2);
+        float turn = (float)rng.Unit() * Mathf.Tau, ca = Mathf.Cos(turn), sa = Mathf.Sin(turn);
+        float Solid(float x, float y, float z)
+        {
+            float px = x + 2.4f * Noise(seed + 2, x / 14, y / 14, z / 14), pz = z + 2.4f * Noise(seed + 3, x / 14 + 7, y / 14, z / 14);
+            float rx = ca * px + sa * pz, rz = ca * pz - sa * px;
+            float t = Mathf.Clamp(y / h, 0, 1), scale = 1 - taper * (t > .55f ? 1 : t / .55f * .3f);
+            float plan = (Mathf.Pow(Mathf.Pow(Math.Abs(rx) / (a * scale), 3.2f) + Mathf.Pow(Math.Abs(rz) / (b * scale), 3.2f), 1 / 3.2f) - 1) * Math.Min(a, b) * scale;
+            float top = h * .92f + tilt * rx * .6f + 1.2f * Noise(seed + 4, x / 8, 0, z / 8);
+            float d = SmoothMax(SmoothMax(plan, y - top, 2), .5f - y, 2);
+            float joints = Math.Abs(Noise(seed + 7, x / 5, y / 25, z / 5)), s = y + tilt * x;
+            d += 1.3f * (1 - Math.Min(joints * 5, 1)) - .25f + 1.1f * Noise(seed + 8, x / 6, y / 6, z / 6) + .4f * Noise(seed + 9, x / 2.5f, y / 2.5f, z / 2.5f);
+            float f = Mathf.PosMod(s, bed) / bed;
+            d += .6f * (-1 + 1.25f * Mathf.SmoothStep(.2f, .42f, f) - 1.25f * Mathf.SmoothStep(.84f, 1, f));
+            return d;
+        }
+        // (2.2 m cells: at 1.3 m a wall's hundreds of blocks took the frame rate from 60 to 16)
+        var model = Surface(Solid, new Vector3(-15, -1.5f, -15), new Vector3(15, 24, 15), cell, seed, new Color(RockLight, RockLight, RockLight, 1), tilt, 1e9f, sea: false);
+        var vertices = new Vector3[model.Vertices.Length];
+        for (int i = 0; i < vertices.Length; i++) vertices[i] = (model.Vertices[i] - new Vector3(0, h * .5f, 0)) / h;
+        return (vertices, model.Normals, model.Colors);
+    }
+
+    /// <summary>
     /// An arch (D267, Tom: "they don't look natural"; a tube of even thickness swept over a half circle looked man-made): what
     /// is left of a headland — a block of cliff, one leg stout and one slight, its top sloping off and narrowing upward,
     /// a lopsided hole worn through with a flatter roof, in tilted beds and vertical joints, undercut at the waterline,
@@ -301,7 +335,7 @@ public sealed class SeaStackView
     /// the surface crosses (the mean of its edges' crossings), a quad across each crossed edge. The beds show as bands of
     /// paler and darker rock; dark and wet just over the sea; green only on open tops above <paramref name="grassAbove"/>.
     /// </summary>
-    private static Model Surface(Func<float, float, float, float> solid, Vector3 min, Vector3 max, float cell, ulong seed, Color tint, float tilt, float grassAbove)
+    private static Model Surface(Func<float, float, float, float> solid, Vector3 min, Vector3 max, float cell, ulong seed, Color tint, float tilt, float grassAbove, bool sea = true)
     {
         int nx = (int)Math.Ceiling((max.X - min.X) / cell) + 1, ny = (int)Math.Ceiling((max.Y - min.Y) / cell) + 1, nz = (int)Math.Ceiling((max.Z - min.Z) / cell) + 1;
         var field = new float[nx * ny * nz];
@@ -344,7 +378,7 @@ public sealed class SeaStackView
             var mid = (a + b + c) / 3;
             var colour = Stone.Lerp(Dark, .05f + .4f * band + .1f * shade);
             if (normal.Y > .72f) colour = mid.Y > grassAbove ? Grass.Lerp(Stone, .15f + .3f * shade) : Moss.Lerp(colour, .5f);
-            float wet = 1 - Mathf.Clamp((mid.Y - .5f) / 3, 0, 1);
+            float wet = sea ? 1 - Mathf.Clamp((mid.Y - .5f) / 3, 0, 1) : 0;
             colour = colour.Lerp(new Color(colour.R * .5f, colour.G * .5f, colour.B * .48f), wet);
             var tinted = new Color(colour.R * tint.R, colour.G * tint.G, colour.B * tint.B, tint.A);
             // (Godot front faces are clockwise seen from outside)

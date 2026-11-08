@@ -62,10 +62,10 @@ public partial class WorldLab
                 trees.AddRange(data.Trees.Select(t => new TreeInstance(t.Species, t.Transform.Translated(origin))));
                 solids.AddRange(data.Trees.Where(t => ObjectCollision.TrunkRadius(t.Species) > 0).Select(t => t.Transform.Origin + origin));
                 solids.AddRange(data.Props.Select(p => p.Transform.Origin + origin));
-                solids.AddRange(data.Rocks.Where(r => r.Kind is not (GroundCover.Stone or GroundCover.CliffSlab)).Select(r => r.Transform.Origin + origin));
+                solids.AddRange(data.Rocks.Where(r => r.Kind is not (GroundCover.Stone or GroundCover.CliffSlab) && r.Kind < GroundCover.CliffRock).Select(r => r.Transform.Origin + origin));
                 foreach (var r in data.Rocks)
                 {
-                    if (r.Kind is GroundCover.Stone or GroundCover.CliffSlab) continue;
+                    if (r.Kind is GroundCover.Stone or GroundCover.CliffSlab || r.Kind >= GroundCover.CliffRock) continue;
                     var b = r.Transform.Basis;
                     float size = (b.X.Length() + b.Y.Length() + b.Z.Length()) / 3;
                     // Rocks are partly buried: only boulders standing at least 0.6 m out of the ground are obstacles.

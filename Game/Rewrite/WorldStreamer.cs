@@ -500,7 +500,8 @@ public partial class WorldStreamer : Node3D
                 (kind.Key == PlaceholderPlants.BogShrub ? 220 : 150) * GameSettings.ScatterDistance.F, layer: RenderLayers.Plants));
         foreach (var kind in data.Rocks.GroupBy(r => r.Kind))
             root.AddChild(Multi(RockMeshes.Get(kind.Key), kind.Select(r => r.Transform).ToArray(),
-                kind.Key == GroundCover.Stone ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,
+                // (cliff rocks cast none: they sit in their cliff's own shadow, and casting cost 53 → 38 FPS at a headland, D272)
+                kind.Key == GroundCover.Stone || kind.Key >= GroundCover.CliffRock ? GeometryInstance3D.ShadowCastingSetting.Off : GeometryInstance3D.ShadowCastingSetting.On,
                 kind.Key == GroundCover.Stone ? 90 * GameSettings.ScatterDistance.F : kind.Key == GroundCover.Rock ? 400 * GameSettings.ScatterDistance.F : 0,
                 kind.Select(r => r.Tint.A > 0 ? r.Tint : Colors.White).ToArray(), RenderLayers.Rocks));
         foreach (var kind in data.Props.GroupBy(p => p.Kind))

@@ -42,8 +42,12 @@ public static class RockMeshes
 
     public static ArrayMesh Get(int kind)
     {
-        // 3: cliff slab, 4: huge/shore boulder — chunky, flat-faced (few facets), like blocky rocks.
-        _meshes ??= new[] { Build(Kinds[0]), Build(Kinds[1]), Build(Kinds[2]), Build(Kinds[3]), Build(Kinds[4]) };
+        // 3: cliff slab, 4: huge/shore boulder — chunky, flat-faced (few facets), like blocky rocks; 5–7: rocks of a tall cliff's
+        // face (D272), tens of metres: worn blocks like the sea stacks (as lumps they looked stuck on), in the big rocks'
+        // material (the texture at 19 m and 5.9 m, not 4 m).
+        // 8–10: the same blocks coarse (~a quarter of the triangles), for the middle distance.
+        _meshes ??= new[] { Build(Kinds[0]), Build(Kinds[1]), Build(Kinds[2]), Build(Kinds[3]), Build(Kinds[4]), Block(0xB10C1UL), Block(0xB10C2UL), Block(0xB10C3UL),
+            Block(0xB10C1UL, 4.4f), Block(0xB10C2UL, 4.4f), Block(0xB10C3UL, 4.4f) };
         return _meshes[Math.Clamp(kind, 0, _meshes.Length - 1)];
     }
 
@@ -61,7 +65,21 @@ public static class RockMeshes
         lock (Hulls) return Hulls[kind] ??= Shape(Kinds[kind], out _, out _).ToArray();
     }
 
-    private static ArrayMesh Build((int Subdivisions, uint Seed, float Roughness) kind)
+    private static ArrayMesh Block(ulong seed, float cell = 2.2f)
+    {
+        var (vertices, normals, colours) = SeaStackView.CliffBlock(seed, cell);
+        var arrays = new Godot.Collections.Array();
+        arrays.Resize((int)Mesh.ArrayType.Max);
+        arrays[(int)Mesh.ArrayType.Vertex] = vertices;
+        arrays[(int)Mesh.ArrayType.Normal] = normals;
+        arrays[(int)Mesh.ArrayType.Color] = colours;
+        var mesh = new ArrayMesh();
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+        mesh.SurfaceSetMaterial(0, BigMaterial);
+        return mesh;
+    }
+
+    private static ArrayMesh Build((int Subdivisions, uint Seed, float Roughness) kind, bool big = false)
     {
         var v = Shape(kind, out var f, out var rng);
         var st = new SurfaceTool();
@@ -81,7 +99,7 @@ public static class RockMeshes
         }
         var mesh = st.Commit();
         _material ??= CreateMaterial();
-        mesh.SurfaceSetMaterial(0, _material);
+        mesh.SurfaceSetMaterial(0, big ? BigMaterial : _material);
         return mesh;
     }
 

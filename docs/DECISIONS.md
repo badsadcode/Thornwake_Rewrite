@@ -4267,6 +4267,27 @@ Tom picked landform no. 11 next. `Game/WorldGen/Spits.cs`, placed in the plan; o
   them. Tool: `--spits=<profile>,<seed>`.
 * Return point: *Terrain version → Headlands (rev. 36)* (`terrain-r36.json`).
 
+## D272 — Rocks on cliff faces, and no grass strips down them (2026-11-08)
+Tom's dumps 214200 and 214234 (build 133): a headland's cliff, 30–60 m nearly vertical, "because of the polygons, it looks
+weird", "cover that up with some 3D rock ... find that sharp edge and generate some rocks ... natural". He chose rocks on
+every steep face first (rock walls built per cliff later).
+* **The strips**: a wall that tall is long thin triangles from its lip to its foot, and the shader took rock or grass from
+  the corners' smoothed normals, upward at the lip: thin strips of grass all down the face. Now a triangle steeper than
+  ~57° is rock whatever its corners say (`TerrainBody.gdshaderinc`, the face's own normal from screen derivatives).
+* **Cliff rocks** (`GroundCover.Rocks`, kinds 5–10): near a face (the ground 4 m either way differs by over 6 m: a sheer wall
+  is a strip a metre or two wide on the grid, and points that had to land on it mostly missed), the wall is measured from
+  its lip to its foot along the way down; where it is a cliff (8 m or more, steeper than ~50° overall, so not a steep
+  hillside), rocks sized to it, one per ~25 m up it, about one per its own width along it, each standing half out of the
+  face, a fallen block at its foot now and then. The rocks are worn blocks built like the sea stacks
+  (`SeaStackView.CliffBlock`, three shapes; icosphere lumps looked stuck on), in the big rocks' material. Level 0 tiles
+  (2.2 m cells, ~850 triangles a block) and level 1 (walls over 15 m, 4.4 m cells, about a quarter of that). No shadows (they
+  sit in their cliff's), no collision (the cliff collides). The old small slabs stay at level 0.
+* **Cost**, measured at 1920×1080 at Tom's spot: blocks at 1.3 m cells, a rock per cell, levels 0–2 — 16 FPS; at level 2 the
+  coarse ground made every steep mountainside a wall (36,000 rocks, ~30 million triangles): 39 FPS against build 133's 60.
+  As built: 60 at both of Tom's spots (the cap, so the headroom is not known), ~3,600–6,800 rocks there.
+* Return point: build 133 (`7290b59`). Next asked by Tom: his `CliffRock_Texture.png` on them (512², pixel art, lit from
+  above: for the sides; not seamless as it is).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

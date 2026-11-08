@@ -129,6 +129,12 @@ void fragment() {
 	float cover = UV2.x;
 	float forest = COLOR.r, mountain = COLOR.g, wet = COLOR.b, submerged = smoothstep(0.5, 0.8, COLOR.a);
 	float slope = 1.0 - clamp(world_normal.y, 0.0, 1.0);
+	// A sheer face is rock however its corners' normals lean (D272): a wall tens of metres tall is long thin triangles from
+	// its lip to its foot, and the lip's upward normals drew strips of grass all down it. Only where the triangle itself
+	// stands steeper than ~57°: gentle ground keeps its smooth normals.
+	vec3 face = normalize(cross(dFdx(VERTEX), dFdy(VERTEX)));
+	float face_up = abs((INV_VIEW_MATRIX * vec4(face, 0.0)).y);
+	slope = max(slope, (1.0 - face_up) * (1.0 - smoothstep(0.35, 0.55, face_up)));
 	// Ground parallax (round 26, Tom: "parallax on ground — cheap depth"): within ~30 m on gentle, dry ground, the
 	// textures' dark parts sink a few centimetres — the lookup steps along the view ray until it meets the height
 	// field (grass, or soil where the variety pass will lay bare ground), and everything below reads the shifted spot.

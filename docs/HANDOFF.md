@@ -7,6 +7,8 @@ Written for the next conversation (the previous one ran out of context). Everyth
   headlands and coves (D270), spits, sandbars and lagoons (D271). Launchers "Go to - rocky headland / headland and cove /
   lagoon, from the water / lagoon, from above". Unchecked up close: cove beaches, walking the spits. Next: oxbow lakes
   and river terraces, alluvial fans, then the water rework (order below).
+  **Since 133 (not in a build)**: rocks on cliff faces and no grass strips down them (D272). Tom's `CliffRock_Texture.png`
+  to try on them next (where it came from: asked).
   Build 132 (v0.9.132, return point `9293ad0`, `dist/Preview-132`): sea
   arches and stacks as worn rock (D267, D268). Open: foam round their feet, collision untried in play.
   **Order set by Tom**: the landforms that change where water meets land (spits and lagoons, oxbows and terraces, alluvial

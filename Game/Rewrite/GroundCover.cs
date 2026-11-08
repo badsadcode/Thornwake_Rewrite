@@ -22,7 +22,7 @@ public readonly record struct RockInstance(int Kind, Transform3D Transform, Colo
 /// </summary>
 public static partial class GroundCover
 {
-    public const int Stone = 0, Rock = 1, Boulder = 2, CliffSlab = 3, BigBoulder = 4;
+    public const int Stone = 0, Rock = 1, Boulder = 2, CliffSlab = 3, BigBoulder = 4, CliffRock = 5; // (5–7: three cliff blocks, 8–10 coarse)
     public const int Bush = 0, BerryBush = 1, Stump = 2, Log = 3;
     public static readonly string[] RockKinds = { "stone", "rock", "boulder" };
 
@@ -299,6 +299,66 @@ public static partial class GroundCover
             var at = new Vector3((float)x, height - tall * .2f, (float)z) - outward * thick * .45f;
             result.Add(new RockInstance(CliffSlab, new Transform3D(basis, at), g.RockTint(x, z)));
         });
+        // Rocks of tall cliffs (D272, Tom: the polygons of a steep face look weird, "cover that up" with rock, naturally): on
+        // a face, the wall is measured along the way down — from its lip to its foot — and where it stands 8 m or more, a rock
+        // sized to it (a third to two thirds of its height, 5–35 m across; several up a tall one) stands half out of the face, a block
+        // fallen at its foot now and then. Levels 0–1 (the small slabs below are level 0 only); level 1 has walls over 15 m
+        // only, in coarse blocks (at level 2 the coarse ground made every steep mountainside a wall: 36,000 rocks, 30 million
+        // triangles, 60 → 39 FPS at Tom's headland). They lie on the colliding cliff, like the slabs.
+        if (key.Level <= 1)
+            Cells(key, key.Level == 0 ? 7 : 10, seed ^ 0xC1F2UL, (x, z, h) =>
+            {
+                // Near a face: the ground 4 m either way differs by over 6 m (a sheer wall is a strip a metre or two wide on the
+                // grid: points had to land on it, and most missed). Downhill is out from the face.
+                if (!g.At(x, z, out float height, out _, out _, out _)) return;
+                float r4 = (float)Math.Max(4, g.Spacing * 2);
+                if (!g.At(x + r4, z, out float ex, out _, out _, out _) || !g.At(x - r4, z, out float wx, out _, out _, out _)
+                    || !g.At(x, z + r4, out float sz, out _, out _, out _) || !g.At(x, z - r4, out float nz, out _, out _, out _)) return;
+                var outward = new Vector3(wx - ex, 0, nz - sz);
+                if (outward.Length() < 6) return;
+                outward = outward.Normalized();
+                float step = Math.Max(1.5f, (float)g.Spacing);
+                float foot = height, lip = height, footAt = 0, lipAt = 0;
+                for (float d = step; d <= 70; d += step)
+                {
+                    if (!g.At(x + outward.X * d, z + outward.Z * d, out float f, out _, out _, out _) || foot - f < step * .5f) break;
+                    foot = f; footAt = d;
+                }
+                for (float d = step; d <= 70; d += step)
+                {
+                    if (!g.At(x - outward.X * d, z - outward.Z * d, out float l, out _, out _, out _) || l - lip < step * .5f) break;
+                    lip = l; lipAt = d;
+                }
+                float wall = lip - foot;
+                // (a cliff, not a steep hillside: steeper than ~50° from the lip to the foot)
+                if (wall < (key.Level == 0 ? 8 : 15) || wall < 1.2f * (lipAt + footAt) || Unit(h, 1) > .9f * a0()) return;
+                // Up a tall wall, several rocks one above another (one per ~25 m), each standing half out of the face (set a third
+                // in, most were buried in it); along it, about one per its own width (every cell's rock overlapping its
+                // neighbours' took the frame rate from 60 to 16).
+                int count = 1 + (int)(wall / 25);
+                float cellSize = key.Level == 0 ? 7 : 10;
+                var along = Vector3.Up.Cross(outward).Normalized();
+                for (int i = 0; i < count; i++)
+                {
+                    ulong hh = Hashing.Mix(h + (ulong)(i + 1) * 0x2F1BUL);
+                    float tall = Math.Min(wall * (.35f + .3f * Unit(hh, 2)), wall / count * 1.6f + 4);
+                    float wide = Math.Clamp(tall * (.9f + .8f * Unit(hh, 3)), 5, 35), thick = wide * (.5f + .25f * Unit(hh, 4));
+                    if (Unit(hh, 11) > cellSize * 2.4f / wide) continue;
+                    // Where the face is at the rock's middle height (a straight face from the lip to the foot).
+                    float y = foot + tall * .4f + (wall - tall * .8f) * ((i + Unit(hh, 5)) / count), share = Math.Clamp((lip - y) / wall, 0, 1);
+                    float across = -lipAt + (lipAt + footAt) * share;
+                    var at = new Vector3((float)x + along.X * (Unit(hh, 6) - .5f) * 4, y, (float)z + along.Z * (Unit(hh, 6) - .5f) * 4) + outward * (across - thick * .05f);
+                    var tilt = new Basis(along, (Unit(hh, 7) - .5f) * .35f) * new Basis(outward, (Unit(hh, 8) - .5f) * .3f) * new Basis(Vector3.Up, (Unit(hh, 9) - .5f) * .5f);
+                    var basis = tilt * new Basis(along * wide, Vector3.Up * tall, outward * thick);
+                    result.Add(new RockInstance(CliffRock + (key.Level == 0 ? 0 : 3) + (int)(Unit(hh, 10) * 2.999f), new Transform3D(basis, at), g.RockTint(x, z)));
+                }
+                if (Unit(h, 9) < .35f)
+                {
+                    float block = Math.Min(wall * .18f, 6) * (.6f + .6f * Unit(h, 10));
+                    var foot3 = new Vector3((float)x, foot - block * .3f, (float)z) + outward * (footAt + block * .4f);
+                    result.Add(new RockInstance(Boulder, new Transform3D(new Basis(Vector3.Up, Unit(h, 11) * Mathf.Tau).Scaled(new Vector3(block, block * .7f, block)), foot3), g.RockTint(x, z)));
+                }
+            });
         // Huge boulders, rare, on fairly open ground; erratics (D263): four times as many in the glacial biomes, out in the
         // open (none in forest).
         if (key.Level <= 2)
