@@ -73,6 +73,7 @@ public sealed partial class TerrainSampler
     private readonly Headlands? _headlands;
     private readonly Spits? _spits;
     private readonly Oxbows? _oxbows;
+    private readonly Terraces? _terraces;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
     private readonly double[] _poolQuantiles, _channelQuantiles;
@@ -98,6 +99,7 @@ public sealed partial class TerrainSampler
         _headlands = plan.Headlands is { Count: > 0 } h ? h : null;
         _spits = plan.Spits is { Count: > 0 } sp ? sp : null;
         _oxbows = plan.Oxbows is { Count: > 0 } ob ? ob : null;
+        _terraces = plan.Terraces;
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
         // Coast detail is only evaluated where it can change the land/sea decision or the shore profile.
@@ -176,6 +178,7 @@ public sealed partial class TerrainSampler
         // (3b sites and 3c roads come here once the plan has any: pads and corridors after the landforms, before the
         // water, so rivers and lakes still win. Plan.Sites and Plan.Roads are empty in revision 17.)
         var water = WaterKind.None; double level = double.NaN; int body = -1; double riverDamp = 1;
+        if (_terraces != null) t_terraced = 0;
         double height = Rivers(x, z, minWavelength, baseHeight, inland, detail, ref riverDamp, ref water, ref level, ref body, ref scree, Canyons.Wall(canyon));
         // Revision 33: a gorge's talus is bare ground as the escarpments' debris slopes are (scree, not cliff rock).
         bare = Math.Max(bare, .65 * scree);
@@ -197,6 +200,8 @@ public sealed partial class TerrainSampler
         // Revision 22: no pools where a river has cut the ground down by over 2 m (valley sides, canyon and gorge walls),
         // against the ground as the river stage sees it (the walking-scale relief is damped near rivers: big landforms
         // there are not a cut). Pools filled the flat ledges of canyon walls (Tom's dump 21:59:22, build 118).
+        // Revision 40: the pools fade out where river terraces cut the ground (D282).
+        if (_terraces != null) poolCover *= 1 - t_terraced;
         if (wetland && poolCover > 0 && water == WaterKind.None && !oxbowNear && (_style.Revision < 22 || baseHeight + detail * riverDamp - height < 2))
             Pools(lx, lz, x, z, minWavelength, baseHeight, roughness, mountainShare, inland, flatten, land, riverDamp, lakeCells, poolCover,
                 poolDepth, poolSize, poolChannels, ref height, ref water, ref level);

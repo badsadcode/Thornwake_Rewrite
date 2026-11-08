@@ -5,8 +5,8 @@ Written for the next conversation (the previous one ran out of context). Everyth
 ## Where things stand
 * **Since build 137, on `main`, not in a build yet**: plants on cliff rocks on the rock's real top and edge, the fringe as
   strands (D280); terrain revision 39, oxbow lakes (D281; `Tests/WorldGen` `--oxbows=balanced,7319` lists them, e.g.
-  14738,-119952). Tom said "Later" to build 138. Next: river terraces (rest of no. 12), alluvial fans (no. 13), then the
-  water rework.
+  14738,-119952); terrain revision 40, river terraces (D282; seen best at Balanced 7319, -61180,48330 looking south over
+  the meander). Tom said "Later" to build 138. Next: alluvial fans (no. 13), then the water rework.
 * **Last build Tom has: 137** (v0.9.137, return point `b2267d4`, `dist/Preview-137`): trees cast shadows as far as the shadow
   distance; tree card shadows face the sun (D279). 2 km is costly (~46 FPS, dips to 36 at the savanna spot).
   Build 136 (v0.9.136, return point `2e7b7f4`, `dist/Preview-136`): ambient occlusion in sunlight (Godot's AO

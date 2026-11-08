@@ -26,6 +26,7 @@ internal static class SimulationTests
         T.Run("Landforms: headlands and coves — the coast moved both ways along stretches, cliffs on the points, low coves, river mouths as before (revision 36)", HeadlandForms, filter);
         T.Run("Landforms: spits, sandbars and lagoons — sand just above the sea, shallow water behind, land and river mouths untouched (revision 37)", SpitForms, filter);
         T.Run("Landforms: oxbow lakes — crescents of still water beside lowland rivers, closed round, rivers and lakes unchanged (revision 39)", OxbowForms, filter);
+        T.Run("Landforms: river terraces — level steps up broad valley sides, gentle risers, rivers and lakes unchanged (revision 40)", TerraceForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
         T.Run("Water: pools level in a basin", Basin, filter);
@@ -1179,6 +1180,94 @@ internal static class SimulationTests
         T.Check(overlap == 0, $"apart ({overlap})");
         T.Check(same == 4, $"placed the same every time ({same}/4)");
         T.Check(ground == 0, $"the ground is revision 34's ({ground})");
+    }
+
+    /// <summary>D282: cross-sections of broad valleys, with and without terraces: some stepped, with more level benches (16 m
+    /// within 25 cm, 1.5 m or more over the water, within 200 m) than without; hardly any 2 m stretch over 42° that was not
+    /// (jumps where a fade or the wetland pools broke the cut showed here); every river and lake sample the same as without.</summary>
+    private static void TerraceForms()
+    {
+        int sections = 0, stepped = 0, benchesWith = 0, benchesWithout = 0, steep = 0, slopes = 0, changed = 0, worlds = 0;
+        double maxWith = 0, maxWithout = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("balanced", 7319), ("continental", 7319), ("mountainous", 42) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            if (s.Plan.Terraces == null) continue;
+            worlds++;
+            var without = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Landforms = Off(LandformCatalog.Terraces) }));
+            int taken = 0;
+            foreach (var r in s.Plan.Hydrology.Reaches)
+            {
+                if (r.Distributary || r.Points.Length < 8 || r.Width[r.Width.Length / 2] < 20) continue;
+                for (int i = 3; i < r.Points.Length - 3 && taken < 300; i += 11)
+                {
+                    double fx = r.Points[i + 1].X - r.Points[i - 1].X, fz = r.Points[i + 1].Z - r.Points[i - 1].Z, fl = Math.Sqrt(fx * fx + fz * fz);
+                    if (fl < 1e-6 || r.Width[i] < 24) continue;
+                    taken++;
+                    foreach (int side in new[] { -1, 1 })
+                    {
+                        double nx = -fz / fl * side, nz = fx / fl * side, start = r.Width[i] * .5 + 4, surface = r.Surface[i];
+                        const int n = 200;
+                        var hw = new double[n]; var ho = new double[n]; var dry = new bool[n];
+                        double diff = 0;
+                        for (int k = 0; k < n; k++)
+                        {
+                            double px = r.Points[i].X + nx * (start + 2 * k), pz = r.Points[i].Z + nz * (start + 2 * k);
+                            var a = s.Sample(px, pz); var b = without.Sample(px, pz);
+                            hw[k] = a.Height; ho[k] = b.Height; dry[k] = a.Water == WaterKind.None && b.Water == WaterKind.None;
+                            if (dry[k]) diff = Math.Max(diff, Math.Abs(a.Height - b.Height));
+                        }
+                        sections++;
+                        if (diff < .5) continue;
+                        stepped++;
+                        benchesWith += Benches(hw, dry, surface); benchesWithout += Benches(ho, dry, surface);
+                        for (int k = 1; k < n; k++)
+                        {
+                            if (!dry[k] || !dry[k - 1]) continue;
+                            double gw = Math.Abs(hw[k] - hw[k - 1]) / 2, go = Math.Abs(ho[k] - ho[k - 1]) / 2;
+                            if (Math.Abs(hw[k] - ho[k]) < .05 && Math.Abs(hw[k - 1] - ho[k - 1]) < .05) continue; // (only where stepped)
+                            slopes++;
+                            maxWith = Math.Max(maxWith, gw); maxWithout = Math.Max(maxWithout, go);
+                            if (gw > .9 && gw > go + .05) steep++;
+                        }
+                    }
+                }
+            }
+            // Rivers and lakes as without them (on a coarse lattice over the land, and along every river).
+            var rng = new RandomStream(11);
+            for (int k = 0; k < 3000; k++)
+            {
+                double px = s.Plan.Macro.CellX(rng.Int(s.Plan.Macro.Size)) + rng.Between(-300, 300), pz = s.Plan.Macro.CellZ(rng.Int(s.Plan.Macro.Size)) + rng.Between(-300, 300);
+                var a = without.Sample(px, pz);
+                if (a.Water is WaterKind.River or WaterKind.Lake && s.Sample(px, pz) is var b && (b.Water != a.Water || b.WaterLevel != a.WaterLevel)) changed++;
+            }
+            foreach (var r in s.Plan.Hydrology.Reaches)
+                for (int i = 0; i < r.Points.Length; i += 7)
+                {
+                    var a = without.Sample(r.Points[i].X, r.Points[i].Z); var b = s.Sample(r.Points[i].X, r.Points[i].Z);
+                    if (a.Water != b.Water || !(a.WaterLevel == b.WaterLevel || double.IsNaN(a.WaterLevel) && double.IsNaN(b.WaterLevel)) || a.Height != b.Height) changed++;
+                }
+        }
+        T.Note($"{sections} valley sides in {worlds} worlds, {stepped} stepped; level benches {benchesWith} with terraces, {benchesWithout} without; " +
+            $"steepest 2 m {Math.Atan(maxWith) * 180 / Math.PI:0}° (without {Math.Atan(maxWithout) * 180 / Math.PI:0}°), {steep} of {slopes} over 42° and steeper than before; {changed} river or lake points changed");
+        T.Check(worlds == 4 && stepped >= 40, $"terraces in the worlds ({stepped}, {worlds})");
+        T.Check(benchesWith > benchesWithout * 1.1 + 20, $"level benches ({benchesWith} vs {benchesWithout})");
+        T.Check(steep <= slopes / 500, $"gentle risers ({steep} of {slopes})");
+        T.Check(changed == 0, $"rivers and lakes unchanged ({changed})");
+    }
+
+    /// <summary>Level runs of a cross-section within 200 m of the river: 8 samples (16 m) within 25 cm, 1.5 m or more over the
+    /// water, all dry.</summary>
+    private static int Benches(double[] h, bool[] dry, double surface)
+    {
+        int count = 0;
+        for (int k = 0; k + 8 <= Math.Min(h.Length, 100);)
+        {
+            double lo = double.MaxValue, hi = double.MinValue; bool ok = true;
+            for (int j = k; j < k + 8; j++) { ok &= dry[j]; lo = Math.Min(lo, h[j]); hi = Math.Max(hi, h[j]); }
+            if (ok && hi - lo < .25 && lo > surface + 1.5) { count++; k += 8; } else k++;
+        }
+        return count;
     }
 
     /// <summary>D281: oxbow lakes in the worlds; their middle (on the arc, away from the opening) is still water at their level;

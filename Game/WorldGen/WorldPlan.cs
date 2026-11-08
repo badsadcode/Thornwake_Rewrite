@@ -47,6 +47,8 @@ public sealed class WorldPlan
     public Spits? Spits { get; }
     /// <summary>Oxbow lakes beside lowland rivers (revision 39, landform no. 12); null when off or older.</summary>
     public Oxbows? Oxbows { get; }
+    /// <summary>River terraces in broad valleys (revision 40, landform no. 12); null when off or older.</summary>
+    public Terraces? Terraces { get; }
     /// <summary>Settlement sites and the roads between them (docs/WORLDGEN_PLAN.md step 3): empty in revision 17.</summary>
     public IReadOnlyList<WorldSite> Sites { get; } = Array.Empty<WorldSite>();
     public IReadOnlyList<WorldRoad> Roads { get; } = Array.Empty<WorldRoad>();
@@ -191,6 +193,8 @@ public sealed class WorldPlan
             Spits = new Spits(this, Style.Landform(LandformCatalog.Spits.Id));
         if (Style.Revision >= LandformCatalog.Oxbows.Since && !Style.Landform(LandformCatalog.Oxbows.Id).Off)
             Oxbows = new Oxbows(this, Style.Landform(LandformCatalog.Oxbows.Id));
+        if (Style.Revision >= LandformCatalog.Terraces.Since && !Style.Landform(LandformCatalog.Terraces.Id).Off)
+            Terraces = new Terraces(this, Style.Landform(LandformCatalog.Terraces.Id));
         stage?.Invoke(3);
         Climate = new Climate(this, Style.Climate);
         stage?.Invoke(4);

@@ -96,10 +96,55 @@ public sealed partial class TerrainSampler
             }
             // Inside a channel, another river's raised bank never lifts the bed above this water.
             height = wetInside > 0 ? Math.Min(terrain + carve, level - _p.SeaLevel - .05) : terrain + carve + raise;
+            // Revision 40 (D282): river terraces cut into the valley sides of broad rivers (dry ground only).
+            if (_terraces != null && wetInside <= 0) height = Terraced(x, z, height, reaches[..count], wall);
         }
         else height = Math.Max(baseHeight + detail, floor); // generated land never dips below the sea
         return height;
     }
+
+    /// <summary>
+    /// River terraces (revision 40, D282): each broad river cuts its terraces into the ground beside it (the deepest cut wins),
+    /// measured from its bank top; not in gorges and estuaries, near lakes or near another river's banks (a tributary's banks
+    /// cut down under its water would stand it in a trench of water).
+    /// </summary>
+    private double Terraced(double x, double z, double height, ReadOnlySpan<RiverHit> reaches, double wall)
+    {
+        t_terraced = 0;
+        double lx = x - _ox, lz = z - _oz, result = height, lakeFade = -1; // (lakeFade: the lakes' and the land's slope's fade, once)
+        for (int i = 0; i < reaches.Length; i++)
+        {
+            var r = reaches[i];
+            double weight = _terraces!.Presence(lx, lz, r.Width);
+            if (weight <= 0) continue;
+            weight *= (1 - Estuary(r)) * (1 - Math.Max(_hydrology.Gorge(r.Reach, r.Along), wall));
+            for (int j = 0; j < reaches.Length && weight > 0; j++)
+                if (j != i) weight *= DetMath.Smooth((reaches[j].Distance - reaches[j].Width * .5 - Hydrology.Bank(reaches[j].Width) - 10) / 60);
+            if (weight <= 0) continue;
+            if (lakeFade < 0)
+            {
+                lakeFade = _hydrology.LakeDistance(x, z, out double lakeCells) >= 0 ? DetMath.Smooth((lakeCells - 2) / 1.5) : 1;
+                // Broad valleys only: where the land (the plan's smooth height) slopes over about 1 in 10 it is hillside.
+                // (from samples 300 m apart: the raster's own gradient jumps at its cell borders, and so did the terraces)
+                double gx = (_macro.Sample(WorldPlan.HeightChannel, x + 300, z) - _macro.Sample(WorldPlan.HeightChannel, x - 300, z)) / 600;
+                double gz = (_macro.Sample(WorldPlan.HeightChannel, x, z + 300) - _macro.Sample(WorldPlan.HeightChannel, x, z - 300)) / 600;
+                lakeFade *= 1 - DetMath.Smooth((Math.Sqrt(gx * gx + gz * gz) - .07) / .06);
+            }
+            weight *= lakeFade;
+            if (weight <= 0) continue;
+            double bankTop = r.Surface - _p.SeaLevel + .6 + .15 * r.Depth;
+            double w = r.Distance - r.Width * .5 - Hydrology.Bank(r.Width);
+            double cut = bankTop + _terraces.Step(height - bankTop, w, lx, lz, weight);
+            result = Math.Min(result, cut);
+            t_terraced = Math.Max(t_terraced, weight);
+        }
+        return result;
+    }
+
+    /// <summary>How much the last <see cref="Terraced"/> call on this thread had terraces (0 … 1): the wetland pools fade out
+    /// there (their shaping lifted dry ground beside them back over the cut: it jumped 4 m between neighbours; by the cut's
+    /// depth the pools came back inside the risers, where it changes fastest).</summary>
+    [ThreadStatic] private static double t_terraced;
 
     /// <summary>Stage 5, lakes: a lake fills every point below its surface within its reach; rivers through a lake are
     /// the lake there.</summary>

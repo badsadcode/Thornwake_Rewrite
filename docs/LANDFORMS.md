@@ -172,7 +172,8 @@ Then the fantasy landforms Tom picks (section at the end).
 * **Where**: oxbows on wide, meandering lowland rivers; terraces in broad valleys.
 * **Play**: fishing ponds, flat building ground above the floods.
 * **Build**: small lakes beside the meanders (uses the small-lake support of no. 4); terraces in the valley profile.
-* **Status**: terrain revision 39 (D281): oxbow lakes beside gentle lowland rivers. Terraces not yet.
+* **Status**: terrain revision 39 (D281): oxbow lakes beside gentle lowland rivers; revision 40 (D282): river terraces cut
+  into the sides of broad valleys.
 
 ### 13. Alluvial fans
 * **What**: gravel fans where a mountain stream spills onto a plain, its channel splitting.

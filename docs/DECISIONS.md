@@ -4459,6 +4459,28 @@ meets land before the water rework). `Game/WorldGen/Oxbows.cs`, placed in the pl
   the fingerprints' sample points miss every oxbow, so revision 39's read the same — the oxbow test is what guards them).
 * River terraces (the other half of no. 12) next, then alluvial fans.
 
+## D282 — River terraces, terrain revision 40 (2026-11-08)
+Landform no. 12, second half (Tom: "Yes, terraces"). `Game/WorldGen/Terraces.cs`, applied in the river stage
+(`TerrainSampler.Terraced`) after the valley profile, to dry ground only.
+* **What**: the old floodplains a river left as it cut down. Out from a broad river's bank: the floodplain widened, then one
+  to three level treads 15–70 m wide, each 3–7 m over the one below, on risers of about 1 in 2; behind the last a valley
+  wall of 1 in 2 up to the ground; all within ~180 m of the bank, fading out by 250 m (the river's reach). Each tread is level
+  at a fixed height over the river's bank top, so it follows the river's fall along its length.
+* **A cut**: it only lowers the ground (never over 10 m: into a steep hillside the tread follows the hill rather than leaving a
+  wall where the river's reach ends). The first model stepped the valley side's own height (flat where the slope was
+  squeezed into risers): on these 1-in-4 valley sides that left 8 m treads on near-vertical risers and fewer level benches
+  than before. The second stepped only the river profile's ramp, mostly 60–100 m wide: hardly any terraces.
+* **Where**: rivers over ~12 m wide (full from 24 m), in patches about 1.7 km across along them (both banks alike: the side
+  of the river flips inside tight bends, and a terrace keyed to it jumped 4 m), where the land slopes under about 1 in 10
+  (measured 300 m apart: the raster's own gradient jumps at its cell borders), not in gorges, canyons or estuaries, not
+  within ~2 lake cells of a lake, and fading out near another river's banks (a tributary's banks cut under its water would
+  leave it in a trench).
+* **Rivers win**: the channel, banks and every river level are as before (water samples unchanged in the test). The wetland
+  pools fade out where there are terraces: their shaping lifted dry ground beside them back over the cut.
+* Test `Landforms: river terraces` (4 worlds, 2400 broad valley sides): 869 stepped, more level benches than without (2451
+  vs 2136, natural flats included), 87 of 66901 2 m stretches over 42° that were not (the pools' edges), 0 river or lake
+  samples changed. *Terrain version → Oxbows (before river terraces; not in a build)* = revision 39 (`terrain-r39.json`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
