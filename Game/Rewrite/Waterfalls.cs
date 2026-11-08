@@ -84,7 +84,9 @@ public sealed class FallSet
             double px = x - f.LipX, pz = z - f.LipZ, along = px * f.Dx + pz * f.Dz, across = Math.Abs(px * f.Dz - pz * f.Dx);
             // (D290: 3 m past the river's sides and from 4 m above the lip: 20 m and 15 m cut a V-shaped notch in the water above)
             // (from 1.5 m above the lip: the curtain overlaps it from 3 m above, fading in — D291, a gap showed as a line)
-            if (along < -1.5 || along > f.Length + 12 || across > f.WidthAt(along) * .5 + Margin(f)) continue;
+            // (D296: well past the river's sides, by the level test below only the sheet's ramp: running on under the banks it
+            // hung over the V of a wide fall's gorge as a dark ribbed panel beside the falling water — Tom's dump 001431)
+            if (along < -1.5 || along > f.Length + 12 || across > f.WidthAt(along) * .5 + Math.Max(Margin(f) * 2.5, 15)) continue;
             // (any corner between the two levels: the dome over the lip sinks a little below the lip's level already)
             if (low < f.Top - .25 && high > f.Bottom + .25) return true;
         }
@@ -242,9 +244,12 @@ public sealed class WaterfallView
                     double own = Math.Max(free, ground);
                     // (only outside the river's own width: inside it bumps of the rock stood a metre over the centre's path and
                     // the fade cut holes in the falling water)
+                    // (D296: each column on its own path; where the rock rises well over the centre's path it fades out — inside
+                    // the river only past 2.5 m, bumps of the bed stay — instead of being held a metre over the centre's path,
+                    // which hung those columns straight down from the lip as a flat, stepped wall: Tom's dump 001431)
                     double outside = DetMath.Smooth((Math.Abs(off) - f.WidthAt(h) * .5 + 1) / 2);
-                    wall = DetMath.Smooth((own - centre - 1) / 2.5) * outside;
-                    y = Math.Max(own - (own - Math.Min(own, centre + 1)) * outside, bottom - .25);
+                    wall = DetMath.Smooth((own - centre - (1 + 1.5 * (1 - outside))) / 2.5);
+                    y = Math.Max(own, bottom - .25);
                     onRock = DetMath.Smooth((ground - free) / .5);
                 }
                 var p = new Vector3((float)(x - f.LipX), (float)y, (float)(z - f.LipZ));
@@ -269,11 +274,20 @@ public sealed class WaterfallView
         // Columns that end on the dry bank above the pool (the sides of a wide fall over a V-shaped gorge: every column has the
         // centre's rows, so a side column stopped part-way down the bank) fade out over the lower half of their way down instead
         // of ending in a hard line along the bank (D292, Tom's marked screenshot).
+        // (D296: each column's fade smoothed with its neighbours' — column by column it drew a staircase along the curtain's
+        // lower edge, seen from above the lip)
+        var colStrength = new double[cols];
+        for (int c = 0; c < cols; c++) colStrength[c] = DetMath.Smooth((vertices[(rows - 1) * cols + c].Y - bottom - .4) / 2.5);
+        for (int pass = 0; pass < 3; pass++)
+        {
+            var next = (double[])colStrength.Clone();
+            for (int c = 0; c < cols; c++) next[c] = (colStrength[Math.Max(0, c - 1)] + 2 * colStrength[c] + colStrength[Math.Min(cols - 1, c + 1)]) / 4;
+            colStrength = next;
+        }
         for (int c = 0; c < cols; c++)
         {
-            double high = vertices[(rows - 1) * cols + c].Y - bottom;
-            if (high < .4) continue;
-            double strength = DetMath.Smooth((high - .4) / 2.5);
+            double strength = colStrength[c];
+            if (strength < .01) continue;
             for (int r = 0; r < rows; r++)
             {
                 double t = (double)r / Math.Max(1, rows - 1);

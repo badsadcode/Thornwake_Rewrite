@@ -20,6 +20,10 @@ uniform float daylight = 1.0;          // sun/sky brightness
 // surface (brightest looking toward the sun: water scatters light mostly forward) and a dancing net on the bed.
 uniform int shaft_steps = 24;          // 0: off
 uniform float shaft_strength = 1.0;
+// D296 (Tom: the shafts "come from the side ... it doesn't make any sense"): 1 leans them toward the vertical (light from the
+// bright sky above as much as from the sun, scattered in murky water) and keeps them within a few depths of the camera in
+// shallow water, where long slanting streaks met at one point beside you; 0: build 139 (the sun's refracted direction, 70 m).
+uniform float shafts_from_above = 1.0;
 uniform vec3 sun_light = vec3(1.0);    // sun colour × energy
 global uniform vec3 sun_dir_world;
 global uniform float ocean_time;
@@ -69,6 +73,9 @@ float light_pattern(vec2 s, float d, float blur) {
 		float r1 = 1.0 - abs(2.0 * vnoise(q + vec2(t * 0.31, t * 0.19)) - 1.0);
 		float r2 = 1.0 - abs(2.0 * vnoise(q * 1.7 - vec2(t * 0.23, -t * 0.37)) - 1.0);
 		float ridge = pow(r1 * r2, 4.0);
+		// (D296: the long ridge lines lit thin vertical sheets of water, and sheets in a shallow layer seen in perspective all
+		// meet at one point straight ahead — the fan Tom saw; broken into short bright patches they read as columns of light)
+		ridge *= mix(1.0, smoothstep(0.3, 0.7, vnoise(q * 2.3 + 11.1)), shafts_from_above);
 		return 0.5 + ridge * 3.0 * mix(1.0, 0.4, smoothstep(2.0, 25.0, d)) / (1.0 + blur);
 	}
 	// Focusing with depth (thin-lens: the light from a curved patch converges ~1/(curvature·(1-1/1.33)) below it).
@@ -119,8 +126,9 @@ void fragment() {
 	if (shaft_steps > 0 && sun_up > 0.0) {
 		vec2 sun_flat = sun.xz / 1.33;                          // horizontal part shrinks by the refractive index
 		vec3 refr = normalize(vec3(sun_flat.x, sqrt(max(1.0 - dot(sun_flat, sun_flat), 0.05)), sun_flat.y)); // toward the sun, in water
+		refr = normalize(mix(refr, vec3(0.0, 1.0, 0.0), 0.6 * shafts_from_above));
 		vec3 cam = CAMERA_POSITION_WORLD;
-		float reach = min(dist, 70.0);
+		float reach = min(dist, mix(70.0, clamp(4.0 + surface_depth * 6.0, 8.0, 70.0), shafts_from_above));
 		// (white noise: the interleaved-gradient pattern drew a fine diagonal hatching through the shafts)
 		// (partial jitter: full white noise left heavy grain in a single frame; none at all drew bands)
 		float jitter = 0.2 + 0.6 * hash(FRAGCOORD.xy * 0.731 + fract(t * 7.13) * 91.7);
@@ -141,7 +149,11 @@ void fragment() {
 			vec3 atten = exp(-sigma * (st + d / refr.y));
 			shafts += atten * (light - 0.55) * step_len;       // the shafts: the focused light minus the even glow
 		}
-		c += max(shafts, vec3(0.0)) * density * phase * sun_light * sun_up * shaft_strength * 2.0;
+		// (fainter in shallow water: there the light mostly shows as the net on the bed and a bright surface, D296)
+		float shallow = mix(1.0, 0.6 + 0.4 * smoothstep(2.0, 8.0, surface_depth), shafts_from_above);
+		c += max(shafts, vec3(0.0)) * density * phase * sun_light * sun_up * shaft_strength * 2.0 * shallow;
+		// (the sunlit water's own glow, which the long shafts used to add: an even brightening, brighter looking up)
+		c += water_color * sun_light * sun_up * shaft_strength * shafts_from_above * 0.35 * (0.6 + 0.4 * max(ray.y, 0.0)) * (1.0 - exp(-density * reach));
 		// The bed: the same lenses draw a dancing net of light on it.
 		if (to_surface >= scene_dist) {
 			vec3 bed = cam + ray * dist;

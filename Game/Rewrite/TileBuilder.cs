@@ -580,6 +580,19 @@ public static class TileBuilder
                 float edge = wet[k] ? 1 : under[k] != int.MaxValue ? Math.Max(0, 1 - under[k] / 3f) : kind < .25 || (rivers != null && kind < .5) ? 0 : 1;
                 colors[k] = new Color((float)DetMath.Clamp((level - ground) / 20, 0, 1), (float)kind, (float)plume, edge);
             }
+        // A waterfall's face is left to the falling water (D285): the sheet ran straight from the lip to the pool. Its vertices
+        // there turn transparent (D296: whole squares cut away left a staircase along the lip, seen through the falling water's
+        // top — Tom's dump 001431); the sheet fades out across the last square, and squares wholly on the face are dropped.
+        var onFace = new bool[n * n];
+        if (falls != null)
+            for (int j = 0; j < n; j++)
+                for (int i = 0; i < n; i++)
+                {
+                    int k = j * n + i;
+                    if (!wet[k] && under[k] == int.MaxValue) continue;
+                    float y = vertices[k].Y;
+                    if (falls.OnFace(x0 + i * spacing, z0 + j * spacing, y, y)) { onFace[k] = true; colors[k].A = 0; }
+                }
         // Squares by part (sea, river, lake: D284), each the part of its corners' highest kind code (as banks take theirs).
         var indices = new List<int>[WaterMaterials.Parts];
         for (int p = 0; p < indices.Length; p++) indices[p] = new List<int>();
@@ -592,11 +605,10 @@ public static class TileBuilder
                 // A square touching dug ground below the water would stretch the sheet down into the hole (walls of
                 // water around a dug river bed); the local simulation draws the water there.
                 if (dug[a] || dug[b] || dug[c] || dug[d]) continue;
-                // A waterfall's face is left to the falling water (D285): the sheet ran straight from the lip to the pool.
-                float code = -1, low = float.MaxValue, high = float.MinValue;
+                if (onFace[a] && onFace[b] && onFace[c] && onFace[d]) continue;
+                float code = -1;
                 foreach (int k in new[] { a, b, c, d })
-                    if (Covered(k)) { code = Math.Max(code, colors[k].G); low = Math.Min(low, vertices[k].Y); high = Math.Max(high, vertices[k].Y); }
-                if (falls != null && falls.OnFace(x0 + (i + .5) * spacing, z0 + (j + .5) * spacing, low, high)) continue;
+                    if (Covered(k)) code = Math.Max(code, colors[k].G);
                 var part = indices[WaterMaterials.PartOf(code)];
                 part.Add(a); part.Add(b); part.Add(c);
                 part.Add(b); part.Add(d); part.Add(c);
@@ -747,7 +759,22 @@ public static class TileBuilder
         int p0 = Math.Max(0, k - 1), p1 = Math.Min(n - 1, k + 1);
         double ex = r.Points[p1].X - r.Points[p0].X, ez = r.Points[p1].Z - r.Points[p0].Z, el = Math.Sqrt(ex * ex + ez * ez);
         if (el < 1e-6) return false;
-        tx = ex / el; tz = ez / el; grade = grades[k]; depth = r.Depth[k];
+        tx = ex / el; tz = ez / el;
+        // Between the nearest point and the next one along the river (D296: the nearest point's values alone jumped at the
+        // halfway line between two points — straight edges across the white water below a fall, Tom's dump 001445).
+        int q = k;
+        {
+            int kb = Math.Min(n - 1, k + 1), ka = Math.Max(0, k - 1);
+            double Proj(int a0, int b0)
+            {
+                double sx = r.Points[b0].X - r.Points[a0].X, sz = r.Points[b0].Z - r.Points[a0].Z, l2 = sx * sx + sz * sz;
+                return l2 < 1e-9 ? 0 : ((x - r.Points[a0].X) * sx + (z - r.Points[a0].Z) * sz) / l2;
+            }
+            double ahead = kb > k ? Proj(k, kb) : -1;
+            if (ahead > 0) { double t = Math.Min(1, ahead); grade = grades[k] + (grades[kb] - grades[k]) * t; depth = r.Depth[k] + (r.Depth[kb] - r.Depth[k]) * t; }
+            else if (ka < k) { double t = Math.Clamp(Proj(ka, k), 0, 1); grade = grades[ka] + (grades[k] - grades[ka]) * t; depth = r.Depth[ka] + (r.Depth[k] - r.Depth[ka]) * t; }
+            else { grade = grades[k]; depth = r.Depth[k]; }
+        }
         return true;
     }
 

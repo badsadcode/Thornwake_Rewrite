@@ -4694,6 +4694,30 @@ Imported with mipmaps (`Assets/Water/*.import`).
   and inner detail from Tom's sprites, a little of the drawn churn on top: soft clouds at a fall's foot, a rising plume of
   mist over the pool (new, for falls over 8 m), fine droplets off the falling water and round river stones; lit as before.
 
+## D296 — Tom's build 139 notes: the fall's top, the white water's end, underwater shafts (2026-11-09)
+Tom: "This looks good. The river looks really good. Few tweaks needed", dumps 001431, 001445, 001521.
+* **The fall's top** (001431): (1) the river's sheet ran on past the river's sides under the banks and hung over the V of
+  the wide fall's gorge as a dark ribbed panel — the cut now reaches 2.5 × the margin (at least 15 m) past the river's
+  sides, still only between the pool's and the lip's level; (2) whole squares cut away left a staircase along the lip,
+  seen through the falling water's top — now the sheet's vertices on the face turn transparent and it fades across the
+  last square; (3) columns near the sides held to a metre over the centre's path hung straight down from the lip as a flat,
+  stepped wall — now each column keeps its own path and fades where the rock rises well over the water (inside the river
+  only past 2.5 m); (4) the fade of columns ending on the dry bank is smoothed with their neighbours' (it drew a staircase
+  along the curtain's lower edge).
+* **The white water's end** (001445: "shouldn't end so abruptly. Should be more random"): the river's speed took the fall
+  of the nearest river point, so it jumped at the halfway line between two points — straight edges across the white water.
+  Now blended between the two points along the river; and the speed the white water sees is varied by slow drifting noise
+  (±22 %), so where a fast stretch eases it ends in tongues and islands carried downstream.
+* **Underwater shafts** (001521: "They come from the side ... it doesn't make any sense"): the shafts come from the bright
+  lines of the caustic pattern; each line lights a thin vertical sheet of water, and sheets in a shallow layer seen in
+  perspective all meet at one point straight ahead — a fan at eye level, whatever the light's direction. Now (setting
+  *Underwater light → full*; *full (build 139)* keeps the old): the lines broken into short bright patches (columns of light),
+  the light leaning 60 % toward the vertical (scattered skylight as much as the low sun), reaching ~4 m + 6 × the depth
+  instead of 70 m, fainter in shallow water (from 60 %), with an even sunlit glow in the water so it stays as bright.
+* Next noted (Tom: "where the waterfall drops on top.. there is no river bed.. the sides.. terrain is smooth there.. water
+  would spill"): at a fall's lip the land beside the river lies at the water's level — banks or a rock sill are needed (a
+  terrain change: a new revision).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

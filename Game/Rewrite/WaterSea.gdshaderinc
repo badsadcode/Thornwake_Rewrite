@@ -1164,9 +1164,12 @@ void fragment() {
 		// Whitewater where the current is fast, more so over shallow beds (rocks, riffles).
 #ifdef RIVER2
 		// (D293: from 1.2 m/s, full at 2.6: a 7 % mountain stream reads as rapids, not a pond with stones)
-		float rapids = smoothstep(1.2, 2.6, fs) * (0.65 + 0.35 * (1.0 - smoothstep(0.3, 1.5, vertex_depth)));
+		// (the speed seen through drifting noise, D296: where a fast stretch eases the white water ends in tongues and islands
+		// carried downstream, not along a line — Tom: "shouldn't end so abruptly. Should be more random")
+		float fs_r = fs * (0.78 + 0.44 * flow_noise(p * 0.045 + 3.3, current * 0.06, TIME, 9.0));
+		float rapids = smoothstep(1.2, 2.6, fs_r) * (0.65 + 0.35 * (1.0 - smoothstep(0.3, 1.5, vertex_depth)));
 		// Churned water is milky: air through it hides the bed (rapids were glass-clear), more where it is fastest.
-		float churned = smoothstep(1.1, 2.4, fs) * (0.55 + 0.45 * flow_noise(p * 0.35, current * 0.6, TIME, 3.0));
+		float churned = smoothstep(1.1, 2.4, fs_r) * (0.55 + 0.45 * flow_noise(p * 0.35, current * 0.6, TIME, 3.0));
 		rv_churned = churned;
 #else
 		float rapids = smoothstep(1.0, 2.8, fs) * (0.6 + 0.4 * (1.0 - smoothstep(0.3, 1.5, vertex_depth)));

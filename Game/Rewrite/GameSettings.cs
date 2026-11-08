@@ -223,10 +223,11 @@ public static class GameSettings
         "Screen-space reflections of the landscape on water (sky only when off).", options: new[] { "sky only", "medium", "high" }));
     public static readonly Setting Ssr = Add(new("fx.ssr", "Lighting and effects", "Screen-space reflections (other surfaces)", 0, 1, 1, 0,
         "Godot's SSR for shiny opaque surfaces (rocks, wet ground). Mostly subtle."));
-    public static readonly Setting UnderwaterLight = Add(new("fx.underwater_light", "Lighting and effects", "Underwater light", 0, 2, 1, 2,
-        "Light shafts fanning down from the moving surface and the dancing net of light on the bed when you dive. " +
-        "Simple: half the samples (older PCs). Off: the plain underwater view of build 30.",
-        options: new[] { "off", "simple", "full" }));
+    public static readonly Setting UnderwaterLight = Add(new("fx.underwater_light", "Lighting and effects", "Underwater light", 0, 3, 1, 2,
+        "Light shafts falling from the moving surface and the dancing net of light on the bed when you dive: from above, " +
+        "near you in shallow water. Simple: half the samples (older PCs). Full (build 139): the shafts slanting along the " +
+        "sun's refracted direction out to 70 m (they fanned out sideways in shallow rivers). Off: the plain view of build 30.",
+        options: new[] { "off", "simple", "full", "full (build 139)" }));
     public static readonly Setting Look = Add(new("fx.look", "Lighting and effects", "Look", 0, 1, 1, 1,
         "Natural: stronger colour and contrast (ACES tone mapping), deeper shade, glow only on real highlights (no " +
         "spilling light), less grey haze. Classic: the look of build 29.",
