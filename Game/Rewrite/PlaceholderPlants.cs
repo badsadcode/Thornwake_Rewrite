@@ -64,13 +64,20 @@ public static class PlaceholderPlants
 
     private static readonly Dictionary<int, Mesh> Drapes = new();
 
-    /// <summary>Cliff dressing card (kind 0 hanging grass, 1 roots): hangs from local origin (the lip) down the face;
-    /// local +Z points out from the cliff, 1 unit = 1 m (instances scale it).</summary>
+    /// <summary>Cliff dressing (kind 0 hanging grass, 1 roots, 3 hanging moss: cards hanging from local origin (the lip) down
+    /// the face; 2 a small bush clinging to a ledge, sitting on the origin); local +Z points out from the cliff, 1 unit =
+    /// 1 m (instances scale it). Kinds 2 and 3 for the tall cliffs' rocks (D273).</summary>
     public static Mesh Drape(int kind)
     {
         if (Drapes.TryGetValue(kind, out var mesh)) return mesh;
         var b = new Builder(1);
-        b.Drape(kind == 0 ? "T_Drape_Grass_64" : "T_Roots_64", kind == 0, kind == 0 ? .06f : .015f);
+        if (kind == 2)
+        {
+            b.Blob("T_Bog_Leaves_64", new Vector3(0, .32f, .1f), new Vector3(.75f, .4f, .6f), 911, .04f);
+            b.Blob("T_Bog_Leaves_64", new Vector3(.45f, .22f, .3f), new Vector3(.45f, .3f, .4f), 912, .04f);
+            b.Blob("T_Bog_Leaves_64", new Vector3(-.4f, .2f, .25f), new Vector3(.4f, .28f, .38f), 913, .04f);
+        }
+        else b.Drape(kind == 0 ? "T_Drape_Grass_64" : kind == 3 ? "T_Moss_32" : "T_Roots_64", kind != 1, kind == 1 ? .015f : .05f);
         return Drapes[kind] = b.Commit();
     }
 

@@ -229,7 +229,9 @@ public static partial class GroundCover
     }
 
     /// <summary>Stones (level 0), rocks (levels 0–1), boulders and outcrop clusters (levels 0–2).</summary>
-    public static List<RockInstance> Rocks(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1, ObjectRemovals? removals = null)
+    /// <param name="plants">Level 0: cards and small bushes on the tall cliffs' rocks go here (the tile's cliff dressing, D273).</param>
+    public static List<RockInstance> Rocks(TileKey key, in Grid grid, double sea, ulong seed, double amount = 1, ObjectRemovals? removals = null,
+        List<RockInstance>? plants = null)
     {
         float a = (float)amount;
         float a0() => Math.Min(1, a);
@@ -350,7 +352,11 @@ public static partial class GroundCover
                     var at = new Vector3((float)x + along.X * (Unit(hh, 6) - .5f) * 4, y, (float)z + along.Z * (Unit(hh, 6) - .5f) * 4) + outward * (across - thick * .05f);
                     var tilt = new Basis(along, (Unit(hh, 7) - .5f) * .35f) * new Basis(outward, (Unit(hh, 8) - .5f) * .3f) * new Basis(Vector3.Up, (Unit(hh, 9) - .5f) * .5f);
                     var basis = tilt * new Basis(along * wide, Vector3.Up * tall, outward * thick);
-                    result.Add(new RockInstance(CliffRock + (key.Level == 0 ? 0 : 3) + (int)(Unit(hh, 10) * 2.999f), new Transform3D(basis, at), g.RockTint(x, z)));
+                    var tint = g.RockTint(x, z);
+                    float shade = .82f + .36f * Unit(hh, 12), warm = (Unit(hh, 13) - .5f) * .12f; // (each its own: all one tint was bland)
+                    tint = new Color(tint.R * shade * (1 + warm), tint.G * shade, tint.B * shade * (1 - warm), tint.A);
+                    result.Add(new RockInstance(CliffRock + (key.Level == 0 ? 0 : 3) + (int)(Unit(hh, 10) * 2.999f), new Transform3D(basis, at), tint));
+                    if (plants != null) Greenery(plants, g, x, z, hh, at, along, outward, wide, tall, thick);
                 }
                 if (Unit(h, 9) < .35f)
                 {
@@ -412,6 +418,45 @@ public static partial class GroundCover
                 }
             });
         return result;
+    }
+
+    /// <summary>
+    /// A little green on a tall cliff's rock (D273, Tom: "small plants, small bushes, maybe some roots sticking out of the
+    /// rock ... flat planes with a texture"): a small bush on its top ledge, grass or moss hanging over its front edge,
+    /// roots out of the face beside it — as many as the place grows plants (the biome's plant cover; roots more where it
+    /// is wooded), none under the spray. Cards from the cliff dressing (PlaceholderPlants.Drape).
+    /// </summary>
+    private static void Greenery(List<RockInstance> plants, in Grid g, double x, double z, ulong h, Vector3 at, Vector3 along, Vector3 outward,
+        float wide, float tall, float thick)
+    {
+        float cover = Math.Min(1, g.Plants(x, z) * 1.2f + .15f);
+        g.At(x, z, out _, out _, out float forest, out _);
+        if (at.Y + tall * .45f < 4) return;
+        var right = along;
+        // A bush on the top ledge, set back from its front edge.
+        if (Unit(h, 20) < .55f * cover)
+        {
+            float s = 1.1f + 1.6f * Unit(h, 21);
+            var top = at + Vector3.Up * tall * .43f + outward * thick * (.05f + .2f * Unit(h, 22)) + along * (Unit(h, 23) - .5f) * wide * .5f;
+            plants.Add(new RockInstance(2, new Transform3D(new Basis(Vector3.Up, Unit(h, 24) * Mathf.Tau).Scaled(new Vector3(s, s * (.7f + .5f * Unit(h, 25)), s)), top)));
+        }
+        // Grass or moss hanging over its front edge.
+        int hangs = (int)(Unit(h, 26) * 3 * cover);
+        for (int i = 0; i < hangs; i++)
+        {
+            ulong k = Hashing.Mix(h + (ulong)(i + 7) * 0x51A7UL);
+            float length = 1.2f + 2.2f * Unit(k, 1), width = 1.2f + 1.4f * Unit(k, 2);
+            var lip = at + Vector3.Up * tall * (.32f + .12f * Unit(k, 3)) + outward * thick * .42f + along * (Unit(k, 4) - .5f) * wide * .7f;
+            var basis = new Basis(right * width, Vector3.Up * length, outward * (.9f + .4f * Unit(k, 5)));
+            plants.Add(new RockInstance(Unit(k, 6) < .5f ? 3 : 0, new Transform3D(basis, lip)));
+        }
+        // Roots out of the face beside it, more where it is wooded.
+        if (Unit(h, 27) < (.15f + .5f * forest) * cover)
+        {
+            float length = 1.5f + 2.5f * Unit(h, 28), width = 1 + 1.2f * Unit(h, 29);
+            var spot = at + along * (wide * (.45f + .2f * Unit(h, 30)) * (Unit(h, 31) < .5f ? -1 : 1)) + Vector3.Up * tall * (Unit(h, 32) - .3f) * .5f;
+            plants.Add(new RockInstance(1, new Transform3D(new Basis(right * width, Vector3.Up * length, outward), spot)));
+        }
     }
 
     /// <summary>

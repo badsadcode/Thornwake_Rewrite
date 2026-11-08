@@ -350,7 +350,8 @@ public static class TileBuilder
         if (key.Level == 0 && config.Grass > 0 && !populations) data.Grass = GroundCover.Grass(key, grid, sea, coverSeed, config.Grass);
         if (key.Level == 0 && config.Grass > 0 && !populations) data.Reeds = GroundCover.Reeds(key, grid, sea, coverSeed, config.Grass);
         if (key.Level == 0 && config.Props > 0) data.Drapes = GroundCover.CliffDressing(key, grid, sea, coverSeed);
-        if (key.Level <= 2 && config.Rocks > 0) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed, config.Rocks, sampler.Removals);
+        if (key.Level <= 2 && config.Rocks > 0) data.Rocks = GroundCover.Rocks(key, grid, sea, coverSeed, config.Rocks, sampler.Removals,
+            key.Level == 0 && config.Props > 0 ? data.Drapes : null);
         if (data.Water is { } riverWater && data.WaterShore is { } shore && data.Rocks is { Count: > 0 } rocks)
             ObstacleWakes(riverWater.Vertices, riverWater.Colors, riverWater.Flow, shore, rocks);
         if (key.Level <= 1 && config.Props > 0) data.Props = GroundCover.Props(key, grid, sea, coverSeed, config.Props, sampler.Removals);

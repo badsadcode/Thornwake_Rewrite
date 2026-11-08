@@ -26,8 +26,9 @@ public static class RockMeshes
         _meshes = null; _material = null; _big = null;
     }
 
-    /// <summary>The rocks' material for rocks tens of metres tall (sea stacks and arches, D268): the texture every 19 m and,
-    /// turned, every 5.9 m (repeating every 4 m it drew rows of little triangles over them, like knitting).</summary>
+    /// <summary>The rocks' material for rocks tens of metres tall (sea stacks and arches, D268; cliff rocks, D272): the texture
+    /// every 19 m and, turned, every 5.9 m (repeating every 4 m it drew rows of little triangles over them, like knitting);
+    /// Tom's cliff rock on their sides every 14 m (D273).</summary>
     public static ShaderMaterial BigMaterial
     {
         get
@@ -36,6 +37,16 @@ public static class RockMeshes
             _big = CreateMaterial();
             _big.SetShaderParameter("tile", 19f);
             _big.SetShaderParameter("second_tile", 5.9f);
+            // Tom's cliff rocks on their sides (D273), made seamless (a half-shifted copy blended over their edges): per rock
+            // look of the biome (layered, granite, basalt, sandstone, mossy, icy) a first and a second.
+            _big.SetShaderParameter("cliff_tex", CliffTextures());
+            _big.SetShaderParameter("cliff_tile", 14f);
+            // (sandstone country's first is the pale granite, the sandstone second: all sandstone drew hot orange-red cliffs
+            // over the whole savanna)
+            _big.SetShaderParameter("cliff_first", new[] { 0, 3, 2, 3, 4, 1 });
+            _big.SetShaderParameter("cliff_second", new[] { 1, 1, 4, 5, 0, 2 });
+            _big.SetShaderParameter("cliff_means", new[] { .275f, .427f, .395f, .514f, .269f, .468f });
+            _big.SetShaderParameter("big_look", 1f);
             return _big;
         }
     }
@@ -63,6 +74,18 @@ public static class RockMeshes
     {
         kind = Math.Clamp(kind, 0, Kinds.Length - 1);
         lock (Hulls) return Hulls[kind] ??= Shape(Kinds[kind], out _, out _).ToArray();
+    }
+
+    /// <summary>Tom's six cliff textures (512², made seamless, D273), as one array: his cliff rock, alpine rock, blue-grey
+    /// slate, grey granite, mossy stone, warm sandstone.</summary>
+    private static Texture2DArray CliffTextures()
+    {
+        var images = new Godot.Collections.Array<Image>();
+        foreach (var name in new[] { "rock_tom", "alpine_rock", "blue_gray_slate", "granite_gray", "mossy_stone", "warm_sandstone" })
+            images.Add(GD.Load<Texture2D>($"res://Assets/Terrain/Cliff/cliff_{name}_tiled.png").GetImage());
+        var array = new Texture2DArray();
+        array.CreateFromImages(images);
+        return array;
     }
 
     private static ArrayMesh Block(ulong seed, float cell = 2.2f)

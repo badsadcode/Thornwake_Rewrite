@@ -4288,6 +4288,24 @@ every steep face first (rock walls built per cliff later).
 * Return point: build 133 (`7290b59`). Next asked by Tom: his `CliffRock_Texture.png` on them (512², pixel art, lit from
   above: for the sides; not seamless as it is).
 
+## D273 — Tom's cliff textures, rock colour, green on the cliffs (2026-11-08)
+Tom on D272's cliff rocks: "they look awesome", then "small plants, small bushes, maybe some roots sticking out of the
+rock ... flat planes with a texture", "the rocks are too dark, too brown ... break the blandness", and his own textures:
+`CliffRock_Texture.png` and five more in `ArtKit/Textures` ("homemade").
+* **His textures** in `Assets/Terrain/Cliff/*_tiled.png` (512²): the five ArtKit ones were 1024² with every pixel doubled
+  and a 3-pixel frame, so halved and the frame cut; all six made seamless (a half-shifted copy blended over their edges:
+  his seams were 10–17 grey levels). On the sides of big rocks only (sea stacks, arches, cliff rocks: their light comes
+  from above), every 14 m, as one texture array; each of the biome's six rock looks has a first and a second texture, and
+  each rock takes one by a slow noise over where it stands, so whole stretches share one. Sandstone country (desert,
+  badlands, savanna) has the pale granite first and the sandstone second: all sandstone drew hot orange-red cliffs over the
+  whole savanna. Their colour at 45 % (at full, the sandstone burned).
+* **Less brown, less bland**: on big rocks 85 % of the biome's tint taken out (the textures bring the colour), each cliff rock
+  its own shade (±18 %) and warmth, pale lichen in patches (now and then orange), dark streaks where water runs down.
+* **Green on the cliffs** (level 0, with the cliff dressing; flat cards and the bog shrub's leaves): a small bush on a cliff
+  rock's top ledge, grass or moss hanging over its front edge, roots out of the face beside it (more where it is wooded); as
+  much as the place grows plants, none under the spray.
+* Cost: 60 FPS at 1920×1080 at Tom's headland, the gorge, the stacks (the cap). Return point: build 133 (`7290b59`).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
