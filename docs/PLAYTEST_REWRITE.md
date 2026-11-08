@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 136 — ambient occlusion in sunlight, shadow distance, natural rock formations
+**Host and everyone joining need build 136** (versions must match to connect). Same terrain as build 135.
+* **Ambient occlusion now works in sunlight** (you saw it only in shadow, and right: a Godot setting left at 0 kept it off the
+  sun's light). Rocks and objects get a soft dark foot where they meet the ground, creases go darker. Your saved setting now
+  points at the strong one. *Ambient occlusion → on (build 134)* is the old one.
+* **Shadow distance** (new, *Lighting and effects*): shadows now reach 1.2 km (up to 2 km), close shadows as sharp as before.
+  *By quality (build 135)* is the old 450 m. Distant tree cards still cast none.
+* **Rock formations less regular and stable**: pieces lean and taper their own way, upper blocks rest on the ones below,
+  none on steep slopes. *Rock formations → boulders (build 134)* if you prefer the old ones.
+* Try *Go to - all 16 rock formations, test grid* and *Go to - needle rocks*.
+
 ## New in build 135 — the rock kit, solid rocks, ambient occlusion
 **Host and everyone joining need build 135** (versions must match to connect). Same terrain as build 134.
 * **The rock kit** (after your references): rock formations built of chunky pieces with crisp flat faces and bevelled
