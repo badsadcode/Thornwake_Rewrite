@@ -441,7 +441,7 @@ public partial class WorldLab : Node3D
         _streamer.Configure(_sampler, _originX, _originZ);
         if (_horizon == null) { _horizon = new HorizonLand(); AddChild(_horizon); }
         _horizon.Configure(_sampler);
-        _water.Configure(_sampler, _streamer.WaterMaterial, _originX, _originZ);
+        _water.Configure(_sampler, _streamer.WaterMaterial.RiverMaterial, _originX, _originZ); // (drawn as river: D284)
         _rain = _shotRain && _shotPath == null; // a dump's Reproduce line carries --rain (H); shots start it later
         Teleport(start.X, start.Z);
         // Playing from a dump's Reproduce line (or a "Go to" launcher, D155): start at its place and view, not the world's

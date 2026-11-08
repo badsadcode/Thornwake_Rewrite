@@ -269,7 +269,7 @@ public partial class Atmosphere : Node3D
     /// <summary>Wind wisps and biome motes around the camera (D190).</summary>
     public AmbientLife? Life { get; private set; }
     private float _wetness, _puddles; // cosmetic rain wetness of the ground and puddles (0..1)
-    private ShaderMaterial? _water;
+    private WaterMaterials? _water;
     private ImageTexture? _foamNet;
     /// <summary>The GPU FFT sea of the "experimental 3" water (null with other styles, or without compute shaders).</summary>
     public OceanFft? Ocean { get; private set; }
@@ -510,7 +510,7 @@ public partial class Atmosphere : Node3D
     }
 
     /// <summary>The terrain water material: reflection quality follows the settings.</summary>
-    public void SetWater(ShaderMaterial water) { _water = water; _wavesState = -1; ShareClouds(); ApplyAll(); }
+    public void SetWater(WaterMaterials water) { _water = water; _wavesState = -1; ShareClouds(); ApplyAll(); }
 
     /// <summary>The water reflects the sky's own clouds (experimental 2): same texture, period and heights.</summary>
     /// <summary>A sky material parameter, mirrored to the clouds drawn in front of the scene (cloud renderer v2).</summary>

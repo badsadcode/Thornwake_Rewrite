@@ -135,7 +135,8 @@ public partial class WorldStreamer : Node3D
     private readonly Dictionary<TileKey, (Task<TileData> Task, long Revision)> _jobs = new();
     private readonly HashSet<TileKey> _failed = new();
     private readonly int _maxJobs = Background.TileJobs;
-    private ShaderMaterial _terrain = null!, _water = null!, _farTree = null!;
+    private ShaderMaterial _terrain = null!, _farTree = null!;
+    private WaterMaterials _water = null!;
     private readonly ShaderMaterial _lava = new() { Shader = LavaShader() };
     private Mesh _grass = null!, _card = null!;
     private TreeCatalog _trees = null!;
@@ -162,12 +163,12 @@ public partial class WorldStreamer : Node3D
         _terrain.SetShaderParameter("ground_parallax", GameSettings.GroundParallax.F);
         _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
         _terrain.SetShaderParameter("flora_tint", GameSettings.GrassStyle.Index == 1 ? 1f : 0f);
-        _water = new ShaderMaterial { Shader = WaterShader() };
-        // Water style (classic / experimental): one material, the shader swapped in place, so every uniform the
-        // atmosphere sets (waves, sun, reflections) carries over and existing tiles switch at once.
+        _water = new WaterMaterials(WaterShader());
+        // Water style (classic / experimental): a material per kind of water (D284), the shader swapped in place, so every
+        // uniform the atmosphere sets (waves, sun, reflections) carries over and existing tiles switch at once.
         GameSettings.Changed += s =>
         {
-            if (s == GameSettings.WaterStyle) _water.Shader = WaterShader();
+            if (s == GameSettings.WaterStyle) for (int p = 0; p < WaterMaterials.Parts; p++) _water.SetShader(p, WaterShader());
             if (s == GameSettings.Lava) _lava.Shader = LavaShader();
             if (s == GameSettings.GroundTextures) _terrain.SetShaderParameter("ground_style", GameSettings.GroundTextures.Index);
             if (s == GameSettings.GroundVariety) _terrain.SetShaderParameter("ground_variety", GameSettings.GroundVariety.F);
@@ -198,7 +199,7 @@ public partial class WorldStreamer : Node3D
         _card = card;
     }
 
-    public ShaderMaterial WaterMaterial => _water;
+    public WaterMaterials WaterMaterial => _water;
 
     /// <summary>The lava sheet's look (setting Lava): the veined lava (D260; "glowing", so a saved "glowing" gets it), or
     /// build 125's, Lava.gdshader.</summary>
@@ -429,17 +430,24 @@ public partial class WorldStreamer : Node3D
                 CastShadow = key.Level <= (GameSettings.AirRays.Index > 0 ? 3 : 1) ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
             });
         }
-        if (data.Water is { } water && water.Indices.Length > 0)
+        if (data.Water is { } water && water.Indices.Length > 0 && data.WaterArrays is { } parts)
         {
-            using var arrays = data.WaterArrays!;
+            // A surface per part (sea, river, lake: D284), each with its kind's material.
             var mesh = new ArrayMesh();
-            if (data.WaterShore is { } shore && shore.Length == water.Vertices.Length * 4)
+            bool shore = data.WaterShore is { } s && s.Length == water.Vertices.Length * 4;
+            for (int p = 0; p < parts.Length; p++)
             {
-                mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays, null, null,
-                    (Mesh.ArrayFormat)((long)Mesh.ArrayCustomFormat.RgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift));
+                if (parts[p] is not { } arrays) continue;
+                using (arrays)
+                {
+                    if (shore)
+                        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays, null, null,
+                            (Mesh.ArrayFormat)((long)Mesh.ArrayCustomFormat.RgbaFloat << (int)Mesh.ArrayFormat.FormatCustom0Shift));
+                    else mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+                }
+                mesh.SurfaceSetMaterial(mesh.GetSurfaceCount() - 1, _water[p]);
             }
-            else mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
-            root.AddChild(new MeshInstance3D { Mesh = mesh, MaterialOverride = _water, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+            root.AddChild(new MeshInstance3D { Mesh = mesh, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         }
         if (data.Lava is { } lavaSheet && lavaSheet.Indices.Length > 0 && data.LavaArrays is { } lavaArrays)
         {

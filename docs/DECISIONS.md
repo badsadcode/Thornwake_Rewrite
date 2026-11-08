@@ -4502,6 +4502,18 @@ Landform no. 13 (Tom: "Alluvial fans"), the last of the landforms where water me
 * Tom, asked whether to make them easier to recognise (a clearer cone with an edge, paler stonier gravel, fewer trees):
   "Leave them subtle". The look stays as built.
 
+## D284 — Water rework: the plan, and the split first (2026-11-08)
+Tom: "Start water rework". Plan in `docs/WATER_REWORK_PLAN.md`. Tom's answers: realistic motion matters most ("The water is
+important. The realistic motion is important. Shaders are very important."), torn on colour between fully realistic and
+simpler, so colour treatments are shown side by side for him to pick, both kept; each new look starts from Experimental 4,
+the style he plays; rivers and waterfalls first.
+* **Step 1, the split** (no visible change): each tile's water mesh has three parts (sea, river, lake with ponds), each with
+  its own material (`WaterMaterials`); all three draw with today's *Water style* until a kind gets its own look. A square
+  where kinds meet goes to the part of the highest kind code among its corners (the rule the bank vertices already follow).
+  The atmosphere's and wakes' uniforms go to all three; the local water simulation draws with the river's.
+* Checked on four views with Experimental 4 (lagoon, waterfall, lake, meander), before and after: the lake identical to the
+  pixel; the others differ only as much as two runs of the same code do (the moving sea, floating seeds).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

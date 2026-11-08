@@ -69,15 +69,18 @@ public sealed class TileData
     public required float[] Biome1 { get; init; }
     public required float[] Biome2 { get; init; }
     public required float[] Biome3 { get; init; }
-    /// <summary>Water surface mesh (null when the tile is dry).</summary>
+    /// <summary>Water surface mesh (null when the tile is dry). Its indices run part by part (sea, river, lake: D284),
+    /// <see cref="WaterParts"/> the number of indices in each.</summary>
     public (Vector3[] Vertices, Color[] Colors, Vector2[] Flow, int[] Indices)? Water { get; set; }
+    public int[] WaterParts { get; set; } = new int[WaterMaterials.Parts];
     /// <summary>
     /// The terrain and water surfaces as Godot arrays, filled on the builder thread (round 30d: converting ~4,500
     /// vertices × 10 arrays on the main thread was half of a tile's mesh commit). Null until <see cref="PrepareSurfaces"/>.
     /// The committer takes ownership and disposes them.
     /// </summary>
     public Godot.Collections.Array? TerrainArrays { get; set; }
-    public Godot.Collections.Array? WaterArrays { get; set; }
+    /// <summary>The water's parts (sea, river, lake: D284), null where a part is empty; they share the vertex arrays.</summary>
+    public Godot.Collections.Array?[]? WaterArrays { get; set; }
     /// <summary>Lava surface mesh (D257; null where there is none): a sheet lying on the ground over an active volcano's
     /// lava, like the water's. COLOR = (molten, crust, cover, 1), UV = which way it moves (its length the speed).</summary>
     public (Vector3[] Vertices, Color[] Colors, Vector2[] Flow, Vector3[] Normals, int[] Indices)? Lava { get; set; }
@@ -110,9 +113,17 @@ public sealed class TileData
             var up = new Vector3[water.Vertices.Length];
             Array.Fill(up, Vector3.Up);
             w[(int)Mesh.ArrayType.Normal] = up;
-            w[(int)Mesh.ArrayType.Index] = water.Indices;
             if (WaterShore is { } shore && shore.Length == water.Vertices.Length * 4) w[(int)Mesh.ArrayType.Custom0] = shore;
-            WaterArrays = w;
+            var parts = new Godot.Collections.Array?[WaterMaterials.Parts];
+            for (int p = 0, start = 0; p < parts.Length; start += WaterParts[p], p++)
+            {
+                if (WaterParts[p] == 0) continue;
+                var part = w.Duplicate(); // (shallow: the same vertex arrays, this part's own indices)
+                part[(int)Mesh.ArrayType.Index] = water.Indices[start..(start + WaterParts[p])];
+                parts[p] = part;
+            }
+            w.Dispose();
+            WaterArrays = parts;
         }
         if (Lava is { } lava && lava.Indices.Length > 0)
         {
@@ -548,7 +559,9 @@ public static class TileBuilder
                 float edge = wet[k] ? 1 : under[k] != int.MaxValue ? Math.Max(0, 1 - under[k] / 3f) : kind < .25 ? 0 : 1;
                 colors[k] = new Color((float)DetMath.Clamp((level - ground) / 20, 0, 1), (float)kind, (float)plume, edge);
             }
-        var indices = new List<int>();
+        // Squares by part (sea, river, lake: D284), each the part of its corners' highest kind code (as banks take theirs).
+        var indices = new List<int>[WaterMaterials.Parts];
+        for (int p = 0; p < indices.Length; p++) indices[p] = new List<int>();
         bool Covered(int k) => wet[k] || under[k] != int.MaxValue;
         for (int j = 0; j < n - 1; j++)
             for (int i = 0; i < n - 1; i++)
@@ -558,10 +571,15 @@ public static class TileBuilder
                 // A square touching dug ground below the water would stretch the sheet down into the hole (walls of
                 // water around a dug river bed); the local simulation draws the water there.
                 if (dug[a] || dug[b] || dug[c] || dug[d]) continue;
-                indices.Add(a); indices.Add(b); indices.Add(c);
-                indices.Add(b); indices.Add(d); indices.Add(c);
+                float code = -1;
+                foreach (int k in new[] { a, b, c, d }) if (Covered(k)) code = Math.Max(code, colors[k].G);
+                var part = indices[WaterMaterials.PartOf(code)];
+                part.Add(a); part.Add(b); part.Add(c);
+                part.Add(b); part.Add(d); part.Add(c);
             }
-        data.Water = (vertices, colors, Flow(samples, vertices, wet, spacing, n), indices.ToArray());
+        var all = new List<int>(indices.Sum(p => p.Count));
+        for (int p = 0; p < indices.Length; p++) { all.AddRange(indices[p]); data.WaterParts[p] = indices[p].Count; }
+        data.Water = (vertices, colors, Flow(samples, vertices, wet, spacing, n), all.ToArray());
     }
 
     /// <summary>

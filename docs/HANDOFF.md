@@ -7,8 +7,9 @@ Written for the next conversation (the previous one ran out of context). Everyth
   strands (D280); terrain revision 39, oxbow lakes (D281; `Tests/WorldGen` `--oxbows=balanced,7319` lists them, e.g.
   14738,-119952); terrain revision 40, river terraces (D282; seen best at Balanced 7319, -61180,48330 looking south over
   the meander); terrain revision 41, alluvial fans (D283; `--fans=balanced,7319` lists them; seen at Balanced 7319 near
-  -51200,56040). Tom said "Later" to build 138. Next: the water rework (Tom's order), the landforms where water meets land
-  being done.
+  -51200,56040). Tom said "Later" to build 138. **Water rework started** (D284, `docs/WATER_REWORK_PLAN.md`): step 1, the
+  split (each tile's water in sea, river and lake parts with a material each, no visible change), done; next waterfalls,
+  then the river look (from Experimental 4, Tom's style), where kinds meet, lakes, the sea.
 * **Last build Tom has: 137** (v0.9.137, return point `b2267d4`, `dist/Preview-137`): trees cast shadows as far as the shadow
   distance; tree card shadows face the sun (D279). 2 km is costly (~46 FPS, dips to 36 at the savanna spot).
   Build 136 (v0.9.136, return point `2e7b7f4`, `dist/Preview-136`): ambient occlusion in sunlight (Godot's AO

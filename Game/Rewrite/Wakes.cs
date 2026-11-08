@@ -49,7 +49,7 @@ public sealed class Wakes
         _lastX += shift.X; _lastZ += shift.Z;
     }
 
-    public void Apply(ShaderMaterial water, Vector3 source)
+    public void Apply(WaterMaterials water, Vector3 source)
     {
         water.SetShaderParameter("wake_points", _points);
         water.SetShaderParameter("wake_flow", _flow);
