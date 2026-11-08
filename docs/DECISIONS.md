@@ -4667,6 +4667,18 @@ glass-clear pools with stones in them.
 * Not changed: the reddish band along river banks (the bank's ground look) and the river's flat surface (no wave motion
   in the mesh yet; Tom: "Not yet").
 
+## D294 — Tom's water textures prepared (2026-11-08)
+Tom: "I added a new zip file with textures that we might use. I'm not sure if they will be seamless and tileable".
+`River_Foam_and_Waterfall_Mist_Textures.zip`, unpacked as given in `ArtKit/WaterTextures/` (six 1254 px RGBA PNGs).
+* **River foam** (broken patches, fine bubble lace, flowing streaks): white with transparency over a faint dark veil, and
+  not seamless (a brightness step across the joins, strands cut off at the edge). `tools/seamless_foam.py` makes them one
+  channel (brightness × alpha, the veil dropped), levels the step across each edge with a smooth correction (structure
+  kept), then cross-fades a narrow 40 px band: `Assets/Water/river_foam_*_tiled.png`, 1024 px, no visible joins (a wide
+  150 px cross-fade, the first try, ghosted).
+* **Mist and spray** (rising plume, soft cloud, fine droplets): single puffs with transparent edges, used as particle
+  sprites as they are: `Assets/Water/waterfall_*_sprite.png`, 512 px.
+* Not used in the game yet: how they replace the drawn foam and spray is Tom's call.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
