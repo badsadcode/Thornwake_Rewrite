@@ -4577,6 +4577,19 @@ rivers feels sometimes like it has different speeds. I still don't have the feel
 * **Ripples** slide 2.8 s before each copy fades into the next (was 1.4 s: a pulse, not a flow).
 * Dropped after Tom saw them: the big foam cushion and the flecks drifting over all river water.
 
+## D288 — Stones along steep river banks; calmer river ripples (2026-11-08)
+Tom: "Keep tuning first", then "Maybe the issue is jagged shore. It's very sharp in the area where you're testing this."
+* **The jagged shore**: where a bank rises steeply out of a river, the flat water meets a wall of 1 m grid triangles and the
+  waterline zigzags along their edges; D287's foam ring drew every tooth in white. As with the cliffs (D272), stones cover
+  it: along steep river banks (ground within −0.6…+1.2 m of the nearest river water within three grid steps, slope over
+  ~25°) a stone every few metres straddles the waterline, 0.9–2.5 m across, half in the water (*River stones*). The ring
+  along banks is fainter than round stones.
+* **Ripples**: with D287's even, faster currents the ripples glinted like broken glass: 30 % lower in river water.
+* **Turbulence behind stones** fades with the wake's weight squared: where it fades (between two rocks, a wake's ends)
+  the frame blended across triangles drew straight-edged white shapes.
+* **Fewer stones in calm lowland rivers** (half the shallow-water share; mountain streams as before).
+* Animated captures (24 frames, 0.1 s) of a gorge stream and a lowland river for Tom, `--extra-yaws=0,…,0 --extra-every=0.1`.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

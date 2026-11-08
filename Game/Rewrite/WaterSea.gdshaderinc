@@ -501,6 +501,9 @@ vec2 flow_slope(vec2 p, vec2 f, float t, float dist) {
 	vec2 sa = flow_layer(p - f * p0 * cycle, dir, stretch, dist);
 	vec2 sb = flow_layer(p - f * p1 * cycle + vec2(13.1, 7.7), dir, stretch, dist);
 	float rough = 0.15 + 0.85 * smoothstep(0.05, 1.6, speed);
+#ifdef RIVER2
+	rough *= 0.7; // (with the even, faster currents of D287 the ripples glinted like broken glass, D288)
+#endif
 	return (sa * w0 + sb * (1.0 - w0)) * rough / (1.0 + dist / 90.0);
 }
 // Noise carried by a current that varies from place to place (round 20, Tom: "circles or thingies on the rivers… not
@@ -1137,7 +1140,7 @@ void fragment() {
 	// water's depth alone every shallow riffle was covered in white shards. Measured outside the branch: screen derivatives.)
 	float cd_run = max(1e-3, length(vec2(length(dFdx(p)), length(dFdy(p)))));
 	float cd_slope = length(vec2(dFdx(contact_depth), dFdy(contact_depth))) / cd_run;
-	float ring_at = max(smoothstep(0.35, 0.9, cd_slope), smoothstep(0.08, 0.3, vertex_depth - contact_depth));
+	float ring_at = max(smoothstep(0.35, 0.9, cd_slope) * 0.55, smoothstep(0.08, 0.3, vertex_depth - contact_depth)); // (banks fainter: their line zigzags along the grid's triangles, D288)
 	if (river > 0.5) {
 		float fsp = length(current);
 		float near_f = 1.0 - smoothstep(40.0, 160.0, dist);
@@ -1153,7 +1156,9 @@ void fragment() {
 			float oa = ob_a, oc = ob_c;
 			float sides = smoothstep(0.2, 1.0, oa) * exp(-sq(abs(oc) - 0.75 - max(oa, 0.0) * 0.1) * 4.0);
 			float middle = smoothstep(0.9, 1.6, oa) * exp(-oc * oc / (0.3 + max(oa, 0.0) * 0.15));
-			float tail = max(sides, middle) * (1.0 - smoothstep(2.0, 7.0, oa)) * ob_w * smoothstep(0.08, 0.5, fsp);
+			// (the weight squared: where it fades — between two rocks, the wake's ends — the frame blended across triangles
+			// drew straight-edged white shapes, D288)
+			float tail = max(sides, middle) * (1.0 - smoothstep(2.0, 7.0, oa)) * ob_w * ob_w * smoothstep(0.08, 0.5, fsp);
 			rfield = max(rfield, tail * (0.3 + 1.0 * n2));
 		}
 		// Cartoony: a crisp, wobbling edge rather than a soft fade; a few bubble holes near the edge.
