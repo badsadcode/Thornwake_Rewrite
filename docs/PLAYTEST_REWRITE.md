@@ -78,6 +78,23 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 139 — rivers: your foam and mist textures, spray, rapids, better waterfalls
+**Host and everyone joining need build 139** (versions must match to connect). Same terrain as build 138.
+* **Your textures**: the foam round river stones and banks is your bubble lace (solid at the stone, lace further out),
+  rapids' white water your broken patches and flowing streaks along the current, all drifting downstream. *River foam →
+  drawn (D293)* is the previous look.
+* **Spray and mist**: billowing clouds of spray roll up at the foot of waterfalls, a plume of mist rises over the pool,
+  fine spray comes off the falling water and where fast water breaks on stones — made of your mist and droplet pictures.
+  *Spray and mist → billowing spray (drawn)* or *simple mist (build 138)* for the others.
+* **Foam round stones without blocks**: worked out from each stone's real place and size (round rings, turbulence behind,
+  no triangle edges — your dumps 21:39 and 21:43).
+* **Rapids look like rapids**: steep streams run faster, churned water turns milky and hides the bed.
+* **Waterfalls**: as wide as their stream (no sheet wrapped round the cliff, no notch above the lip — dumps 21:45/21:47);
+  the water falls at its own speed (no part crawling up); the sides of the wide fall fade into the banks (your red lines);
+  glassy over the lip, white as it falls; foam at the foot drifts downstream.
+* Try *Go to - wide waterfall*, *Go to - stream with stones*, *Go to - lowland river with stones*, and the new
+  *Go to - rapids (Balanced, seed 7319)*.
+
 ## New in build 138 — oxbow lakes, river terraces, alluvial fans; falling water, river water, stones in rivers
 **Host and everyone joining need build 138** (versions must match to connect). **New terrain** (revision 41): *Terrain
 version → Build 137* keeps the old ground.
