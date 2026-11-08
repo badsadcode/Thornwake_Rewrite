@@ -487,7 +487,13 @@ vec2 flow_layer(vec2 q, vec2 dir, float stretch, float dist) {
 }
 vec2 flow_slope(vec2 p, vec2 f, float t, float dist) {
 	float speed = length(f);
+#ifdef RIVER2
+	// (2.8 s: in 1.4 s each copy slid a metre or two and faded into the next — a pulse, not a flow; Tom: "I still don't
+	// have the feeling of the flow", D287)
+	const float cycle = 2.8;
+#else
 	const float cycle = 1.4;
+#endif
 	float p0 = fract(t / cycle), p1 = fract(t / cycle + 0.5);
 	float w0 = 1.0 - abs(2.0 * p0 - 1.0);
 	vec2 dir = speed > 0.001 ? f / speed : vec2(1.0, 0.0);
@@ -801,6 +807,7 @@ void fragment() {
 	float bed_slope = length(bed_grad);
 	float rocky = sea * smoothstep(0.12, 0.35, bed_slope) * (1.0 - smoothstep(2.0, 9.0, vertex_depth)) * (0.4 + sea_state) * exposure;
 	float standing = 0.0, bank_foam = 0.0, obstacle_foam = 0.0; // river: standing-wave crests and bank turbulence (foam, below)
+	float ob_a = 99.0, ob_c = 0.0, ob_w = 0.0; // the nearest rock's frame (downstream, across in rock radii) and weight (RIVER2)
 	float plume_flow = 0.0, mouth_meet = 0.0, dbg_obstacle = 0.0; // river mouths: the outgoing current's share, waves meeting it
 	if (river > 0.5) {
 		// Rivers are water with a destination (Noor; docs/RIVERS_PLAN.md): every layer follows the current.
@@ -850,6 +857,7 @@ void fragment() {
 		float oweight = exposure;
 		if (oweight > 0.01 && fs > 0.15) {
 			float a = bed_grad.x, c = bed_grad.y, e = 0.1;
+			ob_a = a; ob_c = c; ob_w = oweight;
 			float strength = smoothstep(0.15, 1.2, fs) * oweight;
 			// TIME * fs sheared across the wake where the speed varies (rings that never move): two short cycles, cross-faded.
 			const float ocycle = 4.0;
@@ -867,16 +875,7 @@ void fragment() {
 			float drift = mix(noise(vec2(a * 0.9 - t1 * fs * 0.7 + 5.1, c * 1.7)), noise(vec2(a * 0.9 - t0 * fs * 0.7, c * 1.7)), ow0);
 			obstacle_foam = strength * (bulge * 0.7 * smoothstep(0.6, 2.0, fs) + arm * 0.35 * smoothstep(0.8, 2.0, fs) * smoothstep(0.45, 0.8, drift)
 				+ core * 0.6 * smoothstep(0.45, 0.8, drift));
-#ifdef RIVER2
-			// River water (D286, Tom: stones "so the water flows around it, makes foam"): foam even in slow water — a broken
-			// ring where the water piles against the rock and slides round its sides, streaks trailing behind it, fading out
-			// downstream (in slow water the wakes above made none).
-			float gentle = oweight * smoothstep(0.05, 0.5, fs);
-			float ring = exp(-sq(max(0.0, length(vec2(a + 0.2, c)) - 1.0)) * 3.0) * (0.6 + 0.4 * smoothstep(0.5, -0.8, a));
-			float trail = smoothstep(0.0, 1.0, a) * exp(-sq(abs(c) - 0.7 - a * 0.08) * 2.5) * exp(-max(a, 0.0) * 0.22);
-			float breakup = smoothstep(0.3, 0.65, drift);
-			obstacle_foam = max(obstacle_foam, gentle * (ring * (0.6 + 0.4 * breakup) + trail * breakup * 0.8));
-#endif
+
 		}
 		// Wide rivers: wind waves too (fetch = the river's width), steeper where the wind blows against the current.
 		float wide = smoothstep(25.0, 150.0, fetch);
@@ -1131,11 +1130,42 @@ void fragment() {
 #endif
 		* smoothstep(0.01, 0.12, contact_depth); // the thinnest swash film carries no solid foam
 #ifdef RIVER2
-	// Foam round rocks in rivers (D286): after the thin-film fade above, which took it away exactly at a rock's waterline,
-	// broken into clumps that drift downstream.
-	if (river > 0.5 && obstacle_foam > 0.05) {
-		float clumps = smoothstep(0.4, 0.75, flow_noise(p * 1.7, current * 0.8, TIME, 2.5) * 0.65 + noise(p * 4.3 + 1.7) * 0.35);
-		foam = max(foam, smoothstep(0.2, 0.7, obstacle_foam) * mix(0.45, 1.0, clumps) * (1.0 - smoothstep(25.0, 120.0, dist)));
+	// Rivers' foam (D287, Tom: "more visible ... a little bit more cartoony, but with some details"; then: "Just close
+	// around the objects, like the shore or the stone. Nice ring and behind the ring, when the water flows, some
+	// turbulence"), laid after the thin-film fade above (which took foam away exactly at a waterline):
+	// (the ring only where something stands out of the bed — a stone, a log — or the bottom rises steeply, a bank: by the
+	// water's depth alone every shallow riffle was covered in white shards. Measured outside the branch: screen derivatives.)
+	float cd_run = max(1e-3, length(vec2(length(dFdx(p)), length(dFdy(p)))));
+	float cd_slope = length(vec2(dFdx(contact_depth), dFdy(contact_depth))) / cd_run;
+	float ring_at = max(smoothstep(0.35, 0.9, cd_slope), smoothstep(0.08, 0.3, vertex_depth - contact_depth));
+	if (river > 0.5) {
+		float fsp = length(current);
+		float near_f = 1.0 - smoothstep(40.0, 160.0, dist);
+		// Detail drifting with the current: two noises for the edge's wobble and the turbulence's clumps.
+		float n1 = flow_noise(p * 1.4, current * 0.9, TIME, 3.0);
+		float n2 = flow_noise(p * 3.6 + 4.1, current * 0.9, TIME, 2.2);
+		// The ring: where the water is only a few centimetres over whatever lies behind it — round a stone's real shape,
+		// along the bank — a band of foam hugging it (wider where the current presses on it).
+		float ring = (1.0 - smoothstep(0.05, 0.22 + 0.1 * n1 + 0.08 * smoothstep(0.2, 1.5, fsp), contact_depth)) * ring_at;
+		float rfield = ring * 1.1;
+		// Behind a stone, in the current: turbulence — churned, broken water trailing downstream from its sides and middle.
+		if (ob_w > 0.01) {
+			float oa = ob_a, oc = ob_c;
+			float sides = smoothstep(0.2, 1.0, oa) * exp(-sq(abs(oc) - 0.75 - max(oa, 0.0) * 0.1) * 4.0);
+			float middle = smoothstep(0.9, 1.6, oa) * exp(-oc * oc / (0.3 + max(oa, 0.0) * 0.15));
+			float tail = max(sides, middle) * (1.0 - smoothstep(2.0, 7.0, oa)) * ob_w * smoothstep(0.08, 0.5, fsp);
+			rfield = max(rfield, tail * (0.3 + 1.0 * n2));
+		}
+		// Cartoony: a crisp, wobbling edge rather than a soft fade; a few bubble holes near the edge.
+		float fedge = rfield + 0.18 * (n1 - 0.5) + 0.1 * (n2 - 0.5);
+		float rfoam = smoothstep(0.42, 0.47, fedge);
+		float rbubbles = cells(p * 3.0 + vec2(n1, n2) * 1.5, TIME * 0.4);
+		rfoam *= 1.0 - 0.7 * (1.0 - smoothstep(0.05, 0.14, rbubbles)) * (1.0 - smoothstep(0.5, 0.7, fedge));
+		rfoam *= near_f * smoothstep(0.2, 0.9, edge_fade);
+		foam = max(foam, rfoam);
+		foam_shade = mix(foam_shade, mix(0.86, 1.0, smoothstep(0.0, 0.2, rbubbles) * 0.5 + 0.5 * n1), rfoam);
+		// A milky halo just outside the foam's edge.
+		under_foam = max(under_foam, smoothstep(0.3, 0.42, fedge) * (1.0 - rfoam) * 0.45 * near_f);
 	}
 #endif
 

@@ -184,7 +184,8 @@ public static class GameSettings
         options: new[] { "classic", "experimental", "experimental 2", "experimental 3", "experimental 3A", "experimental 4" }));
     public static readonly Setting RiverWater = Add(new("fx.river_water", "Lighting and effects", "River water", 0, 1, 1, 1,
         "Rivers: their own water (experimental 4 with the river's changes: foam round stones even in slow water), or as the " +
-        "Water setting draws them (build 137).", options: new[] { "as Water (build 137)", "river water" }));
+        "Water setting draws them (build 137). River water also flows at an even speed along each river (faster in the deep " +
+        "middle) and fades softly at its banks.", options: new[] { "as Water (build 137)", "river water" }, rebuild: true));
     public static readonly Setting Waterfalls = Add(new("fx.waterfalls", "Lighting and effects", "Waterfalls", 0, 1, 1, 1,
         "Falling water: the water leaves the river's level at the lip and falls to the pool (sliding down the rock where the " +
         "rock lies higher), streaked and white, white water spreading on the pool and mist rising at the foot. River sheet " +

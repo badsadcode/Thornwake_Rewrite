@@ -11,7 +11,8 @@ Written for the next conversation (the previous one ran out of context). Everyth
   split (each tile's water in sea, river and lake parts with a material each, no visible change), done; step 2, waterfalls
   (D285: falling water, white water and mist at the foot, setting *Waterfalls*), first version for Tom to judge; step 3
   started (D286): foam no longer runs upstream/upwind (bug in every experimental style), *River water* (its own shader,
-  WaterRiver.gdshader = experimental 4 + RIVER2), *River stones* with foam round them. Next: more of the river look, where
+  WaterRiver.gdshader = experimental 4 + RIVER2), *River stones* with foam round them; D287: the foam a ring hugging stones
+  and banks with turbulence behind stones (Tom's words), even river speeds, softer bank edges, longer ripple cycles. Next: more of the river look, where
   kinds meet, lakes, the sea.
 * **Last build Tom has: 137** (v0.9.137, return point `b2267d4`, `dist/Preview-137`): trees cast shadows as far as the shadow
   distance; tree card shadows face the sun (D279). 2 km is costly (~46 FPS, dips to 36 at the savanna spot).

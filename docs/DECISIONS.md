@@ -4557,6 +4557,26 @@ makes foam".
   wake and foam (`TileBuilder.ObstacleWakes`, styles 2+). About 120 in the area round the test spot, mostly in streams.
 * Test tool: `--river-at=<profile>,<seed>,x,z` (the river there: which way it runs, its width and fall).
 
+## D287 — River foam: a ring round stones and banks, turbulence behind; even river speeds (2026-11-08)
+Tom on D286's foam: "I need this foam to be more visible. It may be a little bit more cartoony, but with some details";
+on a first try (a big cushion round the stone, flecks drifting everywhere): "nothing like that ... Just close around the
+objects, like the shore or the stone. Nice ring and behind the ring, when the water flows, some turbulence"; and "Water in
+rivers feels sometimes like it has different speeds. I still don't have the feeling of the flow". All under *River water*
+(river water / as Water (build 137)), which now rebuilds the tiles.
+* **The ring** (`RIVER2`): where the water is only centimetres over what lies behind it, and that is something standing out
+  of the bed (a stone, a log: the scene behind is nearer than the bed) or a bottom rising steeply (a bank) — by depth alone
+  every shallow riffle was covered in white shards. Crisp, wobbling edge (a little cartoony), a few bubble holes near the
+  edge, brighter and dimmer threads inside, a milky halo just outside; wider where the current presses.
+* **Turbulence behind a stone**: broken, churned foam trailing downstream from its sides and middle, drifting with the
+  current, out to ~6 radii, only where the water moves.
+* **The bank's edge**: a river's sheet now fades over its last square at the banks (as the sea's does) instead of ending
+  in the triangles' sawtooth where the bank lies a little under the water — the ring drew that sawtooth in white.
+* **Even speeds**: a river's current from its fall over ~120 m along it (√fall × 5 + 0.45 m/s, up to 3.5), faster in the
+  deep middle, slower toward the banks, its direction leaning on the river's course — the surface's slope between two
+  vertices a metre apart jumped from place to place. Faster water's ripples are rougher, so it glints more in sun.
+* **Ripples** slide 2.8 s before each copy fades into the next (was 1.4 s: a pulse, not a flow).
+* Dropped after Tom saw them: the big foam cushion and the flecks drifting over all river water.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -23,7 +23,7 @@ public readonly record struct TreeInstance(int Species, Transform3D Transform);
 /// logs are world objects, not decoration); grass and the draw distances come from the player's settings.
 /// </summary>
 public readonly record struct DetailConfig(double Grass, double ForestCover, double ForestDensity, double Rocks, double Props,
-    int TreeLevels, int FarTreeLevels, bool SimulatedWater = true, int GrassStyle = 1, int MeshDetail = 1, int CardLevels = -1, bool FallingWater = true)
+    int TreeLevels, int FarTreeLevels, bool SimulatedWater = true, int GrassStyle = 1, int MeshDetail = 1, int CardLevels = -1, bool FallingWater = true, bool RiverWater = true)
 {
 
     public static DetailConfig For(TerrainSampler sampler)
@@ -31,7 +31,7 @@ public readonly record struct DetailConfig(double Grass, double ForestCover, dou
         var style = sampler.Plan.Style;
         return new(GameSettings.GrassDensity.Value, style.ForestCover, style.ForestDensity, style.RockAmount, style.PropAmount,
             TreeField.Enabled ? 1 : 2 + GameSettings.TreeDistance.Index, 4 + GameSettings.FarTreeDistance.Index, GameSettings.WaterSimulation.On, GameSettings.GrassStyle.Index,
-            1 << GameSettings.TerrainMesh.Index, CardLevel(), GameSettings.Waterfalls.Index == 1);
+            1 << GameSettings.TerrainMesh.Index, CardLevel(), GameSettings.Waterfalls.Index == 1, GameSettings.RiverWater.Index == 1);
     }
 
     /// <summary>
@@ -347,7 +347,8 @@ public static class TileBuilder
             // Full trees on the nearest levels; beyond, tree cards, then the terrain shader's forest tint.
             Trees = key.Level < config.TreeLevels ? Vegetation.Trees(sampler, key, config) : new List<TreeInstance>(),
         };
-        BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater, sea, config.FallingWater ? FallSet.For(sampler.Plan) : null, x0, z0);
+        BuildWater(data, samples, heights, s2, spacing, Side, config.SimulatedWater, sea, config.FallingWater ? FallSet.For(sampler.Plan) : null, x0, z0,
+            config.RiverWater ? sampler.Plan.Hydrology : null);
         if (key.Level <= LavaLevels) BuildLava(sampler, data, samples, heights, s2, spacing, Side, x0, z0);
         if (data.Water is { } builtWater) data.WaterShore = ShoreData(sampler, builtWater.Vertices, builtWater.Colors, heights, s2, samples, x0, z0, spacing, Side);
         var grid = new GroundCover.Grid(vertices, normals, forest, samples, spacing, x0, z0, Side, submerged, uv2, biome1, props, biome3, biome0, climate.Settings.Biomes);
@@ -467,7 +468,7 @@ public static class TileBuilder
     }
 
     private static void BuildWater(TileData data, TerrainSample[] samples, double[] heights, int s2, double spacing, int n, bool simulated, double seaLevel,
-        FallSet? falls = null, double x0 = 0, double z0 = 0)
+        FallSet? falls = null, double x0 = 0, double z0 = 0, Hydrology? rivers = null)
     {
         var wet = new bool[n * n];
         bool any = false;
@@ -557,7 +558,9 @@ public static class TileBuilder
                 // Alpha: 1 on water vertices, fading over the sheet's extension under the beach (the experimental water
                 // fades its swash film out there instead of ending on the sheet's triangle edges; classic ignores it).
                 // (Corners of the last squares that are neither: 0 on the sea, 1 at lake and river banks.)
-                float edge = wet[k] ? 1 : under[k] != int.MaxValue ? Math.Max(0, 1 - under[k] / 3f) : kind < .25 ? 0 : 1;
+                // (river water, D287: 0 on river banks too, so a river's sheet fades over its last square instead of ending in
+                // the triangles' sawtooth where the bank lies a little under the water — the foam ring drew it in white)
+                float edge = wet[k] ? 1 : under[k] != int.MaxValue ? Math.Max(0, 1 - under[k] / 3f) : kind < .25 || (rivers != null && kind < .5) ? 0 : 1;
                 colors[k] = new Color((float)DetMath.Clamp((level - ground) / 20, 0, 1), (float)kind, (float)plume, edge);
             }
         // Squares by part (sea, river, lake: D284), each the part of its corners' highest kind code (as banks take theirs).
@@ -583,7 +586,7 @@ public static class TileBuilder
             }
         var all = new List<int>(indices.Sum(p => p.Count));
         for (int p = 0; p < indices.Length; p++) { all.AddRange(indices[p]); data.WaterParts[p] = indices[p].Count; }
-        data.Water = (vertices, colors, Flow(samples, vertices, wet, spacing, n), all.ToArray());
+        data.Water = (vertices, colors, Flow(samples, vertices, wet, spacing, n, rivers, x0, z0), all.ToArray());
     }
 
     /// <summary>
@@ -683,6 +686,54 @@ public static class TileBuilder
         }
     }
 
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<RiverReach, double[]> Grades = new();
+
+    /// <summary>
+    /// A river reach's way and fall near a point (D287): its direction there (unit, xz), how much it falls per metre over
+    /// ~60 m either way and its channel's depth at the nearest point. <paramref name="hints"/>: the last point found per reach
+    /// (a tile's vertices lie along the same few points).
+    /// </summary>
+    private static bool ReachFlow(Hydrology rivers, int reachId, double x, double z, Dictionary<int, int> hints, out double tx, out double tz,
+        out double grade, out double depth)
+    {
+        tx = tz = grade = depth = 0;
+        if (reachId < 0 || reachId >= rivers.Reaches.Count) return false;
+        var r = rivers.Reaches[reachId];
+        int n = r.Points.Length;
+        if (n < 2 || r.Along.Length != n) return false;
+        double D(int i) => (r.Points[i].X - x) * (r.Points[i].X - x) + (r.Points[i].Z - z) * (r.Points[i].Z - z);
+        int k;
+        if (hints.TryGetValue(reachId, out int hint))
+        {
+            k = hint;
+            while (k + 1 < n && D(k + 1) < D(k)) k++;
+            while (k > 0 && D(k - 1) < D(k)) k--;
+        }
+        else
+        {
+            k = 0;
+            for (int i = 1; i < n; i++) if (D(i) < D(k)) k = i;
+        }
+        hints[reachId] = k;
+        var grades = Grades.GetValue(r, reach =>
+        {
+            var g = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                int a = i, b = i;
+                while (a > 0 && reach.Along[i] - reach.Along[a] < 60) a--;
+                while (b < n - 1 && reach.Along[b] - reach.Along[i] < 60) b++;
+                g[i] = b > a ? (reach.Surface[a] - reach.Surface[b]) / Math.Max(1, reach.Along[b] - reach.Along[a]) : 0;
+            }
+            return g;
+        });
+        int p0 = Math.Max(0, k - 1), p1 = Math.Min(n - 1, k + 1);
+        double ex = r.Points[p1].X - r.Points[p0].X, ez = r.Points[p1].Z - r.Points[p0].Z, el = Math.Sqrt(ex * ex + ez * ez);
+        if (el < 1e-6) return false;
+        tx = ex / el; tz = ez / el; grade = grades[k]; depth = r.Depth[k];
+        return true;
+    }
+
     private static float Smooth01(float t) { t = Math.Clamp(t, 0, 1); return t * t * (3 - 2 * t); }
 
     private static double SeaLevel(TerrainSample[] samples)
@@ -695,8 +746,10 @@ public static class TileBuilder
     /// River current per water vertex (world xz, m/s): downhill along the water surface's gradient (central
     /// differences between wet neighbours), speed growing with the square root of the slope. Still water elsewhere.
     /// </summary>
-    private static Vector2[] Flow(TerrainSample[] samples, Vector3[] water, bool[] wet, double spacing, int n)
+    private static Vector2[] Flow(TerrainSample[] samples, Vector3[] water, bool[] wet, double spacing, int n, Hydrology? rivers = null,
+        double x0 = 0, double z0 = 0)
     {
+        var hints = new Dictionary<int, int>();
         var flow = new Vector2[n * n];
         for (int j = 0; j < n; j++)
             for (int i = 0; i < n; i++)
@@ -716,7 +769,20 @@ public static class TileBuilder
                 double g = Math.Sqrt(gx * gx + gz * gz);
                 if (g < 1e-6) continue;
                 double speed = Math.Clamp(Math.Sqrt(g) * 6, .3, 3.5);
-                flow[k] = new Vector2((float)(-gx / g * speed), (float)(-gz / g * speed));
+                double dx = -gx / g, dz = -gz / g;
+                // River water (D287, Tom: "Water in rivers feels sometimes like it has different speeds"): the speed from the
+                // river's fall over ~120 m along it (the surface's slope between two vertices a metre apart jumped from place to
+                // place), faster where it is deep (the middle), slower toward the banks; the direction leaning on the river's
+                // own course.
+                if (rivers != null && ReachFlow(rivers, samples[k].WaterBody, x0 + water[k].X, z0 + water[k].Z, hints, out double tx, out double tz, out double grade, out double channel))
+                {
+                    double waterDepth = samples[k].WaterLevel - samples[k].Height;
+                    speed = Math.Clamp(.45 + Math.Sqrt(Math.Max(0, grade)) * 5, .45, 3.5) * (.55 + .45 * Math.Clamp(waterDepth / Math.Max(.3, channel), 0, 1));
+                    dx += tx * 2; dz += tz * 2;
+                    double dl = Math.Sqrt(dx * dx + dz * dz);
+                    if (dl > 1e-6) { dx /= dl; dz /= dl; }
+                }
+                flow[k] = new Vector2((float)(dx * speed), (float)(dz * speed));
             }
         // River mouths (round 15, RIVERS_PLAN step 3): the current continues into the lake or sea as a fanning plume,
         // down the slope of the river-water share (which falls away from the channel's line and toward the plume's
