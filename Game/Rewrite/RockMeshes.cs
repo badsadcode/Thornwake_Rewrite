@@ -80,10 +80,34 @@ public static class RockMeshes
             list.AddRange(near);
             for (int k = 0; k < GroundCover.CliffShapes; k++) { int kk = k; list.Add(Add(() => SeaStackView.CliffBlock(0xB10C1UL + (ulong)kk, 4.4f, kk), BigMaterial)); }
             list.AddRange(near);
+            // The rock kit's formations (D277), kind by kind.
+            _pieces = new RockKit.Piece[GroundCover.Formations][];
+            for (int k = 0; k < RockKit.Kinds; k++)
+                for (int v = 0; v < RockKit.Variants; v++)
+                {
+                    var (fkind, variant, index) = ((RockKit.Kind)k, v, k * RockKit.Variants + v);
+                    list.Add(Add(() => { var built = RockKit.Build(fkind, variant); _pieces[index] = built.Pieces; return built.Mesh; }, BigMaterial));
+                }
             _meshes = list.ToArray();
         }
         return _meshes[Math.Clamp(kind, 0, _meshes.Length - 1)];
     }
+
+    private static RockKit.Piece[][]? _pieces;
+    private static readonly object PiecesLock = new();
+
+    /// <summary>A formation's pieces (boxes, for collision; thread-safe: built here if the meshes are not yet).</summary>
+    public static RockKit.Piece[] Pieces(int kind)
+    {
+        int index = Math.Clamp(kind - GroundCover.Formation, 0, GroundCover.Formations - 1);
+        if (_pieces?[index] is { } ready) return ready;
+        lock (PiecesLock)
+        {
+            _pieceCache ??= new RockKit.Piece[GroundCover.Formations][];
+            return _pieceCache[index] ??= RockKit.Build((RockKit.Kind)(index / RockKit.Variants), index % RockKit.Variants).Pieces;
+        }
+    }
+    private static RockKit.Piece[][]? _pieceCache;
 
     /// <summary>Rebuild every rock mesh in place (the Rock shading setting changed): the tiles' instances keep the same meshes.</summary>
     public static void Reshade()

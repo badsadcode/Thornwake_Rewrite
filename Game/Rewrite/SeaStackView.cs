@@ -314,6 +314,15 @@ public sealed class SeaStackView
         return (vertices, Shade(vertices, model.Normals), model.Colors);
     }
 
+    /// <summary>A rock kit formation's surface (D277): as the cliff blocks (no sea's wet band, moss on open tops), shaded by
+    /// the Rock shading setting.</summary>
+    public static (Vector3[] Vertices, Vector3[] Normals, Color[] Colors) KitSurface(Func<float, float, float, float> solid, Vector3 min, Vector3 max, float cell, ulong seed)
+    {
+        // (a lighter, shorter crevice shadow: the pieces are packed close, and at the stacks' 70 % over 5 m they came out black)
+        var model = Surface(solid, min, max, cell, seed, new Color(RockLight, RockLight, RockLight, 1), 0, 1e9f, sea: false, aoStrength: .45f, aoReach: .5f);
+        return (model.Vertices, Shade(model.Vertices, model.Normals), model.Colors);
+    }
+
     /// <summary>
     /// An arch (D267, Tom: "they don't look natural"; a tube of even thickness swept over a half circle looked man-made): what
     /// is left of a headland — a block of cliff, one leg stout and one slight, its top sloping off and narrowing upward,
@@ -379,7 +388,8 @@ public sealed class SeaStackView
     /// the surface crosses (the mean of its edges' crossings), a quad across each crossed edge. The beds show as bands of
     /// paler and darker rock; dark and wet just over the sea; green only on open tops above <paramref name="grassAbove"/>.
     /// </summary>
-    private static Model Surface(Func<float, float, float, float> solid, Vector3 min, Vector3 max, float cell, ulong seed, Color tint, float tilt, float grassAbove, bool sea = true)
+    private static Model Surface(Func<float, float, float, float> solid, Vector3 min, Vector3 max, float cell, ulong seed, Color tint, float tilt, float grassAbove, bool sea = true,
+        float aoStrength = .7f, float aoReach = 1)
     {
         int nx = (int)Math.Ceiling((max.X - min.X) / cell) + 1, ny = (int)Math.Ceiling((max.Y - min.Y) / cell) + 1, nz = (int)Math.Ceiling((max.Z - min.Z) / cell) + 1;
         var field = new float[nx * ny * nz];
@@ -417,9 +427,12 @@ public sealed class SeaStackView
         float Occlusion(Vector3 p, Vector3 n)
         {
             float occ = 0;
-            foreach (var (d, w) in new[] { (1f, .5f), (2.5f, .3f), (5f, .2f) })
+            foreach (var (d0, w) in new[] { (1f, .5f), (2.5f, .3f), (5f, .2f) })
+            {
+                float d = d0 * aoReach;
                 occ += w * Mathf.Clamp((d - solid(p.X + n.X * d, p.Y + n.Y * d, p.Z + n.Z * d)) / d, 0, 1);
-            return 1 - .7f * Mathf.Clamp(occ * 1.4f, 0, 1);
+            }
+            return 1 - aoStrength * Mathf.Clamp(occ * 1.4f, 0, 1);
         }
         // (bands wider than the cells, one colour across a quad: bands as narrow as the cells, per triangle, drew a knitted zigzag)
         float bandHeight = Math.Max(3, cell * 2.6f);

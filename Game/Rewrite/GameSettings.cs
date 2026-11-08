@@ -221,6 +221,10 @@ public static class GameSettings
         "black crust rafts riding on it (D260). Build 125: the lava's earlier look. Off: lava fields stay dark rock (build 123). " +
         "Only the look: the lava burns whichever is chosen (D261).",
         options: new[] { "off (dark rock)", "glowing", "glowing (build 125)" }));
+    public static readonly Setting RockFormations = Add(new("fx.rock_formations", "Lighting and effects", "Rock formations", 0, 1, 1, 1,
+        "The big rocks on open ground (D277): the rock kit's formations — column clusters, slab stacks, tiered piles and tors, " +
+        "built of chunky pieces, by the land's rock — or single huge boulders (as before build 135).",
+        options: new[] { "boulders (build 134)", "rock kit" }, rebuild: true));
     public static readonly Setting RockShading = Add(new("fx.rock_shading", "Lighting and effects", "Rock shading", 0, 1, 1, 1,
         "How rocks are lit (D275): smooth (auto-smooth, as in Blender: edges sharper than 50° stay crisp, the rest blend) or " +
         "faceted (every face its own flat shade, as before build 135).",

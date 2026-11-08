@@ -61,6 +61,18 @@ public static class ObjectCollision
         }
         foreach (var rock in data.Rocks)
         {
+            // The rock kit's formations: a box per piece (D277).
+            if (rock.Kind >= GroundCover.Formation)
+            {
+                var t = rock.Transform;
+                foreach (var piece in RockMeshes.Pieces(rock.Kind))
+                {
+                    float scale = t.Basis.X.Length();
+                    var pb = t.Basis.Orthonormalized() * piece.Basis;
+                    yield return new CollisionShape3D { Shape = new BoxShape3D { Size = piece.Half * 2 * scale }, Transform = new Transform3D(pb, t * piece.Centre) };
+                }
+                continue;
+            }
             // Cliff rocks: a box a little inside the block (D273 the lip's; D275 all — Tom walked into one on a face, which stood
             // well out from the colliding cliff).
             if (rock.Kind >= GroundCover.CliffRock)

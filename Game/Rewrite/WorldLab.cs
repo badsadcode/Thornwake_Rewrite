@@ -96,6 +96,26 @@ public partial class WorldLab : Node3D
     // --extra-yaws=a,b,…: after the shot, more shots turned by these yaw offsets (<name>-1.png …), same world and tiles.
     private readonly List<float> _extraYaws = new();
     private bool _extraRebase;
+    private int _rockKitShow = -1;
+
+    /// <summary>Test (--rock-kit, D277): every rock kit formation in a 4 × 4 grid on the ground in front of the camera, a row per
+    /// kind (columns, slab stacks, tiered piles, tors), 28 m apart.</summary>
+    private void RockKitShowcase()
+    {
+        _rockKitShow = 1;
+        var forward = new Vector3(-Mathf.Sin(_yaw), 0, -Mathf.Cos(_yaw)); var right = new Vector3(Mathf.Cos(_yaw), 0, -Mathf.Sin(_yaw));
+        for (int k = 0; k < RockKit.Kinds; k++)
+            for (int v = 0; v < RockKit.Variants; v++)
+            {
+                var at = _player.Position + forward * (45 + k * 28) + right * ((v - 1.5f) * 28);
+                at.Y = GroundY(_originX + at.X, _originZ + at.Z) - .6f;
+                var multi = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = RockMeshes.Get(GroundCover.Formation + k * RockKit.Variants + v), InstanceCount = 1 };
+                multi.SetInstanceTransform(0, Transform3D.Identity);
+                multi.SetInstanceColor(0, new Color(1, 1, 1, 2 / 8f));
+                AddChild(new MultiMeshInstance3D { Multimesh = multi, Position = at, Name = "RockKit" });
+            }
+        GD.Print("ROCKKIT shown");
+    }
     // --extra-every=s: seconds between those extra shots (default 3); with yaw offsets 0 a short burst of the same view,
     // to see what moves (Tom's fast fog waves, D170).
     private float _extraEvery = 3;
@@ -157,6 +177,7 @@ public partial class WorldLab : Node3D
             if (arg.StartsWith("--at=")) { var v = arg[5..].Split(','); _shotAt = (double.Parse(v[0], CultureInfo.InvariantCulture), double.Parse(v[1], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--extra-every=")) _extraEvery = float.Parse(arg[14..], CultureInfo.InvariantCulture);
             if (arg == "--extra-rebase") _extraRebase = true;
+            if (arg == "--rock-kit") _rockKitShow = 0;
             if (arg.StartsWith("--extra-yaws=")) foreach (var y in arg[13..].Split(',')) _extraYaws.Add(float.Parse(y, CultureInfo.InvariantCulture));
             if (arg.StartsWith("--view=")) { var v = arg[7..].Split(','); _shotView = (float.Parse(v[0], CultureInfo.InvariantCulture), float.Parse(v[1], CultureInfo.InvariantCulture), float.Parse(v[2], CultureInfo.InvariantCulture)); }
             if (arg.StartsWith("--msaa=")) GetViewport().Msaa3D = arg[7..] switch { "0" => Viewport.Msaa.Disabled, "4" => Viewport.Msaa.Msaa4X, _ => Viewport.Msaa.Msaa2X };
@@ -504,6 +525,7 @@ public partial class WorldLab : Node3D
             // Sea stacks and arches off steep coasts (terrain revision 35, D266).
             _seaStacks ??= new SeaStackView(this);
             _seaStacks.Update(_sampler, _originX + camLava.X, _originZ + camLava.Z, _originX, _originZ);
+            if (_rockKitShow == 0 && _generation == null && !_holding) RockKitShowcase();
         }
         if (!GameSettings.WeatherOn.On || _sampler == null)
         {

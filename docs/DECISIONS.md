@@ -4365,6 +4365,27 @@ sky's light (`SsaoLightAffect` 0): outdoors by day the sun carries the light, so
   the first moments while tiles load.
 * Return point: build 134 (`1d6a12a`); *Ambient occlusion → on (build 134)*.
 
+## D277 — The rock kit: formations of chunky pieces (2026-11-08)
+Tom: "what can we do with procedural generation for rocks so we can have different types of them?", with references
+(stylised modular rocks: column clusters, flat slab stacks, stepped piles; the granite tors behind the wargs in a Hobbit
+still) and "Yes, build the kit". The common idea: a formation of many distinct pieces with flat faces and softened edges,
+not one lumpy blob. `Game/Rewrite/RockKit.cs`, a first pass:
+* **A piece**: a box turned and tilted a little, two to four of its corners cut off by planes, bevelled (smooth max), as a
+  signed-distance solid; the formation is their union, so the cracks between pieces show (and catch the baked shadow).
+* **Four kinds, four variants each** (16 meshes, built once): column clusters (prisms on a jittered grid in an ellipse, the
+  tallest toward the middle, tops cut at angles, 11–17 m), slab stacks (3–6 flat layers, each smaller and set off, a slab
+  fallen against the side), tiered piles (3–4 rings of blocks stepping up to a middle), tors (big rounded blocks piled two
+  or three high, split slabs beside). Rubble round every foot.
+* Meshed like the sea stacks (surface nets at 0.55–0.9 m, auto-smooth, the big rocks' material and Tom's textures), the
+  crevice shadow lighter and shorter (45 % within 2.5 m: at the stacks' 70 % over 5 m the packed pieces came out black).
+* **Placed** in place of the huge boulders on open ground (the same 140 m cells and chances), their kind by the land's rock:
+  columns where it is basalt or mountain, slab stacks in sandstone and layered country, tors in granite and mossy country,
+  tiered piles mixed in; 0.6–1.4 of their built size. Shadows on; collision a box per piece.
+* Setting *Rock formations* (*rock kit* / *boulders (build 134)*). Test flag `--rock-kit`: all 16 in a 4 × 4 grid in front
+  of the camera (rows: columns, slabs, tiered, tors).
+* Open: softer than the references (the faces are not yet crisp planes); rare in the world; not yet used for the cliff
+  rocks and sea stacks. Tom to judge the look.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
