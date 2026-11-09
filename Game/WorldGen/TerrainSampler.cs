@@ -190,16 +190,27 @@ public sealed partial class TerrainSampler
         bare = Math.Max(bare, .65 * scree);
         // Revision 43 (D300): a rock face at each fall's lip and a plunge pool below it, filled to the foot's level (the river's
         // ramp of water over the drop is the pool there).
+        double fallPool = double.NaN; int fallReach = -1;
         if (_fallLips is { Faces: true })
         {
-            height = _fallLips.Pool(x, z, height, _p.SeaLevel, out double poolLevel, out int poolReach, out double faceRock);
+            height = _fallLips.Pool(x, z, height, _p.SeaLevel, water == WaterKind.River ? level : double.NaN, water == WaterKind.River ? body : -1,
+                water == WaterKind.None, out double poolLevel, out int poolReach, out double faceRock, out bool onSlope);
             bare = Math.Max(bare, faceRock);
-            if (!double.IsNaN(poolLevel) && (water == WaterKind.None || water == WaterKind.River && level > poolLevel)) { water = WaterKind.River; level = poolLevel; body = poolReach; }
+            // (revision 44, D301: the river's water on a fall's slope takes the lip's level above the face, the pool's below)
+            if (!double.IsNaN(poolLevel) && (water == WaterKind.None || water == WaterKind.River && (level > poolLevel || onSlope)))
+            {
+                water = WaterKind.River; level = poolLevel; body = poolReach;
+                if (_fallLips.Follow) { fallPool = poolLevel; fallReach = poolReach; }
+            }
+            else if (onSlope && water == WaterKind.River) { water = WaterKind.None; level = double.NaN; body = -1; } // (beside the lip: dry, a bank)
         }
         // Revision 42 (D297): banks of rock beside waterfall lips (dry ground only: the river's channel and water unchanged).
         if (_fallLips != null && water == WaterKind.None) { height = _fallLips.Apply(x, z, height, _p.SeaLevel, out double lipRock); bare = Math.Max(bare, lipRock); }
         double lakePlume = 0, lakeCells = double.PositiveInfinity;
         Lakes(x, z, ref height, ref water, ref level, ref body, ref lakePlume, ref lakeCells);
+        // Revision 44 (D301): a fall's pool keeps its water where a lake above the lip would flood it (the lowered pool lay below
+        // the lake's level, and the lake's water there was cut away as the fall's — a dry floor under the falling water).
+        if (!double.IsNaN(fallPool) && water == WaterKind.Lake && level > fallPool + .05) { water = WaterKind.River; level = fallPool; body = fallReach; }
         // Revision 23: a cirque's tarn, still water of its own (drawn as a pond), where nothing else is water.
         if (_cirques != null && water == WaterKind.None && _cirques.Tarn(x, z, height, out double tarn)) { water = WaterKind.Pond; level = tarn; }
         // Revision 39: oxbow lakes, still water of their own beside lowland rivers (drawn as ponds), where nothing else is water.

@@ -155,6 +155,28 @@ if (args.FirstOrDefault(a => a.StartsWith("--river-spots=")) is { } rsArg)
     }
     return 0;
 }
+// --map=<profile>,<seed>,x,z,half,step[,revision]: ground height and water level (whole metres) on a grid around x,z (rows
+// north to south... z rising downward), '~' water's level after the ground, '-' dry.
+if (args.FirstOrDefault(a => a.StartsWith("--map=")) is { } mapArg)
+{
+    var p = mapArg[6..].Split(',');
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var s = CoreTests.Sampler(p[0], int.Parse(p[1]));
+    if (p.Length > 6) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = int.Parse(p[6]) }));
+    double x0 = double.Parse(p[2], inv), z0 = double.Parse(p[3], inv), half = double.Parse(p[4], inv), step = double.Parse(p[5], inv);
+    Console.Write("      x:"); for (double x = x0 - half; x <= x0 + half + 1e-9; x += step) Console.Write($"{x - x0,9:0}"); Console.WriteLine();
+    for (double z = z0 - half; z <= z0 + half + 1e-9; z += step)
+    {
+        Console.Write($"{z - z0,8:0}");
+        for (double x = x0 - half; x <= x0 + half + 1e-9; x += step)
+        {
+            var t = s.Sample(x, z);
+            Console.Write(t.Water == WaterKind.None ? $"{t.Height,5:0}----" : $"{t.Height,5:0}{t.Water.ToString()[0]}{t.WaterLevel,3:0}");
+        }
+        Console.WriteLine();
+    }
+    return 0;
+}
 // --river-at=<profile>,<seed>,x,z: the nearest river point, which way the river runs there and how fast it falls.
 if (args.FirstOrDefault(a => a.StartsWith("--river-at=")) is { } raArg)
 {

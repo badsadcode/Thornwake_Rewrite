@@ -193,11 +193,30 @@ public sealed class WaterfallView
         // width a side: 19 m on the wide fall) hid where the river's sheet was cut, which now fades out by itself (D296) and
         // meets the banks at the lip (D297).
         double margin = Math.Clamp(f.Width * .12, 1, 4);
-        double Wide(double h) => Math.Max(2, f.Width * (1 + .1 * Math.Clamp(h / Math.Max(1, f.Length), 0, 1)) + 1);
-        double width = Wide(0);
         double ax = f.Dz, az = -f.Dx; // across the fall (to its right)
         double lipLevel = terrain.Sample(f.LipX, f.LipZ).WaterLevel;
         if (double.IsNaN(lipLevel)) lipLevel = f.Top;
+        // D301 (revision 44): the lip's water reaches as far as the river's did on the fall's slope — on a bend further out to one
+        // side than the river's width — so the falling water spans the water found at the lip, each side measured (Tom's dump
+        // 112818: a ledge between the falling water and the river beside it).
+        bool follow = terrain.Plan.FallLips is { Follow: true };
+        double left = f.Width * .5, right = f.Width * .5;
+        if (follow)
+            foreach (double side in new[] { -1.0, 1.0 })
+            {
+                double reach = f.Width * .5;
+                for (double o = f.Width * .5 + 1; o < f.Width * 1.5 + 30; o += 1)
+                {
+                    var s = terrain.Sample(f.LipX - f.Dx * .5 + ax * o * side, f.LipZ - f.Dz * .5 + az * o * side);
+                    if (s.Water != WaterKind.River || Math.Abs(s.WaterLevel - lipLevel) > .3) break;
+                    reach = o;
+                }
+                if (side < 0) left = reach; else right = reach;
+            }
+        double span = left + right, shift = (right - left) * .5; // (shift: the water's middle off the river's line, to the right)
+        double Spread(double h) => 1 + .1 * Math.Clamp(h / Math.Max(1, f.Length), 0, 1);
+        double Wide(double h) => Math.Max(2, span * Spread(h) + 1);
+        double width = Wide(0);
         double v0 = Math.Clamp(1.5 + .04 * f.Width, 1.5, 4), bottom = f.Bottom;
         // The centre line's path, at steps of about a metre along it: draped on the river above the lip, then falling freely
         // or sliding on the rock, down to the pool.
@@ -243,7 +262,7 @@ public sealed class WaterfallView
             double pathLength = 0, travel = 0, lastSpeed = v0; Vector3 last = default;
             for (int r = 0; r < rows; r++)
             {
-                double h = steps[r], off = (u - .5) * Wide(h);
+                double h = steps[r], off = shift * Spread(h) + (u - .5) * Wide(h);
                 double x = f.LipX + f.Dx * h + ax * off, z = f.LipZ + f.Dz * h + az * off;
                 double y, onRock = 0, wall = 0;
                 if (h < 0)
@@ -265,7 +284,7 @@ public sealed class WaterfallView
                     // (D296: each column on its own path; where the rock rises well over the centre's path it fades out — inside
                     // the river only past 2.5 m, bumps of the bed stay — instead of being held a metre over the centre's path,
                     // which hung those columns straight down from the lip as a flat, stepped wall: Tom's dump 001431)
-                    double outside = DetMath.Smooth((Math.Abs(off) - f.WidthAt(h) * .5 + 1) / 2);
+                    double outside = DetMath.Smooth((Math.Abs(off - shift * Spread(h)) - (follow ? Math.Max(f.WidthAt(h), span * Spread(h)) : f.WidthAt(h)) * .5 + 1) / 2);
                     // (D299: only outside the river's width — within it the lip's water pours down whatever slope is there; fading it
                     // where it slid down a gorge's V sides left them dry under a full-width river, Tom's red circles)
                     wall = DetMath.Smooth((own - centre - 1) / 2.5) * outside;

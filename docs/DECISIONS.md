@@ -4765,6 +4765,36 @@ Asked how big falls' ground should be shaped, Tom chose "Rock face and wide pool
   points miss every fall, so revision 43's read the same — the test guards it). The banks' test compares revisions 41 and
   42 now (the pools change falls' water).
 
+## D301 — No river water left on a fall's slope, terrain revision 44 (2026-11-09)
+Tom, build 140: "Made a few dumps. All show real problems" (112735, 112745 on build 139's ground from the old launcher;
+112818, 112829 on revision 43). On revision 43 the river's water sloping down over a fall (its level between the lip's and
+the foot's) was left wherever the rectangular pool did not reach: beside the pool's end and at the lip's ends on a bend
+(95 thousand sample points around the test worlds' falls). The game cut that water away as part of the falling water, so
+stepped dry patches showed beside the pool (112829), and a ledge with sloping water beside the falling water at the lip's
+end (112818). Upstream of the lip the river's surface also sagged up to 4 m toward the sides, blended with the drop's.
+* **Terrain** (`FallLips`, `Follow`), in the fall's straight frame (from the lip's point toward the foot's; along the
+  river's line, water beside the lip on a bend counted as upstream):
+  * past the face, all of the slope's water becomes pool — the ground lowered to the pool's depth at its edge, shoaling past
+    the foot as the pool does;
+  * along the lip's stretch (from 0.8 × the width, at least 25 m, upstream to the face), within the river's width and up to
+    4 m more a side, the water eases from the river's own level up to the lip's (level to the edge, no step where the stretch
+    begins), and dry ground in that channel below it fills; beyond it the slope's water is dry ground, and the banks of
+    D297 rise to full height where that water ends (they rose over the whole inner bank and stayed under the water there);
+    the 4 m is a quarter of the width on narrow streams, at least 1 m (4 m doubled an 8 m stream's falling water);
+  * a fall's pool keeps its water where a lake above the lip floods its cells (the lowered pool lay below the lake's level:
+    lake water there was cut away as the fall's, a dry floor under the falling water — found on a small fall of Mountain
+    kingdoms 42 at -11612,68583, on revision 43 too).
+* **Falling water**: as wide as the water found at the lip, each side measured (on a bend it reaches further to one side).
+* Test `Landforms: no river water left on a fall's slope` (4 worlds, 2753 falls): around each fall, from 10 m above the lip
+  to 40 m past the foot and 30 m past the river's sides, river water between the two levels at 198 of ~790 thousand river
+  points (revision 43: 40168, counted the same way), no river water under its ground, no river or lake point away from
+  the falls changed. *Terrain version → Build 140* keeps revision 43 (`terrain-build140.json`); the current fingerprints
+  re-recorded (one sample of Great mainland 42 lies on a lip's stretch).
+* Tool: `Tests/WorldGen --map=<profile>,<seed>,x,z,half,step[,revision]` prints ground and water levels on a grid.
+* Checked on Tom's fall and on seven falls of other worlds and seeds (Mountain kingdoms 42, Great mainland 7319: small, tall
+  and narrow up to 199 m, medium, wide), each beside revision 43 (Tom: "how will other waterfalls that we don't know about
+  yet ... behave?"). The revision 43 face test now pins revision 43 (D301 changes the lip's stretch upstream).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

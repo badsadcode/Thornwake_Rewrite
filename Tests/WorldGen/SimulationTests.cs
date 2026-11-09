@@ -27,6 +27,7 @@ internal static class SimulationTests
         T.Run("Landforms: spits, sandbars and lagoons — sand just above the sea, shallow water behind, land and river mouths untouched (revision 37)", SpitForms, filter);
         T.Run("Landforms: oxbow lakes — crescents of still water beside lowland rivers, closed round, rivers and lakes unchanged (revision 39)", OxbowForms, filter);
         T.Run("Landforms: river terraces — level steps up broad valley sides, gentle risers, rivers and lakes unchanged (revision 40)", TerraceForms, filter);
+        T.Run("Landforms: no river water left on a fall's slope — the lip's above the face, the pool's below (revision 44)", FallSlopeForms, filter);
         T.Run("Landforms: rock faces and plunge pools at falls — a sheer drop at the lip, the pool's water below (revision 43)", FallFaceForms, filter);
         T.Run("Landforms: banks at waterfall lips — the ground beside a lip stands over its water, rivers and lakes unchanged (revision 42)", FallLipForms, filter);
         T.Run("Landforms: alluvial fans — gravel cones where mountain streams reach a plain, gentle, rivers and lakes unchanged (revision 41)", FanForms, filter);
@@ -1197,6 +1198,8 @@ internal static class SimulationTests
             if (s.Plan.FallLips is not { Faces: true, Count: > 0 } fl) continue;
             worlds++;
             var old = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 42 }));
+            s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 43 })); // (the faces alone: D301 changes the lip's stretch)
+            fl = s.Plan.FallLips!;
             double sea = s.Plan.Profile.SeaLevel;
             var zones = new List<(double X, double Z, double Dx, double Dz, double Length, double Half)>();
             foreach (var (x, z, dx, dz, width, top, bottom, length) in fl.Falls())
@@ -1231,6 +1234,65 @@ internal static class SimulationTests
         T.Check(worlds >= 3 && tall >= 30, $"falls in the worlds ({tall}, {worlds})");
         T.Check(faces >= tall * .9, $"rock faces ({faces} of {tall})");
         T.Check(pools >= tall * .9, $"plunge pools ({pools} of {tall})");
+        T.Check(changed == 0, $"rivers and lakes away from the falls unchanged ({changed})");
+    }
+
+    /// <summary>D301: around each fall (from 10 m above the lip to 40 m past the foot, out to the river's width and 30 m more a
+    /// side, every 2 m) no river water of its reach between the lip's level and the foot's (revision 43 left it beside the pool's
+    /// end and at the lip's ends on a bend: the game cut it away as part of the falling water, leaving dry steps — Tom's dumps
+    /// 112818, 112829); all river water there at the lip's level or at the pool's or below; the pool's water over its floor;
+    /// rivers and lakes away from the falls unchanged (revision 43).</summary>
+    private static void FallSlopeForms()
+    {
+        int falls = 0, worlds = 0, slope = 0, before = 0, dryPool = 0, wet = 0, changed = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("balanced", 7319), ("continental", 7319), ("mountainous", 42) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            if (s.Plan.FallLips is not { Follow: true, Count: > 0 } fl) continue;
+            worlds++;
+            var old = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 43 }));
+            var zones = new List<(double X, double Z, double Dx, double Dz, double Length, double Half, double Upstream)>();
+            foreach (var (x, z, dx, dz, width, top, bottom, length) in fl.Falls())
+            {
+                falls++;
+                double half = width * .5 + 30;
+                zones.Add((x, z, dx, dz, length, half, Math.Max(25, width * .8)));
+                for (double along = -10; along <= length + 40; along += 2)
+                    for (double across = -half; across <= half; across += 2)
+                    {
+                        double px = x + dx * along + dz * across, pz = z + dz * along - dx * across;
+                        var b = s.Sample(px, pz); var a = old.Sample(px, pz);
+                        // (from 2 m above the lip: upstream the river's surface dips a little toward the lip; past the foot half a metre
+                        // or more over the pool: it eases down to the pool's level there)
+                        bool OnSlope(TerrainSample t) => along >= -2 && t.Water == WaterKind.River && t.WaterLevel < top - .05
+                            && t.WaterLevel > bottom + (along > length ? .5 : .05);
+                        // (another river's water may lie between the two levels by chance: counted in both)
+                        if (OnSlope(a)) before++;
+                        if (OnSlope(b)) slope++;
+                        if (b.Water == WaterKind.River) { wet++; if (b.Height > b.WaterLevel + 1e-6) dryPool++; }
+                    }
+            }
+            bool InZone(double px, double pz)
+            {
+                foreach (var zz in zones)
+                {
+                    double ox = px - zz.X, oz = pz - zz.Z, along = ox * zz.Dx + oz * zz.Dz, across = Math.Abs(ox * zz.Dz - oz * zz.Dx);
+                    if (along > -zz.Upstream - 5 && along < zz.Length + 60 && across < zz.Half + 10) return true;
+                }
+                return false;
+            }
+            foreach (var r in s.Plan.Hydrology.Reaches)
+                for (int i = 0; i < r.Points.Length; i += 3)
+                {
+                    if (InZone(r.Points[i].X, r.Points[i].Z)) continue;
+                    var a = old.Sample(r.Points[i].X, r.Points[i].Z); var b = s.Sample(r.Points[i].X, r.Points[i].Z);
+                    if (a.Water != b.Water || !(a.WaterLevel == b.WaterLevel || double.IsNaN(a.WaterLevel) && double.IsNaN(b.WaterLevel))) { changed++; }
+                }
+        }
+        T.Note($"{falls} falls in {worlds} worlds: river water on a fall's slope at {slope} of {wet} river points around them (revision 43: {before}); {dryPool} with the ground over the water; {changed} river or lake points away from the falls changed");
+        T.Check(worlds >= 3 && falls >= 50, $"falls in the worlds ({falls}, {worlds})");
+        T.Check(slope <= before / 20, $"no river water left on the falls' slopes ({slope}, revision 43: {before})");
+        T.Check(dryPool == 0, $"river water over its ground ({dryPool})");
         T.Check(changed == 0, $"rivers and lakes away from the falls unchanged ({changed})");
     }
 
