@@ -4736,6 +4736,16 @@ a quarter of the width a side: 19 m on the 74 m fall) that hid where the river's
 by itself (D296) and banks at the lip (D297) it is the river's width (+1 m, a tenth wider toward the foot as the water
 spreads), fading over its own edges (12 % of the width, 1–4 m).
 
+## D299 — The whole lip pours over, down to the pool (2026-11-09)
+Tom (screenshot, the wide fall's sides circled): "Why is there no water in the marked areas? Well, the water is above. It's
+just sands there. It doesn't make any sense." The river is 74 m wide to the lip, but the curtain left the gorge's V sides
+below it dry: (1) within the river's width a column sliding down a side slope that stayed well over the free-falling middle
+was faded out (the rule meant for rock walls beside a river) — now that fade applies only outside the river's width; (2) the
+rows ended where the middle reached the pool, part-way down the V's sides — now they go on until the sides have reached the
+pool too (up to 2.5 × the fall's length + 20 m), and the river's sheet is cut as far; (3) a dark strip between the curtain
+and the pool: the curtain faded out half a metre over the pool and the sheet was cut down to 0.25 m over it — now the curtain
+stays solid to the pool's level and the sheet is kept up to 0.8 m over the pool, overlapping it.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

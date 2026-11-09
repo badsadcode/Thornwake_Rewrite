@@ -55,7 +55,7 @@ public sealed class FallSet
         for (int i = 0; i < _falls.Count; i++)
         {
             var f = _falls[i];
-            double reach = f.Length + Math.Max(f.Width, f.FootWidth) + 20;
+            double reach = f.Length * 2.5 + Math.Max(f.Width, f.FootWidth) + 40;
             for (int gx = Cell(Math.Min(f.LipX, f.FootX) - reach); gx <= Cell(Math.Max(f.LipX, f.FootX) + reach); gx++)
                 for (int gz = Cell(Math.Min(f.LipZ, f.FootZ) - reach); gz <= Cell(Math.Max(f.LipZ, f.FootZ) + reach); gz++)
                 {
@@ -86,9 +86,9 @@ public sealed class FallSet
             // (from 1.5 m above the lip: the curtain overlaps it from 3 m above, fading in — D291, a gap showed as a line)
             // (D296: well past the river's sides, by the level test below only the sheet's ramp: running on under the banks it
             // hung over the V of a wide fall's gorge as a dark ribbed panel beside the falling water — Tom's dump 001431)
-            if (along < -1.5 || along > f.Length + 12 || across > f.WidthAt(along) * .5 + Math.Max(Margin(f) * 2.5, 15)) continue;
+            if (along < -1.5 || along > f.Length * 2.5 + 20 || across > f.WidthAt(Math.Min(along, f.Length)) * .5 + Math.Max(Margin(f) * 2.5, 15)) continue;
             // (any corner between the two levels: the dome over the lip sinks a little below the lip's level already)
-            if (low < f.Top - .25 && high > f.Bottom + .25) return true;
+            if (low < f.Top - .25 && high > f.Bottom + .8) return true; // (D299: the sheet kept up to 0.8 m over the pool: it overlaps the curtain's foot)
         }
         return false;
     }
@@ -205,17 +205,29 @@ public sealed class WaterfallView
         // slides on down it: the path follows whichever is higher, or the curtain ended a third of the way down)
         double Centre(double hh) => hh <= 0 ? lipLevel
             : Math.Max(lipLevel - 4.9 * (hh / v0) * (hh / v0), terrain.Height(f.LipX + f.Dx * hh, f.LipZ + f.Dz * hh) + .3);
+        // Whether the falling water's sides (a quarter and the edge of the river's width either side) have reached the pool's level.
+        bool SidesDown(double hh)
+        {
+            foreach (double u in new[] { -.5, -.3, .3, .5 })
+            {
+                double off = u * f.WidthAt(hh), x = f.LipX + f.Dx * hh + ax * off, z = f.LipZ + f.Dz * hh + az * off;
+                if (terrain.Height(x, z) + .3 > bottom + .2) return false;
+            }
+            return true;
+        }
         var steps = new List<double> { -Upstream };
         {
             double h = -Upstream, y = lipLevel;
-            while (h < f.Length + 8 && steps.Count < 600)
+            while (h < f.Length * 2.5 + 20 && steps.Count < 900)
             {
                 // About a metre of path a step: shorter where it drops steeply.
                 double step = 1;
                 for (int tries = 0; tries < 6 && Math.Abs(Centre(h + step) - y) > 1; tries++) step *= .5;
                 h += step; steps.Add(h);
                 y = Centre(h);
-                if (h > 0 && y <= bottom - .1) break;
+                // (D299: on until every column has reached the pool — the sides of a V-shaped gorge reach it further down than the
+                // middle; the rows were cut where the middle did)
+                if (h > f.Length + 4 && y <= bottom - .1 && SidesDown(h)) break;
             }
         }
         int cols = Math.Clamp((int)Math.Ceiling(Math.Max(width, Wide(f.Length)) / 1.2), 2, 60) + 1, rows = steps.Count;
@@ -252,7 +264,9 @@ public sealed class WaterfallView
                     // the river only past 2.5 m, bumps of the bed stay — instead of being held a metre over the centre's path,
                     // which hung those columns straight down from the lip as a flat, stepped wall: Tom's dump 001431)
                     double outside = DetMath.Smooth((Math.Abs(off) - f.WidthAt(h) * .5 + 1) / 2);
-                    wall = DetMath.Smooth((own - centre - (1 + 1.5 * (1 - outside))) / 2.5);
+                    // (D299: only outside the river's width — within it the lip's water pours down whatever slope is there; fading it
+                    // where it slid down a gorge's V sides left them dry under a full-width river, Tom's red circles)
+                    wall = DetMath.Smooth((own - centre - 1) / 2.5) * outside;
                     y = Math.Max(own, bottom - .25);
                     onRock = DetMath.Smooth((ground - free) / .5);
                 }
@@ -271,7 +285,7 @@ public sealed class WaterfallView
                 // (fading out as it reaches the pool: drawn after the water, its rows lying under the pool showed as a glassy sheet)
                 double fromSide = Math.Min(u, 1 - u) * Wide(h);
                 double edge = DetMath.Smooth(fromSide / margin) * DetMath.Smooth((h + Upstream) / (Upstream - 1))
-                    * (h > 0 ? DetMath.Smooth((y - bottom + .1) / .6) : 1) * (1 - wall);
+                    * (h > 0 ? DetMath.Smooth((y - bottom + .2) / .3) : 1) * (1 - wall);
                 colors[k] = new Color((float)Math.Min(1, speed / 25), (float)foot, (float)onRock, (float)edge);
             }
         }
