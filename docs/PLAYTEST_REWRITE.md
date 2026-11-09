@@ -78,6 +78,17 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 142 — waterfalls: the digging crash, depth and spray
+**Host and everyone joining need build 142** (versions must match to connect). Same terrain as build 141.
+* **No crash digging by a waterfall** (your black screen): digging at a fall's face fed the water simulation impossible
+  water and broke everything after it. Fixed; and if anything ever puts the player somewhere impossible again, the game puts
+  you back where you last were instead of going black.
+* **No wall behind the lip** (dump 133922): seen from upstream, the back of the falling water showed through the river.
+* **Falling water with depth**: a second layer behind the first, joined at the sides, so from the side it is a band of
+  falling water (up to ~3 m on big falls), with spray down both sides and along the lip. *Falling water's body → flat
+  sheet (build 141)* is the previous look.
+* River currents pushing the player: planned, not in this build.
+
 ## New in build 141 — waterfalls: your build 140 dumps
 **Host and everyone joining need build 141** (versions must match to connect). **New terrain at waterfalls** (revision 44):
 *Terrain version → Build 140* is the ground of build 140.
