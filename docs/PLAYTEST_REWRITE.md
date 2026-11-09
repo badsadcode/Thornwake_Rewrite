@@ -78,6 +78,19 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 141 — waterfalls: your build 140 dumps
+**Host and everyone joining need build 141** (versions must match to connect). **New terrain at waterfalls** (revision 44):
+*Terrain version → Build 140* is the ground of build 140.
+* **No dry steps or ledges at falls** (your dumps 112818, 112829): the river's water sloping down over a fall was left
+  beside the pool's end and at the lip's ends, and the game hid it as falling water. Now past the drop it is all pool,
+  and the pool runs on into the river below.
+* **Level to the lip**: the river runs level right to the edge across its width (it sagged up to 4 m toward the sides),
+  with rock banks beside it standing over the water; the falling water spans all the water at the lip.
+* **Pools below lakes**: a fall leaving a lake now has water in its pool (a dry floor before).
+* Your dumps 112735 and 112745 were on build 139's ground: the old *Go to - wide waterfall* keeps it. *Go to - wide
+  waterfall, rock face and pool* now opens the new ground.
+* Checked on seven other falls in Mountain kingdoms and Great mainland: small, tall and narrow, wide.
+
 ## New in build 140 — waterfalls: rock faces and plunge pools; your build 139 notes
 **Host and everyone joining need build 140** (versions must match to connect). **New terrain at waterfalls** (revision 43):
 *Terrain version → Build 139* is the ground of build 139, *Fall banks (rev. 42)* the step between.
