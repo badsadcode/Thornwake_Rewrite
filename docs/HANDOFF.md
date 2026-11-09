@@ -3,15 +3,16 @@
 Written for the next conversation (the previous one ran out of context). Everything is on `main`, pushed.
 
 ## Where things stand
-* **Last build Tom has: 140** (v0.9.140, return point `6ef460e`, `dist/Preview-140`): Tom's build 139 notes fixed (D296:
+* **Last build Tom has: 141** (v0.9.141, return point `0e042bf`, `dist/Preview-141`): Tom's build 140 dumps (112735–112829)
+  fixed by terrain revision 44 (D301): no river water left on a fall's slope, the river level to the lip within its width with
+  rock banks beyond, a pool keeps its water under a lake above the lip; falling water as wide as the water at the lip. Checked
+  on seven falls of other worlds (`--map=` in `Tests/WorldGen` prints ground and water levels). Launcher "Go to - wide
+  waterfall, rock face and pool" opens revision 44. Tom: rivers first, then where kinds meet, lakes, the sea.
+* Build 140 (v0.9.140, return point `6ef460e`, `dist/Preview-140`): Tom's build 139 notes fixed (D296:
   the fall's top, the white water's ragged end, underwater shafts as columns of light), banks at waterfall lips (terrain
   revision 42, D297), falling water as wide as its river (D298), the whole lip pouring over (D299), rock faces and plunge
   pools at falls (terrain revision 43, D300). New launcher "Go to - wide waterfall, rock face and pool" (revision 43; the
-  old "wide waterfall" keeps revision 41). Tom: rivers first, then where kinds meet, lakes, the sea.
-* **Since build 140** (on `main`): Tom's build 140 dumps (112735–112829) fixed by terrain revision 44 (D301): no river water
-  left on a fall's slope (it became stepped dry patches and a ledge beside the falling water), the river level to the lip
-  within its width with rock banks beyond, a pool keeps its water under a lake above the lip; falling water as wide as the
-  water at the lip. Checked on seven falls of other worlds (`--map=` in `Tests/WorldGen` prints ground and water levels).
+  old "wide waterfall" keeps revision 41).
 * Build 139 (v0.9.139, return point `6b7c616`, `dist/Preview-139`): rivers — foam from the rocks' real place (D290),
   falling water fixes (D290–D292), billowing spray (D292), rapids (D293), Tom's foam and mist textures (`Assets/Water`,
   D294–D295). Launcher "Go to - rapids".
