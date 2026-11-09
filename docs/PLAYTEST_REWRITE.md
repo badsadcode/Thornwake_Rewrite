@@ -78,6 +78,23 @@ milestone M6), caves.
 * **Going back**: New world → *Build 5 terrain (for comparison)* generates rivers and shores exactly as in build 5.
   New world → *Bank irregularity* and *Shore steepness* tune the new look.
 
+## New in build 140 — waterfalls: rock faces and plunge pools; your build 139 notes
+**Host and everyone joining need build 140** (versions must match to connect). **New terrain at waterfalls** (revision 43):
+*Terrain version → Build 139* is the ground of build 139, *Fall banks (rev. 42)* the step between.
+* **Rock face and wide pool** (your choice): at every waterfall the ground drops sheer at the lip, across the river's whole
+  width, into a plunge pool a little wider than the river (2–8 m deep, by the fall's height), with bare rock on the face
+  and the walls either side. The pool shallows back into the river below. Away from falls nothing changed.
+* **Banks at the lip** (you: "the sides.. terrain is smooth there.. water would spill"): rocky banks rise beside the river
+  over the last stretch before a fall, so the water leaves through its channel.
+* **The falling water**: as wide as its river (it was wider), the whole lip pours over, and it falls freely in front of the
+  face into the pool. The pool churns white with its river's current instead of lying dark and still.
+* **The fall's top** (dump 001431): no dark ribbed panel, staircase or flat stepped wall where the river goes over the lip.
+* **White water ends raggedly** (dump 001445): where a fast stretch eases, the white water breaks into tongues and
+  islands carried downstream instead of a straight edge.
+* **Underwater light** (dump 001521): no fan of shafts from the side; columns of light from above, fainter in shallow
+  water. *Underwater light → full (build 139)* is the previous look.
+* Try *Go to - wide waterfall, rock face and pool* (the new ground) beside *Go to - wide waterfall* (build 139's ground).
+
 ## New in build 139 — rivers: your foam and mist textures, spray, rapids, better waterfalls
 **Host and everyone joining need build 139** (versions must match to connect). Same terrain as build 138.
 * **Your textures**: the foam round river stones and banks is your bubble lace (solid at the stone, lace further out),
