@@ -4718,6 +4718,24 @@ Tom: "This looks good. The river looks really good. Few tweaks needed", dumps 00
   would spill"): at a fall's lip the land beside the river lies at the water's level — banks or a rock sill are needed (a
   terrain change: a new revision).
 
+## D297 — Banks at waterfall lips, terrain revision 42 (2026-11-09)
+Tom: "where the waterfall drops on top.. there is no river bed.. the sides.. terrain is smooth there.. water would
+spill/flow on the sides", then "Yes, do it here". `Game/WorldGen/FallLips.cs`, applied after the river stage to dry ground.
+* At every stretch of river dropping 3 m or more steeper than 1 in 5 (the falls the game draws), from ~25 m upstream (0.8 ×
+  the width on wide rivers) along the lip and on down the fall's sides (fading toward its foot), the dry ground beside the
+  river rises to 1.8–3.2 m over the lip's water — rising from the channel's edge over the bank, fading out 12 m + a quarter
+  of the width beyond — as bare rock: a sill the water leaves through in a channel. Only raised, only dry ground: the
+  channel, every river level and every lake are as before.
+* Test `Landforms: banks at waterfall lips` (4 worlds, 2753 lips): beside each lip, 5 m upstream just past the bank, 5391
+  of 5455 dry points a metre or more over the lip's water (3418 before); no river or lake sample changed. *Terrain version
+  → Build 139* = revision 41 (`terrain-build139.json`).
+
+## D298 — Falling water as wide as its river (2026-11-09)
+Tom, in build 139: "The waterfall is wider than the river." The curtain reached past the river's sides by a margin (up to
+a quarter of the width a side: 19 m on the 74 m fall) that hid where the river's sheet was cut. With the sheet now fading out
+by itself (D296) and banks at the lip (D297) it is the river's width (+1 m, a tenth wider toward the foot as the water
+spreads), fading over its own edges (12 % of the width, 1–4 m).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

@@ -74,6 +74,7 @@ public sealed partial class TerrainSampler
     private readonly Spits? _spits;
     private readonly Oxbows? _oxbows;
     private readonly Terraces? _terraces;
+    private readonly FallLips? _fallLips;
     private readonly Fans? _fans;
     // Wetland pools: sorted samples of the pool and channel noise (unit standard deviation), to turn a coverage share
     // into a threshold.
@@ -101,6 +102,7 @@ public sealed partial class TerrainSampler
         _spits = plan.Spits is { Count: > 0 } sp ? sp : null;
         _oxbows = plan.Oxbows is { Count: > 0 } ob ? ob : null;
         _terraces = plan.Terraces;
+        _fallLips = plan.FallLips is { Count: > 0 } fl ? fl : null;
         _fans = plan.Fans is { Count: > 0 } fa ? fa : null;
         (_poolQuantiles, _poolStd) = Quantiles((u, v) => PoolNoise(u, v, 1, 0));
         (_channelQuantiles, _channelStd) = Quantiles((u, v) => ChannelNoise(u, v, 1, 0));
@@ -186,6 +188,8 @@ public sealed partial class TerrainSampler
         double height = Rivers(x, z, minWavelength, baseHeight, inland, detail, ref riverDamp, ref water, ref level, ref body, ref scree, Canyons.Wall(canyon));
         // Revision 33: a gorge's talus is bare ground as the escarpments' debris slopes are (scree, not cliff rock).
         bare = Math.Max(bare, .65 * scree);
+        // Revision 42 (D297): banks of rock beside waterfall lips (dry ground only: the river's channel and water unchanged).
+        if (_fallLips != null && water == WaterKind.None) { height = _fallLips.Apply(x, z, height, _p.SeaLevel, out double lipRock); bare = Math.Max(bare, lipRock); }
         double lakePlume = 0, lakeCells = double.PositiveInfinity;
         Lakes(x, z, ref height, ref water, ref level, ref body, ref lakePlume, ref lakeCells);
         // Revision 23: a cirque's tarn, still water of its own (drawn as a pond), where nothing else is water.

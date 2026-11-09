@@ -6,6 +6,8 @@ Written for the next conversation (the previous one ran out of context). Everyth
 * **Last build Tom has: 139** (v0.9.139, return point `6b7c616`, `dist/Preview-139`): rivers — foam from the rocks' real
   place (D290), falling water fixes (D290–D292), billowing spray (D292), rapids (D293), Tom's foam and mist textures
   (`Assets/Water`, D294–D295). New launcher "Go to - rapids". Tom: rivers first, then where kinds meet, lakes, the sea.
+* **Since build 139** (on `main`): Tom's notes fixed (D296: the fall's top, the white water's ragged end, underwater shafts as
+  columns of light), banks at waterfall lips (terrain revision 42, D297), falling water as wide as its river (D298).
 * Build 138 (v0.9.138, return point `e6802dc`, `dist/Preview-138`): everything below up to D289.
   Launchers "Go to - oxbow lake / river terraces / alluvial fan, from above / wide waterfall / stream with stones / lowland
   river with stones". Tom asked whether rivers move their mesh (they do not: only the sea's and lakes' vertices move; river

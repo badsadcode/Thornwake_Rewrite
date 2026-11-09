@@ -49,6 +49,8 @@ public sealed class WorldPlan
     public Oxbows? Oxbows { get; }
     /// <summary>River terraces in broad valleys (revision 40, landform no. 12); null when off or older.</summary>
     public Terraces? Terraces { get; }
+    /// <summary>Banks at waterfall lips (revision 42, D297); null when older.</summary>
+    public FallLips? FallLips { get; }
     /// <summary>Alluvial fans at mountain fronts (revision 41, landform no. 13); null when off or older.</summary>
     public Fans? Fans { get; }
     /// <summary>Settlement sites and the roads between them (docs/WORLDGEN_PLAN.md step 3): empty in revision 17.</summary>
@@ -197,6 +199,7 @@ public sealed class WorldPlan
             Oxbows = new Oxbows(this, Style.Landform(LandformCatalog.Oxbows.Id));
         if (Style.Revision >= LandformCatalog.Terraces.Since && !Style.Landform(LandformCatalog.Terraces.Id).Off)
             Terraces = new Terraces(this, Style.Landform(LandformCatalog.Terraces.Id));
+        if (Style.Revision >= 42) FallLips = new FallLips(this);
         stage?.Invoke(3);
         Climate = new Climate(this, Style.Climate);
         // Fans (revision 41) read the climate (more in dry country); they change no raster the climate reads.

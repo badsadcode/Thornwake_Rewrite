@@ -188,8 +188,12 @@ public sealed class WaterfallView
         // dumps 214522/214703).
         // D291: 3.5 m more a side, fading and fraying there — the river's sheet is cut 3 m past the river's sides and the curtain
         // stopped short of that: a clear cut-off between them (Tom: "the sides are too regular. There's a clear cutoff").
-        double margin = FallSet.Margin(f) + .5;
-        double Wide(double h) => Math.Max(2, f.Width * (1 + .25 * Math.Clamp(h / Math.Max(1, f.Length), 0, 1)) + 1) + 2 * margin;
+        // D298 (Tom, build 139: "The waterfall is wider than the river"): the river's width (a tenth wider toward the foot as the
+        // water spreads), fading out over its own edges — the margin past the river's sides (D291/D292, up to a quarter of the
+        // width a side: 19 m on the wide fall) hid where the river's sheet was cut, which now fades out by itself (D296) and
+        // meets the banks at the lip (D297).
+        double margin = Math.Clamp(f.Width * .12, 1, 4);
+        double Wide(double h) => Math.Max(2, f.Width * (1 + .1 * Math.Clamp(h / Math.Max(1, f.Length), 0, 1)) + 1);
         double width = Wide(0);
         double ax = f.Dz, az = -f.Dx; // across the fall (to its right)
         double lipLevel = terrain.Sample(f.LipX, f.LipZ).WaterLevel;

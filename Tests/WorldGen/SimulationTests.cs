@@ -27,6 +27,7 @@ internal static class SimulationTests
         T.Run("Landforms: spits, sandbars and lagoons — sand just above the sea, shallow water behind, land and river mouths untouched (revision 37)", SpitForms, filter);
         T.Run("Landforms: oxbow lakes — crescents of still water beside lowland rivers, closed round, rivers and lakes unchanged (revision 39)", OxbowForms, filter);
         T.Run("Landforms: river terraces — level steps up broad valley sides, gentle risers, rivers and lakes unchanged (revision 40)", TerraceForms, filter);
+        T.Run("Landforms: banks at waterfall lips — the ground beside a lip stands over its water, rivers and lakes unchanged (revision 42)", FallLipForms, filter);
         T.Run("Landforms: alluvial fans — gravel cones where mountain streams reach a plain, gentle, rivers and lakes unchanged (revision 41)", FanForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
         T.Run("Water: rain erosion is slow, wears the stream's bed, keeps the soil", Erosion, filter);
@@ -1181,6 +1182,53 @@ internal static class SimulationTests
         T.Check(overlap == 0, $"apart ({overlap})");
         T.Check(same == 4, $"placed the same every time ({same}/4)");
         T.Check(ground == 0, $"the ground is revision 34's ({ground})");
+    }
+
+    /// <summary>D297: beside each fall's lip, 5 m upstream, just past the bank on both sides, the dry ground stands at least a
+    /// metre over the lip's water (it lay at the water's level: water would spill sideways — Tom); every river and lake sample
+    /// the same as without (revision 41).</summary>
+    private static void FallLipForms()
+    {
+        int lips = 0, sides = 0, high = 0, before = 0, changed = 0, worlds = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("balanced", 7319), ("continental", 7319), ("mountainous", 42) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            if (s.Plan.FallLips is not { Count: > 0 } fl) continue;
+            worlds++;
+            var old = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 41 }));
+            double sea = s.Plan.Profile.SeaLevel;
+            foreach (var (x, z, dx, dz, width, top) in fl.Probes())
+            {
+                lips++;
+                double off = width * .5 + Hydrology.Bank(width) * .6 + 3;
+                foreach (double side in new[] { -1.0, 1.0 })
+                {
+                    double px = x - dx * 5 + dz * off * side, pz = z - dz * 5 - dx * off * side;
+                    var a = s.Sample(px, pz);
+                    if (a.Water != WaterKind.None) continue;
+                    sides++;
+                    if (a.Height >= top + 1) high++;
+                    if (old.Sample(px, pz).Height >= top + 1) before++;
+                }
+            }
+            foreach (var r in s.Plan.Hydrology.Reaches)
+                for (int i = 0; i < r.Points.Length; i += 3)
+                {
+                    var a = old.Sample(r.Points[i].X, r.Points[i].Z); var b = s.Sample(r.Points[i].X, r.Points[i].Z);
+                    if (a.Water != b.Water || !(a.WaterLevel == b.WaterLevel || double.IsNaN(a.WaterLevel) && double.IsNaN(b.WaterLevel)) || (a.Water != WaterKind.None && a.Height != b.Height)) changed++;
+                }
+            var rng = new RandomStream(13);
+            for (int k = 0; k < 3000; k++)
+            {
+                double px = s.Plan.Macro.CellX(rng.Int(s.Plan.Macro.Size)) + rng.Between(-300, 300), pz = s.Plan.Macro.CellZ(rng.Int(s.Plan.Macro.Size)) + rng.Between(-300, 300);
+                var a = old.Sample(px, pz);
+                if (a.Water is WaterKind.Lake or WaterKind.River && s.Sample(px, pz) is var b && (b.Water != a.Water || b.WaterLevel != a.WaterLevel)) changed++;
+            }
+        }
+        T.Note($"{lips} fall lips in {worlds} worlds: beside them {high} of {sides} dry points a metre or more over the lip's water (before {before}); {changed} river or lake points changed");
+        T.Check(worlds >= 3 && lips >= 50, $"lips in the worlds ({lips}, {worlds})");
+        T.Check(high >= sides * .97, $"banks over the water ({high} of {sides})");
+        T.Check(changed == 0, $"rivers and lakes unchanged ({changed})");
     }
 
     /// <summary>D283: alluvial fans in the worlds; each raises the ground beside its stream half-way down (off the stream's
