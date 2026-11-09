@@ -4746,6 +4746,25 @@ pool too (up to 2.5 × the fall's length + 20 m), and the river's sheet is cut a
 and the pool: the curtain faded out half a metre over the pool and the sheet was cut down to 0.25 m over it — now the curtain
 stays solid to the pool's level and the sheet is kept up to 0.8 m over the pool, overlapping it.
 
+## D300 — Rock faces and plunge pools at falls, terrain revision 43 (2026-11-09)
+Tom marked the wide fall's lip strip, top corners, a tree in the water, the dark band at its foot, then: "I'm not sure if
+this terrain would produce a waterfall like that." The fall was a river level dropping over one stretch (37 m) and the
+valley carved as a slope: a V-shaped chute no real fall of 74 m by 42 m has; the curtain fitted to it caused those marks.
+Asked how big falls' ground should be shaped, Tom chose "Rock face and wide pool".
+* **Terrain** (`FallLips.Pool`, with the lips' banks of D297): from just past the lip (a sheer face over 0.6 m) to the fall's
+  foot, across a pool a little wider than the river (0.55 × the width + 3 m a side, its edge wandering), the ground drops to
+  the pool's floor — 15 % of the drop deep (2–8 m), a bowl, shoaling over 8 m past the foot into the river below; only
+  lowered; bare rock on the face and the walls. The pool fills to the foot's water level (the river's ramp of water over
+  the drop becomes the pool), as river water of its reach.
+* **Water drawn**: the curtain then falls freely in front of the face to the pool, ending there (on the old ground it slid
+  on down the slopes, D299); the river's sheet drops squares spanning from the lip's level to the pool's (a wall of water at
+  the face); a river's still water (the pool) takes its river's way and speed, so it churns white instead of lying dark.
+* Test `Landforms: rock faces and plunge pools at falls` (4 worlds, 962 falls of 6 m or more): 940 with a drop of over
+  half the fall within 4 m of the lip, 949 with the pool's water below it; no river or lake sample away from the falls
+  changed. *Terrain version → Fall banks (rev. 42)* keeps the ground before (`terrain-r42.json`; the fingerprints' sample
+  points miss every fall, so revision 43's read the same — the test guards it). The banks' test compares revisions 41 and
+  42 now (the pools change falls' water).
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,

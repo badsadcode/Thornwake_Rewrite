@@ -215,6 +215,7 @@ public sealed class WaterfallView
             }
             return true;
         }
+        bool faces = terrain.Plan.FallLips is { Faces: true };
         var steps = new List<double> { -Upstream };
         {
             double h = -Upstream, y = lipLevel;
@@ -227,7 +228,8 @@ public sealed class WaterfallView
                 y = Centre(h);
                 // (D299: on until every column has reached the pool — the sides of a V-shaped gorge reach it further down than the
                 // middle; the rows were cut where the middle did)
-                if (h > f.Length + 4 && y <= bottom - .1 && SidesDown(h)) break;
+                // (D300: with a plunge pool under the face — revision 43 — it ends where the falling water meets the pool)
+                if (faces ? h > 0 && y <= bottom - .1 : h > f.Length + 4 && y <= bottom - .1 && SidesDown(h)) break;
             }
         }
         int cols = Math.Clamp((int)Math.Ceiling(Math.Max(width, Wide(f.Length)) / 1.2), 2, 60) + 1, rows = steps.Count;

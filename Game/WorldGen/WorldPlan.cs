@@ -199,7 +199,7 @@ public sealed class WorldPlan
             Oxbows = new Oxbows(this, Style.Landform(LandformCatalog.Oxbows.Id));
         if (Style.Revision >= LandformCatalog.Terraces.Since && !Style.Landform(LandformCatalog.Terraces.Id).Off)
             Terraces = new Terraces(this, Style.Landform(LandformCatalog.Terraces.Id));
-        if (Style.Revision >= 42) FallLips = new FallLips(this);
+        if (Style.Revision >= 42) FallLips = new FallLips(this, Style.Revision >= 43);
         stage?.Invoke(3);
         Climate = new Climate(this, Style.Climate);
         // Fans (revision 41) read the climate (more in dry country); they change no raster the climate reads.

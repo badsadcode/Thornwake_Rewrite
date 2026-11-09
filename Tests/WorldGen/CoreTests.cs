@@ -78,6 +78,7 @@ internal static class CoreTests
         T.Run("Revision 39 terrain still reproducible", () => Fingerprints(false, "terrain-r39.json", r39: true), filter);
         T.Run("Revision 40 terrain still reproducible", () => Fingerprints(false, "terrain-r40.json", r40: true), filter);
         T.Run("Build 139 terrain still reproducible", () => Fingerprints(false, "terrain-build139.json", build139: true), filter);
+        T.Run("Revision 42 terrain still reproducible", () => Fingerprints(false, "terrain-r42.json", r42: true), filter);
     }
 
     private static void DetMathAccuracy()
@@ -334,7 +335,7 @@ internal static class CoreTests
     // Fixture: SHA-256 of terrain heights on fixed grids. Same on every platform by construction (D5).
     private sealed record Fingerprint(string Case, string Hash);
 
-    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false, bool build25 = false, bool build51 = false, bool build52 = false, bool build114 = false, bool build115 = false, bool build116 = false, bool build117 = false, bool r20 = false, bool build118 = false, bool r22 = false, bool build119 = false, bool build120 = false, bool r25 = false, bool r26 = false, bool build121 = false, bool r28 = false, bool build122 = false, bool build123 = false, bool build125 = false, bool build127 = false, bool build129 = false, bool build130 = false, bool build132 = false, bool r36 = false, bool build133 = false, bool build137 = false, bool r39 = false, bool r40 = false, bool build139 = false)
+    private static void Fingerprints(bool record, string file = "terrain-r1.json", bool classic = false, bool preview7 = false, bool build8 = false, bool build9 = false, bool build12 = false, bool build13 = false, bool build19 = false, bool build25 = false, bool build51 = false, bool build52 = false, bool build114 = false, bool build115 = false, bool build116 = false, bool build117 = false, bool r20 = false, bool build118 = false, bool r22 = false, bool build119 = false, bool build120 = false, bool r25 = false, bool r26 = false, bool build121 = false, bool r28 = false, bool build122 = false, bool build123 = false, bool build125 = false, bool build127 = false, bool build129 = false, bool build130 = false, bool build132 = false, bool r36 = false, bool build133 = false, bool build137 = false, bool r39 = false, bool r40 = false, bool build139 = false, bool r42 = false)
     {
         // Read the source copy: the build output copy is stale right after --record.
         string fixture = Path.Combine(FindRepoRoot(), "Tests/WorldGen/Fixtures", file);
@@ -418,6 +419,8 @@ internal static class CoreTests
                 if (r40) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 40 }));
                 // Builds 138–139 (commits e6802dc, 6b7c616): terrain revision 41, alluvial fans, before banks at waterfall lips.
                 if (build139) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 41 }));
+                // Commit 6c31495: terrain revision 42, banks at waterfall lips, before rock faces and plunge pools.
+                if (r42) s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 42 }));
                 using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new double[33 * 33];
                 var f = s.Plan.Layout.Land[0];

@@ -27,6 +27,7 @@ internal static class SimulationTests
         T.Run("Landforms: spits, sandbars and lagoons — sand just above the sea, shallow water behind, land and river mouths untouched (revision 37)", SpitForms, filter);
         T.Run("Landforms: oxbow lakes — crescents of still water beside lowland rivers, closed round, rivers and lakes unchanged (revision 39)", OxbowForms, filter);
         T.Run("Landforms: river terraces — level steps up broad valley sides, gentle risers, rivers and lakes unchanged (revision 40)", TerraceForms, filter);
+        T.Run("Landforms: rock faces and plunge pools at falls — a sheer drop at the lip, the pool's water below (revision 43)", FallFaceForms, filter);
         T.Run("Landforms: banks at waterfall lips — the ground beside a lip stands over its water, rivers and lakes unchanged (revision 42)", FallLipForms, filter);
         T.Run("Landforms: alluvial fans — gravel cones where mountain streams reach a plain, gentle, rivers and lakes unchanged (revision 41)", FanForms, filter);
         T.Run("Water: mass conserved, runs downhill", Downhill, filter);
@@ -1184,6 +1185,55 @@ internal static class SimulationTests
         T.Check(ground == 0, $"the ground is revision 34's ({ground})");
     }
 
+    /// <summary>D300: at each fall a rock face and a plunge pool — 2 m upstream of the lip the river at the lip's level, 2 m past
+    /// it the pool's water at the foot's level with the ground well below the lip (a drop of over half the fall at the face);
+    /// every river and lake sample away from the falls' pools the same as without (revision 42).</summary>
+    private static void FallFaceForms()
+    {
+        int falls = 0, faces = 0, pools = 0, changed = 0, worlds = 0, tall = 0;
+        foreach (var (id, seed) in new[] { ("balanced", 42), ("balanced", 7319), ("continental", 7319), ("mountainous", 42) })
+        {
+            var s = CoreTests.Sampler(id, seed);
+            if (s.Plan.FallLips is not { Faces: true, Count: > 0 } fl) continue;
+            worlds++;
+            var old = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 42 }));
+            double sea = s.Plan.Profile.SeaLevel;
+            var zones = new List<(double X, double Z, double Dx, double Dz, double Length, double Half)>();
+            foreach (var (x, z, dx, dz, width, top, bottom, length) in fl.Falls())
+            {
+                falls++;
+                zones.Add((x, z, dx, dz, length, width * .55 + 3));
+                if (top - bottom < 6) continue; // (small steps: the face is a metre or two)
+                tall++;
+                var up = s.Sample(x - dx * 2, z - dz * 2); var down = s.Sample(x + dx * 2, z + dz * 2);
+                if (up.Height - down.Height > (top - bottom) * .5) faces++;
+                if (down.Water == WaterKind.River && Math.Abs(down.WaterLevel - bottom) < 1e-6) pools++;
+                else if (pools + 3 > tall && tall < 8) T.Note($"{id}/{seed} fall at {x:0},{z:0}: below the lip {down.Water} {down.WaterLevel:0.0} (foot {bottom:0.0}), ground {down.Height:0.0}");
+            }
+            bool InZone(double px, double pz)
+            {
+                foreach (var zz in zones)
+                {
+                    double ox = px - zz.X, oz = pz - zz.Z, along = ox * zz.Dx + oz * zz.Dz, across = Math.Abs(ox * zz.Dz - oz * zz.Dx);
+                    if (along > -3 && along < zz.Length + 15 && across < zz.Half + 6) return true;
+                }
+                return false;
+            }
+            foreach (var r in s.Plan.Hydrology.Reaches)
+                for (int i = 0; i < r.Points.Length; i += 3)
+                {
+                    if (InZone(r.Points[i].X, r.Points[i].Z)) continue;
+                    var a = old.Sample(r.Points[i].X, r.Points[i].Z); var b = s.Sample(r.Points[i].X, r.Points[i].Z);
+                    if (a.Water != b.Water || !(a.WaterLevel == b.WaterLevel || double.IsNaN(a.WaterLevel) && double.IsNaN(b.WaterLevel))) changed++;
+                }
+        }
+        T.Note($"{falls} falls in {worlds} worlds, {tall} of 6 m or more: {faces} with a rock face at the lip, {pools} with the pool's water below it; {changed} river or lake points away from the pools changed");
+        T.Check(worlds >= 3 && tall >= 30, $"falls in the worlds ({tall}, {worlds})");
+        T.Check(faces >= tall * .9, $"rock faces ({faces} of {tall})");
+        T.Check(pools >= tall * .9, $"plunge pools ({pools} of {tall})");
+        T.Check(changed == 0, $"rivers and lakes away from the falls unchanged ({changed})");
+    }
+
     /// <summary>D297: beside each fall's lip, 5 m upstream, just past the bank on both sides, the dry ground stands at least a
     /// metre over the lip's water (it lay at the water's level: water would spill sideways — Tom); every river and lake sample
     /// the same as without (revision 41).</summary>
@@ -1196,6 +1246,7 @@ internal static class SimulationTests
             if (s.Plan.FallLips is not { Count: > 0 } fl) continue;
             worlds++;
             var old = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 41 }));
+            s = new TerrainSampler(new WorldPlan(s.Plan.Manifest, style: s.Plan.Style with { Revision = 42 })); // (the banks alone: D300's pools change falls' water)
             double sea = s.Plan.Profile.SeaLevel;
             foreach (var (x, z, dx, dz, width, top) in fl.Probes())
             {

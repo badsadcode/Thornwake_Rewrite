@@ -14,13 +14,29 @@ namespace Thornwake.WorldGen;
 public sealed class FallLips
 {
     private sealed record Lip(Point2[] Points, double[] Along, double Width, double Top, double Length, double Upstream,
-        double MinX, double MinZ, double MaxX, double MaxZ, ulong Seed);
+        double MinX, double MinZ, double MaxX, double MaxZ, ulong Seed, double Bottom, int Reach);
 
     private const double GridCell = 2000;
     private readonly List<Lip> _lips = new();
     private readonly Dictionary<(int, int), List<int>> _grid = new();
 
     public int Count => _lips.Count;
+
+    /// <summary>Revision 43 (D300): a rock face at each lip and a plunge pool below it (Tom: "Rock face and wide pool").</summary>
+    public bool Faces { get; }
+
+    /// <summary>Each fall's lip, downstream direction, width, the water's level at the lip and at the foot, and how long the drop
+    /// runs along the river (tests).</summary>
+    public IEnumerable<(double X, double Z, double Dx, double Dz, double Width, double Top, double Bottom, double Length)> Falls()
+    {
+        foreach (var l in _lips)
+        {
+            int k = Array.FindIndex(l.Along, a => a >= 0);
+            var p = l.Points[k]; var q = l.Points[Math.Min(l.Points.Length - 1, k + 1)];
+            double dx = q.X - p.X, dz = q.Z - p.Z, dl = Math.Max(1e-6, Math.Sqrt(dx * dx + dz * dz));
+            yield return (p.X, p.Z, dx / dl, dz / dl, l.Width, l.Top, l.Bottom, l.Length);
+        }
+    }
 
     /// <summary>Each lip (the river's point there), its downstream direction, the river's width and the water's level at the lip
     /// (absolute) (tests).</summary>
@@ -35,8 +51,9 @@ public sealed class FallLips
         }
     }
 
-    public FallLips(WorldPlan plan)
+    public FallLips(WorldPlan plan, bool faces = false)
     {
+        Faces = faces;
         var rng = new RandomStream(Hashing.Mix((ulong)plan.Manifest.Seed ^ 0xFA11_11B5UL));
         foreach (var r in plan.Hydrology.Reaches)
         {
@@ -58,7 +75,8 @@ public sealed class FallLips
                     minX = Math.Min(minX, pts[i].X); maxX = Math.Max(maxX, pts[i].X); minZ = Math.Min(minZ, pts[i].Z); maxZ = Math.Max(maxZ, pts[i].Z);
                 }
                 double reach = Reach(width);
-                _lips.Add(new Lip(pts, along, width, r.Surface[k], length, upstream, minX - reach, minZ - reach, maxX + reach, maxZ + reach, rng.Next()));
+                _lips.Add(new Lip(pts, along, width, r.Surface[k], length, upstream, minX - reach, minZ - reach, maxX + reach, maxZ + reach, rng.Next(),
+                    r.Surface[k + 1], r.Id));
             }
         }
         for (int i = 0; i < _lips.Count; i++)
@@ -74,6 +92,70 @@ public sealed class FallLips
     }
 
     private static int Cell(double v) => (int)Math.Floor(v / GridCell);
+
+    /// <summary>The plunge pool's half-width: a little wider than the river.</summary>
+    private static double PoolHalf(double width) => width * .55 + 3;
+
+    /// <summary>Distance to the river's line near a lip and how far along it from the lip (negative upstream).</summary>
+    private static void Locate(Lip l, double x, double z, out double d, out double along)
+    {
+        double best = double.MaxValue; along = 0;
+        for (int s = 0; s + 1 < l.Points.Length; s++)
+        {
+            var p = l.Points[s]; var q = l.Points[s + 1];
+            double sx = q.X - p.X, sz = q.Z - p.Z, l2 = sx * sx + sz * sz;
+            double t = l2 < 1e-9 ? 0 : ((x - p.X) * sx + (z - p.Z) * sz) / l2;
+            // (past the last point, on along the river's last direction: the pool's end fades there)
+            double tc = s + 2 == l.Points.Length ? Math.Max(0, t) : Math.Clamp(t, 0, 1);
+            if (s + 2 != l.Points.Length || t <= 1) tc = Math.Clamp(t, 0, 1);
+            double ex = p.X + sx * Math.Clamp(t, 0, 1) - x, ez = p.Z + sz * Math.Clamp(t, 0, 1) - z;
+            double e2 = ex * ex + ez * ez;
+            if (s + 2 == l.Points.Length && t > 1)
+            {
+                // beyond the foot: across from the extended line, along beyond the foot
+                double len = Math.Sqrt(l2), ux = sx / len, uz = sz / len, px = x - q.X, pz = z - q.Z;
+                double ahead = px * ux + pz * uz, side = Math.Abs(px * uz - pz * ux);
+                e2 = side * side;
+                if (e2 < best) { best = e2; along = l.Along[s + 1] + ahead; }
+                continue;
+            }
+            if (e2 < best) { best = e2; along = l.Along[s] + (l.Along[s + 1] - l.Along[s]) * tc; }
+        }
+        d = Math.Sqrt(best);
+    }
+
+    /// <summary>
+    /// Revision 43 (D300): the rock face at a lip and the plunge pool below it. From just past the lip to the fall's foot,
+    /// across the pool's width, the ground drops sheer to the pool's floor (2–8 m under the foot's water, a bowl), only ever
+    /// lowered; the pool fills to the foot's level (<paramref name="level"/>, absolute, NaN outside). <paramref name="rock"/>:
+    /// how bare (the face and the walls beside the pool).
+    /// </summary>
+    public double Pool(double x, double z, double height, double sea, out double level, out int reach, out double rock)
+    {
+        level = double.NaN; reach = -1; rock = 0;
+        if (!Faces || !_grid.TryGetValue((Cell(x), Cell(z)), out var list)) return height;
+        double result = height;
+        foreach (int i in list)
+        {
+            var l = _lips[i];
+            if (x < l.MinX || x > l.MaxX || z < l.MinZ || z > l.MaxZ) continue;
+            Locate(l, x, z, out double d, out double along);
+            double half = PoolHalf(l.Width) * (1 + .08 * Noise.Fbm(x, z, 30, 2, 0, l.Seed + 3));
+            // Sheer: the face rises over half a metre past the lip, the walls over 2 m at the pool's sides; the pool ends at the
+            // foot, shoaling over 8 m into the river below.
+            double inPool = DetMath.Smooth((along - .2) / .6) * (1 - DetMath.Smooth((d - half) / 2)) * (1 - DetMath.Smooth((along - l.Length) / 8));
+            if (inPool <= 0) continue;
+            double depth = Math.Clamp((l.Top - l.Bottom) * .15, 2, 8);
+            double bowl = 1 - (d / half) * (d / half) * .6;
+            double floor = l.Bottom - sea - depth * Math.Max(.25, bowl) * (1 - DetMath.Smooth((along - l.Length + 4) / 8));
+            double lowered = height + (Math.Min(height, floor) - height) * inPool;
+            if (lowered < result) result = lowered;
+            if (inPool > .5 && result < l.Bottom - sea - .05) { level = l.Bottom; reach = l.Reach; }
+            // Bare rock on the face and the walls (where the ground drops away steeply).
+            rock = Math.Max(rock, DetMath.Smooth((height - result) / 3) * .9);
+        }
+        return result;
+    }
     private static double Inner(double width) => width * .5 + Hydrology.Bank(width) * .6;
     private static double Band(double width) => 12 + width * .25;
     private static double Reach(double width) => Inner(width) + Band(width) * 1.5;

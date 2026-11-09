@@ -606,9 +606,11 @@ public static class TileBuilder
                 // water around a dug river bed); the local simulation draws the water there.
                 if (dug[a] || dug[b] || dug[c] || dug[d]) continue;
                 if (onFace[a] && onFace[b] && onFace[c] && onFace[d]) continue;
-                float code = -1;
+                float code = -1, low = float.MaxValue, high = float.MinValue;
                 foreach (int k in new[] { a, b, c, d })
-                    if (Covered(k)) code = Math.Max(code, colors[k].G);
+                    if (Covered(k)) { code = Math.Max(code, colors[k].G); low = Math.Min(low, vertices[k].Y); high = Math.Max(high, vertices[k].Y); }
+                // (D300: a square spanning from the lip's level down to a plunge pool's stood as a wall of water at the rock face)
+                if (falls != null && high - low > 1.5 && falls.OnFace(x0 + (i + .5) * spacing, z0 + (j + .5) * spacing, low, high)) continue;
                 var part = indices[WaterMaterials.PartOf(code)];
                 part.Add(a); part.Add(b); part.Add(c);
                 part.Add(b); part.Add(d); part.Add(c);
@@ -811,9 +813,11 @@ public static class TileBuilder
                 double gx = Slope(i > 0 ? k - 1 : -1, i < n - 1 ? k + 1 : -1);
                 double gz = Slope(j > 0 ? k - n : -1, j < n - 1 ? k + n : -1);
                 double g = Math.Sqrt(gx * gx + gz * gz);
-                if (g < 1e-6) continue;
-                double speed = Math.Clamp(Math.Sqrt(g) * 6, .3, 3.5);
-                double dx = -gx / g, dz = -gz / g;
+                // (D300: still water of a river — a plunge pool, level at the foot's — takes its river's way and speed: still, it drew
+                // a fall's pool as a dark, foamless sheet)
+                if (g < 1e-6 && rivers == null) continue;
+                double speed = g < 1e-6 ? .45 : Math.Clamp(Math.Sqrt(g) * 6, .3, 3.5);
+                double dx = g < 1e-6 ? 0 : -gx / g, dz = g < 1e-6 ? 0 : -gz / g;
                 // River water (D287, Tom: "Water in rivers feels sometimes like it has different speeds"): the speed from the
                 // river's fall over ~120 m along it (the surface's slope between two vertices a metre apart jumped from place to
                 // place), faster where it is deep (the middle), slower toward the banks; the direction leaning on the river's
@@ -827,6 +831,7 @@ public static class TileBuilder
                     double dl = Math.Sqrt(dx * dx + dz * dz);
                     if (dl > 1e-6) { dx /= dl; dz /= dl; }
                 }
+                else if (g < 1e-6) continue;
                 flow[k] = new Vector2((float)(dx * speed), (float)(dz * speed));
             }
         // River mouths (round 15, RIVERS_PLAN step 3): the current continues into the lake or sea as a fanning plume,

@@ -188,6 +188,14 @@ public sealed partial class TerrainSampler
         double height = Rivers(x, z, minWavelength, baseHeight, inland, detail, ref riverDamp, ref water, ref level, ref body, ref scree, Canyons.Wall(canyon));
         // Revision 33: a gorge's talus is bare ground as the escarpments' debris slopes are (scree, not cliff rock).
         bare = Math.Max(bare, .65 * scree);
+        // Revision 43 (D300): a rock face at each fall's lip and a plunge pool below it, filled to the foot's level (the river's
+        // ramp of water over the drop is the pool there).
+        if (_fallLips is { Faces: true })
+        {
+            height = _fallLips.Pool(x, z, height, _p.SeaLevel, out double poolLevel, out int poolReach, out double faceRock);
+            bare = Math.Max(bare, faceRock);
+            if (!double.IsNaN(poolLevel) && (water == WaterKind.None || water == WaterKind.River && level > poolLevel)) { water = WaterKind.River; level = poolLevel; body = poolReach; }
+        }
         // Revision 42 (D297): banks of rock beside waterfall lips (dry ground only: the river's channel and water unchanged).
         if (_fallLips != null && water == WaterKind.None) { height = _fallLips.Apply(x, z, height, _p.SeaLevel, out double lipRock); bare = Math.Max(bare, lipRock); }
         double lakePlume = 0, lakeCells = double.PositiveInfinity;
