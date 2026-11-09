@@ -27,6 +27,7 @@ internal static class SimulationTests
         T.Run("Landforms: spits, sandbars and lagoons — sand just above the sea, shallow water behind, land and river mouths untouched (revision 37)", SpitForms, filter);
         T.Run("Landforms: oxbow lakes — crescents of still water beside lowland rivers, closed round, rivers and lakes unchanged (revision 39)", OxbowForms, filter);
         T.Run("Landforms: river terraces — level steps up broad valley sides, gentle risers, rivers and lakes unchanged (revision 40)", TerraceForms, filter);
+        T.Run("Water simulation: digging beside a waterfall stays finite (Tom's crash in build 141, D302)", FallDig, filter);
         T.Run("Landforms: no river water left on a fall's slope — the lip's above the face, the pool's below (revision 44)", FallSlopeForms, filter);
         T.Run("Landforms: rock faces and plunge pools at falls — a sheer drop at the lip, the pool's water below (revision 43)", FallFaceForms, filter);
         T.Run("Landforms: banks at waterfall lips — the ground beside a lip stands over its water, rivers and lakes unchanged (revision 42)", FallLipForms, filter);
@@ -1235,6 +1236,33 @@ internal static class SimulationTests
         T.Check(faces >= tall * .9, $"rock faces ({faces} of {tall})");
         T.Check(pools >= tall * .9, $"plunge pools ({pools} of {tall})");
         T.Check(changed == 0, $"rivers and lakes away from the falls unchanged ({changed})");
+    }
+
+    /// <summary>D302: Tom dug beside the wide fall's lip in build 141 and the game went black and closed (NaN in the player's
+    /// surroundings). Holes dug at the lip, beside the face, at the banks and the pool's edge; the local water simulation run
+    /// for 40 s: every depth and surface in the window finite.</summary>
+    private static void FallDig()
+    {
+        var shared = CoreTests.Sampler("balanced", 7319);
+        var s = new TerrainSampler(new WorldPlan(shared.Plan.Manifest));
+        double lx = 73229, lz = -151365, dx = -.74, dz = -.67, ax = dz, az = -dx;
+        var holes = new List<(double X, double Z)>();
+        foreach (double along in new[] { -6.0, -1, .5, 2, 6 })
+            foreach (double side in new[] { -48.0, -40, -36, 0, 36, 40, 48 })
+                holes.Add((lx + dx * along + ax * side, lz + dz * along + az * side));
+        holes.Add((73164, -151359)); holes.Add((73205, -151328)); holes.Add((73230, -151339));
+        foreach (var (x, z) in holes) s.Edits.Apply(Math.Round(x), Math.Round(z), 3, -2);
+        var w = new LocalWater((cx, cz) => LocalWater.FromSampler(s, cx, cz));
+        w.Follow(lx, lz);
+        foreach (var (x, z) in holes) w.ReloadGround(x - 8, z - 8, x + 8, z + 8);
+        for (int k = 0; k < 1200; k++) w.Step(1 / 30f);
+        int bad = 0;
+        for (double x = lx - 90; x <= lx + 90; x += 1)
+            for (double z = lz - 90; z <= lz + 90; z += 1)
+                if (!float.IsFinite(w.DepthAt(x, z)) || float.IsNaN(w.SurfaceAt(x, z)) && w.DepthAt(x, z) > .01f) bad++;
+        T.Note($"{holes.Count} holes by the fall; volume {w.Volume():0.0} m³; {bad} cells not finite");
+        T.Check(double.IsFinite(w.Volume()), "the water's volume finite");
+        T.Check(bad == 0, $"every cell finite ({bad})");
     }
 
     /// <summary>D301: around each fall (from 10 m above the lip to 40 m past the foot, out to the river's width and 30 m more a

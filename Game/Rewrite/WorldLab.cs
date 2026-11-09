@@ -1069,6 +1069,8 @@ public partial class WorldLab : Node3D
     private double _splashTimer;
     private float _splashLevel = float.NaN;
 
+    private Vector3 _lastGoodPosition;
+
     public override void _PhysicsProcess(double delta)
     {
         if (_sampler == null || _holding) return;
@@ -1147,8 +1149,18 @@ public partial class WorldLab : Node3D
             if (_player.IsOnFloor()) { if (((!typing && Input.IsKeyPressed(Key.Space)) || (CollisionTestActive && _testJump)) && (_stamina >= 8 || !NeedsOn)) { velocity.Y = 6.5f; if (NeedsOn) _stamina -= 8; } }
             else velocity.Y -= 20 * dt;
         }
+        // (D302: a NaN from anything around the player — the water simulation produced one when Tom dug beside a waterfall —
+        // put the player and the camera nowhere: the screen went black and every frame threw; back to the last good place)
+        if (!float.IsFinite(velocity.X) || !float.IsFinite(velocity.Y) || !float.IsFinite(velocity.Z)) velocity = Vector3.Zero;
         _player.Velocity = velocity;
         _player.MoveAndSlide();
+        var placed = _player.GlobalPosition;
+        if (!float.IsFinite(placed.X) || !float.IsFinite(placed.Y) || !float.IsFinite(placed.Z))
+        {
+            GD.PushWarning($"player position {placed} not finite: back to {_lastGoodPosition}");
+            _player.GlobalPosition = _lastGoodPosition; _player.Velocity = Vector3.Zero;
+        }
+        else _lastGoodPosition = placed;
         if (!_fly && !_swimming) StepUp(move, sprint ? 11 : 5, dt);
         PushObjects(delta); // (walking into a fallen trunk pushes it)
         _physicsHitch.Mark("move");

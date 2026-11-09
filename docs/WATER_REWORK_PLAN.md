@@ -34,3 +34,21 @@ Tom's answers (2026-11-08):
 5. **Lakes and ponds**: calm water, wind ripples and small waves by size, their own colour.
 6. **Sea**: foam and breaking water round sea stacks and rocks, calm lagoons (today they get sea waves).
 Each new look is an option beside today's (a return point), and each step a build Tom can try.
+
+## River currents that push the player (Tom, build 141: "we need to slowly start thinking about river currents")
+Not started; a plan to agree on first (D302). What already exists: every river point's direction and speed (`TileBuilder.ReachFlow`,
+the same current the river water is drawn with: 0.45–3.5 m/s by the grade and depth, faster in rapids, the pool under a fall
+taking its river's flow), the player's swimming (deeper than 1.25 m) and wading (feet in water).
+1. **The current where the player is**: the same speed and direction as drawn, sampled at the player (one function the
+   water and the player share, so what you see is what pushes you). Slower near the banks and the bed (a shallow, slow
+   edge to climb out at).
+2. **Swimming**: the current carries the player at most of its speed; swimming across or against it is the player's
+   speed on top (1.8 m/s, sprint 3.2: you can beat a lowland river, not a rapid). Settings: *River currents → off / gentle /
+   full*, off as today.
+3. **Wading**: knee-deep water pushes a little (a slower walk upstream, a nudge downstream), waist-deep more; standing still
+   in a rapid you slide. Stamina drains faster against the current.
+4. **Over a fall**: carried to the lip you go over it (falling with the water into the pool, no fall damage into deep water);
+   the pool's churn pushes away from the foot.
+5. **Things floating**: dropped items, logs and animals carried the same way (later, with the item physics).
+6. **Multiplayer**: each player's own movement (the current is the same everywhere, nothing to send).
+Test: a headless check that the current sampled at points matches the drawn flow; captures of a swim across a river.

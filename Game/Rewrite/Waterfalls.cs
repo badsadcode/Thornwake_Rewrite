@@ -116,7 +116,7 @@ public sealed class WaterfallView
     private double _originX = double.NaN, _originZ, _lastX = double.NaN, _lastZ;
     private static ShaderMaterial? _curtain, _foam;
     private static Material? _mistMaterial;
-    private int _spray = GameSettings.Spray.Index;
+    private int _spray = GameSettings.Spray.Index, _body = GameSettings.WaterfallBody.Index;
 
     public WaterfallView(Node3D parent) { _parent = parent; }
 
@@ -126,7 +126,8 @@ public sealed class WaterfallView
     public void Update(TerrainSampler terrain, double camX, double camZ, double originX, double originZ)
     {
         bool on = GameSettings.Waterfalls.Index == 1;
-        if (_spray != GameSettings.Spray.Index) { _spray = GameSettings.Spray.Index; Clear(); _building.Clear(); _lastX = double.NaN; }
+        if (_spray != GameSettings.Spray.Index || _body != GameSettings.WaterfallBody.Index)
+        { _spray = GameSettings.Spray.Index; _body = GameSettings.WaterfallBody.Index; Clear(); _building.Clear(); _lastX = double.NaN; }
         if (_for != terrain || !on)
         {
             Clear(); _building.Clear(); _lastX = double.NaN;
@@ -179,7 +180,7 @@ public sealed class WaterfallView
 
     /// <summary>A fall's curtain and foam disc, in metres from the lip across (y absolute, as the terrain's).</summary>
     private sealed record Model(Vector3[] Vertices, Vector3[] Normals, Vector2[] Uv, Vector2[] Uv2, Color[] Colors, int[] Indices,
-        Vector3[] FoamVertices, Vector2[] FoamUv, Color[] FoamColors, int[] FoamIndices, Vector3 Foot, float Spread, Vector3 Face, float Width);
+        Vector3[] FoamVertices, Vector2[] FoamUv, Color[] FoamColors, int[] FoamIndices, Vector3 Foot, float Spread, Vector3 Face, float Width, float LipLevel = 0, float Left = 0, float Right = 0);
 
     private static Model Build(TerrainSampler terrain, FallSet.Fall f)
     {
@@ -235,6 +236,7 @@ public sealed class WaterfallView
             return true;
         }
         bool faces = terrain.Plan.FallLips is { Faces: true };
+        bool body = GameSettings.WaterfallBody.Index == 1;
         var steps = new List<double> { -Upstream };
         {
             double h = -Upstream, y = lipLevel;
@@ -334,7 +336,6 @@ public sealed class WaterfallView
                 colors[k].A *= (float)(1 - strength * DetMath.Smooth((t - .35) / .6));
             }
         }
-        var normals = new Vector3[vertices.Length];
         var indices = new List<int>((cols - 1) * (rows - 1) * 6);
         for (int r = 0; r + 1 < rows; r++)
             for (int c = 0; c + 1 < cols; c++)
@@ -343,6 +344,58 @@ public sealed class WaterfallView
                 indices.Add(a); indices.Add(d); indices.Add(b);
                 indices.Add(b); indices.Add(d); indices.Add(e);
             }
+        // D302 (Tom: "From the sides, it looks like a flat sheet"): with depth, a second sheet behind the first — back toward the
+        // rock by up to a tenth of the width (0.6–3 m), growing from the lip as the water spreads, never behind the face — and the
+        // two joined along the sides, so from the side the falling water is a band, not a line.
+        if (body)
+        {
+            int front = cols * rows;
+            double thickMax = Math.Clamp(f.Width * .1, .6, 3);
+            Array.Resize(ref vertices, front * 2); Array.Resize(ref uv, front * 2); Array.Resize(ref uv2, front * 2); Array.Resize(ref colors, front * 2);
+            for (int r = 0; r < rows; r++)
+            {
+                double h = steps[r];
+                double th = h <= 0 ? 0 : Math.Min(thickMax * DetMath.Smooth(h / Math.Max(2, f.Length * .6) + .15), Math.Max(0, h - .3));
+                for (int c = 0; c < cols; c++)
+                {
+                    int k = r * cols + c;
+                    vertices[front + k] = vertices[k] - new Vector3((float)(f.Dx * th), -(float)(th * .15), (float)(f.Dz * th));
+                    uv[front + k] = uv[k] + new Vector2(.37f * (float)width, 1.7f);
+                    uv2[front + k] = uv2[k] + new Vector2(.23f, 0);
+                    colors[front + k] = colors[k] with { A = colors[k].A * .85f };
+                }
+            }
+            for (int r = 0; r + 1 < rows; r++)
+                for (int c = 0; c + 1 < cols; c++)
+                {
+                    int a = front + r * cols + c, b = a + 1, d = a + cols, e = d + 1;
+                    indices.Add(a); indices.Add(b); indices.Add(d);
+                    indices.Add(b); indices.Add(e); indices.Add(d);
+                }
+            // The sides: between the front's and the back's edge columns, as solid as the sheet just inside its faded edge.
+            int inner = Math.Clamp((int)Math.Ceiling(margin / (Wide(0) / Math.Max(1, cols - 1))), 1, cols / 2);
+            foreach (var (c, ci) in new[] { (0, inner), (cols - 1, cols - 1 - inner) })
+            {
+                int start = vertices.Length;
+                Array.Resize(ref vertices, start + rows * 2); Array.Resize(ref uv, start + rows * 2); Array.Resize(ref uv2, start + rows * 2); Array.Resize(ref colors, start + rows * 2);
+                for (int r = 0; r < rows; r++)
+                {
+                    int k = r * cols + c, kin = r * cols + ci;
+                    float a = colors[kin].A * .8f;
+                    vertices[start + 2 * r] = vertices[k]; vertices[start + 2 * r + 1] = vertices[front + k];
+                    uv[start + 2 * r] = uv[k]; uv[start + 2 * r + 1] = uv[k] + new Vector2((vertices[k] - vertices[front + k]).Length(), 0);
+                    uv2[start + 2 * r] = uv2[k]; uv2[start + 2 * r + 1] = uv2[k];
+                    colors[start + 2 * r] = colors[kin] with { A = a }; colors[start + 2 * r + 1] = colors[kin] with { A = a * .85f };
+                }
+                for (int r = 0; r + 1 < rows; r++)
+                {
+                    int a = start + 2 * r, ba = a + 1, d = a + 2, bd = a + 3;
+                    indices.Add(a); indices.Add(d); indices.Add(ba);
+                    indices.Add(ba); indices.Add(d); indices.Add(bd);
+                }
+            }
+        }
+        var normals = new Vector3[vertices.Length];
         for (int t = 0; t < indices.Count; t += 3)
         {
             var n = (vertices[indices[t + 1]] - vertices[indices[t]]).Cross(vertices[indices[t + 2]] - vertices[indices[t]]);
@@ -379,7 +432,8 @@ public sealed class WaterfallView
                 int a = 1 + (ring - 1) * spokes + s, b = 1 + (ring - 1) * spokes + (s + 1) % spokes, c = a + spokes, d = b + spokes;
                 fi.Add(a); fi.Add(c); fi.Add(b); fi.Add(b); fi.Add(c); fi.Add(d);
             }
-        return new Model(vertices, normals, uv, uv2, colors, indices.ToArray(), fv.ToArray(), fuv.ToArray(), fc.ToArray(), fi.ToArray(), footPoint, spread, face, (float)f.Width);
+        return new Model(vertices, normals, uv, uv2, colors, indices.ToArray(), fv.ToArray(), fuv.ToArray(), fc.ToArray(), fi.ToArray(), footPoint, spread, face, (float)f.Width,
+            (float)lipLevel, (float)(left + .5), (float)(right + .5));
     }
 
     private void Add((int, int) key, FallSet.Fall fall, Model m, double originX, double originZ)
@@ -396,7 +450,13 @@ public sealed class WaterfallView
             a[(int)Mesh.ArrayType.TexUV] = m.Uv; a[(int)Mesh.ArrayType.TexUV2] = m.Uv2; a[(int)Mesh.ArrayType.Color] = m.Colors; a[(int)Mesh.ArrayType.Index] = m.Indices;
             curtain.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, a);
         }
-        node.AddChild(new MeshInstance3D { Mesh = curtain, MaterialOverride = _curtain, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        var curtainInstance = new MeshInstance3D { Mesh = curtain, MaterialOverride = _curtain, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        // D302: the lip's water level and frame, so the falling water hides where the river above the lip lies between it and
+        // the camera (the river's water writes no depth: from upstream the falling sheet's back showed through it, standing
+        // out of the river like a wall — Tom's dump 133922).
+        curtainInstance.SetInstanceShaderParameter("lip_level", m.LipLevel);
+        curtainInstance.SetInstanceShaderParameter("lip_frame", new Vector4((float)fall.Dx, (float)fall.Dz, m.Left, m.Right));
+        node.AddChild(curtainInstance);
         var foam = new ArrayMesh();
         using (var a = new Godot.Collections.Array())
         {
@@ -426,6 +486,25 @@ public sealed class WaterfallView
                 off.Basis = frame;
                 off.Position = m.Face;
                 node.AddChild(off);
+                // D302 (Tom: "cover the sides of the waterfall ... at the top, add some of that mist and splashes"): with depth,
+                // spray veiling the falling water's sides all the way down, and fine spray thrown off where it bends over the lip.
+                if (GameSettings.WaterfallBody.Index == 1)
+                {
+                    float half = (m.Left + m.Right) * .5f - .5f, th = (float)Math.Clamp(w * .1, .6, 3);
+                    foreach (float side in new[] { -1f, 1f })
+                    {
+                        var veil = Spray.Emitter(new Vector3(.9f, h * .36f, .6f + th * .5f), new Vector3(side * .8f, -.3f, .4f), 30, .4f, 1.3f,
+                            .8f + h * .01f, 1.6f + h * .025f, 1.8f, 2.6f, Math.Clamp((int)(h * .7f), 10, 70), -.5f, .32f, Spray.Tint, "fine_droplets");
+                        veil.Basis = frame;
+                        veil.Position = m.Face + frame.X * side * (half + .3f) - frame.Z * (th * .5f);
+                        node.AddChild(veil);
+                    }
+                    var lip = Spray.Emitter(new Vector3(Math.Max(1, half * .9f), .25f, .7f), new Vector3(0, .5f, 1), 25, .5f, 1.4f,
+                        .5f + w * .01f, 1.1f + w * .015f, 1.6f, 1.8f, Math.Clamp((int)(w * .8f), 8, 60), -1.2f, .3f, Spray.Tint, "fine_droplets");
+                    lip.Basis = frame;
+                    lip.Position = new Vector3(0, m.LipLevel - .3f, 0) + frame.X * ((m.Right - m.Left) * .5f) + frame.Z * 1.2f;
+                    node.AddChild(lip);
+                }
                 // Mist rising off the pool above the foot's clouds (Tom's rising plume).
                 var plume = Spray.Emitter(new Vector3(Math.Max(1.5f, w * .4f), .5f, 1.5f), new Vector3(0, 1, .3f), 20, .8f, 1.6f + h * .03f,
                     3 + w * .05f + h * .06f, 5 + w * .08f + h * .1f, 1.8f, Math.Clamp(5 + h * .04f, 5, 9), Math.Clamp((int)(4 + h * .3f + w * .2f), 4, 40),

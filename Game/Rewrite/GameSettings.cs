@@ -201,6 +201,10 @@ public static class GameSettings
         "rock lies higher), streaked and white, white water spreading on the pool and mist rising at the foot. River sheet " +
         "(build 137): the river's water running straight down from the lip to the pool, a rounded dome.",
         options: new[] { "river sheet (build 137)", "falling water" }, rebuild: true));
+    public static readonly Setting WaterfallBody = Add(new("fx.waterfall_body", "Lighting and effects", "Falling water's body", 0, 1, 1, 1,
+        "With depth: the falling water thickens as it falls (a second sheet behind the first, joined at the sides, up to a few " +
+        "metres), so from the side it reads as a falling mass of water, veiled with spray along its sides and at the lip. Flat " +
+        "sheet (build 141): one sheet, a line seen from the side.", options: new[] { "flat sheet (build 141)", "with depth" }));
     public static readonly Setting FoamStyle = Add(new("fx.foam_style", "Lighting and effects", "Foam style", 0, 1, 1, 0,
         "Experimental water foam (2 and later): lace (thin threads along bubble cells, build 38) or net (a thick, fluffy net of " +
         "foam around round clear holes, finer where the foam is fresh, patchy as it thins).", options: new[] { "lace", "net" }));

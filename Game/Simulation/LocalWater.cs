@@ -135,7 +135,9 @@ public sealed class LocalWater
                 double l = Max(level[a], level[b], level[c], level[d]);
                 sink[cz * ChunkCells + cx] = !double.IsNaN(l) && h < l;
                 // The surface: the corners' average (the highest corner lifted water a little above a sloping river).
-                if (!double.IsNaN(l)) l = Mean(level[a], level[b], level[c], level[d]);
+                // (D302: never below the floor — at a waterfall's face a cell's corners hold the lip's and the pool's water, 40 m
+                // apart, and their average lay under the rock: a negative depth, 0 / 0 in the flow, NaN everywhere — Tom's crash)
+                if (!double.IsNaN(l)) { double mean = Mean(level[a], level[b], level[c], level[d]); if (mean > h) l = mean; }
                 surface[cz * ChunkCells + cx] = double.IsNaN(l) ? float.NaN : (float)l;
                 edited[cz * ChunkCells + cx] = sampler.Edits.Delta(x0 + (cx + .5) * Cell, z0 + (cz + .5) * Cell) < -.02;
                 sea[cz * ChunkCells + cx] = sink[cz * ChunkCells + cx] && (oceanAt[a] || oceanAt[b] || oceanAt[c] || oceanAt[d]);
@@ -392,6 +394,7 @@ public sealed class LocalWater
                     // A generated water body: a fixed surface that only flows out into lower non-water neighbours.
                     if (!_feeds[i]) { _left[i] = _right[i] = _up[i] = _down[i] = 0; continue; }
                     d = _level[i] - _floor[i];
+                    if (!(d > 0)) { _left[i] = _right[i] = _up[i] = _down[i] = 0; continue; } // (D302: no water over this cell's floor)
                 }
                 else if (d <= Dry) { _left[i] = _right[i] = _up[i] = _down[i] = 0; continue; }
                 float h = _floor[i] + d;
@@ -410,7 +413,7 @@ public sealed class LocalWater
                 }
                 float l = Flow(_left[i], x - 1, z), r = Flow(_right[i], x + 1, z), u = Flow(_up[i], x, z - 1), w = Flow(_down[i], x, z + 1);
                 float total = (l + r + u + w) * dt;
-                float scale = total > d * area ? d * area / total : 1f; // never more out than the cell holds
+                float scale = total > 0 && total > d * area ? d * area / total : 1f; // never more out than the cell holds
                 _left[i] = l * scale; _right[i] = r * scale; _up[i] = u * scale; _down[i] = w * scale;
             }
         int nx0 = int.MaxValue, nx1 = -1, nz0 = int.MaxValue, nz1 = -1;

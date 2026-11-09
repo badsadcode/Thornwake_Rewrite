@@ -8,6 +8,10 @@ shader_type spatial;
 render_mode blend_mix, cull_disabled, depth_draw_never, specular_schlick_ggx;
 
 uniform bool foam_disc = false;
+// The lip (D302): its water level and (downstream x, z, the water's reach to the left, to the right), the lip at the
+// node's origin. lip_frame zero: off.
+instance uniform float lip_level = 0.0;
+instance uniform vec4 lip_frame = vec4(0.0);
 uniform vec3 deep_color : source_color = vec3(0.16, 0.30, 0.33);
 uniform vec3 white_color : source_color = vec3(0.90, 0.94, 0.96);
 
@@ -93,6 +97,21 @@ void fragment()
 	// White water lets light through and scatters it (in a cliff's shade it was lit by the blue sky alone: a blue strip).
 	BACKLIGHT = vec3(0.35) * albedo;
 	EMISSION = albedo * 0.05;
+	// Hidden under the river above the lip (D302): where the line to the camera crosses the lip's level upstream of the lip,
+	// within the water's width, the river's surface lies in front (it writes no depth, so this sheet showed through it).
+	if (!foam_disc && dot(lip_frame.xy, lip_frame.xy) > 0.5) {
+		vec3 cam = INV_VIEW_MATRIX[3].xyz;
+		vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+		if (cam.y > lip_level + 0.05 && wp.y < lip_level - 0.02) {
+			float t = (cam.y - lip_level) / (cam.y - wp.y);
+			vec2 c = cam.xz + (wp.xz - cam.xz) * t - MODEL_MATRIX[3].xz;
+			float along = dot(c, lip_frame.xy);
+			float side = dot(c, vec2(lip_frame.y, -lip_frame.x)); // (to the fall's right: the curtain's +across)
+			float reach = side > 0.0 ? lip_frame.w : lip_frame.z;
+			float hidden = smoothstep(0.0, -1.0, along) * (1.0 - smoothstep(reach, reach + 1.5, abs(side)));
+			alpha *= 1.0 - 0.9 * hidden;
+		}
+	}
 	ALPHA = alpha;
 	ROUGHNESS = rough;
 	SPECULAR = 0.5;

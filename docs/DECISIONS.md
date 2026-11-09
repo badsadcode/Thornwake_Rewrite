@@ -4795,6 +4795,27 @@ end (112818). Upstream of the lip the river's surface also sagged up to 4 m towa
   and narrow up to 199 m, medium, wide), each beside revision 43 (Tom: "how will other waterfalls that we don't know about
   yet ... behave?"). The revision 43 face test now pins revision 43 (D301 changes the lip's stretch upstream).
 
+## D302 — Tom's build 141 notes: the crash digging by a fall, the sheet behind the lip, the falling water's body (2026-11-09)
+Tom: "When I dug close to the waterfall, it crashed the game. The screen went black, and then the game closed", dump 133922,
+"From the sides, it looks like a flat sheet ... cover the sides ... at the top, add some of that mist and splashes", and
+"slowly start thinking about river currents so they push the player".
+* **The crash**: digging starts the local water simulation round the hole, its ground and water read from the terrain. At
+  a fall's face a cell's corners hold the lip's and the pool's water (40 m apart); their average lay under the rock, a
+  river cell with a negative depth, and the flow divided 0 by 0: NaN spread through the water and onto the player, every
+  frame threw (`Atmosphere.UpdateMist`, `Math.Sign(NaN)`) and the screen went black. Now a cell's water is never under its
+  floor (`LocalWater.FromSampler`), a river cell with no water over its floor sends none, the flow never divides by zero; and
+  the player, if anything ever puts them at a NaN place, is put back at the last good one instead. Test `Water simulation:
+  digging beside a waterfall stays finite` (38 holes at the lip, the face, the banks, the pool; 40 s of water).
+* **The falling water seen through the river above the lip** (dump 133922: from upstream its back stood out of the river like
+  a wall): the river's water writes no depth, so the sheet beyond and below the lip showed through. The curtain now knows the
+  lip's level and the water's width there and fades where the river above the lip lies between it and the camera.
+* **Body** (setting *Falling water's body → with depth*; *flat sheet (build 141)* keeps the old): a second sheet behind the
+  first, back toward the rock by up to a tenth of the river's width (0.6–3 m), growing from the lip, joined to the front along
+  both sides — from the side a band of water, not a line; with it spray veils both sides all the way down and fine spray is
+  thrown off along the lip.
+* **River currents**: a plan in `docs/WATER_REWORK_PLAN.md` (the drawn current pushing a swimming or wading player, a setting,
+  over the lip into the pool); not started, Tom to agree first.
+
 ## Planned — Biomes, later phases
 Overlays (coast, riverbank, floodplain, cliffs), local terrain features (dunes, needle spires, ravines, boulder
 fields), large features before erosion (volcanoes, mesas/canyons, glacial valleys), atmosphere, gameplay hooks,
